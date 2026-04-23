@@ -36,6 +36,15 @@ dotnet add package CrestApps.OrchardCore.OpenAI
 
 After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
 
+## Upgrade guidance
+
+If you are upgrading an existing Orchard solution, review these pages before you update package references:
+
+1. [Version 2.0.0 Release Notes](changelog/v2.0.0)
+2. [Migrating to Typed AI Deployments](ai/migration-typed-deployments)
+
+The current repository version is the `2.0.0-preview` line on `.NET 10` and Orchard Core `3.0.0-preview`.
+
 ## Build this repository locally
 
 ```powershell
@@ -48,21 +57,6 @@ dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.cspr
 ```
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
-
-### Test against local `CrestApps.Core` packages
-
-The repository now includes a repo-local feed at `.\.nupkgs\crestapps-core-local`, and `NuGet.config` maps all `CrestApps.Core*` restores to that feed before the shared preview feed.
-
-When you need to test changes from the sibling `CrestApps.Core` repository, pack that solution into the local feed with the version used by this repo:
-
-```powershell
-dotnet pack ..\CrestApps.Core\CrestApps.Core.slnx -c Release `
-  -o .\.nupkgs\crestapps-core-local `
-  -p:Version=1.0.0-local-preview-49 `
-  /p:NuGetAudit=false
-```
-
-After packing, run restore or build from this repository and the OrchardCore projects will consume the locally packed `CrestApps.Core` packages.
 
 ## Run the startup apps
 
@@ -107,7 +101,6 @@ npm run build
 ## Package feeds
 
 - **Stable packages:** [NuGet.org](https://www.nuget.org/)
-- **Preview packages:** [Cloudsmith CrestApps OrchardCore feed](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore)
 - **Shared Core preview feed:** [Cloudsmith CrestApps Core feed](https://cloudsmith.io/~crestapps/repos/crestapps-core)
 - **Shared Core preview source URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-core/v3/index.json`
-- **Repo-local test feed:** `.\.nupkgs\crestapps-core-local`
+- **Orchard Core preview source URL:** `https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json`

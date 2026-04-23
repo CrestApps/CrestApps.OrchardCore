@@ -15,8 +15,16 @@ CrestApps provides both **client** and **server** MCP support:
 
 | Feature | Feature ID | Description |
 |---------|-----------|-------------|
-| [MCP Client Integration](client) | `CrestApps.OrchardCore.AI.Mcp` / `.Mcp.Stdio` | Connect to remote (SSE) or local (Stdio) MCP servers |
+| [MCP Client Integration](client) | `CrestApps.OrchardCore.AI.Mcp` / `CrestApps.OrchardCore.AI.Mcp.LocalClient` | Connect to remote (SSE) or local (Stdio) MCP servers |
 | [MCP Server](server) | `CrestApps.OrchardCore.AI.Mcp.Server` | Expose Orchard Core AI capabilities to external MCP clients |
+
+## Orchard admin surfaces
+
+When the relevant features are enabled, Orchard adds these MCP screens under **Artificial Intelligence**:
+
+- **Model Context Protocol -> MCP Hosts**
+- **MCP Prompts**
+- **MCP Resources**
 
 ## Supported Capabilities
 

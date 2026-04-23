@@ -1,6 +1,6 @@
 # CrestApps.OrchardCore Documentation
 
-Documentation site for the [CrestApps.OrchardCore](https://github.com/CrestApps/CrestApps.OrchardCore) project, built with [Docusaurus 3.9](https://docusaurus.io/).
+Documentation site for the [CrestApps.OrchardCore](https://github.com/CrestApps/CrestApps.OrchardCore) project, built with [Docusaurus 3.10](https://docusaurus.io/).
 
 **Live site:** [orchardcore.crestapps.com](https://orchardcore.crestapps.com)
 
@@ -29,18 +29,13 @@ Generates static content into the `build` directory.
 ```
 src/CrestApps.Docs/
 ├── docs/                  # All documentation pages (Markdown)
-│   ├── intro.md           # Homepage / Introduction
-│   ├── getting-started.md # Getting started guide
-│   ├── ai/                # AI module docs
-│   │   ├── ai-services.md
-│   │   ├── ai-chat.md
-│   │   ├── data-sources/  # Nested category
-│   │   ├── documents/
-│   │   └── mcp/
-│   ├── providers/         # AI provider docs
+│   ├── intro.md
+│   ├── getting-started.md
+│   ├── ai/                # AI, providers, A2A, MCP, documents, memory
 │   ├── omnichannel/       # Omnichannel module docs
 │   ├── modules/           # Standard module docs
-│   └── samples/           # Sample project docs
+│   ├── samples/           # Sample project docs
+│   └── changelog/         # Release notes and documentation updates
 ├── sidebars.js            # Sidebar navigation configuration
 ├── docusaurus.config.js   # Site configuration
 ├── src/css/custom.css     # Custom styles
@@ -77,13 +72,14 @@ src/CrestApps.Docs/
        // ...
        {
          type: 'category',
-         label: 'AI Suite',
-         items: [
-           'ai/ai-services',
-           'ai/ai-chat',
-           'ai/my-new-feature',  // <-- Add your page here
-           // ...
-         ],
+          label: 'Artificial Intelligence Suite',
+          items: [
+            'ai/index',
+            'ai/overview',
+            'ai/chat',
+            'ai/my-new-feature',  // <-- Add your page here
+            // ...
+          ],
        },
      ],
    };
@@ -112,9 +108,9 @@ For deeper navigation hierarchies, nest categories inside items:
 ```javascript
 {
   type: 'category',
-  label: 'AI Suite',
+  label: 'Artificial Intelligence Suite',
   items: [
-    'ai/ai-services',
+    'ai/index',
     {
       type: 'category',
       label: 'Data Sources',        // Sub-category
@@ -135,7 +131,7 @@ The page ID used in `sidebars.js` is the **file path relative to `docs/`** witho
 | File path | Page ID |
 |---|---|
 | `docs/getting-started.md` | `getting-started` |
-| `docs/ai/ai-chat.md` | `ai/ai-chat` |
+| `docs/ai/chat.md` | `ai/chat` |
 | `docs/ai/mcp/ftp.md` | `ai/mcp/ftp` |
 | `docs/modules/users.md` | `modules/users` |
 
@@ -152,7 +148,7 @@ Place images and other static files in the `static/` directory. Reference them i
 Use relative Markdown links to reference other documentation pages:
 
 ```markdown
-See the [AI Services](ai/ai-services.md) page for more details.
+See the [AI Services](ai/overview.md) page for more details.
 ```
 
 Or from a nested page back to a parent:

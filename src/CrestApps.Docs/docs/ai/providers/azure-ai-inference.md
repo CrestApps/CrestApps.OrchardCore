@@ -10,7 +10,7 @@ description: Azure AI Inference integration for GitHub models using Azure AI pro
 | **Feature Name** | Azure AI Inference Chat |
 | **Feature ID** | `CrestApps.OrchardCore.AzureAIInference` |
 
-Provides a way to interact with GitHub Models using Azure Inference service provider.
+Provides a way to interact with GitHub Models using the Azure AI Inference provider.
 
 ## Overview
 
@@ -18,7 +18,7 @@ The **Azure AI Inference Chat** feature enhances the **AI Services** functionali
 
 ### Configuration
 
-To configure the OpenAI connection, add the following settings to the `appsettings.json` file:
+To configure an Azure AI Inference connection, add the following settings to `appsettings.json`:
 
 ```json
 {

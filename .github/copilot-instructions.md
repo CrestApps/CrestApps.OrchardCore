@@ -257,9 +257,17 @@ tests/
 Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
 
 1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
-2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
-3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
-4. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
+3. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+
+## Documentation expectations
+
+When a change affects public behavior, configuration, setup, or project guidance:
+
+1. Update the relevant page under `src\CrestApps.Docs\docs`
+2. Update the changelog or release-notes file under `src\CrestApps.Docs\docs\changelog` that matches `VersionPrefix` in `Directory.Build.props` (for example, `VersionPrefix` `2.0.0` maps to `v2.0.0.md`)
+3. Do not create a new changelog version file unless `VersionPrefix` changed or the user explicitly instructs you to create a different file
+4. Build the docs site
 
 ## Troubleshooting
 

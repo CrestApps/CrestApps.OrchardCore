@@ -63,7 +63,7 @@ Legacy AI chat sessions stored in the `AI_Document` table are also migrated forw
 4. Removes the embedded `Prompts` array from the session document after extraction
 5. Backfills missing session fields such as `LastActivityUtc` from the original `CreatedUtc` value when older session documents did not store the newer field yet
 
-This upgrade path is intended to keep v1 tenant data usable in v2.1 without losing existing provider connections, deployments, AI profiles, chat-session transcripts, or related JSON metadata.
+This upgrade path is intended to keep `v1.x` tenant data usable in the current `v2` preview line without losing existing provider connections, deployments, AI profiles, chat-session transcripts, or related JSON metadata.
 
 After migration, review the auto-created deployments at **Artificial Intelligence > Deployments** to verify they look correct.
 
@@ -71,7 +71,7 @@ After migration, review the auto-created deployments at **Artificial Intelligenc
 
 Before upgrading a production tenant, take a database backup.
 
-After the first v2.1 startup completes, verify:
+After the first `v2` startup completes, verify:
 
 1. **Artificial Intelligence > Connections** still shows the expected provider connections
 2. **Artificial Intelligence > Deployments** lists the expected typed deployments and defaults

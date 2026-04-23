@@ -150,7 +150,7 @@ You can find your Speech Service endpoint and API key in the [Azure AI Foundry p
 
 ### Setting as Default Speech-to-Text Deployment
 
-After creating the deployment, go to **Configuration** → **Settings** → **AI** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.
+After creating the deployment, go to **Settings** → **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.
 
 ### Configuring Azure Speech via appsettings.json
 

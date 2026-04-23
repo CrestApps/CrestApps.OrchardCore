@@ -14,7 +14,7 @@ Two transport types are supported:
 | Transport | Feature ID | Description |
 |---|---|---|
 | **Server-Sent Events (SSE)** | `CrestApps.OrchardCore.AI.Mcp` | Connect to remote MCP servers over HTTP. |
-| **Standard Input/Output (Stdio)** | `CrestApps.OrchardCore.AI.Mcp.Stdio` | Connect to local MCP servers (e.g., Docker containers). |
+| **Standard Input/Output (Stdio)** | `CrestApps.OrchardCore.AI.Mcp.LocalClient` | Connect to local MCP servers (e.g., Docker containers). |
 
 ---
 
@@ -32,7 +32,7 @@ The Orchard Core module composes the shared `CrestApps.Core.AI.Mcp` client regis
 ### Connect to a Remote MCP Server
 
 1. Open your Orchard Core project.
-2. Navigate to **Artificial Intelligence** → **MCP Connections**.
+2. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**.
 3. Click the **Add Connection** button.
 4. Under the **Server Sent Events (SSE)** source, click **Add**.
 5. Enter the following connection details:
@@ -144,9 +144,11 @@ Sensitive values (ApiKey, BasicPassword, OAuth2ClientSecret, OAuth2PrivateKey, O
 | | |
 | --- | --- |
 | **Feature Name** | Model Context Protocol (MCP) Local Client |
-| **Feature ID** | `CrestApps.OrchardCore.AI.Mcp.Stdio` |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Mcp.LocalClient` |
 
 The **Local MCP Client Feature** allows your application to connect to MCP servers running locally, typically in containers. It uses **Standard Input/Output (Stdio)** for communication — ideal for offline tools or running local services.
+
+Enable the base **Model Context Protocol (MCP) Client** feature first, then add **Model Context Protocol (MCP) Local Client** when you need local-process transports.
 
 ### Example: Global Time Capabilities with `mcp/time`
 
@@ -165,7 +167,7 @@ Download and install [Docker Desktop](https://www.docker.com/products/docker-des
 #### Step 3: Add the Connection via Orchard Core
 
 1. Open your Orchard Core project.
-2. Navigate to **Artificial Intelligence** → **MCP Connections**.
+2. Navigate to **Artificial Intelligence** → **Model Context Protocol** → **MCP Hosts**.
 3. Click the **Add Connection** button.
 4. Under the **Standard Input/Output (Stdio)** source, click **Add**.
 5. Enter the following connection details:
