@@ -6,11 +6,11 @@ using Microsoft.Extensions.Configuration;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Documents;
 using OrchardCore.Documents.Models;
 using OrchardCore.Environment.Shell.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 
@@ -48,12 +48,8 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
     }
 
     [Fact]
-    public void Startup_ShouldMergeConnectionSectionsIntoProviderOptions()
+    public async Task Startup_ShouldExposeConfiguredConnectionsThroughTheActiveCatalog()
     {
-        // IShellConfiguration is scoped to the OrchardCore: section, so section
-        // paths registered without the OrchardCore: prefix resolve correctly.
-        // Core defaults (CrestApps:AI:*) and Orchard-registered (CrestApps_AI:*)
-        // both map through IShellConfiguration.
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
@@ -64,34 +60,6 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
                 ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:Endpoint"] = "https://example.openai.azure.com/",
                 ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:AuthenticationType"] = "ApiKey",
                 ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:ApiKey"] = "secret",
-            })
-            .Build();
-
-        var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(configuration);
-        services.AddSingleton<IShellConfiguration>(new MockShellConfiguration(configuration));
-        services.AddLogging();
-        services.AddOptions();
-
-        new Startup().ConfigureServices(services);
-
-        using var serviceProvider = services.BuildServiceProvider();
-
-        var options = serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
-
-        Assert.Contains("primary-openai", options.Providers["OpenAI"].Connections.Keys);
-        Assert.Contains("legacy-openai", options.Providers["OpenAI"].Connections.Keys);
-        Assert.Contains("azure-shared", options.Providers["Azure"].Connections.Keys);
-    }
-
-    [Fact]
-    public async Task Startup_ShouldExposeConfiguredConnectionsThroughTheActiveCatalog()
-    {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string>
-            {
-                ["CrestApps:AI:Connections:0:Name"] = "primary-openai",
-                ["CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
             })
             .Build();
 
@@ -111,9 +79,9 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         var catalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProviderConnection>>();
         var connections = await catalog.GetAllAsync();
 
-        var connection = Assert.Single(connections);
-        Assert.Equal("primary-openai", connection.Name);
-        Assert.Equal("OpenAI", connection.ClientName);
+        Assert.Contains(connections, connection => connection.Name == "primary-openai" && connection.ClientName == "OpenAI");
+        Assert.Contains(connections, connection => connection.Name == "legacy-openai" && connection.ClientName == "OpenAI");
+        Assert.Contains(connections, connection => connection.Name == "azure-shared" && connection.ClientName == "Azure");
     }
 
     private static IDocumentManager<DictionaryDocument<T>> CreateDocumentManager<T>()

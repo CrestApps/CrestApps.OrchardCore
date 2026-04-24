@@ -3,15 +3,18 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
+var _excluded = ["placeholder"];
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
@@ -52,7 +55,7 @@ window.openAIChatManager = function () {
       minWidth: 320,
       minHeight: 420
     },
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                        {{ getAssistantLabel(message) }}\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <span class=\"fa-regular fa-thumbs-up\"></span>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <span class=\"fa-regular fa-thumbs-down\"></span>\n                                    </button>\n                                </span>\n                            </template>\n                            <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <span class=\"fa-solid fa-copy\"></span>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <span class=\"fa-solid fa-xmark\"></span>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                        {{ getAssistantLabel(message) }}\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                            <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                <span v-else>{{ citation.label }}</span>\n                            </li>\n                        </ol>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <span class=\"fa-regular fa-thumbs-up\"></span>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <span class=\"fa-regular fa-thumbs-down\"></span>\n                                    </button>\n                                </span>\n                            </template>\n                            <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message)\" :title=\"copyTitle\">\n                                <span class=\"fa-solid fa-copy\"></span>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <span class=\"fa-solid fa-xmark\"></span>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><span class=\"fa fa-robot\" style=\"display: inline-block;\"></span></span>\n            Assistant\n        </div>\n    "
   };
 
@@ -86,15 +89,29 @@ window.openAIChatManager = function () {
     return Math.min(Math.max(value, min), max);
   }
   function normalizeReference(reference) {
-    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$link;
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference;
     if (!reference || _typeof(reference) !== 'object') {
       return null;
     }
     var normalized = Object.assign({}, reference);
     normalized.index = (_ref = (_normalized$index = normalized.index) !== null && _normalized$index !== void 0 ? _normalized$index : normalized.Index) !== null && _ref !== void 0 ? _ref : 0;
     normalized.text = (_ref2 = (_normalized$text = normalized.text) !== null && _normalized$text !== void 0 ? _normalized$text : normalized.Text) !== null && _ref2 !== void 0 ? _ref2 : null;
-    normalized.link = (_ref3 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
+    normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
     return normalized;
+  }
+  function isDownloadCitationReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return false;
+    }
+    if (typeof reference.referenceType === 'string' && reference.referenceType.toLowerCase() === 'document') {
+      return true;
+    }
+    if (typeof reference.link === 'string' && /\/ai\/documents\/.+\/download(?:$|\?)/i.test(reference.link)) {
+      return true;
+    }
+    return false;
   }
   function normalizeReferences(references) {
     if (!references || _typeof(references) !== 'object') {
@@ -109,6 +126,125 @@ window.openAIChatManager = function () {
       normalized[key] = (_normalizeReference = normalizeReference(value)) !== null && _normalizeReference !== void 0 ? _normalizeReference : {};
     }
     return normalized;
+  }
+  function getCitationLabel(reference, key) {
+    return reference.title || reference.text || key;
+  }
+  function buildCitationDisplay(content, references) {
+    var processedContent = (content || '').trim();
+    var messageReferences = normalizeReferences(references);
+    if (!processedContent || !Object.keys(messageReferences).length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    var citedRefs = Object.entries(messageReferences).filter(function (_ref6) {
+      var _ref7 = _slicedToArray(_ref6, 1),
+        key = _ref7[0];
+      return processedContent.includes(key);
+    });
+    if (!citedRefs.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    citedRefs.sort(function (_ref8, _ref9) {
+      var _ref0 = _slicedToArray(_ref8, 2),
+        a = _ref0[1];
+      var _ref1 = _slicedToArray(_ref9, 2),
+        b = _ref1[1];
+      return a.index - b.index;
+    });
+    var citations = [];
+    var displayIndex = 1;
+    var _iterator = _createForOfIteratorHelper(citedRefs),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        processedContent = processedContent.replaceAll(key, placeholder);
+        citations.push({
+          referenceKey: key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(value, key),
+          link: value.link || null,
+          isDownload: isDownloadCitationReference(value),
+          placeholder: placeholder
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
+      var citation = _citations[_i2];
+      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    }
+    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+    return {
+      content: processedContent,
+      citations: citations.map(function (_ref10) {
+        var placeholder = _ref10.placeholder,
+          citation = _objectWithoutProperties(_ref10, _excluded);
+        return citation;
+      })
+    };
+  }
+  function buildCopyContent(content, citations) {
+    var copyContent = (content || '').trim();
+    if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
+      return copyContent;
+    }
+    var _iterator2 = _createForOfIteratorHelper(citations),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var citation = _step2.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator3 = _createForOfIteratorHelper(citations),
+      _step3;
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var _citation = _step3.value;
+        copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
+        if (_citation.link) {
+          copyContent += " - ".concat(_citation.link);
+        }
+        copyContent += '\n';
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    return copyContent.trimEnd();
+  }
+  function updateMessagePresentation(message, references) {
+    var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
+    var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
+    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    message.rawContent = rawContent;
+    message.content = rawContent;
+    message.displayContent = citationDisplay.content;
+    message.references = messageReferences;
+    message.citationReferences = citationDisplay.citations;
+    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
+    return message;
   }
   var renderer = new marked.Renderer();
 
@@ -275,17 +411,17 @@ window.openAIChatManager = function () {
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator = _createForOfIteratorHelper(charts),
-        _step;
+      var _iterator4 = _createForOfIteratorHelper(charts),
+        _step4;
       try {
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-          var c = _step.value;
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var c = _step4.value;
           renderChartOnCanvas(c.chartId, c.config);
         }
       } catch (err) {
-        _iterator.e(err);
+        _iterator4.e(err);
       } finally {
-        _iterator.f();
+        _iterator4.f();
       }
     });
   }
@@ -338,8 +474,8 @@ window.openAIChatManager = function () {
       return;
     }
     requestAnimationFrame(function () {
-      for (var _i2 = 0, _Object$keys = Object.keys(configs); _i2 < _Object$keys.length; _i2++) {
-        var chartId = _Object$keys[_i2];
+      for (var _i3 = 0, _Object$keys = Object.keys(configs); _i3 < _Object$keys.length; _i3++) {
+        var chartId = _Object$keys[_i3];
         renderChartOnCanvas(chartId, configs[chartId]);
       }
     });
@@ -1034,7 +1170,7 @@ window.openAIChatManager = function () {
                       _this3.scrollToBottom();
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, appearance) {
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, references, appearance) {
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
@@ -1053,7 +1189,8 @@ window.openAIChatManager = function () {
                         htmlContent: "",
                         isStreaming: true,
                         userRating: null,
-                        appearance: _this3.normalizeAssistantAppearance(appearance)
+                        appearance: _this3.normalizeAssistantAppearance(appearance),
+                        references: {}
                       };
                       _this3.messages.push(newMessage);
                       _this3._conversationAssistantMessage = {
@@ -1067,19 +1204,22 @@ window.openAIChatManager = function () {
                       if (!msg.appearance) {
                         msg.appearance = _this3.normalizeAssistantAppearance(appearance);
                       }
-                      msg.content = _this3._conversationAssistantMessage.content;
-                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      msg.rawContent = _this3._conversationAssistantMessage.content;
+                      msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                      updateMessagePresentation(msg, msg.references);
                       _this3.$nextTick(function () {
                         renderChartsInMessage(msg);
                         _this3.scrollToBottom();
                       });
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId) {
+                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId, references) {
                     if (_this3._conversationAssistantMessage) {
                       var msg = _this3.messages[_this3._conversationAssistantMessage.index];
                       if (msg) {
                         msg.isStreaming = false;
+                        msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                        updateMessagePresentation(msg, msg.references);
                       }
                       _this3._conversationAssistantMessage = null;
                     }
@@ -1170,82 +1310,9 @@ window.openAIChatManager = function () {
             message.userRating = null;
           }
           if (message.content) {
-            var processedContent = message.content.trim();
-            message.references = normalizeReferences(message.references);
-            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              // Only include references that were actually cited in the response.
-              var citedRefs = Object.entries(message.references).filter(function (_ref7) {
-                var _ref8 = _slicedToArray(_ref7, 1),
-                  key = _ref8[0];
-                return processedContent.includes(key);
-              });
-              if (citedRefs.length) {
-                // Sort by original index so display indices follow a natural order.
-                citedRefs.sort(function (_ref9, _ref0) {
-                  var _ref1 = _slicedToArray(_ref9, 2),
-                    a = _ref1[1];
-                  var _ref10 = _slicedToArray(_ref0, 2),
-                    b = _ref10[1];
-                  return a.index - b.index;
-                });
-
-                // Phase 1: Replace all markers with unique placeholders.
-                var displayIndex = 1;
-                var _iterator2 = _createForOfIteratorHelper(citedRefs),
-                  _step2;
-                try {
-                  for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                    var _step2$value = _slicedToArray(_step2.value, 2),
-                      key = _step2$value[0],
-                      value = _step2$value[1];
-                    var placeholder = "__CITE_".concat(value.index, "__");
-                    processedContent = processedContent.replaceAll(key, placeholder);
-                    value._displayIndex = displayIndex++;
-                    value._placeholder = placeholder;
-                  }
-
-                  // Phase 2: Replace placeholders with sequential display indices.
-                } catch (err) {
-                  _iterator2.e(err);
-                } finally {
-                  _iterator2.f();
-                }
-                var _iterator3 = _createForOfIteratorHelper(citedRefs),
-                  _step3;
-                try {
-                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-                    var _step3$value = _slicedToArray(_step3.value, 2),
-                      _value = _step3$value[1];
-                    processedContent = processedContent.replaceAll(_value._placeholder, "<sup><strong>".concat(_value._displayIndex, "</strong></sup>"));
-                  }
-
-                  // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                } catch (err) {
-                  _iterator3.e(err);
-                } finally {
-                  _iterator3.f();
-                }
-                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                processedContent += '<br><br>';
-                var _iterator4 = _createForOfIteratorHelper(citedRefs),
-                  _step4;
-                try {
-                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-                    var _step4$value = _slicedToArray(_step4.value, 2),
-                      _key = _step4$value[0],
-                      _value2 = _step4$value[1];
-                    var label = _value2.text || _key;
-                    processedContent += _value2.link ? "**".concat(_value2._displayIndex, "**. [").concat(label, "](").concat(_value2.link, ")<br>") : "**".concat(_value2._displayIndex, "**. ").concat(label, "<br>");
-                  }
-                } catch (err) {
-                  _iterator4.e(err);
-                } finally {
-                  _iterator4.f();
-                }
-              }
-            }
-            message.content = processedContent;
-            message.htmlContent = parseMarkdownContent(processedContent, message);
+            var _message$rawContent;
+            message.rawContent = (_message$rawContent = message.rawContent) !== null && _message$rawContent !== void 0 ? _message$rawContent : message.content;
+            updateMessagePresentation(message, message.references);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
@@ -1471,9 +1538,9 @@ window.openAIChatManager = function () {
                 message.title = chunk.title;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i3 = 0, _Object$entries2 = Object.entries(chunk.references); _i3 < _Object$entries2.length; _i3++) {
+                for (var _i4 = 0, _Object$entries2 = Object.entries(chunk.references); _i4 < _Object$entries2.length; _i4++) {
                   var _normalizeReference2;
-                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i4], 2),
                     key = _Object$entries2$_i[0],
                     value = _Object$entries2$_i[1];
                   references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
@@ -1488,22 +1555,12 @@ window.openAIChatManager = function () {
                 if (chunk.responseId) {
                   lastResponseId = chunk.responseId;
                 }
-                var processedContent = chunk.content;
-                for (var _i4 = 0, _Object$entries3 = Object.entries(references); _i4 < _Object$entries3.length; _i4++) {
-                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i4], 2),
-                    _key2 = _Object$entries3$_i[0],
-                    _value3 = _Object$entries3$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
-                }
-
-                // Append processed content to the message.
-                // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                content += chunk.content;
               }
 
               // Update the existing message
-              message.content = content;
-              message.htmlContent = parseMarkdownContent(content, message);
+              message.rawContent = content;
+              updateMessagePresentation(message, references);
               _this8.messages[messageIndex] = message;
               _this8.$nextTick(function () {
                 renderChartsInMessage(message);
@@ -1560,85 +1617,10 @@ window.openAIChatManager = function () {
           var _this9 = this;
           references = normalizeReferences(references);
           if (Object.keys(references).length) {
+            var _ref15, _message$rawContent2;
             var message = this.messages[messageIndex];
-            var content = message.content || '';
-
-            // Only include references that were actually cited in the response.
-            // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
-            var citedRefs = Object.entries(references).filter(function (_ref12) {
-              var _ref13 = _slicedToArray(_ref12, 2),
-                key = _ref13[0],
-                value = _ref13[1];
-              return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
-            });
-            if (!citedRefs.length) {
-              return;
-            }
-
-            // Sort by original index so display indices follow a natural order.
-            citedRefs.sort(function (_ref14, _ref15) {
-              var _ref16 = _slicedToArray(_ref14, 2),
-                a = _ref16[1];
-              var _ref17 = _slicedToArray(_ref15, 2),
-                b = _ref17[1];
-              return a.index - b.index;
-            });
-
-            // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
-            var processed = content.trim();
-            var displayIndex = 1;
-            var _iterator5 = _createForOfIteratorHelper(citedRefs),
-              _step5;
-            try {
-              for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                var _step5$value = _slicedToArray(_step5.value, 2),
-                  key = _step5$value[0],
-                  value = _step5$value[1];
-                var placeholder = "__CITE_".concat(value.index, "__");
-                processed = processed.replaceAll(key, placeholder);
-                processed = processed.replaceAll("<sup><strong>".concat(value.index, "</strong></sup>"), placeholder);
-                value._displayIndex = displayIndex++;
-                value._placeholder = placeholder;
-              }
-
-              // Phase 2: Replace placeholders with sequential display indices.
-            } catch (err) {
-              _iterator5.e(err);
-            } finally {
-              _iterator5.f();
-            }
-            var _iterator6 = _createForOfIteratorHelper(citedRefs),
-              _step6;
-            try {
-              for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-                var _step6$value = _slicedToArray(_step6.value, 2),
-                  _value4 = _step6$value[1];
-                processed = processed.replaceAll(_value4._placeholder, "<sup><strong>".concat(_value4._displayIndex, "</strong></sup>"));
-              }
-            } catch (err) {
-              _iterator6.e(err);
-            } finally {
-              _iterator6.f();
-            }
-            processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-            processed += '<br><br>';
-            var _iterator7 = _createForOfIteratorHelper(citedRefs),
-              _step7;
-            try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _step7$value = _slicedToArray(_step7.value, 2),
-                  _key3 = _step7$value[0],
-                  _value5 = _step7$value[1];
-                var label = _value5.text || _key3;
-                processed += _value5.link ? "**".concat(_value5._displayIndex, "**. [").concat(label, "](").concat(_value5.link, ")<br>") : "**".concat(_value5._displayIndex, "**. ").concat(label, "<br>");
-              }
-            } catch (err) {
-              _iterator7.e(err);
-            } finally {
-              _iterator7.f();
-            }
-            message.content = processed;
-            message.htmlContent = parseMarkdownContent(processed, message);
+            message.rawContent = (_ref15 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref15 !== void 0 ? _ref15 : '';
+            updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
             this.$nextTick(function () {
               renderChartsInMessage(message);
@@ -1766,18 +1748,18 @@ window.openAIChatManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator5 = _createForOfIteratorHelper(this.audioChunks),
+            _step5;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+              var chunk = _step5.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator5.e(err);
           } finally {
-            _iterator8.f();
+            _iterator5.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
@@ -2509,7 +2491,9 @@ window.openAIChatManager = function () {
           return sessionId;
         },
         copyResponse: function copyResponse(message) {
-          navigator.clipboard.writeText(message);
+          var _ref17, _message$copyContent;
+          var text = message && _typeof(message) === 'object' ? (_ref17 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref17 !== void 0 ? _ref17 : '' : message !== null && message !== void 0 ? message : '';
+          navigator.clipboard.writeText(text);
         },
         updateFeedbackIcons: function updateFeedbackIcons(container, userRating) {
           if (!container) {

@@ -198,8 +198,8 @@
 
 <style at="Head">
     .ai-chat-widget-document-bar .small.text-muted {
-        font-size: 0.68rem !important;
-        line-height: 1.25;
+    font-size: 0.68rem !important;
+    line-height: 1.25;
     }
 </style>
 
@@ -324,9 +324,17 @@
                     <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
                     @T["Assistant"]
                 </div>
-                <div class="ai-chat-message-body min-w-0">
+                <div class="ai-chat-message-body min-w-0 lh-base">
                     <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
-                    <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
+                    <div v-html="message.htmlContent" style="font-size: 0.85rem; line-height: 1.5;"></div>
+
+                    <ol v-if="message.citationReferences && message.citationReferences.length" class="ai-chat-citation-list">
+                        <li v-for="citation in message.citationReferences" :key="'citation-' + (citation.referenceKey || citation.displayIndex)" class="ai-chat-citation-item">
+                            <a v-if="citation.link" :href="citation.link" :target="citation.isDownload ? null : '_new'" :rel="citation.isDownload ? null : 'noopener noreferrer'">{{ citation.label }}</a>
+                            <span v-else>{{ citation.label }}</span>
+                        </li>
+                    </ol>
+
                     <span class="message-buttons-container" v-if="!isIndicator(message)">
                         <template v-if="metricsEnabled && message.role === 'assistant'">
                             <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
@@ -341,7 +349,7 @@
                         <button v-if="textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming" class="btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox" :class="{ 'tts-playing': ttsPlayingMessageIndex === index }" :data-tts-message-index="index" @@click="toggleMessageTts(message, index)" :title="ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'">
                             <span :class="ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'" style="font-size: 0.9rem;"></span>
                         </button>
-                        <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Copy"]">
+                        <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message)" title="@T["Copy"]">
                             <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
                         </button>
                     </span>

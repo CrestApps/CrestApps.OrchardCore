@@ -244,8 +244,6 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
             {
                 deploymentObject[nameof(AIDeployment.ConnectionName)] = connection.ItemId;
             }
-
-            EnsurePropertiesObject(deploymentObject)["ConnectionNameAlias"] ??= connection.Name;
         }
         else
         {
@@ -468,9 +466,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                 deployment.SupportsType(type) &&
                 string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase) &&
                 (string.Equals(deployment.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.GetConnectionNameAlias(), connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.GetConnectionNameAlias(), connection.Name, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(deployment.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)))
             .Select(deployment => deployment.Name)
             .FirstOrDefault()
             ?? deployments

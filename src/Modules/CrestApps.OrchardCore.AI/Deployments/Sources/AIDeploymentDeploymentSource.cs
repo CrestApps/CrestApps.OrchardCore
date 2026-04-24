@@ -42,7 +42,6 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "ClientName", deployment.Source },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
-                { "ConnectionNameAlias", deployment.GetConnectionNameAlias() },
                 { "Type", deployment.Type.ToString() },
                 { "IsDefault", deployment.GetIsDefault() },
                 { "Author", deployment.Author },

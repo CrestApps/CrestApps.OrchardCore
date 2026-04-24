@@ -9,25 +9,24 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
-    private readonly AIProviderOptions _providerOptions;
     private readonly AIOptions _aiOptions;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDisplayDriver(
         INamedCatalog<AIDeployment> deploymentCatalog,
-        IOptions<AIProviderOptions> providerOptions,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
-        _providerOptions = providerOptions.Value;
+        _connectionsCatalog = connectionsCatalog;
         _aiOptions = aiOptions.Value;
         _deploymentsCatalog = deploymentCatalog;
         S = stringLocalizer;
@@ -63,19 +62,9 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
         if (!HasContainedConnection(deployment.ClientName))
         {
-            results.Add(Initialize<EditDeploymentConnectionViewModel>("AIDeploymentConnectionName_Edit", model =>
+            results.Add(Initialize<EditDeploymentConnectionViewModel>("AIDeploymentConnectionName_Edit", async model =>
             {
-                model.ConnectionName = deployment.ConnectionName;
-
-                if (_providerOptions.Providers.TryGetValue(deployment.ClientName, out var providerOptions))
-                {
-                    model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Value.GetValue<string>("ConnectionNameAlias") ?? x.Key, x.Key)).ToArray();
-
-                    if (string.IsNullOrEmpty(model.ConnectionName) && providerOptions.Connections.Count == 1)
-                    {
-                        model.ConnectionName = providerOptions.Connections.First().Key;
-                    }
-                }
+                await PopulateConnectionEditorAsync(model, deployment);
             }).Location("Content:5"));
         }
 
@@ -125,14 +114,15 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             // Contained-connection providers manage their own connection parameters
             // in the deployment's Properties via their own display driver.
             deployment.ConnectionName = null;
-            deployment.SetConnectionNameAlias(null);
         }
         else
         {
             var connectionModel = new EditDeploymentConnectionViewModel();
             await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
-            if (!_providerOptions.Providers.TryGetValue(deployment.ClientName, out var provider))
+            var connections = await _connectionsCatalog.GetAsync(deployment.ClientName);
+
+            if (connections.Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(connectionModel.ConnectionName), S["There are no configured connection for the client name: {0}.", deployment.ClientName]);
             }
@@ -144,14 +134,15 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
                 }
                 else
                 {
-                    if (!provider.Connections.TryGetValue(connectionModel.ConnectionName, out var connection))
+                    var connection = await _connectionsCatalog.FindByConnectionNameAsync(deployment.ClientName, connectionModel.ConnectionName);
+
+                    if (connection is null)
                     {
                         context.Updater.ModelState.AddModelError(Prefix, nameof(connectionModel.ConnectionName), S["Invalid connection name provided."]);
                     }
                     else
                     {
-                        deployment.ConnectionName = connectionModel.ConnectionName;
-                        deployment.SetConnectionNameAlias(connection.GetValue<string>("ConnectionNameAlias"));
+                        deployment.ConnectionName = connection.ItemId;
                     }
                 }
             }
@@ -168,6 +159,25 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         }
 
         return Edit(deployment, context);
+    }
+
+    private async Task PopulateConnectionEditorAsync(EditDeploymentConnectionViewModel model, AIDeployment deployment)
+    {
+        var selectedConnection = string.IsNullOrWhiteSpace(deployment.ConnectionName)
+            ? null
+            : await _connectionsCatalog.FindByConnectionNameAsync(deployment.ClientName, deployment.ConnectionName);
+        var connections = await _connectionsCatalog.GetAsync(deployment.ClientName);
+
+        model.ConnectionName = selectedConnection?.ItemId ?? deployment.ConnectionName;
+        model.Connections = connections
+            .OrderBy(connection => connection.GetDisplayName(), StringComparer.OrdinalIgnoreCase)
+            .Select(connection => new SelectListItem(connection.GetDisplayName(), connection.ItemId))
+            .ToArray();
+
+        if (string.IsNullOrEmpty(model.ConnectionName) && model.Connections.Count == 1)
+        {
+            model.ConnectionName = model.Connections[0].Value;
+        }
     }
 
     private bool HasContainedConnection(string providerName)

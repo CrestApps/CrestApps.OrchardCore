@@ -477,9 +477,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             .Where(deployment =>
                 deployment.SupportsType(type) &&
                 (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.GetConnectionNameAlias(), connectionId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.GetConnectionNameAlias(), connectionAlias, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         return candidates.FirstOrDefault(deployment => deployment.GetIsDefault())?.Name

@@ -19,9 +19,9 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly AIProviderOptions _aiProviderOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
 
     internal readonly IStringLocalizer S;
@@ -29,16 +29,16 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
     public OmnichannelCampaignDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IOptions<AIProviderOptions> aiProviderOptions,
         DefaultAIOptions defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
+        _connectionsCatalog = connectionsCatalog;
         _toolDefinitions = toolDefinitions.Value;
-        _aiProviderOptions = aiProviderOptions.Value;
         _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
@@ -91,7 +91,13 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             }).OrderBy(x => x.Text)
         .ToArray();
 
-            model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+            model.Providers = (await _connectionsCatalog.GetAllAsync())
+                .Select(connection => connection.ClientName)
+                .Where(providerName => !string.IsNullOrWhiteSpace(providerName))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(providerName => providerName)
+                .Select(providerName => new SelectListItem(providerName, providerName))
+                .ToArray();
 
             model.Channels =
             [
@@ -176,7 +182,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is required."]);
             }
-            else if (!_aiProviderOptions.Providers.TryGetValue(model.ProviderName, out _))
+            else if ((await _connectionsCatalog.GetAsync(model.ProviderName)).Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is invalid."]);
             }

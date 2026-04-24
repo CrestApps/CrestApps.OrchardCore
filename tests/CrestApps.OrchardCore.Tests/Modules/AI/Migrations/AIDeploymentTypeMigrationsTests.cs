@@ -37,7 +37,7 @@ public sealed class AIDeploymentTypeMigrationsTests
     }
 
     [Fact]
-    public void FindDefaultChatDeploymentName_WhenConnectionAliasMatches_ShouldReturnFirstMatchingDeploymentName()
+    public void FindDefaultChatDeploymentName_WhenConnectionNameMatches_ShouldReturnFirstMatchingDeploymentName()
     {
         var profile = CreateProfile("Friendly Connection");
         var deployments = new[]
@@ -47,18 +47,17 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ItemId = "embedding-default",
                 Name = "embedding-default",
                 ClientName = "OpenAI",
-                ConnectionName = "legacy-connection",
+                ConnectionName = "Friendly Connection",
                 Type = AIDeploymentType.Embedding,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true, ["ConnectionNameAlias"] = "Friendly Connection" },
+                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
                 ItemId = "chat-first",
                 Name = "chat-first",
                 ClientName = "OpenAI",
-                ConnectionName = "legacy-connection",
+                ConnectionName = "Friendly Connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["ConnectionNameAlias"] = "Friendly Connection" },
             },
         };
 
@@ -108,7 +107,7 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "secondary-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true, ["ConnectionNameAlias"] = "Secondary" },
+                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -117,7 +116,7 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true, ["ConnectionNameAlias"] = "Default" },
+                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -126,7 +125,7 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Utility,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true, ["ConnectionNameAlias"] = "Default" },
+                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -175,7 +174,7 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true, ["ConnectionNameAlias"] = "Default" },
+                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
         };
 

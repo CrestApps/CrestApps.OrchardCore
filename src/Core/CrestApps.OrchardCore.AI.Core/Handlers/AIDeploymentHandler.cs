@@ -6,6 +6,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIProviderOptions _providerOptions;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly AIOptions _aiOptions;
     private readonly IClock _clock;
 
@@ -24,13 +25,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
-        IOptions<AIProviderOptions> providerOptions,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _providerOptions = providerOptions.Value;
+        _connectionsCatalog = connectionsCatalog;
         _aiOptions = aiOptions.Value;
         _clock = clock;
         S = stringLocalizer;
@@ -42,7 +43,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
     public override Task UpdatingAsync(UpdatingContext<AIDeployment> context)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIDeployment> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIDeployment> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -76,20 +77,20 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         {
             if (hasConnectionName)
             {
-                if (!_providerOptions.Providers.TryGetValue(context.Model.ClientName, out var provider))
+                var connections = await _connectionsCatalog.GetAsync(context.Model.ClientName);
+
+                if (connections.Count == 0)
                 {
                     context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ClientName], [nameof(AIDeployment.ClientName)]));
                 }
-                else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _) &&
-                    !provider.Connections.Any(x => x.Value.TryGetValue("ConnectionNameAlias", out var r) &&
-                        string.Equals(r.ToString(), context.Model.ConnectionName, StringComparison.OrdinalIgnoreCase)))
+                else if (await _connectionsCatalog.FindByConnectionNameAsync(context.Model.ClientName, context.Model.ConnectionName) is null)
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }
             }
         }
 
-        return Task.CompletedTask;
+        return;
     }
 
     public override Task InitializedAsync(InitializedContext<AIDeployment> context)

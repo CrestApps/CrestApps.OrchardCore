@@ -27,6 +27,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
+- Citation rendering — convert `[doc:N]` markers into superscript citations with a linked reference list when references include resolvable URLs
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 - Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
@@ -41,6 +42,8 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 :::tip
 Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
 :::
+
+When a response cites uploaded or indexed content, the interaction UI renders `[doc:N]` markers as superscript citations and shows the resolved references beneath the assistant message.
 
 ## Orchestration
 

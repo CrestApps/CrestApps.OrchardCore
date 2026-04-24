@@ -58,7 +58,7 @@ public sealed class CustomAIClientProvider : IAIClientProvider
 
 ### 2. Implement `IAICompletionClient`
 
-Use the `NamedAICompletionClient` base class for standard providers, or `DeploymentAwareAICompletionClient` if your provider supports multiple deployments:
+Use the `NamedAICompletionClient` base class for standard providers, or `DeploymentAwareAICompletionClient` if your provider supports multiple deployments. Provider connections now come from the active provider connection catalog, so custom integrations should not depend on the removed `AIProviderOptions` snapshot:
 
 ```csharp
 public sealed class CustomCompletionClient : NamedAICompletionClient
@@ -67,14 +67,13 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
         IAIClientFactory aIClientFactory,
         ILoggerFactory loggerFactory,
         IDistributedCache distributedCache,
-        IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         DefaultAIOptions defaultOptions
     ) : base(
         "CustomSource",
-        aIClientFactory, distributedCache,
+        aIClientFactory,
+        distributedCache,
         loggerFactory,
-        providerOptions.Value,
         defaultOptions,
         handlers)
     {
@@ -165,3 +164,5 @@ The `Type` property can be either a single value or an array of values when one 
 The `IsDefault` flag marks a deployment as the default for each selected type within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for type → global default → null/error.
 
 Global defaults can be configured under **Settings → Artificial Intelligence → Default AI Deployment Settings**.
+
+When you create or edit a deployment in the admin UI, the connection picker is populated from the current provider connection catalog for that provider. Deployments now reference the real connection record directly, and the legacy `ConnectionNameAlias` deployment property is no longer used.

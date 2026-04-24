@@ -16,26 +16,54 @@
   }
   function initAutoGenerateTechnicalName(displayId, nameId) {
     if (!displayId || !nameId) return;
-    document.addEventListener('DOMContentLoaded', function () {
+    function attach() {
       var displayEl = document.getElementById(displayId);
       var nameEl = document.getElementById(nameId);
       if (!displayEl || !nameEl) return;
+      if (nameEl.dataset.techNameInitialized === 'true') return;
+      nameEl.dataset.techNameInitialized = 'true';
 
       // Track whether the user has entered a non-empty value in the Name field.
       var userEdited = nameEl.value.trim() !== '';
+      // Set while we synthesize input/change events on the name field so we can
+      // distinguish programmatic updates from real user typing.
+      var suppressUserEditedTracking = false;
 
       // Resume auto-generation only when the Name field is empty again.
-      nameEl.addEventListener('input', function () {
+      nameEl.addEventListener('input', function (e) {
+        if (suppressUserEditedTracking || e && e.isTrusted === false) {
+          return;
+        }
         userEdited = nameEl.value.trim() !== '';
       });
-
-      // Generate on keyup as requested
-      displayEl.addEventListener('keyup', function () {
+      function updateGeneratedValue() {
         if (userEdited) return;
         var generated = toTitleCaseNoSpaces(displayEl.value || '');
-        nameEl.value = generated;
-      });
-    });
+        if (nameEl.value === generated) {
+          return;
+        }
+        suppressUserEditedTracking = true;
+        try {
+          nameEl.value = generated;
+          nameEl.dispatchEvent(new Event('input', {
+            bubbles: true
+          }));
+          nameEl.dispatchEvent(new Event('change', {
+            bubbles: true
+          }));
+        } finally {
+          suppressUserEditedTracking = false;
+        }
+      }
+      displayEl.addEventListener('input', updateGeneratedValue);
+      displayEl.addEventListener('keyup', updateGeneratedValue);
+      displayEl.addEventListener('change', updateGeneratedValue);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attach);
+    } else {
+      attach();
+    }
   }
 
   // Automatically initialize for any elements using the data attributes.

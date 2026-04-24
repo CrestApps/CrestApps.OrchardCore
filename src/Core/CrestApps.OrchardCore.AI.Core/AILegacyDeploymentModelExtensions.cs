@@ -42,14 +42,8 @@ public static class AILegacyDeploymentModelExtensions
     public static void SetIsDefault(this AIDeployment deployment, bool isDefault)
         => SetLegacyValue(deployment, "IsDefault", isDefault);
 
-    public static string GetConnectionNameAlias(this AIDeployment deployment)
-        => GetLegacyString(GetProperties(deployment), "ConnectionNameAlias");
-
-    public static void SetConnectionNameAlias(this AIDeployment deployment, string value)
-        => SetLegacyValue(deployment, "ConnectionNameAlias", value);
-
     public static string GetConnectionDisplayName(this AIDeployment deployment)
-        => deployment.GetConnectionNameAlias() ?? deployment.ConnectionName;
+        => deployment.ConnectionName;
 
     private static IDictionary<string, object> GetProperties(ExtensibleEntity entity)
     {

@@ -3,22 +3,25 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+var _excluded = ["placeholder"];
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 window.chatInteractionManager = function () {
   // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
@@ -30,7 +33,7 @@ window.chatInteractionManager = function () {
     downloadChartButtonText: 'Download',
     codeCopiedText: 'Copied!',
     assistantLabel: 'Assistant',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"ai-chat-message-body lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                    <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                                </button>\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <span class=\"fa-solid fa-copy\"></span>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <span class=\"fa-solid fa-xmark\"></span>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"ai-chat-message-body lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                                <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                    <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                    <span v-else>{{ citation.label }}</span>\n                                </li>\n                            </ol>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                    <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                                </button>\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message)\" title=\"Click here to copy response to clipboard.\">\n                                    <span class=\"fa-solid fa-copy\"></span>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <span class=\"fa-solid fa-xmark\"></span>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><span class=\"fa fa-robot\" style=\"display: inline-block;\"></span></span>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
@@ -55,6 +58,164 @@ window.chatInteractionManager = function () {
     var span = document.createElement('span');
     span.textContent = text;
     return span.innerHTML;
+  }
+  function normalizeReference(reference) {
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference;
+    if (!reference || _typeof(reference) !== 'object') {
+      return null;
+    }
+    var normalized = Object.assign({}, reference);
+    normalized.index = (_ref = (_normalized$index = normalized.index) !== null && _normalized$index !== void 0 ? _normalized$index : normalized.Index) !== null && _ref !== void 0 ? _ref : 0;
+    normalized.text = (_ref2 = (_normalized$text = normalized.text) !== null && _normalized$text !== void 0 ? _normalized$text : normalized.Text) !== null && _ref2 !== void 0 ? _ref2 : null;
+    normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
+    normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
+    return normalized;
+  }
+  function isDownloadCitationReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return false;
+    }
+    if (typeof reference.referenceType === 'string' && reference.referenceType.toLowerCase() === 'document') {
+      return true;
+    }
+    if (typeof reference.link === 'string' && /\/ai\/documents\/.+\/download(?:$|\?)/i.test(reference.link)) {
+      return true;
+    }
+    return false;
+  }
+  function normalizeReferences(references) {
+    if (!references || _typeof(references) !== 'object') {
+      return {};
+    }
+    var normalized = {};
+    for (var _i = 0, _Object$entries = Object.entries(references); _i < _Object$entries.length; _i++) {
+      var _normalizeReference;
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        key = _Object$entries$_i[0],
+        value = _Object$entries$_i[1];
+      normalized[key] = (_normalizeReference = normalizeReference(value)) !== null && _normalizeReference !== void 0 ? _normalizeReference : {};
+    }
+    return normalized;
+  }
+  function getCitationLabel(reference, key) {
+    return reference.title || reference.text || key;
+  }
+  function buildCitationDisplay(content, references) {
+    var processedContent = (content || '').trim();
+    var messageReferences = normalizeReferences(references);
+    if (!processedContent || !Object.keys(messageReferences).length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    var citedRefs = Object.entries(messageReferences).filter(function (_ref6) {
+      var _ref7 = _slicedToArray(_ref6, 1),
+        key = _ref7[0];
+      return processedContent.includes(key);
+    });
+    if (!citedRefs.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    citedRefs.sort(function (_ref8, _ref9) {
+      var _ref0 = _slicedToArray(_ref8, 2),
+        a = _ref0[1];
+      var _ref1 = _slicedToArray(_ref9, 2),
+        b = _ref1[1];
+      return a.index - b.index;
+    });
+    var citations = [];
+    var displayIndex = 1;
+    var _iterator = _createForOfIteratorHelper(citedRefs),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        processedContent = processedContent.replaceAll(key, placeholder);
+        citations.push({
+          referenceKey: key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(value, key),
+          link: value.link || null,
+          isDownload: isDownloadCitationReference(value),
+          placeholder: placeholder
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
+      var citation = _citations[_i2];
+      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    }
+    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+    return {
+      content: processedContent,
+      citations: citations.map(function (_ref10) {
+        var placeholder = _ref10.placeholder,
+          citation = _objectWithoutProperties(_ref10, _excluded);
+        return citation;
+      })
+    };
+  }
+  function buildCopyContent(content, citations) {
+    var copyContent = (content || '').trim();
+    if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
+      return copyContent;
+    }
+    var _iterator2 = _createForOfIteratorHelper(citations),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var citation = _step2.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator3 = _createForOfIteratorHelper(citations),
+      _step3;
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var _citation = _step3.value;
+        copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
+        if (_citation.link) {
+          copyContent += " - ".concat(_citation.link);
+        }
+        copyContent += '\n';
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    return copyContent.trimEnd();
+  }
+  function updateMessagePresentation(message, references) {
+    var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
+    var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
+    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    message.rawContent = rawContent;
+    message.content = rawContent;
+    message.displayContent = citationDisplay.content;
+    message.references = messageReferences;
+    message.citationReferences = citationDisplay.citations;
+    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
+    return message;
   }
   var renderer = new marked.Renderer();
 
@@ -219,11 +380,11 @@ window.chatInteractionManager = function () {
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator = _createForOfIteratorHelper(charts),
-        _step;
+      var _iterator4 = _createForOfIteratorHelper(charts),
+        _step4;
       try {
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-          var c = _step.value;
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var c = _step4.value;
           var canvas = document.getElementById(c.chartId);
           if (!canvas) {
             continue;
@@ -256,9 +417,9 @@ window.chatInteractionManager = function () {
           }
         }
       } catch (err) {
-        _iterator.e(err);
+        _iterator4.e(err);
       } finally {
-        _iterator.f();
+        _iterator4.f();
       }
     });
   }
@@ -467,7 +628,7 @@ window.chatInteractionManager = function () {
                       _this.scrollToBottom();
                     }
                   });
-                  _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, appearance) {
+                  _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, references, appearance) {
                     if (!_this._conversationAssistantMessage) {
                       _this.stopAudio();
                       _this.hideTypingIndicator();
@@ -485,7 +646,8 @@ window.chatInteractionManager = function () {
                         content: "",
                         htmlContent: "",
                         isStreaming: true,
-                        appearance: _this.normalizeAssistantAppearance(appearance)
+                        appearance: _this.normalizeAssistantAppearance(appearance),
+                        references: {}
                       };
                       _this.messages.push(newMessage);
                       _this._conversationAssistantMessage = {
@@ -499,19 +661,22 @@ window.chatInteractionManager = function () {
                       if (!msg.appearance) {
                         msg.appearance = _this.normalizeAssistantAppearance(appearance);
                       }
-                      msg.content = _this._conversationAssistantMessage.content;
-                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      msg.rawContent = _this._conversationAssistantMessage.content;
+                      msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                      updateMessagePresentation(msg, msg.references);
                       _this.$nextTick(function () {
                         renderChartsInMessage(msg);
                         _this.scrollToBottom();
                       });
                     }
                   });
-                  _this.connection.on("ReceiveConversationAssistantComplete", function (itemId, messageId) {
+                  _this.connection.on("ReceiveConversationAssistantComplete", function (itemId, messageId, references) {
                     if (_this._conversationAssistantMessage) {
                       var msg = _this.messages[_this._conversationAssistantMessage.index];
                       if (msg) {
                         msg.isStreaming = false;
+                        msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                        updateMessagePresentation(msg, msg.references);
                       }
                       _this._conversationAssistantMessage = null;
                     }
@@ -605,79 +770,9 @@ window.chatInteractionManager = function () {
         addMessage: function addMessage(message) {
           var _this3 = this;
           if (message.content) {
-            var processedContent = message.content.trim();
-            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              // Only include references that were actually cited in the response.
-              var citedRefs = Object.entries(message.references).filter(function (_ref) {
-                var _ref2 = _slicedToArray(_ref, 1),
-                  key = _ref2[0];
-                return processedContent.includes(key);
-              });
-              if (citedRefs.length) {
-                // Sort by original index so display indices follow a natural order.
-                citedRefs.sort(function (_ref3, _ref4) {
-                  var _ref5 = _slicedToArray(_ref3, 2),
-                    a = _ref5[1];
-                  var _ref6 = _slicedToArray(_ref4, 2),
-                    b = _ref6[1];
-                  return a.index - b.index;
-                });
-
-                // Phase 1: Replace all markers with unique placeholders.
-                var displayIndex = 1;
-                var _iterator2 = _createForOfIteratorHelper(citedRefs),
-                  _step2;
-                try {
-                  for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                    var _step2$value = _slicedToArray(_step2.value, 2),
-                      key = _step2$value[0],
-                      value = _step2$value[1];
-                    var placeholder = "__CITE_".concat(value.index, "__");
-                    processedContent = processedContent.replaceAll(key, placeholder);
-                    value._displayIndex = displayIndex++;
-                    value._placeholder = placeholder;
-                  }
-
-                  // Phase 2: Replace placeholders with sequential display indices.
-                } catch (err) {
-                  _iterator2.e(err);
-                } finally {
-                  _iterator2.f();
-                }
-                var _iterator3 = _createForOfIteratorHelper(citedRefs),
-                  _step3;
-                try {
-                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-                    var _step3$value = _slicedToArray(_step3.value, 2),
-                      _value = _step3$value[1];
-                    processedContent = processedContent.replaceAll(_value._placeholder, "<sup><strong>".concat(_value._displayIndex, "</strong></sup>"));
-                  }
-                } catch (err) {
-                  _iterator3.e(err);
-                } finally {
-                  _iterator3.f();
-                }
-                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                processedContent += '<br><br>';
-                var _iterator4 = _createForOfIteratorHelper(citedRefs),
-                  _step4;
-                try {
-                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-                    var _step4$value = _slicedToArray(_step4.value, 2),
-                      _key = _step4$value[0],
-                      _value2 = _step4$value[1];
-                    var label = _value2.text || "[doc:".concat(_value2.index, "]");
-                    processedContent += _value2.link ? "**".concat(_value2._displayIndex, "**. [").concat(label, "](").concat(_value2.link, ")<br>") : "**".concat(_value2._displayIndex, "**. ").concat(label, "<br>");
-                  }
-                } catch (err) {
-                  _iterator4.e(err);
-                } finally {
-                  _iterator4.f();
-                }
-              }
-            }
-            message.content = processedContent;
-            message.htmlContent = parseMarkdownContent(processedContent, message);
+            var _message$rawContent;
+            message.rawContent = (_message$rawContent = message.rawContent) !== null && _message$rawContent !== void 0 ? _message$rawContent : message.content;
+            updateMessagePresentation(message, message.references);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
@@ -828,11 +923,12 @@ window.chatInteractionManager = function () {
                 message = newMessage;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i = 0, _Object$entries = Object.entries(chunk.references); _i < _Object$entries.length; _i++) {
-                  var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
-                    key = _Object$entries$_i[0],
-                    value = _Object$entries$_i[1];
-                  references[key] = value;
+                for (var _i3 = 0, _Object$entries2 = Object.entries(chunk.references); _i3 < _Object$entries2.length; _i3++) {
+                  var _normalizeReference2;
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
+                    key = _Object$entries2$_i[0],
+                    value = _Object$entries2$_i[1];
+                  references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
                 }
               }
               if (chunk.content) {
@@ -844,17 +940,10 @@ window.chatInteractionManager = function () {
                 if (chunk.responseId) {
                   lastResponseId = chunk.responseId;
                 }
-                var processedContent = chunk.content;
-                for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
-                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                    _key2 = _Object$entries2$_i[0],
-                    _value3 = _Object$entries2$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
-                }
-                content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                content += chunk.content;
               }
-              message.content = content;
-              message.htmlContent = parseMarkdownContent(content, message);
+              message.rawContent = content;
+              updateMessagePresentation(message, references);
               _this5.messages[messageIndex] = message;
               _this5.$nextTick(function () {
                 renderChartsInMessage(message);
@@ -908,86 +997,12 @@ window.chatInteractionManager = function () {
         },
         processReferences: function processReferences(references, messageIndex) {
           var _this6 = this;
+          references = normalizeReferences(references);
           if (Object.keys(references).length) {
+            var _ref11, _message$rawContent2;
             var message = this.messages[messageIndex];
-            var content = message.content || '';
-
-            // Only include references that were actually cited in the response.
-            // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
-            var citedRefs = Object.entries(references).filter(function (_ref7) {
-              var _ref8 = _slicedToArray(_ref7, 2),
-                key = _ref8[0],
-                value = _ref8[1];
-              return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
-            });
-            if (!citedRefs.length) {
-              return;
-            }
-
-            // Sort by original index so display indices follow a natural order.
-            citedRefs.sort(function (_ref9, _ref0) {
-              var _ref1 = _slicedToArray(_ref9, 2),
-                a = _ref1[1];
-              var _ref10 = _slicedToArray(_ref0, 2),
-                b = _ref10[1];
-              return a.index - b.index;
-            });
-
-            // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
-            var processed = content.trim();
-            var displayIndex = 1;
-            var _iterator5 = _createForOfIteratorHelper(citedRefs),
-              _step5;
-            try {
-              for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                var _step5$value = _slicedToArray(_step5.value, 2),
-                  key = _step5$value[0],
-                  value = _step5$value[1];
-                var placeholder = "__CITE_".concat(value.index, "__");
-                processed = processed.replaceAll(key, placeholder);
-                processed = processed.replaceAll("<sup><strong>".concat(value.index, "</strong></sup>"), placeholder);
-                value._displayIndex = displayIndex++;
-                value._placeholder = placeholder;
-              }
-
-              // Phase 2: Replace placeholders with sequential display indices.
-            } catch (err) {
-              _iterator5.e(err);
-            } finally {
-              _iterator5.f();
-            }
-            var _iterator6 = _createForOfIteratorHelper(citedRefs),
-              _step6;
-            try {
-              for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-                var _step6$value = _slicedToArray(_step6.value, 2),
-                  _value4 = _step6$value[1];
-                processed = processed.replaceAll(_value4._placeholder, "<sup><strong>".concat(_value4._displayIndex, "</strong></sup>"));
-              }
-            } catch (err) {
-              _iterator6.e(err);
-            } finally {
-              _iterator6.f();
-            }
-            processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-            processed += '<br><br>';
-            var _iterator7 = _createForOfIteratorHelper(citedRefs),
-              _step7;
-            try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _step7$value = _slicedToArray(_step7.value, 2),
-                  _key3 = _step7$value[0],
-                  _value5 = _step7$value[1];
-                var label = _value5.text || "[doc:".concat(_value5.index, "]");
-                processed += _value5.link ? "**".concat(_value5._displayIndex, "**. [").concat(label, "](").concat(_value5.link, ")<br>") : "**".concat(_value5._displayIndex, "**. ").concat(label, "<br>");
-              }
-            } catch (err) {
-              _iterator7.e(err);
-            } finally {
-              _iterator7.f();
-            }
-            message.content = processed;
-            message.htmlContent = parseMarkdownContent(processed, message);
+            message.rawContent = (_ref11 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref11 !== void 0 ? _ref11 : '';
+            updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
             this.$nextTick(function () {
               renderChartsInMessage(message);
@@ -1113,18 +1128,18 @@ window.chatInteractionManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator5 = _createForOfIteratorHelper(this.audioChunks),
+            _step5;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+              var chunk = _step5.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator5.e(err);
           } finally {
-            _iterator8.f();
+            _iterator5.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
@@ -1562,7 +1577,7 @@ window.chatInteractionManager = function () {
           return document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
         },
         getSelectedGroupValues: function getSelectedGroupValues(groupName, fallbackSelector) {
-          var explicitSelections = document.querySelectorAll(".capability-checkbox[data-save-group=\"".concat(groupName, "\"]:checked"));
+          var explicitSelections = document.querySelectorAll(".capability-checkbox[data-save-group=\"".concat(groupName, "\"]:checked, .capability-checkbox[data-group=\"").concat(groupName, "\"]:checked"));
           if (explicitSelections.length > 0) {
             var _values = [];
             explicitSelections.forEach(function (checkbox) {
@@ -1758,8 +1773,8 @@ window.chatInteractionManager = function () {
               _this17.loadInteraction(itemId);
             });
           }
-          for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
-            this.addMessage(config.messages[_i3]);
+          for (var _i4 = 0; _i4 < config.messages.length; _i4++) {
+            this.addMessage(config.messages[_i4]);
           }
 
           // Delegate click for code block copy buttons.
@@ -1791,7 +1806,7 @@ window.chatInteractionManager = function () {
             }
           });
           document.addEventListener('change', function (event) {
-            if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .group-toggle, .ci-agent-global-toggle')) {
+            if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .capability-checkbox[data-group], .group-toggle, .ci-agent-global-toggle')) {
               if (event.target.matches('.setting-input[data-setting]')) {
                 _this17.validateSettingInput(event.target);
               }
@@ -1856,26 +1871,35 @@ window.chatInteractionManager = function () {
         },
         clearHistory: function clearHistory(itemId) {
           var self = this;
-          confirmDialog({
-            title: config.clearHistoryTitle,
-            message: config.clearHistoryMessage,
-            okText: config.clearHistoryOkText,
-            cancelText: config.clearHistoryCancelText,
-            callback: function callback(confirmed) {
-              if (confirmed) {
-                // Cancel any active stream before clearing history.
-                if (self.stream) {
-                  self.stream.dispose();
-                  self.stream = null;
-                  self.hideTypingIndicator();
-                  self.streamingFinished();
-                }
-                self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
-                  return console.error('Error clearing history:', err);
-                });
-              }
+          var clearHistoryConfirmed = function clearHistoryConfirmed() {
+            // Cancel any active stream before clearing history.
+            if (self.stream) {
+              self.stream.dispose();
+              self.stream = null;
+              self.hideTypingIndicator();
+              self.streamingFinished();
             }
-          });
+            self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
+              return console.error('Error clearing history:', err);
+            });
+          };
+          if (typeof confirmDialog === 'function') {
+            confirmDialog({
+              title: config.clearHistoryTitle,
+              message: config.clearHistoryMessage,
+              okText: config.clearHistoryOkText,
+              cancelText: config.clearHistoryCancelText,
+              callback: function callback(confirmed) {
+                if (confirmed) {
+                  clearHistoryConfirmed();
+                }
+              }
+            });
+            return;
+          }
+          if (window.confirm(config.clearHistoryMessage || 'Clear all messages?')) {
+            clearHistoryConfirmed();
+          }
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
           var _this18 = this;
@@ -1981,7 +2005,9 @@ window.chatInteractionManager = function () {
           this.isInteractionStarted = true;
         },
         copyResponse: function copyResponse(message) {
-          navigator.clipboard.writeText(message);
+          var _ref13, _message$copyContent;
+          var text = message && _typeof(message) === 'object' ? (_ref13 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref13 !== void 0 ? _ref13 : '' : message !== null && message !== void 0 ? message : '';
+          navigator.clipboard.writeText(text);
         },
         startRecording: function startRecording() {
           var _this20 = this;
@@ -2128,6 +2154,535 @@ window.chatInteractionManager = function () {
     }).mount(config.appElementSelector);
     return app;
   };
+  return {
+    initialize: initialize
+  };
+}();
+window.chatInteractionDocumentManager = function () {
+  var managerStateKey = '__chatInteractionDocumentManagerState';
+  function normalizeDocumentInfo(document) {
+    if (!document || _typeof(document) !== 'object') {
+      return null;
+    }
+    return {
+      documentId: document.documentId || document.DocumentId || '',
+      fileName: document.fileName || document.FileName || '',
+      fileSize: document.fileSize || document.FileSize || 0
+    };
+  }
+  function formatFileSize(bytes) {
+    if (!bytes || bytes < 1024) {
+      return (bytes || 0) + ' B';
+    }
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  function getDocumentKey(fileName, fileSize) {
+    return (fileName || '').trim().toLowerCase() + '::' + (fileSize || 0);
+  }
+  function isDuplicateFile(file, knownKeys) {
+    return knownKeys.has(getDocumentKey(file.name, file.size));
+  }
+  function getDocumentsFromDom(container) {
+    if (!container) {
+      return [];
+    }
+    return Array.from(container.querySelectorAll('[data-chat-document-id]')).map(function (element) {
+      return normalizeDocumentInfo({
+        documentId: element.dataset.chatDocumentId,
+        fileName: element.dataset.chatDocumentName,
+        fileSize: Number(element.dataset.chatDocumentSize || 0)
+      });
+    }).filter(function (document) {
+      return document && document.documentId;
+    });
+  }
+  function initialize(config) {
+    if (!config || !config.itemId) {
+      return;
+    }
+    var fileInput = document.getElementById('chat-doc-upload');
+    var documentsList = document.getElementById('chat-documents-list');
+    var status = document.getElementById('chat-doc-upload-status');
+    var progressContainer = document.getElementById('chat-doc-upload-progress');
+    var progressBar = document.getElementById('chat-doc-upload-progress-bar');
+    var uploadQueue = document.getElementById('chat-doc-upload-queue');
+    if (!fileInput || !documentsList || !status || !progressContainer || !progressBar || !uploadQueue) {
+      return;
+    }
+    var previousState = fileInput[managerStateKey];
+    if (previousState && typeof previousState.dispose === 'function') {
+      previousState.dispose();
+    }
+    var interactionDocuments = (Array.isArray(config.existingDocuments) ? config.existingDocuments : []).map(normalizeDocumentInfo).filter(function (document) {
+      return document && document.documentId;
+    });
+    if (interactionDocuments.length === 0) {
+      interactionDocuments = getDocumentsFromDom(documentsList);
+    }
+    var uploadItems = [];
+    var isUploadingDocuments = false;
+    function createTextElement(tagName, className, text) {
+      var element = document.createElement(tagName);
+      if (className) {
+        element.className = className;
+      }
+      element.textContent = text;
+      return element;
+    }
+    function renderDocuments() {
+      documentsList.innerHTML = '';
+      if (interactionDocuments.length === 0) {
+        documentsList.appendChild(createTextElement('div', 'text-muted small', 'No documents uploaded yet.'));
+        return;
+      }
+      interactionDocuments.forEach(function (documentInfo) {
+        var row = window.document.createElement('div');
+        row.className = 'd-flex justify-content-between align-items-start gap-2 border rounded px-2 py-2 bg-white chat-document-row';
+        row.dataset.chatDocumentId = documentInfo.documentId;
+        row.dataset.chatDocumentName = documentInfo.fileName;
+        row.dataset.chatDocumentSize = documentInfo.fileSize;
+        var details = window.document.createElement('div');
+        details.className = 'me-2 min-w-0';
+        var name = createTextElement('div', 'fw-semibold small', documentInfo.fileName || 'Document');
+        var icon = window.document.createElement('i');
+        icon.className = 'bi bi-file-earmark-text me-1';
+        name.prepend(icon);
+        var size = createTextElement('div', 'text-muted small', formatFileSize(documentInfo.fileSize));
+        details.appendChild(name);
+        details.appendChild(size);
+        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', ' Remove');
+        removeButton.type = 'button';
+        removeButton.dataset.documentId = documentInfo.documentId;
+        var removeIcon = window.document.createElement('i');
+        removeIcon.className = 'bi bi-trash';
+        removeButton.prepend(removeIcon);
+        removeButton.addEventListener('click', function () {
+          return removeDocument(documentInfo.documentId);
+        });
+        row.appendChild(details);
+        row.appendChild(removeButton);
+        documentsList.appendChild(row);
+      });
+    }
+    function showUploadStatus(message, cssClass) {
+      if (!message) {
+        status.textContent = '';
+        status.className = 'small mt-2 d-none';
+        return;
+      }
+      status.textContent = message;
+      status.className = 'small mt-2 ' + (cssClass || 'text-muted');
+    }
+    function showUploadProgress(progress, message, cssClass) {
+      if (progress === null || progress === undefined) {
+        progressContainer.className = 'progress mt-2 d-none';
+        progressContainer.setAttribute('aria-valuenow', '0');
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        return;
+      }
+      var roundedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+      progressContainer.className = 'progress mt-2';
+      progressContainer.setAttribute('aria-valuenow', roundedProgress.toString());
+      progressBar.className = 'progress-bar ' + (cssClass || 'progress-bar-striped progress-bar-animated');
+      progressBar.style.width = roundedProgress + '%';
+      progressBar.textContent = message || roundedProgress + '%';
+    }
+    function getUploadStatePresentation(state) {
+      switch (state) {
+        case 'uploaded':
+          return {
+            label: 'Uploaded',
+            badgeClass: 'text-bg-success',
+            progressClass: 'bg-success'
+          };
+        case 'failed':
+          return {
+            label: 'Failed',
+            badgeClass: 'text-bg-danger',
+            progressClass: 'bg-danger'
+          };
+        case 'uploading':
+          return {
+            label: 'Uploading',
+            badgeClass: 'text-bg-warning',
+            progressClass: 'bg-warning progress-bar-striped progress-bar-animated'
+          };
+        default:
+          return {
+            label: 'Queued',
+            badgeClass: 'text-bg-secondary',
+            progressClass: 'bg-secondary progress-bar-striped progress-bar-animated'
+          };
+      }
+    }
+    function formatUploadMessage(item) {
+      if (item.status === 'failed' && item.error) {
+        return item.error;
+      }
+      if (item.status === 'uploaded') {
+        return 'Upload completed successfully.';
+      }
+      if (item.status === 'uploading') {
+        return item.progress + '% uploaded';
+      }
+      return 'Waiting to upload...';
+    }
+    function renderUploadQueue() {
+      uploadQueue.innerHTML = '';
+      uploadItems.forEach(function (item) {
+        var presentation = getUploadStatePresentation(item.status);
+        var card = document.createElement('div');
+        card.className = 'border rounded px-2 py-2 bg-white';
+        var header = document.createElement('div');
+        header.className = 'd-flex justify-content-between align-items-start gap-2';
+        var fileDetails = document.createElement('div');
+        fileDetails.className = 'flex-grow-1 min-w-0';
+        fileDetails.appendChild(createTextElement('div', 'fw-semibold small', item.fileName));
+        fileDetails.appendChild(createTextElement('div', 'text-muted small', formatFileSize(item.fileSize)));
+        var badge = createTextElement('span', 'badge ' + presentation.badgeClass, presentation.label);
+        header.appendChild(fileDetails);
+        header.appendChild(badge);
+        var progress = document.createElement('div');
+        progress.className = 'progress mt-2';
+        progress.setAttribute('role', 'progressbar');
+        progress.setAttribute('aria-valuemin', '0');
+        progress.setAttribute('aria-valuemax', '100');
+        progress.setAttribute('aria-valuenow', item.progress.toString());
+        var progressState = document.createElement('div');
+        progressState.className = 'progress-bar ' + presentation.progressClass;
+        progressState.style.width = item.progress + '%';
+        progressState.textContent = item.progress + '%';
+        progress.appendChild(progressState);
+        var message = createTextElement('div', item.status === 'failed' ? 'small text-danger mt-2' : 'small text-muted mt-2', formatUploadMessage(item));
+        card.appendChild(header);
+        card.appendChild(progress);
+        card.appendChild(message);
+        uploadQueue.appendChild(card);
+      });
+    }
+    function createUploadItem(file, index) {
+      return {
+        id: file.name + '::' + file.size + '::' + file.lastModified + '::' + index + '::' + Date.now(),
+        fileName: file.name,
+        fileSize: file.size,
+        status: 'queued',
+        progress: 0,
+        error: null
+      };
+    }
+    function updateUploadItem(itemId, updates) {
+      uploadItems = uploadItems.map(function (item) {
+        return item.id === itemId ? Object.assign({}, item, updates) : item;
+      });
+      renderUploadQueue();
+    }
+    function removeUploadItems(predicate) {
+      uploadItems = uploadItems.filter(function (item) {
+        return !predicate(item);
+      });
+      renderUploadQueue();
+    }
+    function uploadSingleDocument(file, itemIdToUpdate, fileIndex, totalFiles) {
+      return new Promise(function (resolve, reject) {
+        var formData = new FormData();
+        formData.append('chatInteractionId', config.itemId);
+        formData.append('files', file);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', config.uploadDocumentUrl, true);
+        xhr.upload.addEventListener('progress', function (event) {
+          if (!event.lengthComputable) {
+            return;
+          }
+          var fileProgress = Math.round(event.loaded / event.total * 100);
+          updateUploadItem(itemIdToUpdate, {
+            status: 'uploading',
+            progress: fileProgress
+          });
+          var overallProgress = (fileIndex + event.loaded / event.total) / totalFiles * 100;
+          showUploadProgress(overallProgress, 'Uploading ' + (fileIndex + 1) + ' of ' + totalFiles, 'progress-bar-striped progress-bar-animated');
+        });
+        xhr.addEventListener('load', function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (error) {
+              reject(new Error('Upload failed: invalid server response.'));
+            }
+            return;
+          }
+          reject(new Error((xhr.responseText || 'Upload failed.').trim()));
+        });
+        xhr.addEventListener('error', function () {
+          reject(new Error('Upload failed. Please check your connection and try again.'));
+        });
+        xhr.send(formData);
+      });
+    }
+    function uploadDocuments(_x) {
+      return _uploadDocuments.apply(this, arguments);
+    }
+    function _uploadDocuments() {
+      _uploadDocuments = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(files) {
+        var filesToUpload, duplicateItems, knownDocumentKeys, pendingItems, uploadedCount, failedUploads, i, file, pendingItem, result, uploaded, failed, missingUploadMessage, failedMessage, errorMessage, _t2, _t3;
+        return _regenerator().w(function (_context6) {
+          while (1) switch (_context6.p = _context6.n) {
+            case 0:
+              if (!(!config.uploadDocumentUrl || !files || files.length === 0)) {
+                _context6.n = 1;
+                break;
+              }
+              return _context6.a(2);
+            case 1:
+              if (!isUploadingDocuments) {
+                _context6.n = 2;
+                break;
+              }
+              showUploadStatus('A document upload is already in progress.', 'text-warning');
+              return _context6.a(2);
+            case 2:
+              isUploadingDocuments = true;
+              filesToUpload = [];
+              duplicateItems = [];
+              knownDocumentKeys = new Set(interactionDocuments.map(function (document) {
+                return getDocumentKey(document.fileName, document.fileSize);
+              }));
+              Array.from(files).forEach(function (file) {
+                if (isDuplicateFile(file, knownDocumentKeys)) {
+                  duplicateItems.push(file);
+                  return;
+                }
+                knownDocumentKeys.add(getDocumentKey(file.name, file.size));
+                filesToUpload.push(file);
+              });
+              if (duplicateItems.length > 0) {
+                uploadItems = uploadItems.concat(duplicateItems.map(function (file, index) {
+                  return Object.assign(createUploadItem(file, index), {
+                    status: 'failed',
+                    progress: 100,
+                    error: 'This document is already attached.'
+                  });
+                }));
+                renderUploadQueue();
+              }
+              if (!(filesToUpload.length === 0)) {
+                _context6.n = 3;
+                break;
+              }
+              isUploadingDocuments = false;
+              showUploadStatus(duplicateItems.map(function (file) {
+                return file.name + ': This document is already attached.';
+              }).join(' | '), 'text-warning');
+              showUploadProgress(null);
+              return _context6.a(2);
+            case 3:
+              pendingItems = filesToUpload.map(createUploadItem);
+              uploadItems = uploadItems.concat(pendingItems);
+              renderUploadQueue();
+              showUploadProgress(0, 'Preparing upload...', 'progress-bar-striped progress-bar-animated');
+              fileInput.disabled = true;
+              _context6.p = 4;
+              uploadedCount = 0;
+              failedUploads = duplicateItems.map(function (file) {
+                return file.name + ': This document is already attached.';
+              });
+              i = 0;
+            case 5:
+              if (!(i < filesToUpload.length)) {
+                _context6.n = 10;
+                break;
+              }
+              file = filesToUpload[i];
+              pendingItem = pendingItems[i];
+              updateUploadItem(pendingItem.id, {
+                status: 'uploading',
+                progress: 0,
+                error: null
+              });
+              showUploadStatus('Uploading ' + (i + 1) + ' of ' + filesToUpload.length + ' document(s)...', 'text-warning');
+              _context6.p = 6;
+              _context6.n = 7;
+              return uploadSingleDocument(file, pendingItem.id, i, filesToUpload.length);
+            case 7:
+              result = _context6.v;
+              uploaded = (Array.isArray(result.uploaded) ? result.uploaded : []).map(normalizeDocumentInfo).filter(function (document) {
+                return document && document.documentId;
+              });
+              failed = Array.isArray(result.failed) ? result.failed : [];
+              if (uploaded.length > 0) {
+                uploadedCount += uploaded.length;
+                interactionDocuments = interactionDocuments.concat(uploaded);
+                updateUploadItem(pendingItem.id, {
+                  status: 'uploaded',
+                  progress: 100,
+                  error: null
+                });
+              } else {
+                missingUploadMessage = failed.length > 0 ? failed.map(function (entry) {
+                  return entry.fileName + ': ' + entry.error;
+                }).join(' | ') : 'The server did not confirm that the file was uploaded.';
+                if (failed.length === 0) {
+                  failedUploads.push(missingUploadMessage);
+                }
+                updateUploadItem(pendingItem.id, {
+                  status: 'failed',
+                  progress: 100,
+                  error: missingUploadMessage
+                });
+              }
+              if (failed.length > 0) {
+                failedMessage = failed.map(function (entry) {
+                  return entry.fileName + ': ' + entry.error;
+                }).join(' | ');
+                failedUploads.push(failedMessage);
+                updateUploadItem(pendingItem.id, {
+                  status: 'failed',
+                  progress: 100,
+                  error: failedMessage
+                });
+              }
+              _context6.n = 9;
+              break;
+            case 8:
+              _context6.p = 8;
+              _t2 = _context6.v;
+              errorMessage = _t2 && _t2.message ? _t2.message : 'Upload failed. Please try again.';
+              console.error('Upload failed:', _t2);
+              failedUploads.push(file.name + ': ' + errorMessage);
+              updateUploadItem(pendingItem.id, {
+                status: 'failed',
+                progress: pendingItem.progress || 0,
+                error: errorMessage
+              });
+            case 9:
+              i++;
+              _context6.n = 5;
+              break;
+            case 10:
+              renderDocuments();
+              if (!(failedUploads.length > 0)) {
+                _context6.n = 11;
+                break;
+              }
+              removeUploadItems(function (item) {
+                return item.status === 'uploaded';
+              });
+              showUploadStatus((uploadedCount > 0 ? 'Uploaded ' + uploadedCount + ' document(s). ' : '') + failedUploads.join(' | '), uploadedCount > 0 ? 'text-warning' : 'text-danger');
+              showUploadProgress(null);
+              return _context6.a(2);
+            case 11:
+              removeUploadItems(function () {
+                return true;
+              });
+              showUploadStatus('Uploaded ' + uploadedCount + ' document(s).', 'text-success');
+              showUploadProgress(null);
+              _context6.n = 13;
+              break;
+            case 12:
+              _context6.p = 12;
+              _t3 = _context6.v;
+              console.error('Upload failed:', _t3);
+              showUploadStatus('Upload failed. Please try again.', 'text-danger');
+              showUploadProgress(null);
+            case 13:
+              _context6.p = 13;
+              isUploadingDocuments = false;
+              fileInput.disabled = false;
+              fileInput.value = '';
+              return _context6.f(13);
+            case 14:
+              return _context6.a(2);
+          }
+        }, _callee6, null, [[6, 8], [4, 12, 13, 14]]);
+      }));
+      return _uploadDocuments.apply(this, arguments);
+    }
+    function removeDocument(_x2) {
+      return _removeDocument.apply(this, arguments);
+    }
+    function _removeDocument() {
+      _removeDocument = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(documentId) {
+        var response, result, serverDocuments, _t4, _t5;
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.p = _context7.n) {
+            case 0:
+              if (!(!config.removeDocumentUrl || !documentId || !window.confirm('Remove this document?'))) {
+                _context7.n = 1;
+                break;
+              }
+              return _context7.a(2);
+            case 1:
+              _context7.p = 1;
+              _context7.n = 2;
+              return fetch(config.removeDocumentUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  itemId: config.itemId,
+                  documentId: documentId
+                })
+              });
+            case 2:
+              response = _context7.v;
+              if (response.ok) {
+                _context7.n = 4;
+                break;
+              }
+              _t4 = console;
+              _context7.n = 3;
+              return response.text();
+            case 3:
+              _t4.error.call(_t4, 'Failed to remove document:', _context7.v);
+              showUploadStatus('Failed to remove document.', 'text-danger');
+              return _context7.a(2);
+            case 4:
+              _context7.n = 5;
+              return response.json();
+            case 5:
+              result = _context7.v;
+              serverDocuments = (Array.isArray(result.documents) ? result.documents : []).map(normalizeDocumentInfo).filter(function (document) {
+                return document && document.documentId;
+              });
+              interactionDocuments = serverDocuments.length > 0 ? serverDocuments : interactionDocuments.filter(function (document) {
+                return document.documentId !== documentId;
+              });
+              renderDocuments();
+              showUploadStatus('Document removed.', 'text-success');
+              _context7.n = 7;
+              break;
+            case 6:
+              _context7.p = 6;
+              _t5 = _context7.v;
+              console.error('Remove failed:', _t5);
+              showUploadStatus('Failed to remove document.', 'text-danger');
+            case 7:
+              return _context7.a(2);
+          }
+        }, _callee7, null, [[1, 6]]);
+      }));
+      return _removeDocument.apply(this, arguments);
+    }
+    var onFileInputChange = function onFileInputChange(event) {
+      var selectedFiles = event.target.files ? Array.from(event.target.files) : [];
+      uploadDocuments(selectedFiles);
+    };
+    fileInput.addEventListener('change', onFileInputChange);
+    fileInput[managerStateKey] = {
+      dispose: function dispose() {
+        fileInput.removeEventListener('change', onFileInputChange);
+      }
+    };
+    renderDocuments();
+    renderUploadQueue();
+    showUploadStatus(null);
+    showUploadProgress(null);
+  }
   return {
     initialize: initialize
   };

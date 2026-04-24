@@ -118,14 +118,6 @@ public static class ServiceCollectionExtensions
             o.ProviderSections.Add("CrestApps_AI:Providers");
         });
 
-        ReplaceService<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>(
-            services,
-            ServiceLifetime.Transient,
-            static sp => new ConfigurationAIProviderConnectionsOptionsConfiguration(
-                sp.GetRequiredService<IShellConfiguration>(),
-                sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
-                sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionsOptionsConfiguration>>()));
-
         ReplaceService<INamedSourceCatalogSource<AIDeployment>, ConfigurationAIDeploymentSource>(
             services,
             ServiceLifetime.Scoped,

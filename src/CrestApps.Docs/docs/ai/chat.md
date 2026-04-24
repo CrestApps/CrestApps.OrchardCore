@@ -142,6 +142,12 @@ The admin and frontend chat widgets restore their saved toggle and panel positio
 
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 
+### Citations and references
+
+When a chat response includes document markers such as `[doc:1]`, the AI Chat UIs convert them into superscript citations and render a linked reference list below the assistant message when a resolver can provide a URL for the reference.
+
+This linked citation rendering now applies consistently across the admin chat UI, the admin widget, and the frontend widget.
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
@@ -171,6 +177,8 @@ The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core adm
 
 When session documents are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved, each attachment keeps a visible remove button, and the supported-formats note stays compact instead of dominating the widget.
 
+Referenced responses use the same citation rendering as the main admin chat UI, so `[doc:N]` markers are shown as superscript links with a matching reference list instead of raw marker text.
+
 #### Enabling the Admin Widget
 
 1. Go to **Tools** > **Features** in the admin menu.
@@ -196,6 +204,10 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. This allows site visitors to interact with AI chat directly on the frontend.
 
 When the widget's profile allows session documents, file attachments are rendered above the input row instead of beside it, matching the admin widget layout, keeping the remove button visible for each attached file, and reducing the visual weight of the supported-formats note.
+
+When the response contains references, the widget also renders `[doc:N]` markers as superscript citations with linked references beneath the assistant message.
+
+The frontend widget also normalizes theme paragraph spacing inside rendered chat messages so theme-level `p` margins and padding do not add extra blank space above or below each response.
 
 #### Adding the Frontend Widget
 

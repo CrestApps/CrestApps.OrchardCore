@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "1.0.0-preview.12"
+    "@crestapps/ai-chat-ui": "1.0.0-preview.20"
   },
   "devDependencies": {
     "eslint": "^9.39.2"
