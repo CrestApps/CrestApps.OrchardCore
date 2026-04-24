@@ -67,8 +67,8 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
         {
             settings.ChatMode = model.ChatMode;
             settings.VoiceName = model.ChatMode == ChatMode.Conversation
-            ? model.VoiceName?.Trim()
-            : null;
+                ? model.VoiceName?.Trim()
+                : null;
             settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 

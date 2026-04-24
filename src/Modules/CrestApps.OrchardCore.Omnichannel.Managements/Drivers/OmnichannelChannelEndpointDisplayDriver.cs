@@ -15,7 +15,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
     private readonly IPhoneFormatValidator _phoneFormatValidator;
     private readonly IEmailAddressValidator _emailAddressValidator;
 
-    private readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
     public OmnichannelChannelEndpointDisplayDriver(
         IPhoneFormatValidator phoneFormatValidator,
