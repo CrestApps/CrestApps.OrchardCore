@@ -55,7 +55,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.js")
             .SetCdn(
                 "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js")
+                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.js")
             .SetCdnIntegrity(
                 "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==",
                 "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==")

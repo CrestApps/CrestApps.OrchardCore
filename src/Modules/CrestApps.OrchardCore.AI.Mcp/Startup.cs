@@ -64,7 +64,7 @@ public sealed class StdIoStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public StdIoStartup(IStringLocalizer<Startup> stringLocalizer)
+    public StdIoStartup(IStringLocalizer<StdIoStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }

@@ -56,7 +56,7 @@ public sealed class LiquidStartup : StartupBase
 }
 
 [RequireFeatures("OrchardCore.DynamicCache")]
-public sealed class CashingStartup : StartupBase
+public sealed class CachingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

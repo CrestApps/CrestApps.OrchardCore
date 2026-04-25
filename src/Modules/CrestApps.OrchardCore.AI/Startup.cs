@@ -98,10 +98,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<CatalogItemMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
-
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();

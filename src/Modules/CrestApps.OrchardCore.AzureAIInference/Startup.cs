@@ -50,7 +50,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public ConnectionManagementStartup(IStringLocalizer<Startup> stringLocalizer)
+    public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }

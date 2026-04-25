@@ -240,7 +240,7 @@ public sealed class AdminController : Controller
     }
 
     [Admin("ai/chat/interaction/new-chat", "NewInteractionsChat")]
-    public async Task<ActionResult> New()
+    public ActionResult New()
         => RedirectToAction(nameof(Chat));
 
     [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
