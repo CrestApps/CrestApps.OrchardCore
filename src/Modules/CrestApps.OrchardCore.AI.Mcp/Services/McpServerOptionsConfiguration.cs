@@ -16,6 +16,13 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
 
     public void Configure(McpServerOptions options)
     {
-        _shellConfiguration.GetSection("CrestApps:McpServer").Bind(options);
+        var section = _shellConfiguration.GetSection("CrestApps:McpServer");
+
+        section.Bind(options);
+
+        if (string.IsNullOrWhiteSpace(section[nameof(McpServerOptions.AuthenticationType)]))
+        {
+            options.AuthenticationType = McpServerAuthenticationType.OpenId;
+        }
     }
 }

@@ -7,4 +7,6 @@ public sealed class EventGridSettings
     public string AADIssuer { get; set; }
 
     public string AADAudience { get; set; }
+
+    public string AADMetadataAddress { get; set; }
 }

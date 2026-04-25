@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -10,10 +11,14 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIChatSessionIndexMigrations : DataMigration
 {
     private readonly YesSqlStoreOptions _option;
+    private readonly ILogger<AIChatSessionIndexMigrations> _logger;
 
-    public AIChatSessionIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    public AIChatSessionIndexMigrations(
+        IOptions<YesSqlStoreOptions> option,
+        ILogger<AIChatSessionIndexMigrations> logger)
     {
         _option = option.Value;
+        _logger = logger;
     }
 
     public async Task<int> CreateAsync()
@@ -42,8 +47,10 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
                 table.AddColumn<ChatSessionStatus>("Status");
             }, collection: _option.AICollectionName);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to add the Status column to the AI chat session index table.");
+            throw;
         }
 
         return 4;

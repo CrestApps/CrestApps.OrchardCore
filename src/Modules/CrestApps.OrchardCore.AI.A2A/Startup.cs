@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
@@ -56,6 +57,13 @@ public sealed class A2AHostStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<A2AHostOptions>(_shellConfiguration.GetSection("CrestApps:A2AHost"));
+        services.PostConfigure<A2AHostOptions>(options =>
+        {
+            if (string.IsNullOrWhiteSpace(_shellConfiguration["CrestApps:A2AHost:AuthenticationType"]))
+            {
+                options.AuthenticationType = A2AHostAuthenticationType.OpenId;
+            }
+        });
 
         services.AddPermissionProvider<A2AHostPermissionsProvider>();
 

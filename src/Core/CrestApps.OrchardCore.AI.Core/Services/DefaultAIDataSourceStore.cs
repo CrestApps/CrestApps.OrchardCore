@@ -18,7 +18,7 @@ public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>, IAIDataSou
     {
         if (!string.IsNullOrEmpty(context.Name))
         {
-            records = records.Where(x => context.Name.Contains(x.DisplayText, StringComparison.OrdinalIgnoreCase));
+            records = records.Where(x => x.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
         }
 
         if (context.Sorted)

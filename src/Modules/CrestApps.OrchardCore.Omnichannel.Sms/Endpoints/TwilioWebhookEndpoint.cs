@@ -57,10 +57,11 @@ internal static class TwilioWebhookEndpoint
         var requestUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
 
         Dictionary<string, string> parameters = null;
+        IFormCollection form = null;
 
         if (request.HasFormContentType)
         {
-            var form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
+            form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
 
             parameters = form.ToDictionary(p => p.Key, p => p.Value.ToString());
         }
@@ -75,12 +76,12 @@ internal static class TwilioWebhookEndpoint
             return TypedResults.Forbid();
         }
 
-        var data = await context.Request.ReadFormAsync();
+        form ??= await context.Request.ReadFormAsync(context.RequestAborted);
 
-        var from = data["From"].ToString();
-        var to = data["To"].ToString();
-        var body = data["Body"].ToString();
-        var messageSid = data["MessageSid"].ToString();
+        var from = form["From"].ToString();
+        var to = form["To"].ToString();
+        var body = form["Body"].ToString();
+        var messageSid = form["MessageSid"].ToString();
         var channel = "SMS";
 
         if (logger.IsEnabled(LogLevel.Information))
