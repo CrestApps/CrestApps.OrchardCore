@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using QueryContext = CrestApps.Core.Models.QueryContext;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -30,6 +29,7 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 

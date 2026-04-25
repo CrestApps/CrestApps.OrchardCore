@@ -2,13 +2,13 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
-using McpClientAuthenticationType = CrestApps.Core.AI.Models.ClientAuthenticationType;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
+using McpClientAuthenticationType = CrestApps.Core.AI.Models.ClientAuthenticationType;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 

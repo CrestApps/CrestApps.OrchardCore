@@ -41,9 +41,9 @@ internal static class GetConnectionsEndpoint
         return TypedResults.Ok(connections
             .OrderBy(connection => connection.GetDisplayName(), StringComparer.OrdinalIgnoreCase)
             .Select(connection => new
-        {
-            Id = connection.ItemId,
-            Name = connection.GetDisplayName(),
-        }));
+            {
+                Id = connection.ItemId,
+                Name = connection.GetDisplayName(),
+            }));
     }
 }

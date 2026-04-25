@@ -2,7 +2,6 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.Core.Models;
-using QueryContext = CrestApps.Core.Models.QueryContext;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -16,6 +15,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Controllers;
 

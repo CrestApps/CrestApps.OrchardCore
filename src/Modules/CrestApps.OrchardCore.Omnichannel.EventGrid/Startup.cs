@@ -1,7 +1,7 @@
+using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 
