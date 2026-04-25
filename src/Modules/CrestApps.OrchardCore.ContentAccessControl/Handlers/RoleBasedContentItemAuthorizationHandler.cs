@@ -107,5 +107,10 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
                 return;
             }
         }
+
+        if (roleNames.Count > 0)
+        {
+            context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
+        }
     }
 }

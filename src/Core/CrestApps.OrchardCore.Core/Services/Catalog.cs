@@ -99,6 +99,10 @@ public class Catalog<T> : ICatalog<T>
         {
             record.ItemId = UniqueId.GenerateId();
         }
+        else if (document.Records.ContainsKey(record.ItemId))
+        {
+            throw new InvalidOperationException($"A record with the ItemId '{record.ItemId}' already exists. Use {nameof(UpdateAsync)} to modify existing records.");
+        }
 
         Saving(record, document);
 
@@ -113,9 +117,9 @@ public class Catalog<T> : ICatalog<T>
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.ItemId))
+        if (string.IsNullOrEmpty(record.ItemId) || !document.Records.ContainsKey(record.ItemId))
         {
-            record.ItemId = UniqueId.GenerateId();
+            throw new InvalidOperationException($"Cannot update a record that does not exist. Use {nameof(CreateAsync)} to create new records.");
         }
 
         Saving(record, document);

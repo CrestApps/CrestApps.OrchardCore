@@ -39,7 +39,7 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
 
     protected static bool OrdinalIgnoreCaseEquals(string str1, string str2)
     {
-        return str1.Equals(str2, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(str1, str2, StringComparison.OrdinalIgnoreCase);
     }
 
     protected override void Saving(T record, DictionaryDocument<T> document)
