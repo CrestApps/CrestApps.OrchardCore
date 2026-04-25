@@ -58,7 +58,6 @@
             </div>
         }
     </div>
-
     <p class="text-muted mt-2" id="resourceNoResults" style="display:none">No resources match your search.</p>
 }
 else
@@ -66,7 +65,7 @@ else
     <p class="text-muted">No resources were returned by the MCP server.</p>
 }
 
-<script>
+<script">
     document.querySelectorAll('.btn-read-resource').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var container = btn.closest('.resource-form');
