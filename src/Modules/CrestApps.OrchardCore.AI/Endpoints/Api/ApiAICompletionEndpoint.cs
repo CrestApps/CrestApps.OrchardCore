@@ -145,9 +145,12 @@ internal static class ApiAICompletionEndpoint
         {
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
 
-            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName)
+            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName);
 
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+            if (templateDeployment is null)
+            {
+                return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
+            }
 
             var completion = await completionService.CompleteAsync(templateDeployment, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
 
@@ -345,8 +348,12 @@ internal static class ApiAICompletionEndpoint
     {
         var context = await completionContextBuilder.BuildAsync(profile);
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName);
+
+        if (deployment is null)
+        {
+            return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
+        }
 
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, prompt)], context);
 

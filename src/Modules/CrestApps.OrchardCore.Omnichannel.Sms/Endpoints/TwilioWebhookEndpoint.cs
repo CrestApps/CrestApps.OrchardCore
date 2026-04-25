@@ -4,9 +4,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -34,7 +31,6 @@ internal static class TwilioWebhookEndpoint
         IClock clock,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IHostEnvironment hostEnvironment,
         ILogger<Startup> logger)
     {
         var settings = await siteService.GetSettingsAsync<TwilioSettings>();
@@ -69,7 +65,7 @@ internal static class TwilioWebhookEndpoint
         var validator = new TwillioRequestValidator(authToken);
 
         if (!request.Headers.TryGetValue("X-Twilio-Signature", out var signature) ||
-            (hostEnvironment.IsProduction() && !validator.Validate(requestUrl, parameters, signature.First())))
+            !validator.Validate(requestUrl, parameters, signature.First()))
         {
             logger.LogWarning("Unauthorized Twilio request.");
 

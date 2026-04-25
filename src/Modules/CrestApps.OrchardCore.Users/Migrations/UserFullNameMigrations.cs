@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Users.Core.Indexes;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -6,6 +7,13 @@ namespace CrestApps.OrchardCore.Users.Migrations;
 
 internal sealed class UserFullNameMigrations : DataMigration
 {
+    private readonly ILogger _logger;
+
+    public UserFullNameMigrations(ILogger<UserFullNameMigrations> logger)
+    {
+        _logger = logger;
+    }
+
     public async Task<int> CreateAsync()
     {
         // In version 2, we changed the package name where UserFullNameMigrations reside.
@@ -36,7 +44,10 @@ internal sealed class UserFullNameMigrations : DataMigration
             )
             );
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create UserFullNameIndex table. It may already exist from a previous migration.");
+        }
 
         return 1;
     }

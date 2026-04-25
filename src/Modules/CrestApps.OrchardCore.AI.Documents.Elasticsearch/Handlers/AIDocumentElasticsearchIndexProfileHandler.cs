@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Elasticsearch.Core.Models;
 using OrchardCore.Elasticsearch.Models;
@@ -17,8 +18,9 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
 {
     public AIDocumentElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<AIDocumentElasticsearchIndexProfileHandler> logger)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

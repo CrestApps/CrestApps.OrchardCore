@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
@@ -16,8 +17,9 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
 {
     public AIDocumentAzureAISearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<AIDocumentAzureAISearchIndexProfileHandler> logger)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

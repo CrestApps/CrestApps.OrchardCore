@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using Microsoft.Extensions.Logging;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
@@ -16,8 +17,9 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
 {
     public DataSourceAzureAISearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<DataSourceAzureAISearchIndexProfileHandler> logger)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

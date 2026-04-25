@@ -14,7 +14,6 @@ internal static class GetConnectionsEndpoint
     public static IEndpointRouteBuilder AddGetConnectionsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/connections", HandleAsync)
-            .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetConnectionsByProviderRouteName)
             .DisableAntiforgery();
 

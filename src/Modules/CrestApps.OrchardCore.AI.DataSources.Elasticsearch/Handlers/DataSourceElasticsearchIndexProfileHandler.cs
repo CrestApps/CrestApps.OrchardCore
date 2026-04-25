@@ -5,6 +5,7 @@ using CrestApps.Core.Elasticsearch;
 using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Elasticsearch.Core.Models;
 using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
@@ -17,8 +18,9 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
 {
     public DataSourceElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory aiClientFactory)
-    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
+        IAIClientFactory aiClientFactory,
+        ILogger<DataSourceElasticsearchIndexProfileHandler> logger)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 
