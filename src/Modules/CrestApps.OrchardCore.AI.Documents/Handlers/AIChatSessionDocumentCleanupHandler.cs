@@ -29,7 +29,9 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
         _chunkStore = chunkStore;
     }
 
-    public override async Task DeletingAsync(DeletingContext<AIChatSession> context)
+    public override async Task DeletingAsync(
+        DeletingContext<AIChatSession> context,
+        CancellationToken cancellationToken = default)
     {
         var session = context.Model;
 
@@ -54,7 +56,7 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
             }
 
             await _chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
-            await _documentStore.DeleteAsync(doc);
+            await _documentStore.DeleteAsync(doc, cancellationToken);
         }
 
         if (chunkIds.Count > 0)

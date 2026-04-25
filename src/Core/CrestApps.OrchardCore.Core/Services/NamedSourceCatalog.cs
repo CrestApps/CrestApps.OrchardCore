@@ -14,7 +14,7 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
     {
     }
 
-    public async ValueTask<T> FindByNameAsync(string name)
+    public async ValueTask<T> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -25,7 +25,7 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
         return Clone(record);
     }
 
-    public async ValueTask<T> GetAsync(string name, string source)
+    public async ValueTask<T> GetAsync(string name, string source, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(source);

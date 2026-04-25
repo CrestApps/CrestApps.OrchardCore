@@ -41,6 +41,33 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
     }
 
     [Fact]
+    public void NormalizeLegacyDeploymentObject_WhenConnectionSelectorUsesItemId_ShouldNormalizeToConnectionName()
+    {
+        // Arrange
+        var deploymentObject = new JsonObject
+        {
+            [nameof(AIDeployment.Name)] = "gpt-4.1-mini",
+            [nameof(AIDeployment.ConnectionName)] = "legacy-connection",
+            [nameof(AIDeployment.Source)] = "Azure",
+        };
+
+        var connections = new[]
+        {
+            CreateConnection(
+                itemId: "legacy-connection",
+                name: "Legacy Connection",
+                clientName: "Azure",
+                legacyChatDeploymentName: "gpt-4.1-mini"),
+        };
+
+        // Act
+        InvokeNormalizeLegacyDeploymentObject(deploymentObject, "fallback-id", connections);
+
+        // Assert
+        Assert.Equal("Legacy Connection", deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>());
+    }
+
+    [Fact]
     public void TryPopulateDefaultDeploymentSettings_WhenUiDefaultExists_ShouldPreferUiDefaultOverLegacyAppSettings()
     {
         // Arrange

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.A2A.ViewModels;
@@ -9,7 +9,7 @@ public class A2AConnectionFieldsViewModel
 
     public string Endpoint { get; set; }
 
-    public A2AClientAuthenticationType AuthenticationType { get; set; }
+    public ClientAuthenticationType AuthenticationType { get; set; }
 
     // API Key.
     public string ApiKeyHeaderName { get; set; }

@@ -190,6 +190,50 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 5;
     }
 
+    public static int UpdateFrom5()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
+            var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+
+            var connectionDoc = await connectionDocManager.GetOrCreateImmutableAsync();
+            var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
+            var connectionsById = connectionDoc.Records.Values
+                .Where(static connection => !string.IsNullOrWhiteSpace(connection.ItemId))
+                .ToDictionary(static connection => connection.ItemId, StringComparer.OrdinalIgnoreCase);
+            var needsSave = false;
+
+            foreach (var deployment in deploymentDoc.Records.Values)
+            {
+                if (string.IsNullOrWhiteSpace(deployment.ConnectionName) ||
+                    !connectionsById.TryGetValue(deployment.ConnectionName, out var connection))
+                {
+                    continue;
+                }
+
+                var normalizedConnectionName = string.IsNullOrWhiteSpace(connection.Name)
+                    ? connection.ItemId
+                    : connection.Name;
+
+                if (string.Equals(deployment.ConnectionName, normalizedConnectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                deployment.ConnectionName = normalizedConnectionName;
+                needsSave = true;
+            }
+
+            if (needsSave)
+            {
+                await deploymentDocManager.UpdateAsync(deploymentDoc);
+            }
+        });
+
+        return 6;
+    }
+
     private static bool TryCreateDeployment(
         DictionaryDocument<AIDeployment> deploymentDoc,
         AIProviderConnection connection,
@@ -203,7 +247,8 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         var exists = deploymentDoc.Records.Values.Any(d =>
         d.ClientName == connection.ClientName &&
-            string.Equals(d.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(d.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)) &&
 
                 string.Equals(d.Name, deploymentName, StringComparison.OrdinalIgnoreCase));
 
@@ -218,7 +263,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             Name = deploymentName,
             ModelName = deploymentName,
             ClientName = connection.ClientName,
-            ConnectionName = connection.ItemId,
+            ConnectionName = string.IsNullOrWhiteSpace(connection.Name)
+                ? connection.ItemId
+                : connection.Name,
             Type = type,
             CreatedUtc = connection.CreatedUtc,
             Author = connection.Author,

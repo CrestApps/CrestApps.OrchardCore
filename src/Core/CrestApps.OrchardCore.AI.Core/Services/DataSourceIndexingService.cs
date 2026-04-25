@@ -131,7 +131,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var allDataSources = await _dataSourceStore.GetAllAsync();
+        var allDataSources = await _dataSourceStore.GetAllAsync(cancellationToken);
 
         foreach (var dataSource in allDataSources)
         {
@@ -167,7 +167,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var allDataSources = await _dataSourceStore.GetAllAsync();
+        var allDataSources = await _dataSourceStore.GetAllAsync(cancellationToken);
 
         foreach (var dataSource in allDataSources)
         {

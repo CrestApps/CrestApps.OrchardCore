@@ -66,7 +66,7 @@ internal sealed class AIDataSourceDocumentIndexNotificationHandler : IDocumentIn
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToArray();
 
-        var hasMapping = (await _dataSourceStore.GetAllAsync())
+        var hasMapping = (await _dataSourceStore.GetAllAsync(cancellationToken))
             .Any(dataSource =>
                 string.Equals(dataSource.SourceIndexProfileName, indexProfile.Name, StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrWhiteSpace(dataSource.AIKnowledgeBaseIndexProfileName));

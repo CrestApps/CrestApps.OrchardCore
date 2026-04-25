@@ -16,10 +16,10 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
         _dataProtectionProvider = dataProtectionProvider;
     }
 
-    public override Task InitializingAsync(InitializingContext<A2AConnection> context)
+    public override Task InitializingAsync(InitializingContext<A2AConnection> context, CancellationToken cancellationToken = default)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<A2AConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<A2AConnection> context, CancellationToken cancellationToken = default)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
 
     private Task ProtectSensitiveFieldsAsync(A2AConnection connection, JsonNode data)

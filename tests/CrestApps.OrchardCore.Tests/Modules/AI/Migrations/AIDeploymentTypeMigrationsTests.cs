@@ -1,6 +1,7 @@
 using System.Reflection;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
@@ -186,6 +187,26 @@ public sealed class AIDeploymentTypeMigrationsTests
     }
 
     [Fact]
+    public void TryCreateDeployment_ShouldPersistConnectionNameInsteadOfItemId()
+    {
+        var deploymentDoc = new DictionaryDocument<AIDeployment>();
+        var connection = CreateConnection(
+            itemId: "default-connection-id",
+            name: "Default Connection",
+            legacyChatDeploymentName: "gpt-4.1-mini");
+
+        var created = InvokeTryCreateDeployment(
+            deploymentDoc,
+            connection,
+            "gpt-4.1-mini",
+            AIDeploymentType.Chat);
+
+        Assert.True(created);
+        var deployment = Assert.Single(deploymentDoc.Records.Values);
+        Assert.Equal("Default Connection", deployment.ConnectionName);
+    }
+
+    [Fact]
     public void TryPopulateDefaultDeploymentSettings_WhenSettingsAlreadyExist_ShouldNotOverwriteThem()
     {
         var settings = new DefaultAIDeploymentSettings
@@ -303,6 +324,26 @@ public sealed class AIDeploymentTypeMigrationsTests
             modifiers: null);
 
         return (bool)method.Invoke(null, [settings, connections, deployments])!;
+    }
+
+    private static bool InvokeTryCreateDeployment(
+        DictionaryDocument<AIDeployment> deploymentDoc,
+        AIProviderConnection connection,
+        string deploymentName,
+        AIDeploymentType type)
+    {
+        var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
+        var migrationType = assembly.GetType(
+            "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
+            throwOnError: true);
+        var method = migrationType.GetMethod(
+            "TryCreateDeployment",
+            BindingFlags.NonPublic | BindingFlags.Static,
+            binder: null,
+            [typeof(DictionaryDocument<AIDeployment>), typeof(AIProviderConnection), typeof(string), typeof(AIDeploymentType)],
+            modifiers: null);
+
+        return (bool)method.Invoke(null, [deploymentDoc, connection, deploymentName, type])!;
     }
 
     private static bool InvokeTryConvertDeploymentSelectorToName(

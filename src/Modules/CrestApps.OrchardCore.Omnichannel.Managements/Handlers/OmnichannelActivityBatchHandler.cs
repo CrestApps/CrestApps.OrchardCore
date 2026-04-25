@@ -27,13 +27,13 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context)
+    public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context)
+    public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context)
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -43,7 +43,7 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context)
+    public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 

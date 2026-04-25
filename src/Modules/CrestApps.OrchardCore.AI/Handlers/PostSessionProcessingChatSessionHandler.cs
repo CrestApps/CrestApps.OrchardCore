@@ -28,7 +28,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
         _logger = logger;
     }
 
-    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context, CancellationToken cancellationToken = default)
     {
         if (!context.Items.TryGetValue(AIChatSessionHandlerContextKeys.PostCloseProcessingResult, out var value)
             || value is not AIChatSessionPostCloseProcessingResult result

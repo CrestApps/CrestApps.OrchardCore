@@ -34,13 +34,13 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProfileTemplate> context)
+    public override Task InitializingAsync(InitializingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProfileTemplate> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override async Task ValidatingAsync(ValidatingContext<AIProfileTemplate> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -48,7 +48,7 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         }
         else
         {
-            var existing = await _templatesCatalog.FindByNameAsync(context.Model.Name);
+            var existing = await _templatesCatalog.FindByNameAsync(context.Model.Name, cancellationToken);
 
             if (existing is not null && existing.ItemId != context.Model.ItemId)
             {
@@ -62,7 +62,7 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         }
     }
 
-    public override Task InitializedAsync(InitializedContext<AIProfileTemplate> context)
+    public override Task InitializedAsync(InitializedContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -77,7 +77,7 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         return Task.CompletedTask;
     }
 
-    public override Task CreatingAsync(CreatingContext<AIProfileTemplate> context)
+    public override Task CreatingAsync(CreatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {

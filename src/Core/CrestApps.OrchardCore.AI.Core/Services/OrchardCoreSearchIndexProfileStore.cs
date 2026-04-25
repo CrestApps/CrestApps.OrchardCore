@@ -17,16 +17,16 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
         _store = store;
     }
 
-    public async ValueTask<SearchIndexProfile> FindByNameAsync(string name)
+    public async ValueTask<SearchIndexProfile> FindByNameAsync(string name, CancellationToken cancellationToken = default)
         => Map(await _store.FindByNameAsync(name));
 
     public async Task<IReadOnlyCollection<SearchIndexProfile>> GetByTypeAsync(string type)
         => (await _store.GetByTypeAsync(type)).Select(Map).ToArray();
 
-    public async ValueTask<SearchIndexProfile> FindByIdAsync(string id)
+    public async ValueTask<SearchIndexProfile> FindByIdAsync(string id, CancellationToken cancellationToken = default)
         => Map(await _store.FindByIdAsync(id));
 
-    public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAsync(IEnumerable<string> ids)
+    public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         var idSet = ids.Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet(StringComparer.Ordinal);
 
@@ -41,13 +41,17 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
             .ToArray();
     }
 
-    public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAllAsync(CancellationToken cancellationToken = default)
         => (await _store.GetAllAsync()).Select(Map).ToArray();
 
-    public async ValueTask<PageResult<SearchIndexProfile>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
+    public async ValueTask<PageResult<SearchIndexProfile>> PageAsync<TQuery>(
+        int page,
+        int pageSize,
+        TQuery context,
+        CancellationToken cancellationToken = default)
         where TQuery : CrestApps.Core.Models.QueryContext
     {
-        var entries = await GetAllAsync();
+        var entries = await GetAllAsync(cancellationToken);
         var skip = (page - 1) * pageSize;
 
         return new PageResult<SearchIndexProfile>
@@ -57,13 +61,13 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
         };
     }
 
-    public async ValueTask CreateAsync(SearchIndexProfile record)
+    public async ValueTask CreateAsync(SearchIndexProfile record, CancellationToken cancellationToken = default)
         => await _store.CreateAsync(Map(record));
 
-    public async ValueTask UpdateAsync(SearchIndexProfile record)
+    public async ValueTask UpdateAsync(SearchIndexProfile record, CancellationToken cancellationToken = default)
         => await _store.UpdateAsync(Map(record));
 
-    public async ValueTask<bool> DeleteAsync(SearchIndexProfile entry)
+    public async ValueTask<bool> DeleteAsync(SearchIndexProfile entry, CancellationToken cancellationToken = default)
         => await _store.DeleteAsync(Map(entry));
 
     private static SearchIndexProfile Map(IndexProfile profile)

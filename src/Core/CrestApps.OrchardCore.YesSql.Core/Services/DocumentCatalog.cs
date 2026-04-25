@@ -29,7 +29,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         CollectionName = collectionName;
     }
 
-    public async ValueTask<bool> DeleteAsync(T entry)
+    public async ValueTask<bool> DeleteAsync(T entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -40,25 +40,29 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         return true;
     }
 
-    public async ValueTask<T> FindByIdAsync(string id)
+    public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
-        var item = await Session.Query<T, TIndex>(x => x.ItemId == id, collection: CollectionName).FirstOrDefaultAsync();
+        var item = await Session.Query<T, TIndex>(x => x.ItemId == id, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
 
         return item;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
 
-        var items = await Session.Query<T, TIndex>(x => x.ItemId.IsIn(ids), collection: CollectionName).ListAsync();
+        var items = await Session.Query<T, TIndex>(x => x.ItemId.IsIn(ids), collection: CollectionName).ListAsync(cancellationToken);
 
         return items.ToArray();
     }
 
-    public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
+    public async ValueTask<PageResult<T>> PageAsync<TQuery>(
+        int page,
+        int pageSize,
+        TQuery context,
+        CancellationToken cancellationToken = default)
         where TQuery : QueryContext
     {
         IQuery<T> query = Session.Query<T, TIndex>(collection: CollectionName);
@@ -105,8 +109,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         return new PageResult<T>
         {
-            Count = await query.CountAsync(),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray()
+            Count = await query.CountAsync(cancellationToken),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray()
         };
     }
 
@@ -116,14 +120,14 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         return ValueTask.CompletedTask;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var items = await Session.Query<T, TIndex>(collection: CollectionName).ListAsync();
+        var items = await Session.Query<T, TIndex>(collection: CollectionName).ListAsync(cancellationToken);
 
         return items.ToArray();
     }
 
-    public async ValueTask CreateAsync(T record)
+    public async ValueTask CreateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -137,7 +141,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         await Session.SaveAsync(record, CollectionName);
     }
 
-    public async ValueTask UpdateAsync(T record)
+    public async ValueTask UpdateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 

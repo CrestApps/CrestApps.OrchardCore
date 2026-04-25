@@ -17,7 +17,7 @@ public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
         _documentManager = documentManager;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 

@@ -42,13 +42,13 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProfile> context)
+    public override Task InitializingAsync(InitializingContext<AIProfile> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProfile> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -56,7 +56,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         }
         else
         {
-            var profile = await _profileStore.FindByNameAsync(context.Model.Name);
+            var profile = await _profileStore.FindByNameAsync(context.Model.Name, cancellationToken);
 
             if (profile is not null && profile.ItemId != context.Model.ItemId)
             {
@@ -85,7 +85,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         }
     }
 
-    public override Task InitializedAsync(InitializedContext<AIProfile> context)
+    public override Task InitializedAsync(InitializedContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -100,7 +100,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         return Task.CompletedTask;
     }
 
-    public override Task CreatingAsync(CreatingContext<AIProfile> context)
+    public override Task CreatingAsync(CreatingContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {

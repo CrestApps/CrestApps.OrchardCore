@@ -28,13 +28,13 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpPrompt> context)
+    public override Task InitializingAsync(InitializingContext<McpPrompt> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpPrompt> context)
+    public override Task UpdatingAsync(UpdatingContext<McpPrompt> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpPrompt> context)
+    public override Task ValidatingAsync(ValidatingContext<McpPrompt> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.Name))
         {

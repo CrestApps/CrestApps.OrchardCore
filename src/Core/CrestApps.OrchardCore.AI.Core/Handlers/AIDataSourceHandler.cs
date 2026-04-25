@@ -27,13 +27,13 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIDataSource> context)
+    public override Task InitializingAsync(InitializingContext<AIDataSource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIDataSource> context)
+    public override Task UpdatingAsync(UpdatingContext<AIDataSource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIDataSource> context)
+    public override Task ValidatingAsync(ValidatingContext<AIDataSource> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -43,7 +43,7 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<AIDataSource> context)
+    public override Task InitializedAsync(InitializedContext<AIDataSource> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 

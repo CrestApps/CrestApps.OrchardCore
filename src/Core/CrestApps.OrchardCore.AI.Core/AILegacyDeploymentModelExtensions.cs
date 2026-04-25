@@ -42,9 +42,6 @@ public static class AILegacyDeploymentModelExtensions
     public static void SetIsDefault(this AIDeployment deployment, bool isDefault)
         => SetLegacyValue(deployment, "IsDefault", isDefault);
 
-    public static string GetConnectionDisplayName(this AIDeployment deployment)
-        => deployment.ConnectionName;
-
     private static IDictionary<string, object> GetProperties(ExtensibleEntity entity)
     {
         entity.Properties ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);

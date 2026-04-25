@@ -16,7 +16,7 @@ public class Catalog<T> : ICatalog<T>
         DocumentManager = documentManager;
     }
 
-    public async ValueTask<bool> DeleteAsync(T entry)
+    public async ValueTask<bool> DeleteAsync(T entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -39,7 +39,7 @@ public class Catalog<T> : ICatalog<T>
         return removed;
     }
 
-    public async ValueTask<T> FindByIdAsync(string id)
+    public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
@@ -53,7 +53,7 @@ public class Catalog<T> : ICatalog<T>
         return null;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
 
@@ -64,10 +64,14 @@ public class Catalog<T> : ICatalog<T>
             .ToArray();
     }
 
-    public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
+    public async ValueTask<PageResult<T>> PageAsync<TQuery>(
+        int page,
+        int pageSize,
+        TQuery context,
+        CancellationToken cancellationToken = default)
         where TQuery : QueryContext
     {
-        var records = await LocateInstancesAsync(context);
+        var records = await LocateInstancesAsync(context, cancellationToken);
 
         var skip = (page - 1) * pageSize;
 
@@ -78,14 +82,14 @@ public class Catalog<T> : ICatalog<T>
         };
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Select(Clone).ToArray();
     }
 
-    public async ValueTask CreateAsync(T record)
+    public async ValueTask CreateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -103,7 +107,7 @@ public class Catalog<T> : ICatalog<T>
         await DocumentManager.UpdateAsync(document);
     }
 
-    public async ValueTask UpdateAsync(T record)
+    public async ValueTask UpdateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -125,7 +129,9 @@ public class Catalog<T> : ICatalog<T>
     {
     }
 
-    protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(QueryContext context)
+    protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(
+        QueryContext context,
+        CancellationToken cancellationToken = default)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 

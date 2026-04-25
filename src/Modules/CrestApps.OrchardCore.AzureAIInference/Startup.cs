@@ -3,6 +3,7 @@ using CrestApps.Core.AI.AzureAIInference;
 using CrestApps.Core.AI.AzureAIInference.Services;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Drivers;
@@ -29,7 +30,7 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>());
         services
             .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
-            .AddCoreAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ClientName, o =>
+            .AddCoreAIProfile<ProviderAICompletionClient<AzureAIInferenceClientMarker>>(AzureAIInferenceConstants.ClientName, o =>
             {
                 o.DisplayName = S["Azure AI Inference (GitHub Models)"];
                 o.Description = S["Provides AI profiles using Azure AI Inference (GitHub Models)."];

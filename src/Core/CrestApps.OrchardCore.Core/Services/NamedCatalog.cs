@@ -14,7 +14,7 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
     {
     }
 
-    public async ValueTask<T> FindByNameAsync(string name)
+    public async ValueTask<T> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 

@@ -60,4 +60,8 @@
     <EmbeddedResource Include="Templates\Prompts\*.md" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\AI.Memory\" />
+  </ItemGroup>
+
 </Project>

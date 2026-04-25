@@ -201,7 +201,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             }
 
             var profileManager = services.GetRequiredService<IAIProfileManager>();
-            var profile = await profileManager.FindByIdAsync(profileId);
+            var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
 
             if (profile is null)
             {
@@ -236,7 +236,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     return;
                 }
 
-                var parentProfile = await profileManager.FindByIdAsync(sessionProfileId);
+                var parentProfile = await profileManager.FindByIdAsync(sessionProfileId, cancellationToken);
 
                 if (parentProfile is null)
                 {
@@ -322,10 +322,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-        });
+        }, cancellationToken);
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName, cancellationToken: cancellationToken)
         ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         using var builder = ZString.CreateStringBuilder();
@@ -354,7 +354,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         assistantMessage.Content = builder.ToString();
         assistantMessage.References = references;
 
-        await promptStore.CreateAsync(assistantMessage);
-        await sessionManager.SaveAsync(chatSession);
+        await promptStore.CreateAsync(assistantMessage, cancellationToken);
+        await sessionManager.SaveAsync(chatSession, cancellationToken);
     }
 }

@@ -31,27 +31,27 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<A2AConnection> context)
+    public override Task InitializingAsync(InitializingContext<A2AConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<A2AConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<A2AConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task UpdatedAsync(UpdatedContext<A2AConnection> context)
+    public override Task UpdatedAsync(UpdatedContext<A2AConnection> context, CancellationToken cancellationToken = default)
     {
         _cacheService.Invalidate(context.Model.ItemId);
 
         return Task.CompletedTask;
     }
 
-    public override Task DeletedAsync(DeletedContext<A2AConnection> context)
+    public override Task DeletedAsync(DeletedContext<A2AConnection> context, CancellationToken cancellationToken = default)
     {
         _cacheService.Invalidate(context.Model.ItemId);
 
         return Task.CompletedTask;
     }
 
-    public override Task ValidatingAsync(ValidatingContext<A2AConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<A2AConnection> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.DisplayText))
         {

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;
@@ -7,7 +7,7 @@ public class SseConnectionFieldsViewModel
 {
     public string Endpoint { get; set; }
 
-    public McpClientAuthenticationType AuthenticationType { get; set; }
+    public ClientAuthenticationType AuthenticationType { get; set; }
 
     // API Key fields.
     public string ApiKeyHeaderName { get; set; }

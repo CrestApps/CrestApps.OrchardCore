@@ -239,11 +239,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         if (connection is not null)
         {
             deploymentObject[nameof(AIDeployment.ClientName)] ??= connection.ClientName;
-
-            if (deploymentObject[nameof(AIDeployment.ConnectionName)] is null)
-            {
-                deploymentObject[nameof(AIDeployment.ConnectionName)] = connection.ItemId;
-            }
+            deploymentObject[nameof(AIDeployment.ConnectionName)] = string.IsNullOrWhiteSpace(connection.Name)
+                ? connection.ItemId
+                : connection.Name;
         }
         else
         {

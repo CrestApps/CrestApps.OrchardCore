@@ -35,7 +35,7 @@ internal static class A2ATaskManagerFactory
 
             var options = services.GetRequiredService<IOptions<A2AHostOptions>>().Value;
             var profileManager = services.GetRequiredService<IAIProfileManager>();
-            var profiles = await profileManager.GetAsync(AIProfileType.Agent);
+            var profiles = await profileManager.GetAsync(AIProfileType.Agent, cancellationToken);
 
             if (options.ExposeAgentsAsSkill)
             {
@@ -136,11 +136,11 @@ internal static class A2ATaskManagerFactory
 
             var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
-            var context = await contextBuilder.BuildAsync(targetProfile);
+            var context = await contextBuilder.BuildAsync(targetProfile, cancellationToken: cancellationToken);
 
             context.DisableTools = true;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
 
             var messages = new List<ChatMessage>

@@ -1,7 +1,8 @@
-using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;

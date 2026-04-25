@@ -37,13 +37,13 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override async Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -51,7 +51,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         }
         else
         {
-            var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name);
+            var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name, cancellationToken);
 
             if (connection is not null && connection.ItemId != context.Model.ItemId)
             {
@@ -69,7 +69,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         }
     }
 
-    public override Task InitializedAsync(InitializedContext<AIProviderConnection> context)
+    public override Task InitializedAsync(InitializedContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 

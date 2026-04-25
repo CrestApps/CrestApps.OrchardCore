@@ -32,9 +32,10 @@ public sealed class AIProfileDocumentMigrationsTests
         // Arrange
         var token = CreateLegacyProfileToken();
         var manager = CreateManager([]);
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         // Act
-        var profile = await manager.NewAsync(token);
+        var profile = await manager.NewAsync(token, cancellationToken);
 
         // Assert
         var metadata = profile.GetOrCreate<AIProfileMetadata>();
@@ -298,13 +299,17 @@ public sealed class AIProfileDocumentMigrationsTests
             _profiles = profiles.ToList();
         }
 
-        public ValueTask<AIProfile> FindByIdAsync(string id)
+        public ValueTask<AIProfile> FindByIdAsync(
+            string id,
+            CancellationToken cancellationToken = default)
             => ValueTask.FromResult(_profiles.FirstOrDefault(profile => string.Equals(profile.ItemId, id, StringComparison.Ordinal)));
 
-        public ValueTask<IReadOnlyCollection<AIProfile>> GetAllAsync()
+        public ValueTask<IReadOnlyCollection<AIProfile>> GetAllAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult<IReadOnlyCollection<AIProfile>>(_profiles);
 
-        public ValueTask<IReadOnlyCollection<AIProfile>> GetAsync(IEnumerable<string> ids)
+        public ValueTask<IReadOnlyCollection<AIProfile>> GetAsync(
+            IEnumerable<string> ids,
+            CancellationToken cancellationToken = default)
         {
             var idSet = ids.ToHashSet(StringComparer.Ordinal);
 
@@ -312,7 +317,11 @@ public sealed class AIProfileDocumentMigrationsTests
                 _profiles.Where(profile => idSet.Contains(profile.ItemId)).ToList());
         }
 
-        public ValueTask<PageResult<AIProfile>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
+        public ValueTask<PageResult<AIProfile>> PageAsync<TQuery>(
+            int page,
+            int pageSize,
+            TQuery context,
+            CancellationToken cancellationToken = default)
             where TQuery : QueryContext
         {
             return ValueTask.FromResult(new PageResult<AIProfile>
@@ -322,10 +331,14 @@ public sealed class AIProfileDocumentMigrationsTests
             });
         }
 
-        public ValueTask<bool> DeleteAsync(AIProfile entry)
+        public ValueTask<bool> DeleteAsync(
+            AIProfile entry,
+            CancellationToken cancellationToken = default)
             => ValueTask.FromResult(_profiles.Remove(entry));
 
-        public ValueTask CreateAsync(AIProfile entry)
+        public ValueTask CreateAsync(
+            AIProfile entry,
+            CancellationToken cancellationToken = default)
         {
             _profiles.RemoveAll(profile => string.Equals(profile.ItemId, entry.ItemId, StringComparison.Ordinal));
             _profiles.Add(entry);
@@ -333,10 +346,14 @@ public sealed class AIProfileDocumentMigrationsTests
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask UpdateAsync(AIProfile entry)
-            => CreateAsync(entry);
+        public ValueTask UpdateAsync(
+            AIProfile entry,
+            CancellationToken cancellationToken = default)
+            => CreateAsync(entry, cancellationToken);
 
-        public ValueTask<AIProfile> FindByNameAsync(string name)
+        public ValueTask<AIProfile> FindByNameAsync(
+            string name,
+            CancellationToken cancellationToken = default)
         {
             return ValueTask.FromResult(
                 _profiles.FirstOrDefault(profile => string.Equals(profile.Name, name, StringComparison.Ordinal)));

@@ -27,13 +27,13 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpConnection> context)
+    public override Task InitializingAsync(InitializingContext<McpConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<McpConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<McpConnection> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.DisplayText))
         {

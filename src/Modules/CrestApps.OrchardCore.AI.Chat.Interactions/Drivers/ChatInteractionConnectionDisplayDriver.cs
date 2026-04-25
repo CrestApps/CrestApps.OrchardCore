@@ -2,7 +2,6 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -69,11 +68,11 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
-                var groupKey = d.GetConnectionDisplayName();
+                var groupKey = d.ConnectionName;
                 SelectListGroup group = null;
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))

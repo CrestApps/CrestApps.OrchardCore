@@ -29,7 +29,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
         _logger = logger;
     }
 
-    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context, CancellationToken cancellationToken = default)
     {
         if (!context.Items.TryGetValue(AIChatSessionHandlerContextKeys.DataExtractionChangeSet, out var value)
             || value is not ExtractionChangeSet changeSet)

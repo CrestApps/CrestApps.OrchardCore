@@ -14,7 +14,9 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
 
     private bool _taskAdded;
 
-    public override Task CreatedAsync(CreatedContext<AIMemoryEntry> context)
+    public override Task CreatedAsync(
+        CreatedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         AddDeferredTask();
         _removedMemoryIds.Remove(context.Model.ItemId);
@@ -23,7 +25,9 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         return Task.CompletedTask;
     }
 
-    public override Task UpdatedAsync(UpdatedContext<AIMemoryEntry> context)
+    public override Task UpdatedAsync(
+        UpdatedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         AddDeferredTask();
         _removedMemoryIds.Remove(context.Model.ItemId);
@@ -32,7 +36,9 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         return Task.CompletedTask;
     }
 
-    public override Task DeletedAsync(DeletedContext<AIMemoryEntry> context)
+    public override Task DeletedAsync(
+        DeletedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.ItemId))
         {

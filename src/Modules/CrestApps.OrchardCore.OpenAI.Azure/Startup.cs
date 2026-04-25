@@ -53,7 +53,7 @@ public sealed class Startup : StartupBase
             })
             .AddCoreAIDeploymentProvider(AzureOpenAIConstants.AzureSpeechClientName, o =>
             {
-                o.SupportsContainedConnection = true;
+                o.UseContainedConnection = true;
                 o.DisplayName = S["Azure AI Services"];
                 o.Description = S["Azure deployment via a service connection."];
             })

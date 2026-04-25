@@ -1,5 +1,6 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
@@ -101,6 +102,6 @@
 
 <script at="Foot" depends-on="list-management-ui">
     document.addEventListener('DOMContentLoaded', () => {
-        listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
+    listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
     });
 </script>

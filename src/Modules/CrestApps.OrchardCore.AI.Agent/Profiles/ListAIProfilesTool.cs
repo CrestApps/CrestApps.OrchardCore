@@ -72,7 +72,7 @@ public sealed class ListAIProfilesTool : AIFunction
 
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
 
-        var profiles = (await profileManager.GetAllAsync()).ToList();
+        var profiles = (await profileManager.GetAllAsync(cancellationToken)).ToList();
 
         if (arguments.TryGetFirstString("type", out var typeStr)
 

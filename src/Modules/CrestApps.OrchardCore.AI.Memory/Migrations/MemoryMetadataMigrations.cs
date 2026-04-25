@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;

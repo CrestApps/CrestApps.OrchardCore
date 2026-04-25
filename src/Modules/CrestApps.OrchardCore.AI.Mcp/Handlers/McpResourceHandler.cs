@@ -28,13 +28,13 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpResource> context)
+    public override Task InitializingAsync(InitializingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpResource> context)
+    public override Task UpdatingAsync(UpdatingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpResource> context)
+    public override Task ValidatingAsync(ValidatingContext<McpResource> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.Source))
         {

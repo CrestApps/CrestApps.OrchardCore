@@ -64,11 +64,11 @@ public sealed class ViewAIProfileTool : AIFunction
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
         {
-            profile = await profileManager.FindByIdAsync(profileId);
+            profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
         }
         else if (arguments.TryGetFirstString("profileName", out var profileName) && !string.IsNullOrWhiteSpace(profileName))
         {
-            profile = await profileManager.FindByNameAsync(profileName);
+            profile = await profileManager.FindByNameAsync(profileName, cancellationToken);
         }
 
         if (profile == null)

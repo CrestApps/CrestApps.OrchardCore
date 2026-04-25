@@ -45,7 +45,10 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _logger = logger;
     }
 
-    public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
+    public async Task<AIChatSession> NewAsync(
+        AIProfile profile,
+        NewAIChatSessionContext context,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(context);
@@ -91,7 +94,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                     Title = profile.PromptSubject,
                     Content = initialPrompt,
                     CreatedUtc = _clock.UtcNow,
-                });
+                }, cancellationToken);
             }
 
             // Set the initial response handler from profile settings.
@@ -106,7 +109,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         return chatSession;
     }
 
-    public async Task<AIChatSessionResult> PageAsync(int page, int pageSize, AIChatSessionQueryContext context)
+    public async Task<AIChatSessionResult> PageAsync(
+        int page,
+        int pageSize,
+        AIChatSessionQueryContext context,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -130,7 +137,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             query = query.Where(i => i.ProfileId == context.ProfileId);
         }
 
-        var sessions = (await query.ListAsync())
+        var sessions = (await query.ListAsync(cancellationToken))
             .Where(session => session.ProfileId is not null);
 
         if (!string.IsNullOrEmpty(context.Name))
@@ -165,15 +172,15 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         };
     }
 
-    public Task<AIChatSession> FindByIdAsync(string id)
+    public Task<AIChatSession> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
         return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<AIChatSession> FindAsync(string id)
+    public async Task<AIChatSession> FindAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
@@ -184,7 +191,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
             return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.AICollectionName)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
         }
         else
         {
@@ -196,7 +203,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
 
             var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (chatSession?.UserId is not null || chatSession?.ClientId != clientId)
             {
@@ -207,14 +214,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         }
     }
 
-    public Task SaveAsync(AIChatSession chatSession)
+    public Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        return _session.SaveAsync(chatSession, collection: AIConstants.AICollectionName);
+        return _session.SaveAsync(chatSession, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(string sessionId)
+    public async Task<bool> DeleteAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
@@ -230,7 +237,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
             collection: AIConstants.AICollectionName)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
         if (chatSession == null)
         {
@@ -252,7 +259,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         return true;
     }
 
-    public async Task<int> DeleteAllAsync(string profileId)
+    public async Task<int> DeleteAllAsync(string profileId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(profileId);
 
@@ -268,7 +275,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.UserId == userId && i.ProfileId == profileId,
             collection: AIConstants.AICollectionName)
-                .ListAsync();
+                .ListAsync(cancellationToken);
 
         var totalDeleted = 0;
 

@@ -36,13 +36,13 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context)
+    public override Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context)
+    public override Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context)
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -81,7 +81,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context)
+    public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 

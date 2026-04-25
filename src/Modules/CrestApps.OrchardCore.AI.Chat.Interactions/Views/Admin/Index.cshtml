@@ -1,5 +1,6 @@
 @using CrestApps.Core.Models
 @using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
@@ -102,6 +103,6 @@
 
 <script at="Foot" depends-on="list-management-ui">
     document.addEventListener('DOMContentLoaded', () => {
-        listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
+    listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
     });
 </script>

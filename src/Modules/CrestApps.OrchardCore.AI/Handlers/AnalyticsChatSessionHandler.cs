@@ -26,7 +26,7 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
         _logger = logger;
     }
 
-    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context, CancellationToken cancellationToken = default)
     {
         var analyticsMetadata = context.Profile.GetOrCreate<AnalyticsMetadata>();
 

@@ -28,13 +28,13 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {

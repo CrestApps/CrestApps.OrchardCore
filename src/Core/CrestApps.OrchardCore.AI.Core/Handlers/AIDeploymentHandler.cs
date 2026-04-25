@@ -37,13 +37,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIDeployment> context)
+    public override Task InitializingAsync(InitializingContext<AIDeployment> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIDeployment> context)
+    public override Task UpdatingAsync(UpdatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override async Task ValidatingAsync(ValidatingContext<AIDeployment> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -77,7 +77,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         {
             if (hasConnectionName)
             {
-                var connections = await _connectionsCatalog.GetAsync(context.Model.ClientName);
+                var connections = await _connectionsCatalog.GetAsync(context.Model.ClientName, cancellationToken);
 
                 if (connections.Count == 0)
                 {
@@ -93,7 +93,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         return;
     }
 
-    public override Task InitializedAsync(InitializedContext<AIDeployment> context)
+    public override Task InitializedAsync(InitializedContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -206,5 +206,5 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
     private bool HasContainedConnection(string clientName)
         => !string.IsNullOrWhiteSpace(clientName) &&
             _aiOptions.Deployments.TryGetValue(clientName, out var entry) &&
-                entry.SupportsContainedConnection;
+                entry.UseContainedConnection;
 }

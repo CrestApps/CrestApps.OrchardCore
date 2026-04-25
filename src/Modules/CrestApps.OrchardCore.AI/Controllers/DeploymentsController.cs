@@ -1,9 +1,9 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;

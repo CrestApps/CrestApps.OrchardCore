@@ -142,7 +142,9 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
                     }
                     else
                     {
-                        deployment.ConnectionName = connection.ItemId;
+                        deployment.ConnectionName = string.IsNullOrWhiteSpace(connection.Name)
+                            ? connection.ItemId
+                            : connection.Name;
                     }
                 }
             }
@@ -181,7 +183,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     }
 
     private bool HasContainedConnection(string providerName)
-        => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.SupportsContainedConnection;
+        => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.UseContainedConnection;
 
     private static bool TryGetSelectedTypes(IEnumerable<string> selectedTypes, out AIDeploymentType deploymentTypes)
     {

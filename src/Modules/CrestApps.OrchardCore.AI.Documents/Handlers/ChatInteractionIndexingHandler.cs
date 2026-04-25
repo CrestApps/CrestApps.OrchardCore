@@ -19,7 +19,9 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         _indexingTaskManager = indexingTaskManager;
     }
 
-    public override Task CreatedAsync(CreatedContext<ChatInteraction> context)
+    public override Task CreatedAsync(
+        CreatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         if (!_updatedIndexIds.Add(context.Model.ItemId))
         {
@@ -29,7 +31,9 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, AIConstants.AIDocumentsIndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
-    public override async Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
+    public override async Task UpdatedAsync(
+        UpdatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         if (!_updatedIndexIds.Add(context.Model.ItemId))
         {
@@ -39,7 +43,9 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, AIConstants.AIDocumentsIndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
-    public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
+    public override Task DeletedAsync(
+        DeletedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         if (!_deletedIndexIds.Add(context.Model.ItemId))
         {

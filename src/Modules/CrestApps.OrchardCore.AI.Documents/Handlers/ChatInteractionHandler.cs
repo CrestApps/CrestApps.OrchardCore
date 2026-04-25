@@ -17,17 +17,23 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
     private readonly Dictionary<string, ChatInteraction> _interactions = [];
     private readonly Dictionary<string, ChatInteraction> _removedInteractions = [];
 
-    public override Task CreatedAsync(CreatedContext<ChatInteraction> context)
+    public override Task CreatedAsync(
+        CreatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         return AddTranscriptAsync(context.Model);
     }
 
-    public override Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
+    public override Task UpdatedAsync(
+        UpdatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         return AddTranscriptAsync(context.Model);
     }
 
-    public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
+    public override Task DeletedAsync(
+        DeletedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
         => RemovedTranscriptAsync(context.Model);
 
     private Task AddTranscriptAsync(ChatInteraction interaction)

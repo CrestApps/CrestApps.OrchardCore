@@ -18,13 +18,13 @@ public sealed class DefaultAIProfileManager : NamedCatalogManager<AIProfile>, IA
         _profileStore = profileStore;
     }
 
-    public async ValueTask<IEnumerable<AIProfile>> GetAsync(AIProfileType type)
+    public async ValueTask<IEnumerable<AIProfile>> GetAsync(AIProfileType type, CancellationToken cancellationToken = default)
     {
         var profiles = await _profileStore.GetByTypeAsync(type);
 
         foreach (var profile in profiles)
         {
-            await LoadAsync(profile);
+            await LoadAsync(profile, cancellationToken);
         }
 
         return profiles;

@@ -81,7 +81,7 @@ internal sealed class AIMemoryIndexingService
             return;
         }
 
-        var memories = await _memoryStore.GetAllAsync();
+        var memories = await _memoryStore.GetAllAsync(cancellationToken);
 
         foreach (var indexProfile in profiles)
         {

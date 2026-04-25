@@ -59,10 +59,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (!string.IsNullOrWhiteSpace(activity.AISessionId))
         {
-            chatSession = await _aIChatSessionManager.FindByIdAsync(activity.AISessionId);
+            chatSession = await _aIChatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
         }
 
-        var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId)
+        var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId, cancellationToken)
         ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
 
         if (chatSession is null)
@@ -80,7 +80,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.System,
                 Content = campaign.SystemMessage,
-            });
+            }, cancellationToken);
         }
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
@@ -108,7 +108,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (!string.IsNullOrEmpty(activity.ChannelEndpointId))
         {
-            var endpoint = await _channelEndpointCatalog.FindByIdAsync(activity.ChannelEndpointId);
+            var endpoint = await _channelEndpointCatalog.FindByIdAsync(activity.ChannelEndpointId, cancellationToken);
 
             if (endpoint is not null && endpoint.Channel == activity.Channel)
             {
@@ -126,9 +126,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Content = initialPrompt,
-            });
+            }, cancellationToken);
 
-            await _aIChatSessionManager.SaveAsync(chatSession);
+            await _aIChatSessionManager.SaveAsync(chatSession, cancellationToken);
 
             // Update the activity with the AI session details.
             activity.AISessionId = chatSession.SessionId;

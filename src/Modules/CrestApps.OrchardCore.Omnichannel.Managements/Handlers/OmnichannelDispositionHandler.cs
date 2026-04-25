@@ -27,13 +27,13 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<OmnichannelDisposition> context)
+    public override Task InitializingAsync(InitializingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelDisposition> context)
+    public override Task UpdatingAsync(UpdatingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<OmnichannelDisposition> context)
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -43,7 +43,7 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelDisposition> context)
+    public override Task InitializedAsync(InitializedContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 

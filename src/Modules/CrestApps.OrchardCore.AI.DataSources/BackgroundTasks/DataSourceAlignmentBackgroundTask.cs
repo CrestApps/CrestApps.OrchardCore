@@ -24,7 +24,7 @@ public sealed class DataSourceAlignmentBackgroundTask : IBackgroundTask
             return;
         }
 
-        var dataSources = (await dataSourceStore.GetAllAsync()).ToArray();
+        var dataSources = (await dataSourceStore.GetAllAsync(cancellationToken)).ToArray();
 
         if (dataSources.Length == 0)
         {

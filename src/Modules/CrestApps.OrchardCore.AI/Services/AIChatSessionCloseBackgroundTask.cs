@@ -36,7 +36,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
 
         var utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        var profiles = await profileManager.GetAsync(AIProfileType.Chat);
+        var profiles = await profileManager.GetAsync(AIProfileType.Chat, cancellationToken);
 
         foreach (var profile in profiles)
         {
