@@ -20,7 +20,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         ILogger<AIDocumentElasticsearchIndexProfileHandler> logger)
-    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
+        : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

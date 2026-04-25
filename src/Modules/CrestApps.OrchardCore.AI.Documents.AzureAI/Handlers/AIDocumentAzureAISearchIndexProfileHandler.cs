@@ -19,7 +19,7 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         ILogger<AIDocumentAzureAISearchIndexProfileHandler> logger)
-    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
+        : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

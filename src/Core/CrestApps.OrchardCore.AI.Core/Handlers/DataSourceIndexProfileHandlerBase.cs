@@ -54,7 +54,7 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to determine embedding dimensions dynamically for index profile '{IndexProfileId}'. Falling back to default dimensions ({DefaultDimensions}).", indexProfile.IndexProfileId, defaultDimensions);
+            _logger.LogWarning(ex, "Failed to determine embedding dimensions dynamically for index profile '{IndexProfileId}'. Falling back to default dimensions ({DefaultDimensions}).", indexProfile.Id, defaultDimensions);
         }
 
         return defaultDimensions;

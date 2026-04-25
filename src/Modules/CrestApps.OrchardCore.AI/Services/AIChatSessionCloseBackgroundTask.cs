@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.Services;
     Schedule = "*/10 * * * *",
     Description = "Periodically closes inactive AI chat sessions, retries pending post-close processing, and triggers workflow events.",
     LockTimeout = 5_000,
-    LockExpiration = 300_000)]
+    LockExpiration = 30_000)]
 public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _defaultInactivityTimeout = TimeSpan.FromMinutes(30);
