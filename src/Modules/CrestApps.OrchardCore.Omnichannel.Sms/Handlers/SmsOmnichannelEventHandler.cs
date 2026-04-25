@@ -82,10 +82,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     public async Task HandleAsync(OmnichannelEvent omnichannelEvent)
     {
-        if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived &&
-            omnichannelEvent.Message.Channel == OmnichannelConstants.Channels.Sms &&
-
-                omnichannelEvent.Message.IsInbound)
+        if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived ||
+            omnichannelEvent.Message.Channel != OmnichannelConstants.Channels.Sms ||
+            !omnichannelEvent.Message.IsInbound)
         {
             return;
         }

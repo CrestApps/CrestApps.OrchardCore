@@ -71,7 +71,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         {
             if (!string.IsNullOrEmpty(context.Name))
             {
-                if (typeof(TIndex).IsAssignableFrom(typeof(INameAwareIndex)))
+                if (typeof(INameAwareIndex).IsAssignableFrom(typeof(TIndex)))
                 {
                     if (context.Sorted)
                     {
@@ -83,7 +83,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                         query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name));
                     }
                 }
-                else if (typeof(TIndex).IsAssignableFrom(typeof(IDisplayTextAwareIndex)))
+                else if (typeof(IDisplayTextAwareIndex).IsAssignableFrom(typeof(TIndex)))
                 {
                     if (context.Sorted)
                     {
@@ -97,9 +97,9 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                 }
             }
 
-            if (!string.IsNullOrEmpty(context.Source) && typeof(TIndex).IsAssignableFrom(typeof(ISourceAwareIndex)))
+            if (!string.IsNullOrEmpty(context.Source) && typeof(ISourceAwareIndex).IsAssignableFrom(typeof(TIndex)))
             {
-                query = query.With<ISourceAwareIndex>(x => x.Source == context.Name);
+                query = query.With<ISourceAwareIndex>(x => x.Source == context.Source);
             }
 
             await PagingAsync(query, context);

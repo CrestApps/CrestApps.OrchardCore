@@ -186,7 +186,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var user = _httpContextAccessor.HttpContext?.User;
 
-        if (user.Identity?.IsAuthenticated == true)
+        if (user?.Identity?.IsAuthenticated == true)
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 

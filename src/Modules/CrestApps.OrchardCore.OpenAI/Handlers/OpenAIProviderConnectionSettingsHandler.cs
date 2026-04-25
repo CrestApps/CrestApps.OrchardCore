@@ -79,7 +79,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
-        if (!string.IsNullOrWhiteSpace(endpoint))
+        if (!string.IsNullOrWhiteSpace(apiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
