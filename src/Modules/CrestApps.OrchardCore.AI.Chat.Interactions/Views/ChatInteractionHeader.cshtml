@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Core
-@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Extensions.Options
@@ -13,13 +13,12 @@
     <div class="card-body d-flex justify-content-between flex-wrap gap-2">
 
         <div>
-            <button type="button" class="btn btn-outline-danger me-1@(Model.Prompts?.Count > 0 ? string.Empty : " d-none")" id="clearHistoryBtn" data-interaction-id="@Model.Interaction.ItemId" title="@T["Clear chat history while keeping documents, parameters, and tools"]>
+            <button type="button" class="btn btn-outline-danger me-1@(Model.Prompts?.Count > 0 ? string.Empty : " d-none")" id="clearHistoryBtn" data-interaction-id="@Model.Interaction.ItemId" title="@T["Clear chat history while keeping documents, parameters, and tools"]">
                 <i class="fa-solid fa-eraser"></i> @T["Clear History"]
             </button>
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-
             <div class="btn-group" title="Actions">
                 <button type="button" class="btn btn-sm btn-secondary dropdown-toggle actions" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span>@T["New Chat"]</span>
@@ -47,3 +46,27 @@
         </div>
     </div>
 </div>
+
+<style at="Head">
+    .settings-save-indicator {
+        min-width: 5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        padding: 0.15rem 0.5rem;
+        border-radius: 0.375rem;
+        transition: opacity 0.3s ease;
+    }
+    .settings-save-indicator:not(:empty) {
+        background-color: rgba(var(--bs-body-color-rgb, 0, 0, 0), 0.05);
+    }
+    .settings-save-indicator.text-success:not(:empty) {
+        background-color: rgba(var(--bs-success-rgb, 25, 135, 84), 0.1);
+    }
+    .settings-save-indicator.text-warning:not(:empty) {
+        background-color: rgba(var(--bs-warning-rgb, 255, 193, 7), 0.12);
+    }
+    .settings-save-indicator.text-danger:not(:empty) {
+        background-color: rgba(var(--bs-danger-rgb, 220, 53, 69), 0.1);
+    }
+</style>

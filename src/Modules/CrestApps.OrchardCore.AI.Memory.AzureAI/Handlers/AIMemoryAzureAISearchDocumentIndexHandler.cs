@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.AzureAI;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 
@@ -16,7 +17,7 @@ public sealed class AIMemoryAzureAISearchDocumentIndexHandler : IDocumentIndexHa
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            !string.Equals(indexProfile.ProviderName, AzureAISearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(indexProfile.ProviderName, AzureAISearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
         {
             return Task.CompletedTask;
         }

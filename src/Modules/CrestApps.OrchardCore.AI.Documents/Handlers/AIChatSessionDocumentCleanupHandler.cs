@@ -1,7 +1,9 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -27,7 +29,9 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
         _chunkStore = chunkStore;
     }
 
-    public override async Task DeletingAsync(DeletingContext<AIChatSession> context)
+    public override async Task DeletingAsync(
+        DeletingContext<AIChatSession> context,
+        CancellationToken cancellationToken = default)
     {
         var session = context.Model;
 
@@ -45,13 +49,14 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
         foreach (var doc in documents)
         {
             var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+
             foreach (var chunk in chunks)
             {
                 chunkIds.Add(chunk.ItemId);
             }
 
             await _chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
-            await _documentStore.DeleteAsync(doc);
+            await _documentStore.DeleteAsync(doc, cancellationToken);
         }
 
         if (chunkIds.Count > 0)

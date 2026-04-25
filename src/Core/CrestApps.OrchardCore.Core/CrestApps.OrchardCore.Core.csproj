@@ -1,17 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Title>CrestApps OrchardCore Core</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Core services project.
+      OrchardCore-specific core services that extend the framework-independent CrestApps.Core.
     </Description>
     <PackageTags>$(PackageTags)</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <PackageReference Include="CrestApps.Core" />
   </ItemGroup>
 
 </Project>

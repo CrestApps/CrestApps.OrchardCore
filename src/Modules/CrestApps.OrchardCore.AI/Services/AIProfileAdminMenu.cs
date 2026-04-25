@@ -25,8 +25,8 @@ public sealed class AIProfileAdminMenu : AdminNavigationProvider
                     .Action("Index", "Profiles", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIProfiles)
                     .LocalNav()
-                )
-            , priority: 1);
+                ),
+                priority: 1);
 
         return ValueTask.CompletedTask;
     }

@@ -4,7 +4,12 @@
 @model AIProfileTemplateParametersViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="MaxOutputTokens" class="@Orchard.GetLabelClasses()">@T["Max response"]</label>
+    <label asp-for="MaxOutputTokens" class="@Orchard.GetLabelClasses()">
+        @T["Max response"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="MaxOutputTokens" step="4" min="4">
         <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text."]</span>
@@ -12,7 +17,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">@T["Temperature"]</label>
+    <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">
+        @T["Temperature"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="1">
         <span class="hint">@T["Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both."]</span>
@@ -20,7 +30,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
+    <label asp-for="TopP" class="@Orchard.GetLabelClasses()">
+        @T["Top P"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
         <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both."]</span>
@@ -28,7 +43,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency penalty"]</label>
+    <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">
+        @T["Frequency penalty"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="1">
         <span class="hint">@T["Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response."]</span>
@@ -36,7 +56,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence penalty"]</label>
+    <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">
+        @T["Presence penalty"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
         <span class="hint">@T["Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response."]</span>
@@ -44,10 +69,14 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
-    <label asp-for="PastMessagesCount" class="@Orchard.GetLabelClasses()">@T["Past messages included"]</label>
+    <label asp-for="PastMessagesCount" class="@Orchard.GetLabelClasses()">
+        @T["Past messages included"]
+        <span class="ms-1" data-bs-toggle="tooltip" title="@T["Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="20">
         <span class="hint">@T["Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses."]</span>
     </div>
 </div>
-

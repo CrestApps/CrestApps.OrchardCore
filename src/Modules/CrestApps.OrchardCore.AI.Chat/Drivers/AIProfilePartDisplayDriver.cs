@@ -1,6 +1,8 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -46,6 +48,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         var user = _httpContextAccessor?.HttpContext.User;
 
         // When displaying history, we should only target session that belong to authenticated users.
+
         if (user is null || !user.Identity.IsAuthenticated)
         {
             return null;
@@ -87,7 +90,6 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
             var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
 
             model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
-
         }).Location("Content:5");
     }
 

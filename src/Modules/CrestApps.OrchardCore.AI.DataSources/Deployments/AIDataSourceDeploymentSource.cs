@@ -1,15 +1,15 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI.DataSources;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 
 internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIDataSourceDeploymentStep>
 {
-    private readonly ICatalog<AIDataSource> _store;
+    private readonly IAIDataSourceStore _store;
 
-    public AIDataSourceDeploymentSource(ICatalog<AIDataSource> store)
+    public AIDataSourceDeploymentSource(IAIDataSourceStore store)
     {
         _store = store;
     }
@@ -21,8 +21,8 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
         var sourceObjects = new JsonArray();
 
         var sourceIds = step.IncludeAll
-            ? []
-            : step.SourceIds ?? [];
+        ? []
+        : step.SourceIds ?? [];
 
         foreach (var dataSource in dataSources)
         {
@@ -43,7 +43,7 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
                 { "CreatedUtc", dataSource.CreatedUtc },
                 { "OwnerId", dataSource.OwnerId },
                 { "Author", dataSource.Author },
-                { "Properties", dataSource.Properties?.DeepClone() },
+                { "Properties", dataSource.Properties is not null ? JsonSerializer.SerializeToNode(dataSource.Properties) : null },
             };
 
             sourceObjects.Add(sourceObject);
@@ -56,4 +56,3 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
         });
     }
 }
-

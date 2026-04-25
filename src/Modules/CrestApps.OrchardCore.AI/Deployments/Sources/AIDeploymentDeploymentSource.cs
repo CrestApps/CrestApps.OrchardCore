@@ -1,7 +1,9 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
@@ -22,8 +24,8 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
         var deploymentData = new JsonArray();
 
         var deploymentNames = step.IncludeAll
-            ? []
-            : step.DeploymentNames ?? [];
+        ? []
+        : step.DeploymentNames ?? [];
 
         foreach (var deployment in deployments)
         {
@@ -40,13 +42,12 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "ClientName", deployment.Source },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
-                { "ConnectionNameAlias", deployment.ConnectionNameAlias },
                 { "Type", deployment.Type.ToString() },
-                { "IsDefault", deployment.IsDefault },
+                { "IsDefault", deployment.GetIsDefault() },
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },
-                { "Properties", deployment.Properties?.DeepClone() },
+                { "Properties", JsonSerializer.SerializeToNode(deployment.Properties) },
             };
 
             deploymentData.Add(deploymentInfo);

@@ -167,21 +167,17 @@
         min-width: 22rem;
         overflow-y: auto;
     }
-
     .prompt-template-dropdown .dropdown-item {
         white-space: normal;
     }
-
     .prompt-template-card.prompt-template-card-collapsed .card-header {
         border-bottom: 0;
         border-bottom-left-radius: var(--bs-card-inner-border-radius);
         border-bottom-right-radius: var(--bs-card-inner-border-radius);
     }
-
     .prompt-template-card.prompt-template-card-collapsed .prompt-template-collapse-toggle .fa-solid::before {
         content: "\f054";
     }
-
     .prompt-template-card:not(.prompt-template-card-collapsed) .prompt-template-collapse-toggle .fa-solid::before {
         content: "\f078";
     }
@@ -209,11 +205,11 @@
 
         function escapeHtml(value) {
             return (value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
         }
 
         function getPromptOption(templateId) {
@@ -247,35 +243,35 @@
             card.className = 'card mb-1 prompt-template-card';
             card.dataset.templateId = templateId;
             card.innerHTML =
-                '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
-                    '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 prompt-template-collapse-toggle" data-bs-toggle="collapse" href="#" role="button" aria-expanded="true">' +
-                        '<i class="fa-solid fa-chevron-down me-1"></i>' +
-                        '<span class="prompt-template-title fw-semibold">' + escapeHtml(title) + '</span>' +
-                    '</a>' +
-                    '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="' + escapeHtml(localized.remove) + '">' +
-                        '<i class="fa-solid fa-trash"></i>' +
-                    '</button>' +
-                '</div>' +
-                '<div class="collapse show">' +
-                    '<div class="card-body">' +
-                        '<input type="hidden" class="prompt-template-id-input" value="' + escapeHtml(templateId) + '" />' +
-                        '<div class="d-flex flex-wrap gap-2 mb-2">' +
-                            '<span class="badge text-bg-secondary prompt-template-category">' + escapeHtml(category) + '</span>' +
-                            unavailableBadge +
-                        '</div>' +
-                        (description ? '<div class="text-muted small mb-3 prompt-template-description">' + escapeHtml(description) + '</div>' : '') +
-                        '<div class="mb-3 prompt-template-parameters-info ' + (parametersMarkup ? '' : 'd-none') + '">' +
-                            '<small class="text-muted d-block mb-1">' + escapeHtml(localized.expectedParameters) + '</small>' +
-                            '<ul class="mb-0 small text-muted prompt-template-parameters-list">' + parametersMarkup + '</ul>' +
-                        '</div>' +
-                        '<div class="mb-1">' +
-                            '<label class="form-label">' + escapeHtml(localized.templateParameters) + '</label>' +
-                            '<textarea class="form-control prompt-template-parameters-input" rows="3" placeholder="' + escapeHtml(localized.parameterPlaceholder) + '"></textarea>' +
-                            '<span class="hint">' + escapeHtml(localized.parameterHint) + '</span>' +
-                            '<div class="text-danger small d-none prompt-template-parameters-error"></div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
+            '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 prompt-template-collapse-toggle" data-bs-toggle="collapse" href="#" role="button" aria-expanded="true">' +
+            '<i class="fa-solid fa-chevron-down me-1"></i>' +
+            '<span class="prompt-template-title fw-semibold">' + escapeHtml(title) + '</span>' +
+            '</a>' +
+            '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="' + escapeHtml(localized.remove) + '">' +
+            '<i class="fa-solid fa-trash"></i>' +
+            '</button>' +
+            '</div>' +
+            '<div class="collapse show">' +
+            '<div class="card-body">' +
+            '<input type="hidden" class="prompt-template-id-input" value="' + escapeHtml(templateId) + '" />' +
+            '<div class="d-flex flex-wrap gap-2 mb-2">' +
+            '<span class="badge text-bg-secondary prompt-template-category">' + escapeHtml(category) + '</span>' +
+            unavailableBadge +
+            '</div>' +
+            (description ? '<div class="text-muted small mb-3 prompt-template-description">' + escapeHtml(description) + '</div>' : '') +
+            '<div class="mb-3 prompt-template-parameters-info ' + (parametersMarkup ? '' : 'd-none') + '">' +
+            '<small class="text-muted d-block mb-1">' + escapeHtml(localized.expectedParameters) + '</small>' +
+            '<ul class="mb-0 small text-muted prompt-template-parameters-list">' + parametersMarkup + '</ul>' +
+            '</div>' +
+            '<div class="mb-1">' +
+            '<label class="form-label">' + escapeHtml(localized.templateParameters) + '</label>' +
+            '<textarea class="form-control prompt-template-parameters-input" rows="3" placeholder="' + escapeHtml(localized.parameterPlaceholder) + '"></textarea>' +
+            '<span class="hint">' + escapeHtml(localized.parameterHint) + '</span>' +
+            '<div class="text-danger small d-none prompt-template-parameters-error"></div>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
 
             card.querySelector('.prompt-template-parameters-input').value = promptParameters || '';
 

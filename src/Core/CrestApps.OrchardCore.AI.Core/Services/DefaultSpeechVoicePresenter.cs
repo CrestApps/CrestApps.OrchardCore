@@ -1,5 +1,8 @@
 using System.Globalization;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Speech;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
@@ -30,8 +33,8 @@ public sealed class DefaultSpeechVoicePresenter
         try
         {
             var deployment = !string.IsNullOrEmpty(deploymentName)
-                ? await _deploymentManager.FindByNameAsync(deploymentName)
-                : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+            ? await _deploymentManager.FindByNameAsync(deploymentName)
+            : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
             if (deployment == null)
             {
@@ -71,5 +74,4 @@ public sealed class DefaultSpeechVoicePresenter
             return [];
         }
     }
-
 }

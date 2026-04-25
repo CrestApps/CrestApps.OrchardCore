@@ -1,11 +1,13 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>
+public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>, IAIDataSourceStore
 {
     public DefaultAIDataSourceStore(IDocumentManager<DictionaryDocument<AIDataSource>> documentManager)
         : base(documentManager)
@@ -16,7 +18,7 @@ public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>
     {
         if (!string.IsNullOrEmpty(context.Name))
         {
-            records = records.Where(x => context.Name.Contains(x.DisplayText, StringComparison.OrdinalIgnoreCase));
+            records = records.Where(x => x.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
         }
 
         if (context.Sorted)

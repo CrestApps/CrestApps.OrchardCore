@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -20,9 +20,9 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditAIProfileMemoryViewModel>("AIProfileMemory_Edit", async model =>
         {
-            model.EnableUserMemory = profile.GetSettings<AIProfileMemorySettings>().EnableUserMemory;
+            model.EnableUserMemory = profile.GetMemoryMetadata().EnableUserMemory ?? false;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:15%Interactions;3");
+        }).Location("Content:1#Knowledge;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -30,7 +30,7 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
         var model = new EditAIProfileMemoryViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.AlterSettings<AIProfileMemorySettings>(settings =>
+        profile.AlterMemoryMetadata(settings =>
         {
             settings.EnableUserMemory = model.EnableUserMemory;
         });

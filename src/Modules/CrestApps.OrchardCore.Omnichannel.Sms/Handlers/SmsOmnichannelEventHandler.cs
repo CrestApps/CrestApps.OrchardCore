@@ -1,20 +1,23 @@
 using System.Text.Json;
-using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
-using CrestApps.OrchardCore.Services;
-using CrestApps.Support;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
@@ -33,11 +36,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _aICompletionService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly ITemplateService _aiTemplateService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ISession _session;
+
     private readonly ISmsService _smsService;
+
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly ILogger _logger;
@@ -49,7 +54,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIChatSessionPromptStore promptStore,
         IAICompletionService aICompletionService,
         IAIDeploymentManager deploymentManager,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ISession session,
@@ -69,6 +74,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
+
         _jsonSerializerOptions = jsonSerializerOptions.Value;
         _logger = logger;
         S = stringLocalizer;
@@ -76,9 +82,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     public async Task HandleAsync(OmnichannelEvent omnichannelEvent)
     {
-        if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived &&
-            omnichannelEvent.Message.Channel == OmnichannelConstants.Channels.Sms &&
-            omnichannelEvent.Message.IsInbound)
+        if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived ||
+            omnichannelEvent.Message.Channel != OmnichannelConstants.Channels.Sms ||
+            !omnichannelEvent.Message.IsInbound)
         {
             return;
         }
@@ -95,9 +101,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
-            endpoint.ItemId,
-            omnichannelEvent.Message.CustomerAddress,
-            ActivityInteractionType.Automated);
+        endpoint.ItemId,
+        omnichannelEvent.Message.CustomerAddress,
+        ActivityInteractionType.Automated);
 
         if (activity is null)
         {
@@ -145,7 +151,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         await _promptStore.CreateAsync(new AIChatSessionPrompt
         {
-            ItemId = IdGenerator.GenerateId(),
+            ItemId = UniqueId.GenerateId(),
             SessionId = chatSession.SessionId,
             Role = ChatRole.User,
             Content = omnichannelEvent.Message.Content
@@ -165,7 +171,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             var context = new AICompletionContext
             {
-                ConnectionName = campaign.ConnectionName,
                 ChatDeploymentName = campaign.DeploymentName,
                 Temperature = campaign.Temperature,
                 TopP = campaign.TopP,
@@ -178,7 +183,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             context.AdditionalProperties["Session"] = chatSession;
 
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
+            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
 
             var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context);
 
@@ -191,6 +196,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 return;
             }
         }
+
         catch (Exception ex)
         {
             _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Campaign {CampaignId}.", activity.ItemId, campaign.ItemId);
@@ -208,7 +214,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             {
                 await _promptStore.CreateAsync(new AIChatSessionPrompt
                 {
-                    ItemId = IdGenerator.GenerateId(),
+                    ItemId = UniqueId.GenerateId(),
                     SessionId = chatSession.SessionId,
                     Role = ChatRole.Assistant,
                     Content = bestChoice,
@@ -225,10 +231,21 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // AI conclusion detection.
                     var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
+
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
+                    var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+
                     var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
                     var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);
-                    var client = await clientFactory.CreateChatClientAsync(campaign.ProviderName, campaign.ConnectionName, campaign.DeploymentName);
+
+                    var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, campaign.DeploymentName, campaign.ProviderName);
+
+                    if (deployment == null)
+                    {
+                        return;
+                    }
+
+                    var client = await clientFactory.CreateChatClientAsync(deployment);
 
                     var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
 
@@ -238,9 +255,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var sessionPrompts = await deferredPromptStore.GetPromptsAsync(chatSession.SessionId);
 
                     var userPrompt = $"""
+
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Campaign Goal: {campaign.CampaignGoal}
                         List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, Name = x.DisplayText, x.Description }))}
+
                         """;
 
                     if (campaign.AllowAIToUpdateSubject)
@@ -248,9 +267,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
 
                         userPrompt +=
-                        $"""
-                        Subject: {JsonSerializer.Serialize(activity.Subject, _jsonSerializerOptions.SerializerOptions)}
-                        """;
+
+                            $"""
+                            Subject: {JsonSerializer.Serialize(activity.Subject, _jsonSerializerOptions.SerializerOptions)}
+                            """;
                     }
 
                     if (campaign.AllowAIToUpdateContact)
@@ -258,9 +278,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
                         userPrompt +=
-                        $"""
-                        Contact: {JsonSerializer.Serialize(contact, _jsonSerializerOptions.SerializerOptions)}
-                        """;
+
+                            $"""
+
+                            Contact: {JsonSerializer.Serialize(contact, _jsonSerializerOptions.SerializerOptions)}
+                            """;
                     }
 
                     var conclusionPrompt = await _aiTemplateService.RenderAsync(SmsConclusionAnalysisPromptId);
@@ -310,8 +332,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
                             omnichannelActivity.Status = ActivityStatus.Completed;
+
                             omnichannelActivity.CompletedUtc = clock.UtcNow;
+
                             omnichannelActivity.DispositionId = result.Result.DispositionId;
+
                             omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
                             omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
 
@@ -338,6 +363,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 await _session.SaveAsync(chatSession);
             }
         }
+
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination.SanitizeLogValue(), activity.ItemId);

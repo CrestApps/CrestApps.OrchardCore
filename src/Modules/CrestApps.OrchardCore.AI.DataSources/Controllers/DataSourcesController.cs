@@ -1,25 +1,23 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Controllers;
 
@@ -32,6 +30,7 @@ public sealed class DataSourcesController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ICatalogManager<AIDataSource> _dataSourceManager;
     private readonly IDisplayManager<AIDataSource> _displayManager;
+    private readonly IAIDataSourceIndexingQueue _indexingQueue;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -42,6 +41,7 @@ public sealed class DataSourcesController : Controller
         IUpdateModelAccessor updateModelAccessor,
         ICatalogManager<AIDataSource> dataSourceManager,
         IDisplayManager<AIDataSource> displayManager,
+        IAIDataSourceIndexingQueue indexingQueue,
         INotifier notifier,
         IHtmlLocalizer<DataSourcesController> htmlLocalizer,
         IStringLocalizer<DataSourcesController> stringLocalizer)
@@ -50,6 +50,7 @@ public sealed class DataSourcesController : Controller
         _updateModelAccessor = updateModelAccessor;
         _dataSourceManager = dataSourceManager;
         _displayManager = displayManager;
+        _indexingQueue = indexingQueue;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -271,12 +272,7 @@ public sealed class DataSourcesController : Controller
             return NotFound();
         }
 
-        await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("process-datasource-sync", dataSource, async (scope, ds) =>
-        {
-            var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
-
-            await indexingService.SyncDataSourceAsync(ds);
-        });
+        await _indexingQueue.QueueSyncDataSourceAsync(dataSource);
 
         await _notifier.SuccessAsync(H["The data source index synchronization has been triggered in the background."]);
 

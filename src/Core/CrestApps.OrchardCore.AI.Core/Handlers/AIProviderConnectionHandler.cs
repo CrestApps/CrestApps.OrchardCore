@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -35,13 +37,13 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override async Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
@@ -49,7 +51,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         }
         else
         {
-            var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name);
+            var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name, cancellationToken);
 
             if (connection is not null && connection.ItemId != context.Model.ItemId)
             {
@@ -65,16 +67,9 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         {
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIProviderConnection.Source)]));
         }
-
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-        if (string.IsNullOrWhiteSpace(context.Model.ChatDeploymentName))
-        {
-            context.Result.Fail(new ValidationResult(S["Chat Deployment name is required."], [nameof(AIProviderConnection.ChatDeploymentName)]));
-        }
-#pragma warning restore CS0618
     }
 
-    public override Task InitializedAsync(InitializedContext<AIProviderConnection> context)
+    public override Task InitializedAsync(InitializedContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -100,36 +95,6 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
                 connection.Name = name;
             }
         }
-
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-        var defaultDeploymentName = data[nameof(AIProviderConnection.ChatDeploymentName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(defaultDeploymentName))
-        {
-            connection.ChatDeploymentName = defaultDeploymentName;
-        }
-
-        var defaultUtilityDeploymentName = data[nameof(AIProviderConnection.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
-        {
-            connection.UtilityDeploymentName = defaultUtilityDeploymentName;
-        }
-
-        var embeddingDeploymentName = data[nameof(AIProviderConnection.EmbeddingDeploymentName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(embeddingDeploymentName))
-        {
-            connection.EmbeddingDeploymentName = embeddingDeploymentName;
-        }
-
-        var imagesDeploymentName = data[nameof(AIProviderConnection.ImagesDeploymentName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(imagesDeploymentName))
-        {
-            connection.ImagesDeploymentName = imagesDeploymentName;
-        }
-#pragma warning restore CS0618
 
         var displayText = data[nameof(AIProviderConnection.DisplayText)]?.GetValue<string>()?.Trim();
 
@@ -170,8 +135,11 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
 
         if (properties != null)
         {
-            connection.Properties ??= [];
-            connection.Properties.Merge(properties);
+            connection.Properties ??= new Dictionary<string, object>();
+
+            var currentJson = JsonSerializer.SerializeToNode(connection.Properties)?.AsObject() ?? [];
+            currentJson.Merge(properties);
+            connection.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         return Task.CompletedTask;

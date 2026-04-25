@@ -34,19 +34,19 @@ public sealed class AIChatSessionClosedEvent : EventActivity
         return new ValueTask<IEnumerable<Outcome>>(
         [
             Outcome(S["Done"]),
-        ]);
+            ]);
     }
 
     public override ActivityExecutionResult Resume(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }
 
     public override ActivityExecutionResult Execute(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }

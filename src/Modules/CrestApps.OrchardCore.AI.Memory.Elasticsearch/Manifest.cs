@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.AI.Memory;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         MemoryConstants.Feature.Memory,
-        "OrchardCore.Search.Elasticsearch",
+        "OrchardCore.Elasticsearch",
     ]
 )]

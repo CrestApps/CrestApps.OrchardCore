@@ -232,7 +232,7 @@ public sealed class FeatureProfilesRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.Lucene", "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.Lucene", "OrchardCore.Recipes.Core")]
 public sealed class LuceneRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -243,7 +243,7 @@ public sealed class LuceneRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.Elasticsearch", "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.Elasticsearch", "OrchardCore.Recipes.Core")]
 public sealed class ElasticRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -254,7 +254,7 @@ public sealed class ElasticRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.AzureAI", "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.AzureAI", "OrchardCore.Recipes.Core")]
 public sealed class AzureAISearchRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

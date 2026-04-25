@@ -31,6 +31,16 @@ public sealed class McpClientFactory
             TransportMode = HttpTransportMode.Sse,
         };
 
+        var apiKey = _configuration["Mcp:ApiKey"];
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            transportOptions.AdditionalHeaders = new Dictionary<string, string>
+            {
+                ["Authorization"] = $"Bearer {apiKey}",
+            };
+        }
+
         var transport = new HttpClientTransport(transportOptions, _loggerFactory);
 
         var clientOptions = new McpClientOptions
@@ -52,6 +62,14 @@ public sealed class McpClientFactory
                 $"The MCP server at '{endpoint}' returned a 404 Not Found response. " +
                 "Please ensure the MCP Server feature is enabled on the default tenant in the Orchard Core admin dashboard " +
                 "(Configuration > Features > search for 'MCP Server').", ex);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            throw new InvalidOperationException(
+                $"The MCP server at '{endpoint}' returned a 401 Unauthorized response. " +
+                "The server requires authentication. Configure the 'Mcp:ApiKey' setting in appsettings.json " +
+                "with a valid API key, and ensure the MCP server's authentication type is set to 'ApiKey' " +
+                "with a matching key in the Orchard Core admin dashboard.", ex);
         }
     }
 }

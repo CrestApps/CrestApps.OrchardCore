@@ -13,6 +13,7 @@ public sealed class SitemapsRecipeStep : IRecipeStep
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
+
         return ValueTask.FromResult(_cached);
     }
 
@@ -22,9 +23,9 @@ public sealed class SitemapsRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Sitemaps")),
-                ("data", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+        ("data", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

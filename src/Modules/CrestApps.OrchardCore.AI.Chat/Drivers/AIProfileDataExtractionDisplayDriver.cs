@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -26,14 +26,14 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
-                .Select(e => new DataExtractionEntryViewModel
-                {
-                    Name = e.Name,
-                    Description = e.Description,
-                    AllowMultipleValues = e.AllowMultipleValues,
-                    IsUpdatable = e.IsUpdatable,
-                })
-                .ToList();
+            .Select(e => new DataExtractionEntryViewModel
+            {
+                Name = e.Name,
+                Description = e.Description,
+                AllowMultipleValues = e.AllowMultipleValues,
+                IsUpdatable = e.IsUpdatable,
+            })
+        .ToList();
         }).Location("Content:5#Data Processing & Metrics;10");
     }
 

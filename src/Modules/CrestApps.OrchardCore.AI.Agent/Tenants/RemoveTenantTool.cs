@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,19 +13,22 @@ public sealed class RemoveTenantTool : AIFunction
     public const string TheName = "removeTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                }
-            },
-            "additionalProperties": false,
-            "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -41,6 +44,7 @@ public sealed class RemoveTenantTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<RemoveTenantTool>>();
@@ -51,6 +55,7 @@ public sealed class RemoveTenantTool : AIFunction
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
+
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellRemovalManager = arguments.Services.GetRequiredService<IShellRemovalManager>();
 

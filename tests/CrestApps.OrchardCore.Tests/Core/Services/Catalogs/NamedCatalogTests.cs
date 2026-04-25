@@ -8,7 +8,9 @@ public sealed class NamedCatalogTests
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
+
         var records = new List<TestNamedCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
         var result = await catalog.FindByNameAsync("Test");
@@ -39,8 +41,11 @@ public sealed class NamedCatalogTests
     public async Task CreateAsync_Throws_WhenDuplicateName()
     {
         var entry1 = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
+
         var entry2 = new TestNamedCatalogEntry { ItemId = "2", Name = "Test" };
+
         var records = new List<TestNamedCatalogEntry> { entry1 };
+
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
 
         await catalog.CreateAsync(entry1);
@@ -51,6 +56,7 @@ public sealed class NamedCatalogTests
     public async Task UpdateAsync_Throws_WhenDuplicateName()
     {
         var entry1 = new TestNamedCatalogEntry { ItemId = "1", Name = "Test1" };
+
         var entry2 = new TestNamedCatalogEntry { ItemId = "2", Name = "Test2" };
 
         var records = new List<TestNamedCatalogEntry>
@@ -58,6 +64,7 @@ public sealed class NamedCatalogTests
             entry1,
             entry2,
         };
+
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
         entry1.Name = entry2.Name;
 

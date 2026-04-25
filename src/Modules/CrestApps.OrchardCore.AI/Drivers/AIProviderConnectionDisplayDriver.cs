@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -45,7 +45,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
             model.IsNew = context.IsNew;
-
         }).Location("Content:1");
     }
 

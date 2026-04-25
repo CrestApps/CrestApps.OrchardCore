@@ -1,4 +1,8 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
@@ -8,33 +12,33 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
 {
     protected string ProviderName { get; }
 
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly ILogger _logger;
 
-    protected DataSourceIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
+    protected DataSourceIndexProfileHandlerBase(
+        string providerName,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
+        ILogger logger)
     {
         ProviderName = providerName;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
+        _logger = logger;
     }
 
-    protected async Task<int> GetEmbeddingDimensionsAsync(DataSourceIndexProfileMetadata metadata)
+    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
     {
         const int defaultDimensions = 1536;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
-        {
-            return defaultDimensions;
-        }
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
         try
         {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                metadata.EmbeddingProviderName,
-                metadata.EmbeddingConnectionName,
-                metadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+                _deploymentManager,
+                _aiClientFactory,
+                metadata);
 
             if (embeddingGenerator == null)
             {
@@ -48,9 +52,9 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
                 return embedding[0].Vector.Length;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // If we can't determine dimensions dynamically, fall back to default.
+            _logger.LogWarning(ex, "Failed to determine embedding dimensions dynamically for index profile '{IndexProfileId}'. Falling back to default dimensions ({DefaultDimensions}).", indexProfile.Id, defaultDimensions);
         }
 
         return defaultDimensions;

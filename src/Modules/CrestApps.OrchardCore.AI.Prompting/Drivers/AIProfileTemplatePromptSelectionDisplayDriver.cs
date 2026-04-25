@@ -1,11 +1,10 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
@@ -25,7 +24,7 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
             return null;
         }
 
-        var promptMetadata = template.As<PromptTemplateMetadata>();
+        var promptMetadata = template.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

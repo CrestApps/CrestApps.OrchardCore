@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -28,13 +28,13 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpResource> context)
+    public override Task InitializingAsync(InitializingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpResource> context)
+    public override Task UpdatingAsync(UpdatingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpResource> context)
+    public override Task ValidatingAsync(ValidatingContext<McpResource> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.Source))
         {

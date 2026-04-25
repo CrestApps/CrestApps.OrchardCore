@@ -1,8 +1,9 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -25,14 +26,14 @@ internal static class ApiAIUtilityCompletionEndpoint
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       [FromServices] IAuthorizationService authorizationService,
-       [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
-       [FromServices] IHttpContextAccessor httpContextAccessor,
-       [FromServices] IAICompletionService completionService,
-       [FromServices] IAICompletionContextBuilder completionContextBuilder,
-       [FromServices] IAIDeploymentManager deploymentManager,
-       [FromServices] ILogger<T> logger,
-       [FromBody] AIUtilityCompletionRequest requestData)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAICompletionService completionService,
+        [FromServices] IAICompletionContextBuilder completionContextBuilder,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ILogger<T> logger,
+        [FromBody] AIUtilityCompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
@@ -64,8 +65,12 @@ internal static class ApiAIUtilityCompletionEndpoint
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName);
+
+        if (deployment is null)
+        {
+            return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
+        }
 
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 

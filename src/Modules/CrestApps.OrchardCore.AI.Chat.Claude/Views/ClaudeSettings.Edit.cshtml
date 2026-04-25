@@ -1,0 +1,78 @@
+@using CrestApps.Core.AI.Claude.Models
+@using CrestApps.OrchardCore.AI.Chat.Claude.Settings
+@model CrestApps.OrchardCore.AI.Chat.Claude.ViewModels.ClaudeSettingsViewModel
+
+<fieldset class="form-group">
+    <div class="row">
+        <div class="col-12">
+            <h3>@T["Claude authentication"]</h3>
+            <p class="hint">@T["Configure how the Claude orchestrator authenticates with Anthropic."]</p>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
+        <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select" id="claude-auth-type">
+        </select>
+        <span class="hint">@T["Choose how the Claude orchestrator authenticates. \"Not configured\" keeps Claude disabled until you explicitly enable API key authentication."]</span>
+    </div>
+
+    <div id="claude-api-key-section" class="@(Model.AuthenticationType == ClaudeAuthenticationType.ApiKey ? "" : "d-none")">
+        <div class="mb-3">
+            <label asp-for="BaseUrl" class="form-label">@T["Base URL"]</label>
+            <input asp-for="BaseUrl" class="form-control" placeholder="https://api.anthropic.com" />
+            <span class="hint">@T["Use the standard Anthropic API base URL unless you have a custom gateway."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+            <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+            @if (Model.HasApiKey)
+            {
+                <span class="hint text-success">@T["A Claude API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["The Claude API key used for live model discovery and Claude-orchestrated chats."]</span>
+            }
+        </div>
+
+        @if (Model.AvailableModels.Any())
+        {
+            <div class="mb-3">
+                <label asp-for="DefaultModel" class="form-label">@T["Default model"]</label>
+                <select asp-for="DefaultModel" asp-items="Model.AvailableModels" class="form-select">
+                    <option value="">@T["Use per-item override"]</option>
+                </select>
+                <span class="hint">@T["Available models are loaded from the Anthropic Models API using the configured API key."]</span>
+            </div>
+        }
+        else
+        {
+            <div class="mb-3">
+                <label asp-for="DefaultModel" class="form-label">@T["Default model"]</label>
+                <input asp-for="DefaultModel" class="form-control" placeholder="claude-sonnet-4-6" />
+                <span class="hint">@T["Optionally set the Claude model ID used when a profile, template, or interaction does not override it."]</span>
+            </div>
+        }
+    </div>
+</fieldset>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const authTypeSelect = document.getElementById('claude-auth-type');
+        const apiKeySection = document.getElementById('claude-api-key-section');
+
+        function toggleSections() {
+            const isApiKey = authTypeSelect.value === '@(nameof(ClaudeAuthenticationType.ApiKey))';
+            apiKeySection.classList.toggle('d-none', !isApiKey);
+        }
+
+        if (authTypeSelect) {
+            authTypeSelect.addEventListener('change', toggleSections);
+        }
+
+        toggleSections();
+    });
+</script>

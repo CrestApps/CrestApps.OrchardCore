@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.AI.Documents.Pdf;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
@@ -8,6 +8,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddIngestionDocumentReader<PdfIngestionDocumentReader>(".pdf");
+        services.AddCoreAIPdfDocumentProcessing();
     }
 }

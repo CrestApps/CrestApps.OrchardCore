@@ -25,10 +25,7 @@ internal sealed class McpResourcesAdminMenu : AdminNavigationProvider
                         .Id("aiMcpResources")
                         .Action("Index", "Resources", "CrestApps.OrchardCore.AI.Mcp")
                         .Permission(McpPermissions.ManageMcpResources)
-                        .LocalNav()
-                    )
-                )
-            );
+                        .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

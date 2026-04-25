@@ -1,7 +1,8 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.YesSql.Core.Indexes;
-using OrchardCore;
+using CrestApps.Core;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using YesSql;
 using YesSql.Services;
 
@@ -20,13 +21,15 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         Session = session;
     }
 
-    internal DocumentCatalog(ISession session, string collectionName)
+    internal DocumentCatalog(
+        ISession session,
+        string collectionName)
         : this(session)
     {
         CollectionName = collectionName;
     }
 
-    public async ValueTask<bool> DeleteAsync(T entry)
+    public async ValueTask<bool> DeleteAsync(T entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -37,26 +40,30 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         return true;
     }
 
-    public async ValueTask<T> FindByIdAsync(string id)
+    public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
-        var item = await Session.Query<T, TIndex>(x => x.ItemId == id, collection: CollectionName).FirstOrDefaultAsync();
+        var item = await Session.Query<T, TIndex>(x => x.ItemId == id, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
 
         return item;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
 
-        var items = await Session.Query<T, TIndex>(x => x.ItemId.IsIn(ids), collection: CollectionName).ListAsync();
+        var items = await Session.Query<T, TIndex>(x => x.ItemId.IsIn(ids), collection: CollectionName).ListAsync(cancellationToken);
 
         return items.ToArray();
     }
 
-    public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-            where TQuery : QueryContext
+    public async ValueTask<PageResult<T>> PageAsync<TQuery>(
+        int page,
+        int pageSize,
+        TQuery context,
+        CancellationToken cancellationToken = default)
+        where TQuery : QueryContext
     {
         IQuery<T> query = Session.Query<T, TIndex>(collection: CollectionName);
 
@@ -64,7 +71,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         {
             if (!string.IsNullOrEmpty(context.Name))
             {
-                if (typeof(TIndex).IsAssignableFrom(typeof(INameAwareIndex)))
+                if (typeof(INameAwareIndex).IsAssignableFrom(typeof(TIndex)))
                 {
                     if (context.Sorted)
                     {
@@ -76,7 +83,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                         query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name));
                     }
                 }
-                else if (typeof(TIndex).IsAssignableFrom(typeof(IDisplayTextAwareIndex)))
+                else if (typeof(IDisplayTextAwareIndex).IsAssignableFrom(typeof(TIndex)))
                 {
                     if (context.Sorted)
                     {
@@ -90,9 +97,9 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                 }
             }
 
-            if (!string.IsNullOrEmpty(context.Source) && typeof(TIndex).IsAssignableFrom(typeof(ISourceAwareIndex)))
+            if (!string.IsNullOrEmpty(context.Source) && typeof(ISourceAwareIndex).IsAssignableFrom(typeof(TIndex)))
             {
-                query = query.With<ISourceAwareIndex>(x => x.Source == context.Name);
+                query = query.With<ISourceAwareIndex>(x => x.Source == context.Source);
             }
 
             await PagingAsync(query, context);
@@ -102,8 +109,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         return new PageResult<T>
         {
-            Count = await query.CountAsync(),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray()
+            Count = await query.CountAsync(cancellationToken),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray()
         };
     }
 
@@ -113,20 +120,20 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         return ValueTask.CompletedTask;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var items = await Session.Query<T, TIndex>(collection: CollectionName).ListAsync();
+        var items = await Session.Query<T, TIndex>(collection: CollectionName).ListAsync(cancellationToken);
 
         return items.ToArray();
     }
 
-    public async ValueTask CreateAsync(T record)
+    public async ValueTask CreateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         await SavingAsync(record);
@@ -134,23 +141,18 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         await Session.SaveAsync(record, CollectionName);
     }
 
-    public async ValueTask UpdateAsync(T record)
+    public async ValueTask UpdateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         await SavingAsync(record);
 
         await Session.SaveAsync(record, CollectionName);
-    }
-
-    public async ValueTask SaveChangesAsync()
-    {
-        await Session.FlushAsync();
     }
 
     protected virtual ValueTask DeletingAsync(T model)

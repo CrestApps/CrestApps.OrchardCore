@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AIPromptingConstants.Feature.Area,
     Name = "AI Prompt Templates",
-    Description = "Provides reusable AI prompt template management with feature-aware discovery, Liquid-based rendering, and prompt selection UI for AI Profiles and Chat Interactions.",
+    Description = "Provides reusable template management with feature-aware discovery, Liquid-based rendering, and prompt selection UI for AI Profiles and Chat Interactions.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

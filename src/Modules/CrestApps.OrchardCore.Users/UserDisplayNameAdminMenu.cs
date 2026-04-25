@@ -14,7 +14,6 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
         { "groupId", DisplayNameSettingsDisplayDriver.GroupId },
     };
 
-
     internal readonly IStringLocalizer S;
 
     public UserDisplayNameAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
@@ -49,9 +48,7 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
                     .Id("userDisplayName")
                     .Action("Index", "Admin", _routeValues)
                     .Permission(UserPermissions.ManageDisplaySettings)
-                    .LocalNav()
-                )
-            );
+                    .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

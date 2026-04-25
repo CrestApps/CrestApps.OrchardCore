@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,27 +14,27 @@ internal sealed class GetUserInfoTool : AIFunction
     public const string TheName = "getUserInfo";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "userId": {
-              "type": "string",
-              "description": "The userId to get user info for."
-            },
-            "username": {
-              "type": "string",
-              "description": "The username to get user info for."
-            },
-            "email": {
-              "type": "string",
-              "description": "The email to get user info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": []
+    """
+    {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The userId to get user info for."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username to get user info for."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email to get user info for."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": []
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -53,6 +53,7 @@ internal sealed class GetUserInfoTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetUserInfoTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -71,6 +72,7 @@ internal sealed class GetUserInfoTool : AIFunction
         if (!hasUserId && !hasUsername && !hasEmail)
         {
             logger.LogWarning("AI tool '{ToolName}' invoked without any identifying argument (userId, username, or email).", Name);
+
             return "You must provide at least one of the following arguments: userId, username, or email.";
         }
 
@@ -92,6 +94,7 @@ internal sealed class GetUserInfoTool : AIFunction
         if (user is null)
         {
             logger.LogWarning("AI tool '{ToolName}' could not find user with the provided arguments.", Name);
+
             return "Unable to find a user with the provided arguments.";
         }
 

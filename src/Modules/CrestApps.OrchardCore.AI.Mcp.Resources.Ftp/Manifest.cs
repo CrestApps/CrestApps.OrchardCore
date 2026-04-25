@@ -16,6 +16,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        McpConstants.Feature.Server,
+        McpPermissions.Feature.Server,
     ]
 )]

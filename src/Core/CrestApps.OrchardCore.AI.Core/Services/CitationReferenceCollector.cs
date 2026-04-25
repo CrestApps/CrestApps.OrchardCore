@@ -1,4 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Services;
 using static CrestApps.OrchardCore.AI.Core.AIConstants;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;

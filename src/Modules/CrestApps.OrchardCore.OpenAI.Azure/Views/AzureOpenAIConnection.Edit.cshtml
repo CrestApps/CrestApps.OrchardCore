@@ -1,4 +1,4 @@
-@using CrestApps.Azure.Core.Models
+@using CrestApps.Core.Azure.Models
 @using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
 @using OrchardCore
 
@@ -44,32 +44,20 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="EnableLogging">
-            <label class="form-check-label" asp-for="EnableLogging">@T["Enable logging"]</label>
-            <span class="hint dashed">@T["When enabled, every request will be logged."]</span>
-        </div>
-    </div>
-</div>
-
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
-
         const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
         const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
         const identityIdWrapper = document.getElementById('@identityIdWrapperId');
 
         menuElement.addEventListener('change', (e) => {
-
-            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
+            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)') {
                 apiKeyWrapper.classList.remove('d-none');
             } else {
                 apiKeyWrapper.classList.add('d-none');
             }
 
-            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
+            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)') {
                 identityIdWrapper.classList.remove('d-none');
             } else {
                 identityIdWrapper.classList.add('d-none');

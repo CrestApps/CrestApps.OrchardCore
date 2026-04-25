@@ -66,6 +66,7 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.EditUsers, user))
         {
             // When the user is only editing their profile never update this part of the user.
+
             return null;
         }
 

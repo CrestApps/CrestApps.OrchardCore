@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -58,9 +59,12 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public bool AllowAIToUpdateSubject { get; set; } = true;
 
+    /// <summary>
+    /// Creates a copy of the current campaign.
+    /// </summary>
     public OmnichannelCampaign Clone()
     {
-        return new OmnichannelCampaign()
+        return new OmnichannelCampaign
         {
             ItemId = ItemId,
             DisplayText = DisplayText,
@@ -89,4 +93,3 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
         };
     }
 }
-

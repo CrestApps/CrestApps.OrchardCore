@@ -1,0 +1,19 @@
+@inherits OrchardCore.DisplayManagement.Razor.RazorPage<TModel>
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper *, OrchardCore.DisplayManagement
+@addTagHelper *, OrchardCore.ResourceManagement
+
+@using OrchardCore
+@using OrchardCore.ContentManagement
+@using OrchardCore.ContentManagement.Metadata.Models
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.DisplayManagement.Shapes
+@using OrchardCore.DisplayManagement.Title
+@using OrchardCore.DisplayManagement.Zones
+@using OrchardCore.Mvc.Utilities
+@using OrchardCore.Settings
+@using OrchardCore.Modules
+
+@inject OrchardCore.DisplayManagement.Title.IPageTitleBuilder PageTitleBuilder
+@inject OrchardCore.Settings.ISiteService SiteService

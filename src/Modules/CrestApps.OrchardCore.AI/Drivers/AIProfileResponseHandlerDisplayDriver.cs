@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -30,6 +31,7 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
         var handlers = _handlerResolver.GetAll();
 
         // Only show the handler selector when there is at least one non-AI handler registered.
+
         if (!handlers.Any())
         {
             return null;
@@ -42,10 +44,10 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
             model.InitialResponseHandlerName = settings.InitialResponseHandlerName;
 
             model.ResponseHandlers = handlers
-                .Select(h => new SelectListItem(h.Name, h.Name))
-                .OrderBy(x => x.Text)
-                .ToList();
-        }).Location("Content:20%Interactions;3");
+            .Select(h => new SelectListItem(h.Name, h.Name))
+            .OrderBy(x => x.Text)
+            .ToList();
+        }).Location("Content:9%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

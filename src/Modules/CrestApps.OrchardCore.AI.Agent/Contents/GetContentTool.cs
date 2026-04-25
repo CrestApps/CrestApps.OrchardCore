@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,19 +14,22 @@ public sealed class GetContentTool : AIFunction
     public const string TheName = "getContentItemById";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
         }
-        """);
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -42,6 +45,7 @@ public sealed class GetContentTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentTool>>();

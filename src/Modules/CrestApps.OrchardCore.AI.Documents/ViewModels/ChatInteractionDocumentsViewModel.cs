@@ -1,17 +1,18 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
 public class ChatInteractionDocumentsViewModel
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of the interaction.
+    /// </summary>
     public string ItemId { get; set; }
 
-    public IList<ChatDocumentInfo> Documents { get; set; } = [];
-
     /// <summary>
-    /// Gets or sets the number of top matching document chunks to include in AI context.
+    /// Gets or sets the collection of chat documents associated with the current context.
     /// </summary>
-    public int TopN { get; set; } = 3;
+    public IList<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether an index profile is configured for document embedding.

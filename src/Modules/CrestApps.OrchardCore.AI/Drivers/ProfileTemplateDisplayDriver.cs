@@ -1,19 +1,20 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for Profile-source AI templates.
+/// Display driver for Profile-source templates.
 /// Manages orchestration, profile-specific fields, and model parameters
 /// stored in <see cref="ProfileTemplateMetadata"/>.
 /// </summary>
@@ -36,15 +37,15 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
         {
             model.OrchestratorName = metadata.OrchestratorName;
 
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
-                .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
-                .ToList();
+            .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+            .ToList();
         }).Location("Content:2%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
@@ -57,7 +58,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var interactionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInteractionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:1%Interactions;3")
+        }).Location("Content:6%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var instructionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInstructionFields_Edit", model =>
@@ -69,7 +70,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var systemInstructionsResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateSystemInstructions_Edit", model =>
         {
             PopulateParameters(metadata, model);
-        }).Location("Content:10%Instructions;4")
+        }).Location("Content:5%Instructions;4")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var parametersResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateParameters_Edit", model =>
@@ -105,7 +106,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             return null;
         }
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         var connectionModel = new AIProfileTemplateConnectionViewModel();
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
@@ -205,9 +206,9 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         {
             model.InitialResponseHandlerName = metadata.InitialResponseHandlerName;
             model.ResponseHandlers = handlers
-                .Select(h => new SelectListItem(h.Name, h.Name))
-                .OrderBy(x => x.Text)
-                .ToList();
-        }).Location("Content:20%Interactions;3");
+            .Select(h => new SelectListItem(h.Name, h.Name))
+            .OrderBy(x => x.Text)
+            .ToList();
+        }).Location("Content:9%General;1");
     }
 }

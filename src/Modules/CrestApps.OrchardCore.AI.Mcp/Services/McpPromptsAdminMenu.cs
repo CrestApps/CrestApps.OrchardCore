@@ -25,10 +25,7 @@ internal sealed class McpPromptsAdminMenu : AdminNavigationProvider
                         .Id("aiMcpPrompts")
                         .Action("Index", "Prompts", "CrestApps.OrchardCore.AI.Mcp")
                         .Permission(McpPermissions.ManageMcpPrompts)
-                        .LocalNav()
-                    )
-                )
-            );
+                        .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

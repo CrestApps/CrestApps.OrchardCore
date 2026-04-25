@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
 using OrchardCore.Json;
@@ -11,13 +12,16 @@ public sealed class RecipeExecutionService
 {
     private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
     private readonly DocumentJsonSerializerOptions _options;
+    private readonly ILogger _logger;
 
     public RecipeExecutionService(
         IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
-        IOptions<DocumentJsonSerializerOptions> options)
+        IOptions<DocumentJsonSerializerOptions> options,
+        ILogger<RecipeExecutionService> logger)
     {
         _deploymentTargetHandlers = deploymentTargetHandlers;
         _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<bool> ExecuteRecipeAsync(JsonNode data)
@@ -48,8 +52,10 @@ public sealed class RecipeExecutionService
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "An error occurred while executing a recipe.");
+
             return false;
         }
         finally

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,19 +14,22 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
     public const string TheName = "removeContentTypeDefinition";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the content type for which to remove the definitions."
-            }
-          },
-          "required": ["name"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the content type for which to remove the definitions."
         }
-        """);
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -45,6 +48,7 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<RemoveContentTypeDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
@@ -71,6 +75,7 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
                 Unable to find a type definition that match the name: {name}.
                 Here are the available content types that can be removed:
                 {JsonSerializer.Serialize((await contentDefinitionManager.ListTypeDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+
                 """;
         }
 

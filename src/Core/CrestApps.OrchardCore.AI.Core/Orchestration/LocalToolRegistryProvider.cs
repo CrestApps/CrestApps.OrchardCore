@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -49,12 +50,14 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
             }
 
             // Skip system tools — they are provided by SystemToolRegistryProvider.
+
             if (definition.IsSystemTool)
             {
                 continue;
             }
 
             // Verify user has permission to access this tool.
+
             if (user is not null &&
                 !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName as object))
             {

@@ -94,7 +94,7 @@ internal sealed class CatalogItemMigrations : DataMigration
                                     content,
                                     id = document.Id,
                                 }
-                            );
+                                );
                         }
                     }
                 }

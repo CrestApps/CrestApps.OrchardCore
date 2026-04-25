@@ -13,6 +13,11 @@ public sealed class AIChatAdminWidgetSettings
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets a value indicating whether the admin widget is enabled.
+    /// </summary>
+    public bool IsEnabled => !string.IsNullOrWhiteSpace(ProfileId);
+
+    /// <summary>
     /// Gets or sets the maximum number of previous sessions to display in the widget history.
     /// </summary>
     public int MaxSessions { get; set; } = DefaultMaxSessions;

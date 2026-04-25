@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,23 +13,26 @@ internal sealed class DisableFeatureTool : AIFunction
     public const string TheName = "disableSiteFeature";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "featureIds": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1,
-              "description": "A list of unique feature IDs to disable."
-            }
+    """
+    {
+      "type": "object",
+      "properties": {
+        "featureIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
           },
-          "additionalProperties": false,
-          "required": ["featureIds"]
+          "minItems": 1,
+          "description": "A list of unique feature IDs to disable."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureIds"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -45,6 +48,7 @@ internal sealed class DisableFeatureTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<DisableFeatureTool>>();

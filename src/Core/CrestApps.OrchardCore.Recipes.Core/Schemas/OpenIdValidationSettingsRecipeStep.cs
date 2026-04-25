@@ -8,11 +8,11 @@ public sealed class OpenIdValidationSettingsRecipeStep : RecipeStepSchemaBase
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-        [
-            ("MetadataAddress", RecipeStepSchemaBuilders.String()),
-            ("Audience", RecipeStepSchemaBuilders.String()),
-            ("Authority", RecipeStepSchemaBuilders.String()),
-            ("DisableTokenTypeValidation", RecipeStepSchemaBuilders.Boolean()),
-            ("Tenant", RecipeStepSchemaBuilders.String()),
+    [
+        ("MetadataAddress", RecipeStepSchemaBuilders.String()),
+        ("Audience", RecipeStepSchemaBuilders.String()),
+        ("Authority", RecipeStepSchemaBuilders.String()),
+        ("DisableTokenTypeValidation", RecipeStepSchemaBuilders.Boolean()),
+        ("Tenant", RecipeStepSchemaBuilders.String()),
         ]);
 }

@@ -1,9 +1,9 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
@@ -21,11 +21,11 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
 
         var alwaysAvailableCount = allAgents
-            .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+            .Count(a => a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
 
         var onDemandAgents = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditChatInteractionAgentsViewModel>("ChatInteractionAgents_Edit", model =>
         {
@@ -37,8 +37,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 Description = agent.Description,
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
-        }).Location("Parameters:5#Capabilities;5");
+        }).Location("Parameters:5#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -53,7 +52,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
 
         var validAgentNames = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

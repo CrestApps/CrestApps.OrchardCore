@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
 @using OrchardCore
 
 @model AIProfileChatModeViewModel
@@ -20,6 +20,16 @@
             <option value="">@T["Default voice"]</option>
         </select>
         <span class="hint">@T["Select a voice for text-to-speech synthesis. If no voice is selected, the provider's default voice is used."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableTextToSpeechPlayback" />
+            <label class="form-check-label" asp-for="EnableTextToSpeechPlayback">@T["Enable text-to-speech playback"]</label>
+        </div>
+        <span class="hint">@T["When enabled, a play button is shown on each assistant message, allowing users to listen to AI responses via the configured text-to-speech deployment."]</span>
     </div>
 </div>
 

@@ -1,7 +1,7 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using Usr = OrchardCore.Users;
+using YSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -24,34 +25,38 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItem": {
-              "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
-            },
-            "isDraft": {
-              "type": "boolean",
-              "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
-            },
-            "ownerUsername": {
-              "type": "string",
-              "description": "Optional. The username of the user who should own the content item. Used as a fallback when no user is authenticated."
-            },
-            "ownerUserId": {
-              "type": "string",
-              "description": "Optional. The user ID of the user who should own the content item. Used as a fallback when no user is authenticated."
-            },
-            "ownerEmail": {
-              "type": "string",
-              "description": "Optional. The email of the user who should own the content item. Used as a fallback when no user is authenticated."
-            }
-          },
-          "required": ["contentItem", "isDraft"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItem": {
+          "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
+        },
+        "isDraft": {
+          "type": "boolean",
+          "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
+        },
+        "ownerUsername": {
+          "type": "string",
+          "description": "Optional. The username of the user who should own the content item. Used as a fallback when no user is authenticated."
+        },
+        "ownerUserId": {
+          "type": "string",
+          "description": "Optional. The user ID of the user who should own the content item. Used as a fallback when no user is authenticated."
+        },
+        "ownerEmail": {
+          "type": "string",
+          "description": "Optional. The email of the user who should own the content item. Used as a fallback when no user is authenticated."
         }
-        """);
+      },
+      "required": [
+        "contentItem",
+        "isDraft"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -59,7 +64,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>
     {
         ["Strict"] = false,
     };
@@ -88,6 +93,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             json = je.GetRawText();
         }
+
         else
         {
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItem argument in the function arguments.", TheName);
@@ -103,8 +109,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         // Use Utf8JsonReader + JsonDocument.ParseValue to read only the first complete
         // JSON value, ignoring any trailing characters the model may have appended.
         var bytes = Encoding.UTF8.GetBytes(json);
+
         var reader = new Utf8JsonReader(bytes);
+
         using var doc = JsonDocument.ParseValue(ref reader);
+
         var model = doc.RootElement.Deserialize<ContentItem>(JsonSerializerOptions);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
@@ -145,16 +154,17 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 logger.LogWarning("AI tool '{ToolName}': Unable to create content item due to validation errors: {Errors}.", TheName, string.Join(", ", result.Errors.Select(x => x.ErrorMessage)));
 
                 return
-                   $"""
-                    Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
-                    For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
-                    """;
+                $"""
+Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
+For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
+""";
             }
             else
             {
                 await contentManager.CreateAsync(contentItem, VersionOptions.Draft);
             }
         }
+
         else
         {
             contentItem.Merge(model, _updateJsonMergeSettings);
@@ -179,6 +189,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             response = $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
+
         else
         {
             await contentManager.PublishAsync(contentItem);
@@ -187,7 +198,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         }
 
         // Flush the changes to allow other tools to access it in the same function execution, such as a tool that generates a link to the content item after creation.
-        var session = arguments.Services.GetRequiredService<global::YesSql.ISession>();
+        var session = arguments.Services.GetRequiredService<YSession>();
         await session.FlushAsync(cancellationToken);
 
         // HttpContext may be null when invoked from a background task (e.g., post-session processing).

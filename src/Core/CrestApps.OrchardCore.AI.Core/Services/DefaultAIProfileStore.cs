@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql.Indexes.AI;
+using CrestApps.Core.Data.YesSql.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -8,21 +9,15 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIProfileIndex>, IAIProfileStore
 {
     public DefaultAIProfileStore(ISession session)
-        : base(session)
+    : base(session, AIConstants.AICollectionName)
     {
-        CollectionName = AIConstants.AICollectionName;
     }
 
     public async ValueTask<IReadOnlyCollection<AIProfile>> GetByTypeAsync(AIProfileType type)
     {
-        var typeValue = type.ToString();
+        var items = await Session.Query<AIProfile, AIProfileIndex>(collection: CollectionName).ListAsync();
 
-        var items = await Session.Query<AIProfile, AIProfileIndex>(
-            x => x.Type == typeValue,
-            collection: CollectionName)
-            .ListAsync();
-
-        return items.ToArray();
+        return items.Where(profile => profile.Type == type).ToArray();
     }
 
     protected override ValueTask DeletingAsync(AIProfile entry)
@@ -39,11 +34,6 @@ public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIPr
 
     protected override ValueTask PagingAsync<TQuery>(IQuery<AIProfile> query, TQuery context)
     {
-        if (context is AIProfileQueryContext { IsListableOnly: true })
-        {
-            query.With<AIProfileIndex>(x => x.IsListable);
-        }
-
         return ValueTask.CompletedTask;
     }
 }

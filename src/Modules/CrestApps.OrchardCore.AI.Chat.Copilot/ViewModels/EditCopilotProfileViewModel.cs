@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -15,6 +15,11 @@ public class EditCopilotProfileViewModel
     /// Whether the Copilot session should run with --allow-all flag.
     /// </summary>
     public bool IsAllowAll { get; set; }
+
+    /// <summary>
+    /// The reasoning effort level for the Copilot session.
+    /// </summary>
+    public CopilotReasoningEffort CopilotReasoningEffort { get; set; }
 
     /// <summary>
     /// Indicates whether the user has authenticated with GitHub.

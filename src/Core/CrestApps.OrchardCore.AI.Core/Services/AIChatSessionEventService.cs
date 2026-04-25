@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
-using OrchardCore.Modules;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -12,14 +11,14 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AIChatSessionEventService
 {
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     public AIChatSessionEventService(
         ISession session,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -28,7 +27,7 @@ public sealed class AIChatSessionEventService
     /// </summary>
     public async Task RecordSessionStartedAsync(AIChatSession chatSession)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
         var evt = new AIChatSessionEvent
@@ -42,6 +41,7 @@ public sealed class AIChatSessionEventService
             MessageCount = 0,
             HandleTimeSeconds = 0,
             IsResolved = false,
+            CompletionCount = 0,
             CreatedUtc = now,
         };
 
@@ -58,7 +58,7 @@ public sealed class AIChatSessionEventService
         if (evt is null)
         {
             // If no start event exists, create a complete record.
-            var now = _clock.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
             evt = new AIChatSessionEvent
@@ -73,6 +73,7 @@ public sealed class AIChatSessionEventService
                 MessageCount = promptCount,
                 HandleTimeSeconds = ((chatSession.ClosedAtUtc ?? now) - chatSession.CreatedUtc).TotalSeconds,
                 IsResolved = isResolved,
+                CompletionCount = 0,
                 CreatedUtc = now,
             };
 
@@ -80,7 +81,7 @@ public sealed class AIChatSessionEventService
             return;
         }
 
-        var endTime = chatSession.ClosedAtUtc ?? _clock.UtcNow;
+        var endTime = chatSession.ClosedAtUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
 
         evt.SessionEndedUtc = endTime;
         evt.MessageCount = promptCount;
@@ -94,7 +95,7 @@ public sealed class AIChatSessionEventService
     /// Accumulates token usage and response latency metrics for the session.
     /// Called after each message completion to update running totals.
     /// </summary>
-    public async Task RecordCompletionMetricsAsync(string sessionId, int inputTokens, int outputTokens, double responseLatencyMs)
+    public async Task RecordCompletionUsageAsync(string sessionId, int inputTokens, int outputTokens)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);
 
@@ -106,10 +107,21 @@ public sealed class AIChatSessionEventService
         evt.TotalInputTokens += inputTokens;
         evt.TotalOutputTokens += outputTokens;
 
-        // Compute running average latency.
-        var completionCount = evt.MessageCount > 0 ? evt.MessageCount : 1;
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+    }
+
+    public async Task RecordResponseLatencyAsync(string sessionId, double responseLatencyMs)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null || responseLatencyMs <= 0)
+        {
+            return;
+        }
+
+        evt.CompletionCount++;
         evt.AverageResponseLatencyMs =
-            ((evt.AverageResponseLatencyMs * (completionCount - 1)) + responseLatencyMs) / completionCount;
+            ((evt.AverageResponseLatencyMs * (evt.CompletionCount - 1)) + responseLatencyMs) / evt.CompletionCount;
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
@@ -181,8 +193,8 @@ public sealed class AIChatSessionEventService
     private async Task<AIChatSessionEvent> FindEventBySessionIdAsync(string sessionId)
     {
         return await _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
-                i => i.SessionId == sessionId,
-                collection: AIConstants.AICollectionName)
-            .FirstOrDefaultAsync();
+            i => i.SessionId == sessionId,
+            collection: AIConstants.AICollectionName)
+                .FirstOrDefaultAsync();
     }
 }

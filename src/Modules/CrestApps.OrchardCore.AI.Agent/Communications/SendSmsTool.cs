@@ -1,8 +1,9 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
@@ -12,23 +13,26 @@ public sealed class SendSmsTool : AIFunction
     public const string TheName = "sendSmsMessage";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "phone": {
-              "type": "string",
-              "description": "This must be internationally formatted phone number starting with +."
-            },
-            "body": {
-              "type": "string",
-              "description": "The text message body to send."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["phone", "body"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "description": "This must be internationally formatted phone number starting with +."
+        },
+        "body": {
+          "type": "string",
+          "description": "The text message body to send."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "phone",
+        "body"
+      ]
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -47,6 +51,7 @@ public sealed class SendSmsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SendSmsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -58,18 +63,21 @@ public sealed class SendSmsTool : AIFunction
         if (!arguments.TryGetFirstString("phone", out var phone))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "phone");
+
             return "Unable to find a phone argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("body", out var body))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
+
             return "Unable to find a body argument in the function arguments.";
         }
 
         if (!phoneFormatValidator.IsValid(phone))
         {
             logger.LogWarning("AI tool '{ToolName}' received invalid phone format '{Phone}'.", Name, phone);
+
             return "The given phone number must be in a international format.";
         }
 
@@ -87,10 +95,12 @@ public sealed class SendSmsTool : AIFunction
             {
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
+
             return "The SMS message was sent successfully.";
         }
 
         logger.LogWarning("AI tool '{ToolName}' failed to send SMS to '{Phone}'.", Name, phone);
+
         return $"The SMS message was not sent successfully due to the following: {string.Join(' ', result.Errors)}";
     }
 }

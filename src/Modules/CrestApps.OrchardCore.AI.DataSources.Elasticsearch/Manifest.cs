@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.DataSources,
-        "OrchardCore.Search.Elasticsearch",
+        "OrchardCore.Elasticsearch",
     ]
 )]

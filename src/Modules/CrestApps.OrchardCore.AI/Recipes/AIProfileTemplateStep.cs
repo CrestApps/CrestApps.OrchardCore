@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -19,7 +19,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
     public AIProfileTemplateStep(
         INamedCatalogManager<AIProfileTemplate> templateManager,
         IStringLocalizer<AIProfileTemplateStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _templateManager = templateManager;
         S = stringLocalizer;
@@ -61,7 +61,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
             {
                 template = await _templateManager.NewAsync(token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     template.ItemId = id;
                 }

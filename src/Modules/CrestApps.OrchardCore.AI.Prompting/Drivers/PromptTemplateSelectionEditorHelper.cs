@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -21,7 +21,7 @@ internal static class PromptTemplateSelectionEditorHelper
                 TemplateId = selection.TemplateId,
                 PromptParameters = SerializeParameters(selection.Parameters),
             })
-            .ToList();
+        .ToList();
 
         model.AvailablePrompts = (await promptTemplateSelectionService.ListAsync())
             .Where(template => template.Metadata.IsListable)
@@ -35,7 +35,7 @@ internal static class PromptTemplateSelectionEditorHelper
                 Category = template.Metadata.Category ?? "General",
                 Parameters = template.Metadata.Parameters ?? [],
             })
-            .ToList();
+        .ToList();
     }
 
     internal static async Task<PromptTemplateMetadata> BuildMetadataAsync(
@@ -80,7 +80,7 @@ internal static class PromptTemplateSelectionEditorHelper
                     {
                         modelState.AddModelError(
                             BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.TemplateId)),
-                            $"Prompt template '{selection.TemplateId}' was not found.");
+                        $"Prompt template '{selection.TemplateId}' was not found.");
                     }
                     else
                     {
@@ -90,7 +90,7 @@ internal static class PromptTemplateSelectionEditorHelper
                         {
                             modelState.AddModelError(
                                 BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
-                                $"The following parameter keys are not supported by this template: {string.Join(", ", invalidKeys)}");
+                            $"The following parameter keys are not supported by this template: {string.Join(", ", invalidKeys)}");
                         }
                         else
                         {
@@ -102,7 +102,7 @@ internal static class PromptTemplateSelectionEditorHelper
                 {
                     modelState.AddModelError(
                         BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
-                        "The parameters must be valid JSON with string key-value pairs. Example: {\"key1\": \"value1\"}");
+                    "The parameters must be valid JSON with string key-value pairs. Example: {\"key1\": \"value1\"}");
                 }
             }
 
@@ -162,7 +162,7 @@ internal static class PromptTemplateSelectionEditorHelper
 
     internal static List<string> GetInvalidParameterKeys(
         Dictionary<string, object> providedParameters,
-        AITemplate template)
+        Template template)
     {
         var invalidKeys = new List<string>();
 
@@ -173,7 +173,7 @@ internal static class PromptTemplateSelectionEditorHelper
 
         var declaredNames = new HashSet<string>(
             template.Metadata.Parameters.Select(parameter => parameter.Name),
-            StringComparer.OrdinalIgnoreCase);
+        StringComparer.OrdinalIgnoreCase);
 
         foreach (var key in providedParameters.Keys)
         {

@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Cysharp.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
@@ -19,73 +19,75 @@ public sealed class SetupTenantTool : AIFunction
     public const string TheName = "setupTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                },
-                "username": {
-                    "type": "string",
-                    "description": "The username for the super user to setup the site with."
-                },
-                "email": {
-                    "type": "string",
-                    "description": "A valid email for the super user to setup the site with."
-                },
-                "password": {
-                    "type": "string",
-                    "description": "The password for the super user to setup the site with."
-                },
-                "title": {
-                    "type": "string",
-                    "description": "A title for the site."
-                },
-                "timeZoneId": {
-                    "type": "string",
-                    "description": "The Unix TimeZone id."
-                },
-                "databaseProvider": {
-                    "type": "string",
-                    "description": "The database provider to use.",
-                    "enum": [
-                        "SqlConnection",
-                        "MySql",
-                        "Sqlite",
-                        "Postgres"
-                    ]
-                },
-                "requestUrlPrefix": {
-                    "type": "string",
-                    "description": "A URI prefix to use."
-                },
-                "requestUrlHost": {
-                    "type": "string",
-                    "description": "One or more qualified domain to use with this tenant."
-                },
-                "connectionString": {
-                    "type": "string",
-                    "description": "The connection string to use when setting up the tenant."
-                },
-                "tablePrefix": {
-                    "type": "string",
-                    "description": "A SQL table prefix to use for every table."
-                },
-                "recipeName": {
-                    "type": "string",
-                    "description": "The name of the startup recipe to use during setup."
-                }
-            },
-            "additionalProperties": false,
-            "required": [
-                "name",
-                "username",
-                "email",
-                "password"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username for the super user to setup the site with."
+        },
+        "email": {
+          "type": "string",
+          "description": "A valid email for the super user to setup the site with."
+        },
+        "password": {
+          "type": "string",
+          "description": "The password for the super user to setup the site with."
+        },
+        "title": {
+          "type": "string",
+          "description": "A title for the site."
+        },
+        "timeZoneId": {
+          "type": "string",
+          "description": "The Unix TimeZone id."
+        },
+        "databaseProvider": {
+          "type": "string",
+          "description": "The database provider to use.",
+          "enum": [
+            "SqlConnection",
+            "MySql",
+            "Sqlite",
+            "Postgres"
+          ]
+        },
+        "requestUrlPrefix": {
+          "type": "string",
+          "description": "A URI prefix to use."
+        },
+        "requestUrlHost": {
+          "type": "string",
+          "description": "One or more qualified domain to use with this tenant."
+        },
+        "connectionString": {
+          "type": "string",
+          "description": "The connection string to use when setting up the tenant."
+        },
+        "tablePrefix": {
+          "type": "string",
+          "description": "A SQL table prefix to use for every table."
+        },
+        "recipeName": {
+          "type": "string",
+          "description": "The name of the startup recipe to use during setup."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "username",
+        "email",
+        "password"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -101,6 +103,7 @@ public sealed class SetupTenantTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SetupTenantTool>>();
@@ -115,6 +118,7 @@ public sealed class SetupTenantTool : AIFunction
         var setupService = arguments.Services.GetRequiredService<ISetupService>();
         var identityOptions = arguments.Services.GetRequiredService<IOptions<IdentityOptions>>().Value;
         var emailAddressValidator = arguments.Services.GetRequiredService<IEmailAddressValidator>();
+
         var clock = arguments.Services.GetRequiredService<IClock>();
 
         if (!shellSettings.IsDefaultShell())
@@ -208,6 +212,7 @@ public sealed class SetupTenantTool : AIFunction
         }
 
         var requestUrlHost = arguments.GetFirstValueOrDefault("requestUrlHost", tenantSettings.RequestUrlHost);
+
         var requestUrlPrefix = arguments.GetFirstValueOrDefault("requestUrlPrefix", tenantSettings.RequestUrlPrefix);
 
         if (string.IsNullOrEmpty(requestUrlPrefix) && string.IsNullOrEmpty(requestUrlHost))
@@ -281,6 +286,7 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: setup of tenant '{TenantName}' encountered errors.", Name, name);
 
             using var builder = ZString.CreateStringBuilder();
+
             builder.Append("Failed to setup the tenant due to the following errors:");
 
             foreach (var error in setupContext.Errors)

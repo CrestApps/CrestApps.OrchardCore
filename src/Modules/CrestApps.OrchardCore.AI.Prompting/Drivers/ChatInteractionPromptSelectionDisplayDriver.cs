@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
@@ -19,7 +18,7 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
-        var promptMetadata = interaction.As<PromptTemplateMetadata>();
+        var promptMetadata = interaction.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

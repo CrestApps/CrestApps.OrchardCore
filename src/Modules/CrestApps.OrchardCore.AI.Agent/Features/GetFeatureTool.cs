@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,19 +13,22 @@ public sealed class GetFeatureTool : AIFunction
     public const string TheName = "getSiteFeature";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "featureId": {
-              "type": "string",
-              "description": "A unique feature ID to get info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["featureId"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "featureId": {
+          "type": "string",
+          "description": "A unique feature ID to get info for."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureId"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -41,6 +44,7 @@ public sealed class GetFeatureTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetFeatureTool>>();

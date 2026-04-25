@@ -1,5 +1,7 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
@@ -7,19 +9,16 @@ namespace CrestApps.OrchardCore.Core.Services;
 public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
     where T : CatalogItem, ISourceAwareModel
 {
-    private readonly IDocumentManager<DictionaryDocument<T>> _documentManager;
-
     public SourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
-        _documentManager = documentManager;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var document = await _documentManager.GetOrCreateImmutableAsync();
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase))
             .Select(Clone)

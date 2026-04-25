@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,26 +16,26 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
     public const string TheName = "queryChatSessionMetrics";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "profileId": {
-              "type": "string",
-              "description": "Optional. Filter metrics to a specific AI profile by its ID."
-            },
-            "startDateUtc": {
-              "type": "string",
-              "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
-            },
-            "endDateUtc": {
-              "type": "string",
-              "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "Optional. Filter metrics to a specific AI profile by its ID."
+        },
+        "startDateUtc": {
+          "type": "string",
+          "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
+        },
+        "endDateUtc": {
+          "type": "string",
+          "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -59,6 +59,7 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<QueryChatSessionMetricsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

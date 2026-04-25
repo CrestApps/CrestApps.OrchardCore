@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using CrestApps.Support.Json;
+using CrestApps.Core.Support.Json;
 
 namespace CrestApps.OrchardCore.Users.Core.Models;
 

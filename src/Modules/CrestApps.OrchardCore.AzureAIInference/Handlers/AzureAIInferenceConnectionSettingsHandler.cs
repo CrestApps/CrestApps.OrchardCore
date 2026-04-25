@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.AzureAIInference;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Azure.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AzureAIInference.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 
@@ -26,20 +27,20 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
         if (!string.Equals(context.Model.Source, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
@@ -63,7 +64,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
 

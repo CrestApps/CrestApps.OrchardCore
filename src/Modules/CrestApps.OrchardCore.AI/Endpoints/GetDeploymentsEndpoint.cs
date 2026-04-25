@@ -1,3 +1,6 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -12,7 +15,6 @@ internal static class GetDeploymentsEndpoint
     public static IEndpointRouteBuilder AddGetDeploymentsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/deployments", HandleAsync)
-            .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName)
             .DisableAntiforgery();
 
@@ -23,6 +25,7 @@ internal static class GetDeploymentsEndpoint
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
         [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         [FromQuery] string providerName,
         [FromQuery] string connection)
     {
@@ -41,7 +44,17 @@ internal static class GetDeploymentsEndpoint
             return TypedResults.BadRequest("Connection is required.");
         }
 
-        var deployments = await deploymentManager.GetAllAsync(providerName, connection);
+        var selectedConnection = await connectionsCatalog.FindByConnectionNameAsync(providerName, connection);
+
+        if (selectedConnection is null)
+        {
+            return TypedResults.BadRequest("Invalid connection.");
+        }
+
+        var deployments = (await deploymentManager.GetAllAsync(providerName))
+            .Where(x =>
+                string.Equals(x.ConnectionName, selectedConnection.ItemId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.ConnectionName, selectedConnection.Name, StringComparison.OrdinalIgnoreCase));
 
         return TypedResults.Ok(deployments.Select(x => new
         {
@@ -50,8 +63,8 @@ internal static class GetDeploymentsEndpoint
             x.Name,
             x.ModelName,
             DisplayText = string.Equals(x.Name, x.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? x.Name
-                : $"{x.Name} ({x.ModelName})",
+            ? x.Name
+            : $"{x.Name} ({x.ModelName})",
             x.CreatedUtc,
         }));
     }

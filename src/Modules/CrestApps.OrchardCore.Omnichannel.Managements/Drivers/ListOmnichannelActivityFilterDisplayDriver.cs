@@ -81,7 +81,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
             var subjectContentTypes = new List<SelectListItem>()
             {
-                new(S["Any subject"], ""),
+            new(S["Any subject"], ""),
             };
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
@@ -120,6 +120,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         }
 
         // Populate route values so other modules can extend filtering and pagination preserves filter state.
+
         if (filter.UrgencyLevel.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".UrgencyLevel", filter.UrgencyLevel.Value.ToString());

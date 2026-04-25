@@ -4,36 +4,52 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1852</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="Moq" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Chat.Copilot\CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.DataSources.AzureAI\CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.DataSources.Elasticsearch\CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents\CrestApps.OrchardCore.AI.Documents.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.OpenXml\CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.Pdf\CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.A2A\CrestApps.OrchardCore.AI.A2A.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" />
-    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <PackageReference Include="CrestApps.Core.AI.Claude" />
+    <PackageReference Include="CrestApps.Core.AI.Copilot" />
+    <PackageReference Include="CrestApps.Core.AI.Markdown" />
+    <PackageReference Include="CrestApps.Core.AI.Documents.OpenXml" />
+    <PackageReference Include="CrestApps.Core.AI.Documents.Pdf" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/CrestApps.OrchardCore.AI.Chat.Claude.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/CrestApps.OrchardCore.AI.Documents.Azure.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Abstractions\**\*.cs" />
+    <Compile Remove="AITemplates\**\*.cs" />
+    <Compile Remove="ChatNotifications\**\*.cs" />
+    <Compile Remove="Core\**\*.cs" />
+    <Compile Remove="Extensions\**\*.cs" />
+    <Compile Remove="Framework\**\*.cs" />
+    <Compile Remove="Helpers\DocumentReaders\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,7 +57,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="AITemplates\Prompts\*.md" />
+    <EmbeddedResource Include="Templates\Prompts\*.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Modules\AI.Memory\" />
   </ItemGroup>
 
 </Project>

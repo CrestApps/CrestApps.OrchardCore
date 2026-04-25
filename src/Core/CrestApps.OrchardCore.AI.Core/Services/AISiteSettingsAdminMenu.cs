@@ -23,15 +23,15 @@ public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-           .Add(S["Settings"], settings =>
-           {
-               settings
-                   .Add(S["Artificial Intelligence"], S["Artificial Intelligence"].PrefixPosition(), ai => ai
-                       .Action("Index", "Admin", _routeValues)
-                       .Permission(AIPermissions.ManageAIProfiles)
-                       .LocalNav()
-                   );
-           });
+            .Add(S["Settings"], settings =>
+            {
+                settings
+                    .Add(S["Artificial Intelligence"], S["Artificial Intelligence"].PrefixPosition(), ai => ai
+                        .Action("Index", "Admin", _routeValues)
+                        .Permission(AIPermissions.ManageAIProfiles)
+                        .LocalNav()
+                    );
+            });
 
         return ValueTask.CompletedTask;
     }

@@ -8,9 +8,9 @@ public sealed class GitHubAuthenticationSettingsRecipeStep : RecipeStepSchemaBas
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-        [
-            ("ConsumerKey", RecipeStepSchemaBuilders.String()),
-            ("ConsumerSecret", RecipeStepSchemaBuilders.String()),
-            ("CallbackPath", RecipeStepSchemaBuilders.String()),
+    [
+        ("ConsumerKey", RecipeStepSchemaBuilders.String()),
+        ("ConsumerSecret", RecipeStepSchemaBuilders.String()),
+        ("CallbackPath", RecipeStepSchemaBuilders.String()),
         ]);
 }

@@ -1,12 +1,11 @@
 using System.Security.Claims;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -30,6 +29,7 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -391,11 +391,11 @@ public sealed class ActivityBatchesController : Controller
                     var contactQuery = readonlySession.Query<ContentItem>();
 
                     contactQuery = contactQuery.With<ContentItemIndex>(index =>
-                        index.ContentType == batch.ContactContentType &&
+                    index.ContentType == batch.ContactContentType &&
                         (batch.OnlyPublishedLeads ? index.Published : index.Latest) &&
-                        index.DocumentId > documentId &&
-                        (leadCreatedFrom == null || index.CreatedUtc >= leadCreatedFrom) &&
-                        (leadCreatedTo == null || index.CreatedUtc <= leadCreatedTo))
+                            index.DocumentId > documentId &&
+                                (leadCreatedFrom == null || index.CreatedUtc >= leadCreatedFrom) &&
+                                    (leadCreatedTo == null || index.CreatedUtc <= leadCreatedTo))
                         .OrderBy(x => x.DocumentId);
 
                     // Apply the filters logic
@@ -420,10 +420,10 @@ public sealed class ActivityBatchesController : Controller
                         var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
 
                         inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
-                            index.ContactContentType == batch.ContactContentType &&
+                        index.ContactContentType == batch.ContactContentType &&
                             index.ContactContentItemId.IsIn(contentItemsIds) &&
-                            index.Status != ActivityStatus.Completed &&
-                            index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                                index.Status != ActivityStatus.Completed &&
+                                    index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
                             .ListAsync())
                             .Select(x => x.ContactContentItemId)
                             .ToHashSet();

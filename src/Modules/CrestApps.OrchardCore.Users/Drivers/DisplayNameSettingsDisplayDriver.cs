@@ -65,7 +65,6 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
                 new SelectListItem(S["First Middle Last name"], nameof(DisplayNameType.FirstThenLast)),
                 new SelectListItem(S["Last, First Middle name"], nameof(DisplayNameType.LastThenFirst)),
                 new SelectListItem(S["Custom format"], nameof(DisplayNameType.Other)),
-
             ];
             model.PropertyTypes =
             [

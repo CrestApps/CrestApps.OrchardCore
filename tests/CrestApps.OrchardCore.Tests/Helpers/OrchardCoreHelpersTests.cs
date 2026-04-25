@@ -41,9 +41,9 @@ public sealed class OrchardCoreHelpersTests
     [InlineData("3.0.0-preview-2", "3.0.0-preview-3")]
     [InlineData("3.0.0-preview-3", "3.0.0")]
     [InlineData("1", "2")]
-    public void IsVersionIsLess_WhenVersionIsLess_ShouldReturnTrue(string currentVersion, string compareTo)
+    public void IsVersionLessThan_WhenVersionIsLess_ShouldReturnTrue(string currentVersion, string compareTo)
     {
-        var result = OrchardCoreHelpers.IsVersionIsLess(currentVersion, compareTo);
+        var result = OrchardCoreHelpers.IsVersionLessThan(currentVersion, compareTo);
 
         Assert.True(result);
     }
@@ -54,9 +54,9 @@ public sealed class OrchardCoreHelpersTests
     [InlineData("2", "2")]
     [InlineData("2.0", "2.0")]
     [InlineData("2.0", "2.0.0")]
-    public void IsVersionIsLess_WhenVersionIsEqual_ShouldReturnFalse(string currentVersion, string compareTo)
+    public void IsVersionLessThan_WhenVersionIsEqual_ShouldReturnFalse(string currentVersion, string compareTo)
     {
-        var result = OrchardCoreHelpers.IsVersionIsLess(currentVersion, compareTo);
+        var result = OrchardCoreHelpers.IsVersionLessThan(currentVersion, compareTo);
 
         Assert.False(result);
     }

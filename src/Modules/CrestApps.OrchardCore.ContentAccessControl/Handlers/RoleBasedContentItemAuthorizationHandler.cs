@@ -60,7 +60,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
         var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // RolePickerPart is reusable by default. Look in the content type definition for the part. 
+        // RolePickerPart is reusable by default. Look in the content type definition for the part.
         foreach (var partDefinition in definition.Parts)
         {
             var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
@@ -106,6 +106,11 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
                 return;
             }
+        }
+
+        if (roleNames.Count > 0)
+        {
+            context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
         }
     }
 }

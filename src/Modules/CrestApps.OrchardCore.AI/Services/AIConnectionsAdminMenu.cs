@@ -23,7 +23,8 @@ public sealed class AIConnectionsAdminMenu : AdminNavigationProvider
                     .Action("Index", "ProviderConnections", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageProviderConnections)
                     .LocalNav()
-                ));
+                )
+            );
 
         return ValueTask.CompletedTask;
     }

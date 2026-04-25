@@ -10,9 +10,9 @@ public interface IOmnichannelProcessor
     string Channel { get; }
 
     /// <summary>
-    /// Processes the given activity.
+    /// Starts processing the specified omnichannel activity.
     /// </summary>
-    /// <param name="activity"></param>
-    /// <returns></returns>
+    /// <param name="activity">The activity to process.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken);
 }

@@ -1,11 +1,13 @@
 using A2A;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.A2A;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 /// <summary>
 /// Handles GET requests to <c>/.well-known/agent-card.json</c>.
@@ -73,6 +75,7 @@ internal static class A2AWellKnownEndpointHandler
                         keyLocation: "header",
                         description: "API key authentication. Send as 'Bearer {key}' or 'ApiKey {key}' in the Authorization header."),
                 };
+
                 card.Security =
                 [
                     new Dictionary<string, string[]> { ["apiKey"] = [] },
@@ -84,8 +87,9 @@ internal static class A2AWellKnownEndpointHandler
                 {
                     ["openId"] = new OpenIdConnectSecurityScheme(
                         openIdConnectUrl: new Uri($"{baseUrl}/.well-known/openid-configuration"),
-                        description: "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token."),
+                    description: "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token."),
                 };
+
                 card.Security =
                 [
                     new Dictionary<string, string[]> { ["openId"] = [] },

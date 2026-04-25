@@ -1,14 +1,15 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
@@ -47,20 +48,20 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
 
             // Migrate data sources to use first-class index properties
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {
                 // Use legacy ProfileSource or ProviderName from Properties (JsonExtensionData)
-                var profileSource = dataSource.Properties?["ProfileSource"]?.GetValue<string>();
-                var providerName = dataSource.Properties?["ProviderName"]?.GetValue<string>();
+                var profileSource = ToJsonObject(dataSource.Properties)?["ProfileSource"]?.GetValue<string>();
+                var providerName = ToJsonObject(dataSource.Properties)?["ProviderName"]?.GetValue<string>();
 
                 if (!string.Equals(profileSource, AzureOpenAIConstants.ClientName, StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(profileSource, "AzureOpenAIOwnData", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
+                        !string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase) &&
+                            !string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -73,14 +74,14 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     continue;
                 }
 
-                var legacyType = dataSource.Properties?["Type"]?.GetValue<string>();
+                var legacyType = ToJsonObject(dataSource.Properties)?["Type"]?.GetValue<string>();
 
                 // Extract IndexName based on legacy data source type using Properties dictionary
                 switch (legacyType)
                 {
                     case "azure_search":
                         {
-                            var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyAISearchMetadataName, "IndexName");
+                            var indexName = GetPropertyValue<string>(ToJsonObject(dataSource.Properties), LegacyAISearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
                                 dataSource.SourceIndexProfileName = indexName;
@@ -91,7 +92,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                     case "elasticsearch":
                         {
-                            var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyElasticsearchMetadataName, "IndexName");
+                            var indexName = GetPropertyValue<string>(ToJsonObject(dataSource.Properties), LegacyElasticsearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
                                 dataSource.SourceIndexProfileName = indexName;
@@ -110,8 +111,8 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             // Migrate AI profiles to use the new RAG metadata
             foreach (var profile in await profileStore.GetAllAsync())
             {
-                var dataSourceId = profile.Properties?["AIProfileDataSourceMetadata"]?["DataSourceId"]?.GetValue<string>()
-                    ?? profile.Properties?["DataSourceMetadata"]?["DataSourceId"]?.GetValue<string>();
+                var dataSourceId = (profile.Properties?["AIProfileDataSourceMetadata"] as JsonNode)?["DataSourceId"]?.GetValue<string>()
+                ?? (profile.Properties?["DataSourceMetadata"] as JsonNode)?["DataSourceId"]?.GetValue<string>();
                 if (string.IsNullOrEmpty(dataSourceId))
                 {
                     continue;
@@ -120,8 +121,8 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 // Check if new RAG metadata already exists
                 if (profile.TryGet<AIDataSourceRagMetadata>(out var existingRagMetadata) &&
                     (existingRagMetadata.Strictness.HasValue ||
-                     existingRagMetadata.TopNDocuments.HasValue ||
-                     !string.IsNullOrWhiteSpace(existingRagMetadata.Filter)))
+                        existingRagMetadata.TopNDocuments.HasValue ||
+                            !string.IsNullOrWhiteSpace(existingRagMetadata.Filter)))
                 {
                     // Already migrated
                     continue;
@@ -138,14 +139,14 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 int? topNDocuments = null;
                 string filter = null;
 
-                var legacyType = dataSource.Properties?["Type"]?.GetValue<string>();
+                var legacyType = ToJsonObject(dataSource.Properties)?["Type"]?.GetValue<string>();
 
                 // Extract query parameters based on legacy data source type using Properties dictionary
                 switch (legacyType)
                 {
                     case "azure_search":
                         {
-                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyAISearchMetadataName);
+                            var legacyProps = GetPropertyObject(ToJsonObject(dataSource.Properties), LegacyAISearchMetadataName);
                             if (legacyProps != null)
                             {
                                 strictness = GetNullableInt(legacyProps, "Strictness");
@@ -157,7 +158,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                     case "elasticsearch":
                         {
-                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyElasticsearchMetadataName);
+                            var legacyProps = GetPropertyObject(ToJsonObject(dataSource.Properties), LegacyElasticsearchMetadataName);
                             if (legacyProps != null)
                             {
                                 strictness = GetNullableInt(legacyProps, "Strictness");
@@ -195,7 +196,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
             var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AzureOpenAIDataSourceMetadataMigrations>>();
@@ -248,7 +249,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     { "IndexName", "AIKnowledgeBaseWarehouse" },
                 });
 
-                knowledgeBaseIndex.Put(FindFirstEmbeddingMetadata(scope.ServiceProvider, logger));
+                knowledgeBaseIndex.Put(await FindFirstEmbeddingMetadataAsync(scope.ServiceProvider, logger));
 
                 var indexManager = scope.ServiceProvider.GetKeyedService<IIndexManager>(firstProviderName);
 
@@ -300,14 +301,14 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
 #pragma warning restore CS0618 // Type or member is obsolete
 
-                var azureIndexName = dataSource.Properties[LegacyAISearchMetadataName]?["IndexName"]?.ToString();
+                var azureIndexName = ToJsonObject(dataSource.Properties)?[LegacyAISearchMetadataName]?["IndexName"]?.ToString();
 
                 if (!string.IsNullOrEmpty(azureIndexName))
                 {
                     dataSource.SourceIndexProfileName = azureIndexName;
                 }
 
-                var elasticsearchIndexName = dataSource.Properties[LegacyElasticsearchMetadataName]?["IndexName"]?.ToString();
+                var elasticsearchIndexName = ToJsonObject(dataSource.Properties)?[LegacyElasticsearchMetadataName]?["IndexName"]?.ToString();
 
                 if (!string.IsNullOrEmpty(elasticsearchIndexName))
                 {
@@ -316,7 +317,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                 if (string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
                 {
-                    var newMetadata = dataSource.Properties["AzureAIDataSourceIndexMetadata"]?["IndexName"]?.ToString();
+                    var newMetadata = ToJsonObject(dataSource.Properties)?["AzureAIDataSourceIndexMetadata"]?["IndexName"]?.ToString();
 
                     if (!string.IsNullOrEmpty(newMetadata))
                     {
@@ -376,7 +377,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 {
                     return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("sync-datasource", async scope =>
                     {
-                        var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+                        var indexingService = scope.ServiceProvider.GetRequiredService<IAIDataSourceIndexingService>();
 
                         await indexingService.SyncDataSourceAsync(dataSource);
                     });
@@ -385,6 +386,20 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
         });
 
         return 2;
+    }
+
+    /// <summary>
+    /// Converts an IDictionary&lt;string, object&gt; (from ExtensibleEntity.Properties) to a JsonObject
+    /// for legacy migration code that expects JsonObject-based property access.
+    /// </summary>
+    private static JsonObject ToJsonObject(IDictionary<string, object> properties)
+    {
+        if (properties is null)
+        {
+            return null;
+        }
+
+        return JsonSerializer.SerializeToNode(properties)?.AsObject();
     }
 
     /// <summary>
@@ -452,42 +467,24 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
     /// Finds the first available embedding connection from configured AI providers.
     /// If no embedding connection is found, logs a warning and returns empty metadata.
     /// </summary>
-    private static DataSourceIndexProfileMetadata FindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
+    private static async Task<DataSourceIndexProfileMetadata> FindFirstEmbeddingMetadataAsync(IServiceProvider serviceProvider, ILogger logger)
     {
-        var providerOptions = serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+        var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
+        var deployment = (await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)).FirstOrDefault();
 
-        foreach (var (providerName, provider) in providerOptions.Providers)
+        if (deployment != null)
         {
-            if (provider.Connections is null)
+            return new DataSourceIndexProfileMetadata
             {
-                continue;
-            }
-
-            foreach (var (connectionName, connection) in provider.Connections)
-            {
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-                var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
-#pragma warning restore CS0618
-
-                if (!string.IsNullOrEmpty(embeddingDeploymentName))
-                {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    return new DataSourceIndexProfileMetadata
-                    {
-                        EmbeddingProviderName = providerName,
-                        EmbeddingConnectionName = connectionName,
-                        EmbeddingDeploymentName = embeddingDeploymentName,
-                    };
-#pragma warning restore CS0618 // Type or member is obsolete
-                }
-            }
+                EmbeddingDeploymentId = deployment.ItemId,
+            };
         }
 
         logger.LogWarning(
-            "No AI provider connection with an embedding deployment was found. " +
-            "The 'AI Knowledge Base Warehouse' index was created without an embedding connection. " +
-            "To enable knowledge base indexing, configure an AI provider connection with an embedding deployment, " +
-            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding connection.");
+            "No embedding deployment was found. " +
+            "The 'AI Knowledge Base Warehouse' index was created without an embedding deployment. " +
+            "To enable knowledge base indexing, configure an embedding deployment, " +
+            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding deployment.");
 
         return new DataSourceIndexProfileMetadata();
     }

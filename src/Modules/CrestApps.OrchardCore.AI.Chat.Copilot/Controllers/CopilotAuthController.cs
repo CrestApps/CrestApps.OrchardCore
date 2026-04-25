@@ -1,6 +1,8 @@
+using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
-using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +25,7 @@ public sealed class CopilotAuthController : Controller
     private readonly ILogger _logger;
     private readonly AdminOptions _adminOptions;
     private readonly ISiteService _siteService;
+    private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
 
     internal readonly IHtmlLocalizer H;
 
@@ -31,6 +34,7 @@ public sealed class CopilotAuthController : Controller
         UserManager<USR.IUser> userManager,
         INotifier notifier,
         ISiteService siteService,
+        CopilotCallbackUrlProvider callbackUrlProvider,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
         ILogger<CopilotAuthController> logger,
         IOptions<AdminOptions> adminOptions)
@@ -39,6 +43,7 @@ public sealed class CopilotAuthController : Controller
         _userManager = userManager;
         _notifier = notifier;
         _siteService = siteService;
+        _callbackUrlProvider = callbackUrlProvider;
         _logger = logger;
         _adminOptions = adminOptions.Value;
         H = htmlLocalizer;
@@ -54,21 +59,21 @@ public sealed class CopilotAuthController : Controller
         // Fallback to admin home — never to OAuthCallback itself (which would trigger a loop).
         // Special case: "__popup__" is a sentinel value for popup-based auth flows.
         var safeReturnUrl = string.Equals(returnUrl, "__popup__", StringComparison.Ordinal)
-            ? "__popup__"
-            : returnUrl != null && Url.IsLocalUrl(returnUrl)
-                ? returnUrl
-                : "~/" + _adminOptions.AdminUrlPrefix;
+        ? "__popup__"
+        : returnUrl != null && Url.IsLocalUrl(returnUrl)
+        ? returnUrl
+        : "~/" + _adminOptions.AdminUrlPrefix;
 
         try
         {
-            var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);
+            var callbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
+            var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
 
             return Redirect(authUrl);
         }
         catch (InvalidOperationException)
         {
             await _notifier.WarningAsync(H["Copilot is not configured and cannot be used until it has been configured."]);
-
             return HandleOAuthReturn(safeReturnUrl, success: false, username: null);
         }
     }
@@ -171,22 +176,15 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/api/status")]
     public async Task<IActionResult> GetAuthStatus()
     {
-        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
-        var isConfigured = settings.IsConfigured();
-
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             return Unauthorized();
         }
 
-        if (!isConfigured)
-        {
-            return Json(new { isConfigured, isAuthenticated = false, gitHubUsername = (string)null });
-        }
-
         var userId = await _userManager.GetUserIdAsync(user);
         var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
         string gitHubUsername = null;
 
         if (isAuthenticated)
@@ -195,7 +193,12 @@ public sealed class CopilotAuthController : Controller
             gitHubUsername = credential?.GitHubUsername;
         }
 
-        return Json(new { isConfigured, isAuthenticated, gitHubUsername });
+        return Json(new
+        {
+            isAuthenticated,
+            gitHubUsername,
+            isConfigured = settings.IsConfigured(),
+        });
     }
 
     /// <summary>
@@ -204,12 +207,6 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/api/models")]
     public async Task<IActionResult> GetModels()
     {
-        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
-        if (!settings.IsConfigured())
-        {
-            return Json(Array.Empty<object>());
-        }
-
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
@@ -219,7 +216,7 @@ public sealed class CopilotAuthController : Controller
         var userId = await _userManager.GetUserIdAsync(user);
         var models = await _oauthService.ListModelsAsync(userId);
 
-        return Json(models.Select(m => new { m.Id, m.Name }));
+        return Json(models.Select(m => new { m.Id, m.Name, m.CostMultiplier }));
     }
 
     /// <summary>

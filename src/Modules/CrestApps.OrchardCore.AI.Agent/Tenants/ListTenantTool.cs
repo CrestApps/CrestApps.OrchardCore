@@ -11,13 +11,13 @@ public sealed class ListTenantTool : AIFunction
     public const string TheName = "listTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 

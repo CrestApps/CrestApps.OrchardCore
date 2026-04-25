@@ -56,7 +56,7 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
             if (field.UserIds.Length > 0)
             {
                 var users = (await _session.Query<User, UserIndex>().Where(x => x.UserId.IsIn(field.UserIds)).ListAsync())
-                    .OrderBy(o => Array.FindIndex(field.UserIds, x => string.Equals(o.UserId, x, StringComparison.OrdinalIgnoreCase)));
+                .OrderBy(o => Array.FindIndex(field.UserIds, x => string.Equals(o.UserId, x, StringComparison.OrdinalIgnoreCase)));
 
                 foreach (var user in users)
                 {
@@ -80,8 +80,8 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix, f => f.UserIds);
 
         field.UserIds = viewModel.UserIds == null
-            ? []
-            : viewModel.UserIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        ? []
+        : viewModel.UserIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
         var settings = context.PartFieldDefinition.GetSettings<UserPickerFieldSettings>();
 

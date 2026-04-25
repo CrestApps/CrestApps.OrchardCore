@@ -33,7 +33,7 @@ public sealed class ContentMetadataService
     {
         var typeNames = new HashSet<string>(
             (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Select(ctd => ctd.Name)
+                .Select(ctd => ctd.Name)
         );
 
         // User-defined parts
@@ -44,12 +44,12 @@ public sealed class ContentMetadataService
 
         // Code-defined parts
         var codeDefinedParts = _contentPartTypes
-                .Where(cpd => !userContentParts.ContainsKey(cpd.Name))
-                .Select(cpi => new ContentPartMetadata
-                {
-                    Name = cpi.Name,
-                    DisplayName = cpi.Name
-                });
+            .Where(cpd => !userContentParts.ContainsKey(cpd.Name))
+            .Select(cpi => new ContentPartMetadata
+            {
+                Name = cpi.Name,
+                DisplayName = cpi.Name
+            });
 
         return codeDefinedParts
             .Union(userContentParts.Values)

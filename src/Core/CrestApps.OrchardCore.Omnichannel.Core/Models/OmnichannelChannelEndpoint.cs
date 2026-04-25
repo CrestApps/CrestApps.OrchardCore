@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -19,9 +20,12 @@ public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareM
 
     public string OwnerId { get; set; }
 
+    /// <summary>
+    /// Creates a copy of the current channel endpoint.
+    /// </summary>
     public OmnichannelChannelEndpoint Clone()
     {
-        return new OmnichannelChannelEndpoint()
+        return new OmnichannelChannelEndpoint
         {
             ItemId = ItemId,
             DisplayText = DisplayText,

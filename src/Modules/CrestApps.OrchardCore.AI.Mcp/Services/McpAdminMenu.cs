@@ -20,16 +20,12 @@ internal sealed class McpAdminMenu : AdminNavigationProvider
                 .Add(S["Model Context Protocol"], S["Model Context Protocol"].PrefixPosition(), mcp => mcp
                     .AddClass("ai-mcp")
                     .Id("aiMcp")
-                    .Add(S["Client Connections"], S["Client Connections"].PrefixPosition(), connections => connections
+                    .Add(S["MCP Hosts"], S["MCP Hosts"].PrefixPosition(), connections => connections
                         .AddClass("ai-mcp-connections")
                         .Id("aiMcpConnections")
                         .Action("Index", "Connections", "CrestApps.OrchardCore.AI.Mcp")
                         .Permission(McpPermissions.ManageMcpConnections)
-                        .LocalNav()
-                    )
-                )
-
-            );
+                        .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,13 +11,13 @@ public sealed class ListContentFieldsTool : AIFunction
     public const string TheName = "listContentFieldDefinitions";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -36,6 +36,7 @@ public sealed class ListContentFieldsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListContentFieldsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);

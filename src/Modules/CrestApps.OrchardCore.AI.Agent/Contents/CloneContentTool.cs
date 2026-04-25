@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,19 +12,22 @@ public sealed class CloneContentTool : AIFunction
     public const string TheName = "cloneContentItem";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
         }
-        """);
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -40,6 +43,7 @@ public sealed class CloneContentTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CloneContentTool>>();

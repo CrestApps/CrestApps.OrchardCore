@@ -1,27 +1,87 @@
 [
   {
+    "copy": true,
     "inputs": [
-      "Assets/js/ai-chat.js"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.js"
     ],
     "output": "wwwroot/scripts/ai-chat.js"
   },
   {
+    "copy": true,
     "inputs": [
-      "Assets/js/ai-chat-widget.js"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.js.map"
+    ],
+    "output": "wwwroot/scripts/ai-chat.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.js.map"
+    ],
+    "output": "wwwroot/scripts/ai-chat.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.js"
     ],
     "output": "wwwroot/scripts/ai-chat-widget.js"
   },
   {
+    "copy": true,
     "inputs": [
-      "Assets/css/ai-chat.css"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat-widget.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.js.map"
+    ],
+    "output": "wwwroot/scripts/ai-chat-widget.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.js.map"
+    ],
+    "output": "wwwroot/scripts/ai-chat-widget.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css"
     ],
     "output": "wwwroot/css/ai-chat.css"
   },
   {
+    "copy": true,
     "inputs": [
-      "Assets/css/ai-chat-widget.css"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.min.css"
+    ],
+    "output": "wwwroot/css/ai-chat.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.css"
     ],
     "output": "wwwroot/css/ai-chat-widget.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.min.css"
+    ],
+    "output": "wwwroot/css/ai-chat-widget.min.css"
   },
   {
     "inputs": [

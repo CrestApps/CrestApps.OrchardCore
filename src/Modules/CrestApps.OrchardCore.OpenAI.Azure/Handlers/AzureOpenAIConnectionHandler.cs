@@ -1,9 +1,9 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
@@ -23,7 +23,7 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
             return;
         }
 
-        var metadataNode = context.ExportData["Properties"]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode = context.ExportData["Properties"]?[nameof(AzureConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
@@ -31,9 +31,9 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
         }
 
         // Always set the API key to an empty string during export to prevent accidental exposure.
-        metadataNode[nameof(AzureOpenAIConnectionMetadata.ApiKey)] = string.Empty;
+        metadataNode[nameof(AzureConnectionMetadata.ApiKey)] = string.Empty;
 
-        context.ExportData["Properties"][nameof(AzureOpenAIConnectionMetadata)] = metadataNode;
+        context.ExportData["Properties"][nameof(AzureConnectionMetadata)] = metadataNode;
     }
 
     public void Initializing(InitializingAIProviderConnectionContext context)
@@ -43,14 +43,16 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
             return;
         }
 
-        var metadata = context.Connection.As<AzureOpenAIConnectionMetadata>();
+        if (!context.Connection.Has<AzureConnectionMetadata>())
+        {
+            return;
+        }
+
+        var metadata = context.Connection.GetOrCreate<AzureConnectionMetadata>();
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
         context.Values["IdentityId"] = metadata.IdentityId;
-        context.Values["EnableLogging"] = metadata.EnableLogging;
-        context.Values["EnableMessageLogging"] = metadata.EnableLogging;
-        context.Values["EnableMessageContentLogging"] = metadata.EnableLogging;
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {

@@ -1,9 +1,13 @@
 using System.Text.Json;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-
 using Microsoft.Extensions.AI;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
@@ -17,13 +21,14 @@ public sealed class ListDocumentsTool : AIFunction
     public const string TheName = SystemToolNames.ListDocuments;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -57,6 +62,7 @@ public sealed class ListDocumentsTool : AIFunction
             if (documentStore is null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
+
                 return "Document store is not available.";
             }
 
@@ -65,6 +71,7 @@ public sealed class ListDocumentsTool : AIFunction
             if (documents is null || documents.Count == 0)
             {
                 logger.LogWarning("AI tool '{ToolName}': no documents attached to session '{SessionId}'.", Name, chatInteractionId);
+
                 return "No documents are attached to this session.";
             }
 
@@ -91,10 +98,12 @@ public sealed class ListDocumentsTool : AIFunction
             if (documentStore is null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
+
                 return "Document store is not available.";
             }
 
             // Collect documents from both profile-level and session-level sources.
+
             var allDocuments = new List<AIDocument>();
 
             var profileDocs = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
@@ -106,7 +115,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                 sessionObj is AIChatSession session &&
-                session.Documents is { Count: > 0 })
+                    session.Documents is { Count: > 0 })
             {
                 var sessionDocs = await documentStore.GetDocumentsAsync(session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession);
 
@@ -119,6 +128,7 @@ public sealed class ListDocumentsTool : AIFunction
             if (allDocuments.Count == 0)
             {
                 logger.LogWarning("AI tool '{ToolName}': no documents attached.", Name);
+
                 return "No documents are attached.";
             }
 

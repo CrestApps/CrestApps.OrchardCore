@@ -44,8 +44,8 @@ public sealed class PromptsModel : PageModel
             var result = await client.GetPromptAsync(
                 promptName,
                 new Dictionary<string, object>(),
-                options: null,
-                cancellationToken);
+            options: null,
+            cancellationToken);
 
             var messages = new List<object>();
 

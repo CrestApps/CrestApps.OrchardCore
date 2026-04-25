@@ -23,7 +23,8 @@ public sealed class AITemplateAdminMenu : AdminNavigationProvider
                     .Action("Index", "AITemplates", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIProfileTemplates)
                     .LocalNav()
-                ));
+                )
+            );
 
         return ValueTask.CompletedTask;
     }

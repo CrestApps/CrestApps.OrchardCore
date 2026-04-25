@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Memory.Indexes;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.AIMemory;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using YesSql;
@@ -10,7 +11,9 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
 {
     private readonly ILookupNormalizer _lookupNormalizer;
 
-    public DefaultAIMemoryStore(ISession session, ILookupNormalizer lookupNormalizer)
+    public DefaultAIMemoryStore(
+        ISession session,
+        ILookupNormalizer lookupNormalizer)
         : base(session)
     {
         _lookupNormalizer = lookupNormalizer;
@@ -38,28 +41,29 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
             return null;
         }
 
-        return await Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
-            x => x.UserId == userId && x.NormalizedName == normalizedName,
+        var entries = await Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
+            x => x.UserId == userId,
             CollectionName)
-            .FirstOrDefaultAsync();
+            .ListAsync();
+
+        return entries.FirstOrDefault(entry => _lookupNormalizer.NormalizeName(entry.Name) == normalizedName);
     }
 
     public async Task<IReadOnlyCollection<AIMemoryEntry>> GetByUserAsync(string userId, int limit = 100)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
-        IQuery<AIMemoryEntry> query = Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
+
+        var query = Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
             x => x.UserId == userId,
             CollectionName);
-
-        query = query
-            .With<AIMemoryEntryIndex>()
-            .OrderByDescending(x => x.UpdatedUtc);
+        var entries = await query.ListAsync();
+        IEnumerable<AIMemoryEntry> orderedEntries = entries.OrderByDescending(x => x.UpdatedUtc);
 
         if (limit > 0)
         {
-            query = query.Take(limit);
+            orderedEntries = orderedEntries.Take(limit);
         }
 
-        return (await query.ListAsync()).ToArray();
+        return orderedEntries.ToArray();
     }
 }

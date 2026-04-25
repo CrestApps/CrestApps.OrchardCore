@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.Indexing;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -7,47 +8,34 @@ namespace CrestApps.OrchardCore.AI.Documents.Migrations;
 
 internal sealed class AIDocumentIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIDocumentIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
-        await CreateAIDocumentIndexTableAsync();
+        await SchemaBuilder.CreateAIDocumentIndexSchemaAsync(_option);
 
-
-        return 2;
+        return 3;
     }
 
     public async Task<int> UpdateFrom1Async()
     {
-        await CreateAIDocumentIndexTableAsync();
+        await SchemaBuilder.CreateAIDocumentIndexSchemaAsync(_option);
 
-        return 2;
+        return 3;
     }
 
-    private async Task CreateAIDocumentIndexTableAsync()
+    public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AIDocumentIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(64))
-                .Column<string>("ReferenceId", column => column.WithLength(64))
-                .Column<string>("ReferenceType", column => column.WithLength(32))
-                .Column<string>("Extension", column => column.WithLength(20)),
-            collection: AIConstants.AIDocsCollectionName
-        );
+        await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table =>
+        {
+            table.AddColumn<string>("FileName", column => column.WithLength(255));
+        }, _option.AIDocsCollectionName);
 
-        await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
-            .CreateIndex("IDX_AIDocumentIndex_ItemId",
-                "DocumentId",
-                "ItemId",
-                "ReferenceId",
-                "ReferenceType",
-                "Extension"),
-            collection: AIConstants.AIDocsCollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
-            .CreateIndex("IDX_AIDocumentIndex_ReferenceId",
-                "DocumentId",
-                "ReferenceId",
-                "ReferenceType"),
-            collection: AIConstants.AIDocsCollectionName
-        );
+        return 3;
     }
 }

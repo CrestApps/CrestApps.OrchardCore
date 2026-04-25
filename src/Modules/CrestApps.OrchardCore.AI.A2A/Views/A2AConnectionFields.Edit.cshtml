@@ -1,4 +1,4 @@
-@using CrestApps.OrchardCore.AI.A2A.Models
+@using CrestApps.Core.AI.A2A.Models
 @using CrestApps.OrchardCore.AI.A2A.ViewModels
 @using OrchardCore
 
@@ -256,10 +256,8 @@
 
 <script at="Foot" asp-name="monaco"></script>
 <script at="Foot" asp-name="a2a-connection-editor" depends-on="monaco">
-    document.addEventListener('DOMContentLoaded', function() {
-
+    document.addEventListener('DOMContentLoaded', function () {
         require(['vs/editor/editor.main'], function () {
-
             var html = document.documentElement;
             const mutationObserver = new MutationObserver(setTheme);
             mutationObserver.observe(html, { attributes: true });

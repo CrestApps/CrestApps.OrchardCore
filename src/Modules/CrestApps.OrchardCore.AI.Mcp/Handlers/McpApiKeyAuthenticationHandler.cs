@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +18,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
         IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,
         ILoggerFactory loggerFactory,
         UrlEncoder encoder)
-        : base(options, loggerFactory, encoder)
+    : base(options, loggerFactory, encoder)
     {
         _mcpServerOptionsMonitor = mcpServerOptionsMonitor;
     }
@@ -26,6 +28,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
         var mcpServerOptions = _mcpServerOptionsMonitor.CurrentValue;
 
         // Only handle authentication if ApiKey authentication type is configured.
+
         if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.ApiKey)
         {
             return Task.FromResult(AuthenticateResult.NoResult());
@@ -68,7 +71,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        if (!string.Equals(apiKey, mcpServerOptions.ApiKey, StringComparison.Ordinal))
+        if (!FixedTimeEquals(apiKey, mcpServerOptions.ApiKey))
         {
             return Task.FromResult(AuthenticateResult.Fail("Invalid API key."));
         }
@@ -85,6 +88,14 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
         var ticket = new AuthenticationTicket(principal, McpApiKeyAuthenticationDefaults.AuthenticationScheme);
 
         return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+
+    private static bool FixedTimeEquals(string a, string b)
+    {
+        var aBytes = Encoding.UTF8.GetBytes(a);
+        var bBytes = Encoding.UTF8.GetBytes(b);
+
+        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
 }
 

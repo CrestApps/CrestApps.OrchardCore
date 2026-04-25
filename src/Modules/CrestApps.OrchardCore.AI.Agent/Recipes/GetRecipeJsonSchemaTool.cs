@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -14,18 +14,18 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
     public const string TheName = "getOrchardCoreRecipeJsonSchema";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "step": {
-              "type": "string",
-              "description": "Optional. A recipe step name to return only that step schema. If omitted, returns the full recipe schema (steps array) composed from all known step schemas."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "step": {
+          "type": "string",
+          "description": "Optional. A recipe step name to return only that step schema. If omitted, returns the full recipe schema (steps array) composed from all known step schemas."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -90,8 +90,8 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
                         ("name", new JsonSchemaBuilder()
                             .Type(SchemaValueType.String)
                             .Enum(stepName)))
-                    .Required("name")
-                    .Build();
+                            .Required("name")
+                            .Build();
             }
 
             stepSchemas[stepName] = stepSchema;
@@ -125,8 +125,8 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(stepSchemas.Keys)))
-            .Required("name")
-            .AdditionalProperties(true);
+                    .Required("name")
+                    .AdditionalProperties(true);
 
         var rootSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -135,8 +135,8 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
                     .Type(SchemaValueType.Array)
                     .Items(stepsBuilder)
                     .MinItems(1)))
-            .Required("steps")
-            .Build();
+                    .Required("steps")
+                    .Build();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {

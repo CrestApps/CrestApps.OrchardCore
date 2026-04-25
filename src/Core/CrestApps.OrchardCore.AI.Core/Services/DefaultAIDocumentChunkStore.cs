@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.Indexing;
+using CrestApps.Core.Data.YesSql.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -8,9 +9,8 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDocumentChunkStore : DocumentCatalog<AIDocumentChunk, AIDocumentChunkIndex>, IAIDocumentChunkStore
 {
     public DefaultAIDocumentChunkStore(ISession session)
-        : base(session)
+    : base(session, AIConstants.AIDocsCollectionName)
     {
-        CollectionName = AIConstants.AIDocsCollectionName;
     }
 
     public async Task<IReadOnlyCollection<AIDocumentChunk>> GetChunksByAIDocumentIdAsync(string documentId)

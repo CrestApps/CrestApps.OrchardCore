@@ -20,6 +20,7 @@ public static class ClientIpAddressAccessorExtensions
         var inputBytes = Encoding.UTF8.GetBytes($"{ipAddress}-{httpContext.Request.Headers.UserAgent}");
         var hashBytes = SHA256.HashData(inputBytes);
         using var sb = ZString.CreateStringBuilder();
+
         foreach (var b in hashBytes)
         {
             sb.Append(b.ToString("x2")); // Format each byte as a hex value

@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -18,7 +19,8 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
@@ -39,6 +41,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         return Initialize<ChatInteractionChatModeSettingsViewModel>("ChatInteractionChatModeSettings_Edit", async model =>
         {
             model.ChatMode = settings.ChatMode;
+            model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             model.AvailableModes = await GetAvailableModesAsync();
         }).Location("Content:4.5%Chat Interactions;1")
         .OnGroup(SettingsGroupId)
@@ -57,6 +60,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.ChatMode = model.ChatMode;
+        settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
 
         return Edit(site, settings, context);
     }

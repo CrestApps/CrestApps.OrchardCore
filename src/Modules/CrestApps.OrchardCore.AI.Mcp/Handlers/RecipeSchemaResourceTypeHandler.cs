@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -21,7 +21,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
     public RecipeSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeSchemaResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _recipeSchemaService = recipeSchemaService;
         _logger = logger;
@@ -39,10 +39,11 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/schema+json",
-                    Text = JsonSerializer.Serialize(recipeSchema),
+                Uri = resource.Resource.Uri,
+                MimeType = "application/schema+json",
+                Text = JsonSerializer.Serialize(recipeSchema),
                 }
+
             ]
         };
     }

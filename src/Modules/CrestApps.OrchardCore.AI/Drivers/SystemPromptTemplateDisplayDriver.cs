@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for SystemPrompt-source AI templates.
+/// Display driver for SystemPrompt-source templates.
 /// Captures the system message stored in <see cref="SystemPromptTemplateMetadata"/>.
 /// </summary>
 internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -17,7 +17,7 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
     {
         return Initialize<SystemPromptTemplateViewModel>("SystemPromptTemplate_Edit", model =>
         {
-            var metadata = template.As<SystemPromptTemplateMetadata>();
+            var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
             model.SystemMessage = metadata.SystemMessage;
         }).Location("Content:10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.SystemPrompt));
@@ -33,7 +33,7 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
         var model = new SystemPromptTemplateViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<SystemPromptTemplateMetadata>();
+        var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
         metadata.SystemMessage = model.SystemMessage;
         template.Put(metadata);
 

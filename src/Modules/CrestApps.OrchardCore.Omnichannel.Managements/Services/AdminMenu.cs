@@ -53,11 +53,9 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
                     .LocalNav()
-                )
-
-            , priority: 1);
+                ),
+                priority: 1);
 
         return ValueTask.CompletedTask;
     }
 }
-

@@ -1,8 +1,8 @@
+using CrestApps.Core.AI.Copilot;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,22 +25,20 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddOrchestrator<CopilotOrchestrator>(CopilotOrchestrator.OrchestratorName)
-            .WithTitle(S["GitHub Copilot Orchestrator"]);
+        // Register framework-level Copilot services (orchestrator, OAuth, handlers).
+        services.AddCoreAICopilotOrchestrator();
 
-        // Register HTTP client for GitHub API calls
-        services.AddHttpClient()
-            .AddScoped<GitHubOAuthService>();
+        // Bridge OrchardCore site settings → CopilotOptions.
+        services.ConfigureOptions<CopilotOptionsConfiguration>();
 
+        // Bridge OrchardCore User model → ICopilotCredentialStore.
+        services.AddScoped<ICopilotCredentialStore, OrchardCoreCopilotCredentialStore>();
         services.AddScoped<CopilotCallbackUrlProvider>();
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CopilotOrchestrationContextHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, CopilotChatInteractionSettingsHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestratorAvailabilityProvider, CopilotOrchestratorAvailabilityProvider>());
 
+        // OrchardCore-specific display drivers.
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
-
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateCopilotDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
 
         services

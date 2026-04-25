@@ -39,14 +39,15 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
             if (!settings.AllowSelectMultiple)
             {
                 m.AvailableRoles = _roleManager.Roles
-                    .Select(role => role.RoleName)
-                    .Except(m.Settings.ExcludedRoles ?? [])
-                    .Order()
-                    .Select(x => new SelectListItem(x, x))
-                    .ToArray();
+                .Select(role => role.RoleName)
+                .Except(m.Settings.ExcludedRoles ?? [])
+                .Order()
+                .Select(x => new SelectListItem(x, x))
+                .ToArray();
             }
         });
     }
+
     public override async Task<IDisplayResult> UpdateAsync(RolePickerPart part, UpdatePartEditorContext context)
     {
         var model = new RolePickerViewModel();

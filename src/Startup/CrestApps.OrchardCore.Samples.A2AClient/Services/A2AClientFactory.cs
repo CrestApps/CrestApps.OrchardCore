@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using A2A;
 
@@ -26,6 +27,7 @@ public sealed class A2AClientFactory
     {
         var url = agentUrl ?? GetEndpoint() + "/a2a";
         var httpClient = _httpClientFactory.CreateClient();
+        ApplyAuthentication(httpClient);
 
         return new A2A.A2AClient(new Uri(url), httpClient);
     }
@@ -34,6 +36,7 @@ public sealed class A2AClientFactory
     {
         var endpoint = GetEndpoint();
         var httpClient = _httpClientFactory.CreateClient();
+        ApplyAuthentication(httpClient);
 
         var cardUrl = $"{endpoint.TrimEnd('/')}/.well-known/agent-card.json";
         var response = await httpClient.GetAsync(cardUrl, cancellationToken);
@@ -71,5 +74,17 @@ public sealed class A2AClientFactory
         }
 
         return endpoint;
+    }
+
+    private void ApplyAuthentication(HttpClient httpClient)
+    {
+        var apiKey = _configuration["A2A:ApiKey"];
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return;
+        }
+
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
     }
 }

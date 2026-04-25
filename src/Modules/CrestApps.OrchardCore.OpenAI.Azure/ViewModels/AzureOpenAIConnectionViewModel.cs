@@ -1,4 +1,4 @@
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core.Azure.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -13,8 +13,6 @@ public class AzureOpenAIConnectionViewModel
     public string ApiKey { get; set; }
 
     public string IdentityId { get; set; }
-
-    public bool EnableLogging { get; set; }
 
     [BindNever]
     public bool HasApiKey { get; set; }

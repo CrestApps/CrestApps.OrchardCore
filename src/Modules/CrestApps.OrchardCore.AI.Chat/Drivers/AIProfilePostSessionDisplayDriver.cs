@@ -1,6 +1,7 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -41,21 +42,21 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 
             model.EnablePostSessionProcessing = settings.EnablePostSessionProcessing;
             model.Tasks = settings.PostSessionTasks
-                .Select(t => new PostSessionTaskViewModel
-                {
-                    Name = t.Name,
-                    Type = t.Type,
-                    Instructions = t.Instructions,
-                    AllowMultipleValues = t.AllowMultipleValues,
-                    Options = t.Options
-                        .Select(o => new PostSessionTaskOptionViewModel
-                        {
-                            Value = o.Value,
-                            Description = o.Description,
-                        })
-                        .ToList(),
-                })
-                .ToList();
+            .Select(t => new PostSessionTaskViewModel
+            {
+                Name = t.Name,
+                Type = t.Type,
+                Instructions = t.Instructions,
+                AllowMultipleValues = t.AllowMultipleValues,
+                Options = t.Options
+            .Select(o => new PostSessionTaskOptionViewModel
+            {
+                Value = o.Value,
+                Description = o.Description,
+            })
+        .ToList(),
+            })
+            .ToList();
 
             if (accessibleTools.Count > 0)
             {
@@ -156,12 +157,12 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                 Instructions = t.Instructions,
                 AllowMultipleValues = t.AllowMultipleValues,
                 Options = t.Type == PostSessionTaskType.PredefinedOptions
-                    ? t.Options.Select(o => new PostSessionTaskOption
-                    {
-                        Value = o.Value,
-                        Description = o.Description,
-                    }).ToList()
-                    : [],
+            ? t.Options.Select(o => new PostSessionTaskOption
+            {
+                Value = o.Value,
+                Description = o.Description,
+            }).ToList()
+                : [],
             }).ToList();
         });
 

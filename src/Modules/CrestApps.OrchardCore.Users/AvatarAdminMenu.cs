@@ -16,7 +16,7 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
-    public AvatarAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
+    public AvatarAdminMenu(IStringLocalizer<AvatarAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -48,9 +48,7 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
                     .Id("userAvatars")
                     .Action("Index", "Admin", _routeValues)
                     .Permission(UserPermissions.ManageAvatarSettings)
-                    .LocalNav()
-                )
-            );
+                    .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

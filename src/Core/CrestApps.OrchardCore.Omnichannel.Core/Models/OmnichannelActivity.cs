@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;

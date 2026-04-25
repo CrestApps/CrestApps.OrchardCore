@@ -1,12 +1,12 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardSftpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models.SftpConnectionMetadata;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Drivers;
 
@@ -33,7 +33,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
 
         return Initialize<SftpConnectionViewModel>("SftpResourceConnection_Edit", model =>
         {
-            var metadata = resource.As<SftpConnectionMetadata>();
+            var metadata = resource.GetOrCreate<OrchardSftpConnectionMetadata>();
 
             model.Host = metadata?.Host;
             model.Port = metadata?.Port;
@@ -72,7 +72,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Username), S["The SFTP username is required."]);
         }
 
-        var metadata = resource.As<SftpConnectionMetadata>();
+        var metadata = resource.GetOrCreate<OrchardSftpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(SftpResourceConstants.DataProtectionPurpose);
 
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
@@ -111,7 +111,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             protectedProxyPassword = protector.Protect(model.ProxyPassword);
         }
 
-        resource.Alter<SftpConnectionMetadata>(m =>
+        resource.Alter<OrchardSftpConnectionMetadata>(m =>
         {
             m.Host = model.Host;
             m.Port = model.Port;

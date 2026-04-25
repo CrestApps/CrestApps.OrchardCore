@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -14,26 +14,31 @@ public sealed class GetContentItemLinkTool : AIFunction
     public const string TheName = "getLinkForContentItem";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            },
-            "type": {
-              "type": "string",
-              "description": "Specifies the type of link to generate.",
-              "enum": ["display", "edit"],
-              "default": "display"
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Specifies the type of link to generate.",
+          "enum": [
+            "display",
+            "edit"
+          ],
+          "default": "display"
         }
-        """);
+      },
+      "required": [
 
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
 
     public override string Description => "Get a URL for the given content item based on the type.";
@@ -93,6 +98,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             {
                 return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
             }
+
             else if (metadata.DisplayRouteValues is not null)
             {
                 return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);

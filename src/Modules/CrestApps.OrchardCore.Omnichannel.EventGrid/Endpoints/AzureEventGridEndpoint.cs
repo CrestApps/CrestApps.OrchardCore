@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -11,11 +13,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Modules;
 
 internal static class AzureEventGridEndpoint
 {
+    private const long _maximumRequestBodySizeBytes = 1024 * 1024;
+
     public static IEndpointRouteBuilder AddAzureEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("Omnichannel/webhook/AzureEventGrid", HandleAsync)
@@ -34,38 +40,31 @@ internal static class AzureEventGridEndpoint
         ILogger<Startup> logger)
     {
         var isAuthorized = false;
+        var eventGridOptions = options.Value;
 
         // Check SAS key
-        if (context.Request.Headers.TryGetValue("aeg-sas-key", out var headerKey) &&
-            headerKey == options.Value.EventGridSasKey)
+        if (!string.IsNullOrEmpty(eventGridOptions.EventGridSasKey) &&
+            context.Request.Headers.TryGetValue("aeg-sas-key", out var headerKey) &&
+            FixedTimeEquals(headerKey.ToString(), eventGridOptions.EventGridSasKey))
         {
             isAuthorized = true;
         }
 
         // Check AAD token if SAS key failed
-        if (!isAuthorized && context.Request.Headers.TryGetValue("Authorization", out var authHeader))
+        if (!isAuthorized &&
+            context.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+            TryGetBearerToken(authHeader.ToString(), out var token))
         {
-            // Expect "Bearer <token>"
-            var token = authHeader.ToString()?.Replace("Bearer ", "");
-
             try
             {
-                var validationParameters = new TokenValidationParameters
+                if (!CanValidateAadToken(eventGridOptions))
                 {
-                    ValidateIssuer = true,
-                    ValidIssuer = options.Value.AADIssuer,       // e.g., "https://sts.windows.net/{tenantId}/"
-                    ValidateAudience = true,
-                    ValidAudience = options.Value.AADAudience,   // e.g., your API App ID URI
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    // You may also provide IssuerSigningKeys if using JWKS endpoint
-                };
-
-                var handler = new JwtSecurityTokenHandler();
-
-                var claimsPrincipal = await handler.ValidateTokenAsync(token, validationParameters);
-
-                isAuthorized = claimsPrincipal != null;
+                    logger.LogWarning("AAD token validation is configured incompletely. Event Grid requires AADIssuer, AADAudience, and AADMetadataAddress.");
+                }
+                else
+                {
+                    isAuthorized = await ValidateAadTokenAsync(token, eventGridOptions, context.RequestAborted);
+                }
             }
             catch (Exception ex)
             {
@@ -78,6 +77,13 @@ internal static class AzureEventGridEndpoint
             logger.LogWarning("Unauthorized Event Grid request.");
 
             return TypedResults.Unauthorized();
+        }
+
+        if (context.Request.ContentLength is > _maximumRequestBodySizeBytes)
+        {
+            logger.LogWarning("Event Grid payload exceeded the maximum supported size of {MaxBytes} bytes.", _maximumRequestBodySizeBytes);
+
+            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
         // Read request body
@@ -121,7 +127,6 @@ internal static class AzureEventGridEndpoint
                 logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
             }
 
-
             var omnichannelMessage = new OmnichannelMessage
             {
                 Channel = "Unknown",
@@ -137,7 +142,7 @@ internal static class AzureEventGridEndpoint
                 var root = doc.RootElement;
 
                 var properties = root.EnumerateObject()
-                     .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
+                    .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
 
                 // Attempt to extract common fields
                 omnichannelMessage.CustomerAddress = GetStringProperty(properties, "from", "sender", "customer");
@@ -186,5 +191,62 @@ internal static class AzureEventGridEndpoint
         }
 
         return null;
+    }
+
+    private static bool CanValidateAadToken(EventGridOptions options) =>
+        !string.IsNullOrWhiteSpace(options.AADIssuer) &&
+        !string.IsNullOrWhiteSpace(options.AADAudience) &&
+        !string.IsNullOrWhiteSpace(options.AADMetadataAddress);
+
+    private static bool FixedTimeEquals(string a, string b)
+    {
+        var aBytes = Encoding.UTF8.GetBytes(a);
+        var bBytes = Encoding.UTF8.GetBytes(b);
+
+        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+    }
+
+    private static bool TryGetBearerToken(string authorizationHeader, out string token)
+    {
+        token = null;
+
+        if (string.IsNullOrWhiteSpace(authorizationHeader) ||
+            !authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        token = authorizationHeader["Bearer ".Length..].Trim();
+
+        return !string.IsNullOrEmpty(token);
+    }
+
+    private static async Task<bool> ValidateAadTokenAsync(
+        string token,
+        EventGridOptions options,
+        CancellationToken cancellationToken)
+    {
+        var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+            options.AADMetadataAddress,
+            new OpenIdConnectConfigurationRetriever(),
+            new HttpDocumentRetriever
+            {
+                RequireHttps = options.AADMetadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase),
+            });
+        var openIdConfiguration = await configurationManager.GetConfigurationAsync(cancellationToken);
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = options.AADIssuer,
+            ValidateAudience = true,
+            ValidAudience = options.AADAudience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKeys = openIdConfiguration.SigningKeys,
+        };
+        var handler = new JwtSecurityTokenHandler();
+        var validationResult = await handler.ValidateTokenAsync(token, validationParameters);
+
+        return validationResult.IsValid;
     }
 }

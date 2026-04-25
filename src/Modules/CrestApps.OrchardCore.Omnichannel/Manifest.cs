@@ -17,7 +17,6 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides a unified communication layer that works across any channel (SMS, email, chat, phone, and more)"
 )]
 
-
 [assembly: Feature(
     Name = "Omnichannel (Azure Communication Services)",
     Id = OmnichannelConstants.Features.AzureCommunicationServices,

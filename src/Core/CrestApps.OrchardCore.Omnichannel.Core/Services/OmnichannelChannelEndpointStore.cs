@@ -18,7 +18,7 @@ public sealed class OmnichannelChannelEndpointStore : Catalog<OmnichannelChannel
         ArgumentException.ThrowIfNullOrEmpty(channel);
         ArgumentException.ThrowIfNullOrEmpty(serviceAddress);
 
-        var document = await DocumentManager.GetOrCreateMutableAsync();
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.FirstOrDefault(x => x.Channel == channel && x.Value == serviceAddress);
     }

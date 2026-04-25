@@ -1,6 +1,8 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
@@ -62,7 +63,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var selectedNames = metadata.ToolNames ?? [];
 
             model.Tools = accessibleTools
@@ -75,7 +76,6 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
                 Description = entry.Value.Description,
                 IsSelected = selectedNames.Contains(entry.Key),
             }).OrderBy(entry => entry.DisplayText).ToArray());
-
         }).Location("Content:7#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -93,7 +93,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (selectedToolKeys is null || !selectedToolKeys.Any())
         {

@@ -8,17 +8,22 @@ namespace CrestApps.OrchardCore.AI.DataSources.ViewModels;
 public class EditDataSourceIndexProfileViewModel
 {
     /// <summary>
-    /// Gets or sets the selected embedding connection key.
+    /// Gets or sets the selected embedding deployment identifier.
     /// </summary>
-    public string EmbeddingConnection { get; set; }
+    public string EmbeddingDeploymentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the available embedding connections.
+    /// Gets or sets the available embedding deployments.
     /// </summary>
-    public IList<SelectListItem> EmbeddingConnections { get; set; } = [];
+    public IList<SelectListItem> EmbeddingDeployments { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets whether the embedding connection is locked (read-only after creation).
+    /// Gets or sets the selected embedding deployment label for read-only display.
+    /// </summary>
+    public string EmbeddingDeploymentText { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the embedding deployment is locked (read-only after creation).
     /// </summary>
     public bool IsLocked { get; set; }
 }

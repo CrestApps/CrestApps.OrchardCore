@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Migrations;
@@ -12,6 +13,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCatalogs();
+
         services
             .AddIndexProvider<OmnichannelMessageIndexProvider>()
             .AddDataMigration<OmnichannelMessageIndexMigrations>();

@@ -8,10 +8,10 @@ public sealed class AzureADSettingsRecipeStep : RecipeStepSchemaBase
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-        [
-            ("DisplayName", RecipeStepSchemaBuilders.String()),
-            ("AppId", RecipeStepSchemaBuilders.String()),
-            ("TenantId", RecipeStepSchemaBuilders.String()),
-            ("CallbackPath", RecipeStepSchemaBuilders.String()),
+    [
+        ("DisplayName", RecipeStepSchemaBuilders.String()),
+        ("AppId", RecipeStepSchemaBuilders.String()),
+        ("TenantId", RecipeStepSchemaBuilders.String()),
+        ("CallbackPath", RecipeStepSchemaBuilders.String()),
         ]);
 }

@@ -1,11 +1,11 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
 
@@ -14,7 +14,6 @@ internal static class GetConnectionsEndpoint
     public static IEndpointRouteBuilder AddGetConnectionsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/connections", HandleAsync)
-            .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetConnectionsByProviderRouteName)
             .DisableAntiforgery();
 
@@ -24,7 +23,7 @@ internal static class GetConnectionsEndpoint
     private static async Task<IResult> HandleAsync(
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
-        [FromServices] IOptions<AIProviderOptions> aiProviderOptions,
+        [FromServices] INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         [FromQuery] string providerName)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
@@ -37,15 +36,14 @@ internal static class GetConnectionsEndpoint
             return TypedResults.BadRequest("providerName is required.");
         }
 
-        if (!aiProviderOptions.Value.Providers.TryGetValue(providerName, out var provider))
-        {
-            return TypedResults.BadRequest("invalid providerName.");
-        }
+        var connections = await connectionsCatalog.GetAsync(providerName);
 
-        return TypedResults.Ok(provider.Connections.Select(x => new
-        {
-            Id = x.Key,
-            Name = x.Key,
-        }));
+        return TypedResults.Ok(connections
+            .OrderBy(connection => connection.GetDisplayName(), StringComparer.OrdinalIgnoreCase)
+            .Select(connection => new
+            {
+                Id = connection.ItemId,
+                Name = connection.GetDisplayName(),
+            }));
     }
 }

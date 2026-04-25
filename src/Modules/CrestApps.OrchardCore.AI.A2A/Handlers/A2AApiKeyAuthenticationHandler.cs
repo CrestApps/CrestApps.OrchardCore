@@ -2,7 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
-using CrestApps.OrchardCore.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,7 +18,7 @@ internal sealed class A2AApiKeyAuthenticationHandler : AuthenticationHandler<A2A
         IOptionsMonitor<A2AHostOptions> hostOptionsMonitor,
         ILoggerFactory loggerFactory,
         UrlEncoder encoder)
-        : base(options, loggerFactory, encoder)
+    : base(options, loggerFactory, encoder)
     {
         _hostOptionsMonitor = hostOptionsMonitor;
     }

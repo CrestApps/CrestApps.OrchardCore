@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
@@ -14,31 +15,35 @@ public sealed class ListAIProfilesTool : AIFunction
     public const string TheName = "listAIProfiles";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "description": "Optional. Filter profiles by type: 'Chat', 'Utility', or 'Embedding'.",
-              "enum": ["Chat", "Utility", "Embedding"]
-            },
-            "onlyWithMetricsEnabled": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have session analytics metrics enabled."
-            },
-            "onlyWithDataExtraction": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have data extraction enabled."
-            },
-            "onlyWithPostSessionProcessing": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have post-session processing enabled."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Optional. Filter profiles by type: 'Chat', 'Utility', or 'Embedding'.",
+          "enum": [
+            "Chat",
+            "Utility",
+            "Embedding"
+          ]
+        },
+        "onlyWithMetricsEnabled": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have session analytics metrics enabled."
+        },
+        "onlyWithDataExtraction": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have data extraction enabled."
+        },
+        "onlyWithPostSessionProcessing": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have post-session processing enabled."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -59,6 +64,7 @@ public sealed class ListAIProfilesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -66,9 +72,10 @@ public sealed class ListAIProfilesTool : AIFunction
 
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
 
-        var profiles = (await profileManager.GetAllAsync()).ToList();
+        var profiles = (await profileManager.GetAllAsync(cancellationToken)).ToList();
 
         if (arguments.TryGetFirstString("type", out var typeStr)
+
             && Enum.TryParse<AIProfileType>(typeStr, ignoreCase: true, out var profileType))
         {
             profiles = profiles.Where(p => p.Type == profileType).ToList();
@@ -76,7 +83,7 @@ public sealed class ListAIProfilesTool : AIFunction
 
         if (arguments.TryGetFirst<bool>("onlyWithMetricsEnabled", out var metricsEnabled) && metricsEnabled)
         {
-            profiles = profiles.Where(p => p.As<AnalyticsMetadata>().EnableSessionMetrics).ToList();
+            profiles = profiles.Where(p => p.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics).ToList();
         }
 
         if (arguments.TryGetFirst<bool>("onlyWithDataExtraction", out var dataExtraction) && dataExtraction)
@@ -95,7 +102,7 @@ public sealed class ListAIProfilesTool : AIFunction
             ["name"] = p.Name,
             ["displayText"] = p.DisplayText,
             ["type"] = p.Type.ToString(),
-            ["metricsEnabled"] = p.As<AnalyticsMetadata>().EnableSessionMetrics,
+            ["metricsEnabled"] = p.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics,
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,
         }).ToList();
