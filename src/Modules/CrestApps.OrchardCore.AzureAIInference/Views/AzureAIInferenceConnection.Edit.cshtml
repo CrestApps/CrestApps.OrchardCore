@@ -51,13 +51,13 @@
         const identityIdWrapper = document.getElementById('@identityIdWrapperId');
 
         menuElement.addEventListener('change', (e) => {
-            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
+            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)') {
                 apiKeyWrapper.classList.remove('d-none');
             } else {
                 apiKeyWrapper.classList.add('d-none');
             }
 
-            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
+            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)') {
                 identityIdWrapper.classList.remove('d-none');
             } else {
                 identityIdWrapper.classList.add('d-none');

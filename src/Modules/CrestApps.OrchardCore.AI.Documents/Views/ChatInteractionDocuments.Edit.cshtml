@@ -122,7 +122,7 @@ else if (!Model.HasVectorSearchService)
 <style asp-name="document-drop-zone" at="Head"></style>
 
 <script at="Foot">
-    (function() {
+    (function () {
         const itemId = '@Model.ItemId';
         const fileInput = document.getElementById('documentUpload-' + itemId);
         const documentsList = document.getElementById('documentsList-' + itemId);
@@ -150,14 +150,14 @@ else if (!Model.HasVectorSearchService)
         }
 
         if (uploadAlertClose) {
-            uploadAlertClose.addEventListener('click', function() {
+            uploadAlertClose.addEventListener('click', function () {
                 hideUploadAlert();
             });
         }
 
         // Browse button click handler
         if (browseBtn && fileInput) {
-            browseBtn.addEventListener('click', function(e) {
+            browseBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 fileInput.click();
@@ -166,7 +166,7 @@ else if (!Model.HasVectorSearchService)
 
         // Make the whole drop zone clickable
         if (dropZone && fileInput) {
-            dropZone.addEventListener('click', function(e) {
+            dropZone.addEventListener('click', function (e) {
                 if (e.target === browseBtn || e.target.closest('#browseBtn-' + itemId)) {
                     return; // Let the button handler deal with it
                 }
@@ -188,7 +188,7 @@ else if (!Model.HasVectorSearchService)
 
             // Handle drag enter/over on the drop zone
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, function(e) {
+                dropZone.addEventListener(eventName, function (e) {
                     preventDefaults(e);
                     highlight();
                 }, false);
@@ -196,14 +196,14 @@ else if (!Model.HasVectorSearchService)
 
             // Handle drag leave
             ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, function(e) {
+                dropZone.addEventListener(eventName, function (e) {
                     preventDefaults(e);
                     unhighlight();
                 }, false);
             });
 
             // Handle drop
-            dropZone.addEventListener('drop', function(e) {
+            dropZone.addEventListener('drop', function (e) {
                 preventDefaults(e);
                 unhighlight();
 
@@ -231,7 +231,7 @@ else if (!Model.HasVectorSearchService)
         }
 
         if (fileInput) {
-            fileInput.addEventListener('change', async function(e) {
+            fileInput.addEventListener('change', async function (e) {
                 const files = e.target.files;
                 if (!files || files.length === 0) return;
 
@@ -317,7 +317,7 @@ else if (!Model.HasVectorSearchService)
                 showUploadAlert(escapeHtml(error.message));
             }
 
-            setTimeout(function() {
+            setTimeout(function () {
                 uploadProgress.style.display = 'none';
                 progressBar.style.width = '0%';
                 statusText.classList.remove('text-success', 'text-danger', 'text-warning');
@@ -392,7 +392,7 @@ else if (!Model.HasVectorSearchService)
         }
 
         // Handle document removal
-        documentsList.addEventListener('click', async function(e) {
+        documentsList.addEventListener('click', async function (e) {
             const removeBtn = e.target.closest('.remove-document');
             if (!removeBtn) return;
 

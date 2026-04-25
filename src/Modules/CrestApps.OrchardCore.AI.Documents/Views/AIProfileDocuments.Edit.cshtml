@@ -102,7 +102,7 @@
 <style asp-name="document-drop-zone" at="Head"></style>
 
 <script at="Foot">
-    (function() {
+    (function () {
         const uniqueId = '@uniqueId';
         const fileInput = document.getElementById('profileDocumentUpload-' + uniqueId);
         const documentsList = document.getElementById('profileDocumentsList-' + uniqueId);
@@ -151,7 +151,7 @@
         }
 
         if (browseBtn && fileInput) {
-            browseBtn.addEventListener('click', function(e) {
+            browseBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -159,7 +159,7 @@
                 tempInput.type = 'file';
                 tempInput.multiple = true;
                 tempInput.accept = fileInput.accept;
-                tempInput.addEventListener('change', function() {
+                tempInput.addEventListener('change', function () {
                     if (tempInput.files) {
                         for (let i = 0; i < tempInput.files.length; i++) {
                             addPendingFile(tempInput.files[i]);
@@ -181,20 +181,20 @@
             }
 
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, function(e) {
+                dropZone.addEventListener(eventName, function (e) {
                     preventDefaults(e);
                     highlight();
                 }, false);
             });
 
             ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, function(e) {
+                dropZone.addEventListener(eventName, function (e) {
                     preventDefaults(e);
                     unhighlight();
                 }, false);
             });
 
-            dropZone.addEventListener('drop', function(e) {
+            dropZone.addEventListener('drop', function (e) {
                 preventDefaults(e);
                 unhighlight();
 
@@ -224,7 +224,7 @@
         }
 
         // Handle removing pending files (not yet saved).
-        pendingFilesList.addEventListener('click', function(e) {
+        pendingFilesList.addEventListener('click', function (e) {
             const removeBtn = e.target.closest('.remove-pending-file');
             if (!removeBtn) return;
 
@@ -264,7 +264,7 @@
         });
 
         // Handle removing existing documents (already saved).
-        documentsList.addEventListener('click', function(e) {
+        documentsList.addEventListener('click', function (e) {
             const removeBtn = e.target.closest('.remove-profile-document');
             if (!removeBtn) return;
 
