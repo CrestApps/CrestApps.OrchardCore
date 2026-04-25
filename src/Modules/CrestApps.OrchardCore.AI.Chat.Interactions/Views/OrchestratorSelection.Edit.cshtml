@@ -31,15 +31,15 @@ else
 
         function updateFieldVisibility() {
             const selectedOrchestrator =
-            orchestratorSelector.value || defaultOrchestrator;
+                orchestratorSelector.value || defaultOrchestrator;
 
             const elements = document.getElementsByClassName('orchestrator-dependent');
             const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
 
             for (const el of elements) {
                 el.classList.toggle(
-                'd-none',
-                !el.classList.contains(targetClass)
+                    'd-none',
+                    !el.classList.contains(targetClass)
                 );
             }
         }

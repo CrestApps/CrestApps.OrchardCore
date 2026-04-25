@@ -112,20 +112,20 @@
                 var card = document.createElement('div');
                 card.className = 'card mb-2 conversion-goal-card';
                 card.innerHTML =
-                '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
-                '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 goal-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
-                '<i class="fa-solid fa-chevron-down me-1"></i>' +
-                '<span class="goal-name-display fw-semibold">@T["New Goal"]</span>' +
-                '</a>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
-                '</div>' +
-                '<div id="' + collapseId + '" class="collapse show">' +
-                '<div class="card-body">' +
-                '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control goal-name-input" name="' + goalsPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., issue_resolved"]" /><span class="hint">@T["A unique identifier for this goal. Only alphanumeric characters and underscores are allowed."]</span></div>' +
-                '<div class="mb-3"><label class="form-label">@T["Description"]</label><textarea class="form-control" name="' + goalsPrefix + '[' + index + '].Description" rows="2" required placeholder="@T["Describe what constitutes success for this goal"]"></textarea><span class="hint">@T["A clear description of the success criteria. This is provided to the AI model as evaluation criteria."]</span></div>' +
-                '<div class="row"><div class="col-md-6 mb-3"><label class="form-label">@T["Min Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MinScore" value="0" min="0" /><span class="hint">@T["Minimum score (default: 0)."]</span></div><div class="col-md-6 mb-3"><label class="form-label">@T["Max Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MaxScore" value="10" min="1" /><span class="hint">@T["Maximum score (default: 10)."]</span></div></div>' +
-                '</div>' +
-                '</div>';
+                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                    '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 goal-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                    '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                    '<span class="goal-name-display fw-semibold">@T["New Goal"]</span>' +
+                    '</a>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                    '<div id="' + collapseId + '" class="collapse show">' +
+                    '<div class="card-body">' +
+                    '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control goal-name-input" name="' + goalsPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., issue_resolved"]" /><span class="hint">@T["A unique identifier for this goal. Only alphanumeric characters and underscores are allowed."]</span></div>' +
+                    '<div class="mb-3"><label class="form-label">@T["Description"]</label><textarea class="form-control" name="' + goalsPrefix + '[' + index + '].Description" rows="2" required placeholder="@T["Describe what constitutes success for this goal"]"></textarea><span class="hint">@T["A clear description of the success criteria. This is provided to the AI model as evaluation criteria."]</span></div>' +
+                    '<div class="row"><div class="col-md-6 mb-3"><label class="form-label">@T["Min Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MinScore" value="0" min="0" /><span class="hint">@T["Minimum score (default: 0)."]</span></div><div class="col-md-6 mb-3"><label class="form-label">@T["Max Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MaxScore" value="10" min="1" /><span class="hint">@T["Maximum score (default: 10)."]</span></div></div>' +
+                    '</div>' +
+                    '</div>';
                 goalsContainer.appendChild(card);
             });
         }

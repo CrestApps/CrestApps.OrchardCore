@@ -88,40 +88,40 @@ else
                 },
                 body: formData
             })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (data.error) {
-                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
-                    return;
-                }
-                if (!data.contents || data.contents.length === 0) {
-                    resultDiv.innerHTML = '<p class="text-muted mb-0">No content returned.</p>';
-                    return;
-                }
-                var html = '';
-                data.contents.forEach(function (c) {
-                    if (c.type === 'text') {
-                        if (c.mimeType) {
-                            html += '<div class="mb-1"><span class="badge bg-info text-dark">' + escapeHtml(c.mimeType) + '</span></div>';
-                        }
-                        html += '<pre class="bg-light p-3 rounded mb-2" style="max-height:400px;overflow:auto">' + escapeHtml(c.text) + '</pre>';
-                    } else if (c.type === 'blob') {
-                        html += '<p><span class="badge bg-warning text-dark">Binary</span>';
-                        if (c.mimeType) {
-                            html += ' <span class="badge bg-info text-dark">' + escapeHtml(c.mimeType) + '</span>';
-                        }
-                        html += '</p><p class="text-muted">Binary content (' + c.length + ' base64 characters)</p>';
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
+                        return;
                     }
+                    if (!data.contents || data.contents.length === 0) {
+                        resultDiv.innerHTML = '<p class="text-muted mb-0">No content returned.</p>';
+                        return;
+                    }
+                    var html = '';
+                    data.contents.forEach(function (c) {
+                        if (c.type === 'text') {
+                            if (c.mimeType) {
+                                html += '<div class="mb-1"><span class="badge bg-info text-dark">' + escapeHtml(c.mimeType) + '</span></div>';
+                            }
+                            html += '<pre class="bg-light p-3 rounded mb-2" style="max-height:400px;overflow:auto">' + escapeHtml(c.text) + '</pre>';
+                        } else if (c.type === 'blob') {
+                            html += '<p><span class="badge bg-warning text-dark">Binary</span>';
+                            if (c.mimeType) {
+                                html += ' <span class="badge bg-info text-dark">' + escapeHtml(c.mimeType) + '</span>';
+                            }
+                            html += '</p><p class="text-muted">Binary content (' + c.length + ' base64 characters)</p>';
+                        }
+                    });
+                    resultDiv.innerHTML = html;
+                })
+                .catch(function (err) {
+                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Get';
                 });
-                resultDiv.innerHTML = html;
-            })
-            .catch(function (err) {
-                resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
-            })
-            .finally(function () {
-                btn.disabled = false;
-                btn.textContent = 'Get';
-            });
         });
     });
 

@@ -289,26 +289,26 @@
                 openIconHtml: '<i class="fas fa-times"></i>',
                 closedIconHtml: '<i class="fa fa-robot"></i>',
                 chatConfig: Object.assign(
-                {},
-                JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
-                {
-                    widget: {
-                        chatWidgetContainer: '#@widgetContainerId',
-                        chatWidgetStateName: widgetStateName,
-                        chatHistorySection: '#@historyPanelId',
-                        closeHistoryButton: '#@closeHistoryBtnId',
-                        showHistoryButton: '#@historyBtnId',
-                        newChatButton: '#@newChatBtnId',
-                        toggleButtonSelector: '#@toggleBtnId',
-                        resetSizeButtonSelector: '#@restoreSizeBtnId',
-                        dragHandleSelector: '.ai-chat-widget-header',
-                        enableDragging: true,
-                        enableResizing: true,
-                        persistLayout: true,
-                        minWidth: 288,
-                        minHeight: 320
-                    }
-                })
+                    {},
+                    JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
+                    {
+                        widget: {
+                            chatWidgetContainer: '#@widgetContainerId',
+                            chatWidgetStateName: widgetStateName,
+                            chatHistorySection: '#@historyPanelId',
+                            closeHistoryButton: '#@closeHistoryBtnId',
+                            showHistoryButton: '#@historyBtnId',
+                            newChatButton: '#@newChatBtnId',
+                            toggleButtonSelector: '#@toggleBtnId',
+                            resetSizeButtonSelector: '#@restoreSizeBtnId',
+                            dragHandleSelector: '.ai-chat-widget-header',
+                            enableDragging: true,
+                            enableResizing: true,
+                            persistLayout: true,
+                            minWidth: 288,
+                            minHeight: 320
+                        }
+                    })
             });
         }
 

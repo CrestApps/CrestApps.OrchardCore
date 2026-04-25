@@ -56,19 +56,19 @@
 
             // Order matters: longer tokens first
             return pattern
-            // Year
-            .replace(/yyyy/g, "Y")
-            .replace(/yyy/g, "Y")
-            .replace(/yy/g, "y")
-            .replace(/y/g, "y")
+                // Year
+                .replace(/yyyy/g, "Y")
+                .replace(/yyy/g, "Y")
+                .replace(/yy/g, "y")
+                .replace(/y/g, "y")
 
-            // Month
-            .replace(/MM/g, "m")
-            .replace(/M/g, "n")
+                // Month
+                .replace(/MM/g, "m")
+                .replace(/M/g, "n")
 
-            // Day
-            .replace(/dd/g, "d")
-            .replace(/d/g, "j");
+                // Day
+                .replace(/dd/g, "d")
+                .replace(/d/g, "j");
         }
 
         var pattern = csharpDatePatternToFlatpickr("@pattern") ?? "Y-m-d"
