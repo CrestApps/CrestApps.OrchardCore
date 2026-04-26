@@ -81,34 +81,97 @@ cd src/Startup/CrestApps.Aspire.AppHost
 dotnet run
 ```
 
-### Coding guidance
+### Code Guidelines
 
-- Follow `.editorconfig`
-- Prefer constructor injection
-- Do not add `ArgumentNullException.ThrowIf...` guards in constructors
-- Add null guards in public implementation methods when a non-nullable input is required and the method does not intentionally support `null`
-- Skip null guards for nullable or intentionally null-tolerant parameters
-- After the last null-check/argument-validation line in a method, add a blank line before the next statement
-- If a method has only one null-check/argument-validation line, still add a blank line after that final guard line
-- Add a blank line before a `return` statement unless the `return` is the first statement inside a `{ ... }` block
-- Add a blank line before and after `if` blocks, `switch` statements, and loops unless the block is immediately preceded by `{`
-- Do not add a blank line between an `if`/`else`/`switch`/loop condition and its opening `{`
-- Use `var` consistently with repository style
-- Only use expression-bodied members when the entire member fits on a single short line; use a full block body for anything longer or split across lines
-- Avoid `DateTime.UtcNow`; prefer injected `IClock`.
-- Fix JavaScript indentations in all script blocks that are placed in `.cshtml` files.
-- Document every method in interfaces and domain models with an XML `<summary>` block.
-- Document every interface method parameter with XML `<param>` tags.
-- Prefer `using` statements over fully qualified namespace usages when there is no conflict.
-- When a constructor has more than one parameter, place each parameter on its own line.
-- Do not leave an extra blank line between consecutive closing braces; each closing brace on its own line is enough.
-- Add a blank line after `};` and after multi-line object initialization statements unless the initializer is returned on the same line.
-- When an object initializer spans multiple lines, place each property assignment on its own line.
-- Always leave a blank line between a property and a following XML documentation block.
-- In unit tests, separate setup, act, and assertion sections for readability and prefer `// Arrange`, `// Act`, and `// Assert` markers when they improve clarity.
-- In unit tests, wrap crowded fluent chains across multiple lines with consistent indentation and leave a blank line after multi-line setup statements.
-- Remove useless decorative or AI-style comments and prefer real XML docs where documentation is needed.
-- Keep public docs and comments honest to the current code
+* Follow `.editorconfig` at all times.
+* Prefer constructor injection.
+* Do not add `ArgumentNullException.ThrowIf...` guards in constructors.
+
+#### Null Handling
+
+* Add null guards in public implementation methods when a non-nullable input is required and the method does not intentionally support `null`.
+* Skip null guards for nullable or intentionally null-tolerant parameters.
+* After the final null-check or argument-validation line in a method, add a blank line before the next statement (even if it is the only guard).
+
+#### Formatting & Layout
+
+* Never use more than one consecutive blank line.
+* Add a blank line before a `return` statement unless it is the first statement in a `{ ... }` block.
+* Add a blank line before and after `if`, `switch`, and loop blocks unless the block is immediately preceded by `{`.
+* Do not add a blank line between a control statement (`if`/`else`/`switch`/loop) and its opening `{`.
+* Do not leave extra blank lines between consecutive closing braces.
+* Add a blank line after `};` and after multi-line object initializers unless returned inline.
+* When an object initializer spans multiple lines, place each property assignment on its own line.
+* Format conditional (`?:`) operators across multiple lines with the condition, `?`, and `:` each on their own properly indented lines.
+* Always keep exactly one trailing newline at the end of each file.
+
+#### `#pragma` Rules
+
+* Do not add a blank line immediately after `#pragma warning disable`.
+* Do not add a blank line immediately before `#pragma warning restore`.
+* Do not add a blank line after `#pragma warning restore` if followed by `{`.
+* Add a blank line before a `#pragma warning disable` block when it starts a new member after a `}`.
+* Add a blank line between `#pragma warning restore` and the next `#pragma warning disable` when guarding separate members.
+
+#### Usings & Types
+
+* Do not use `global using`; declare explicit `using` statements at the top of each file.
+* Prefer top-of-file `using` directives over fully qualified type names.
+* Prefer `using` statements over fully qualified names when there is no conflict.
+* Use `var` consistently with repository style.
+
+#### Members & Structure
+
+* Only use expression-bodied members when the entire member fits on a single short line.
+* Use full block bodies for anything longer or multi-line.
+* When a constructor has more than one parameter, place each parameter on its own line.
+* Place constructor initializer clauses (`: base(...)`) on their own indented line.
+* Seal publicly accessible classes by default unless inheritance is intentionally required (Except for View Models). In OrchardCore, we can't seal view models.
+
+#### Time Abstraction
+
+* Avoid `DateTime.UtcNow`; always use an injected `IClock`.
+
+#### Documentation
+
+* Keep public docs and comments accurate and aligned with the code.
+* Always document:
+
+  * Every public method (including constructors) with XML `<summary>` and `<param>` tags.
+  * Every public property with an XML `<summary>`.
+  * All interfaces and their members.
+* Only include `<param>` tags for actual parameters, in the exact order of the signature.
+* Improve existing XML docs in place—do not duplicate `<summary>` blocks.
+* Always insert a blank line before XML `<summary>` blocks unless immediately preceded by `{`.
+* Never insert a blank line between an XML doc block and the member it documents.
+* Always leave a blank line between a property and a following XML documentation block.
+* Remove decorative or low-value comments; prefer meaningful XML documentation.
+
+#### Testing
+
+* In unit tests:
+
+  * Separate setup, act, and assert sections.
+  * Use `// Arrange`, `// Act`, and `// Assert` when helpful.
+  * Wrap long fluent chains across multiple lines with consistent indentation.
+  * Add a blank line after multi-line setup statements.
+
+#### JavaScript in `.cshtml`
+
+* Ensure proper indentation for all JavaScript inside `.cshtml` files.
+
+#### Architecture & Design
+
+* Prefer SOLID, DRY, KISS, and YAGNI principles.
+* Consolidate duplicated provider, transport, or store logic into shared abstractions before introducing new one-off implementations.
+* Favor additive shared infrastructure first, then migrate consumers in safe, incremental steps.
+* Optimize framework code for consistency, extensibility, and long-term maintainability across providers and hosts.
+* For optional provider integrations in sample hosts, do not eagerly read validated options in UI setup paths—unconfigured providers should appear unavailable rather than cause failures.
+
+#### Quality Enforcement
+
+* Treat all warnings as errors and resolve every warning.
+* Continuously evolve and update `copilot-instructions.md` with newly established preferences and patterns.
 
 ### Validation Scenarios
 
