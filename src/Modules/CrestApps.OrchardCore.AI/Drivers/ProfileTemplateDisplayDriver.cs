@@ -43,6 +43,11 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
@@ -52,38 +57,32 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
             .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
             .ToList();
-        }).Location("Content:2%General;1")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:2%General;1");
 
         var generalFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateGeneralFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:5%General;1")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:5%General;1");
 
         var interactionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInteractionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:6%General;1")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:6%General;1");
 
         var instructionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInstructionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:1%Instructions;4")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:1%Instructions;4");
 
         var systemInstructionsResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateSystemInstructions_Edit", model =>
         {
             PopulateParameters(metadata, model);
-        }).Location("Content:5%Instructions;4")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:5%Instructions;4");
 
         var parametersResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateParameters_Edit", model =>
         {
             PopulateParameters(metadata, model);
-        }).Location("Content:1%Parameters;5")
-        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+        }).Location("Content:1%Parameters;5");
 
         var results = new List<IDisplayResult>
         {

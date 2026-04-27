@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -428,15 +428,6 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
             .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        var uiDefault = candidates
-            .FirstOrDefault(static deployment => deployment.GetIsDefault())?
-            .Name;
-
-        if (!string.IsNullOrWhiteSpace(uiDefault))
-        {
-            return uiDefault;
-        }
 
         if (legacyDeploymentNameAccessor != null)
         {

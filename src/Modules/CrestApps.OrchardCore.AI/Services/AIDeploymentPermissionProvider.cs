@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -24,8 +24,8 @@ internal sealed class AIDeploymentPermissionProvider : IPermissionProvider
     [
         new PermissionStereotype
         {
-        Name = OrchardCoreConstants.Roles.Administrator,
-        Permissions = _allPermissions,
+            Name = OrchardCoreConstants.Roles.Administrator,
+            Permissions = _allPermissions,
         },
     ];
 }

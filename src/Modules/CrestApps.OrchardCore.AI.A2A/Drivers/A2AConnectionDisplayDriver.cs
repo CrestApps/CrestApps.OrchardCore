@@ -1,13 +1,13 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using A2AClientAuthenticationType = CrestApps.Core.AI.Models.ClientAuthenticationType;
 
 namespace CrestApps.OrchardCore.AI.A2A.Drivers;
 
@@ -49,10 +49,10 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
             model.AuthenticationType = metadata.AuthenticationType;
 
-            if (metadata.AuthenticationType == A2AClientAuthenticationType.Anonymous &&
+            if (metadata.AuthenticationType == ClientAuthenticationType.Anonymous &&
                 metadata.AdditionalHeaders is { Count: > 0 })
             {
-                model.AuthenticationType = A2AClientAuthenticationType.CustomHeaders;
+                model.AuthenticationType = ClientAuthenticationType.CustomHeaders;
             }
 
             model.ApiKeyHeaderName = metadata.ApiKeyHeaderName;
@@ -131,27 +131,27 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
         switch (model.AuthenticationType)
         {
-            case A2AClientAuthenticationType.ApiKey:
+            case ClientAuthenticationType.ApiKey:
                 ValidateAndPopulateApiKey(context, model, metadata, protector, existingApiKey);
                 break;
 
-            case A2AClientAuthenticationType.Basic:
+            case ClientAuthenticationType.Basic:
                 ValidateAndPopulateBasic(context, model, metadata, protector, existingBasicPassword);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2ClientCredentials:
+            case ClientAuthenticationType.OAuth2ClientCredentials:
                 ValidateAndPopulateOAuth2(context, model, metadata, protector, existingOAuth2ClientSecret);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2PrivateKeyJwt:
+            case ClientAuthenticationType.OAuth2PrivateKeyJwt:
                 ValidateAndPopulateOAuth2PrivateKeyJwt(context, model, metadata, protector, existingOAuth2PrivateKey);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2Mtls:
+            case ClientAuthenticationType.OAuth2Mtls:
                 ValidateAndPopulateOAuth2Mtls(context, model, metadata, protector, existingOAuth2ClientCertificate, existingOAuth2ClientCertificatePassword);
                 break;
 
-            case A2AClientAuthenticationType.CustomHeaders:
+            case ClientAuthenticationType.CustomHeaders:
                 ValidateAndPopulateCustomHeaders(context, model, metadata);
                 break;
         }

@@ -1,17 +1,15 @@
-﻿using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Permissions;
 
-namespace CrestApps.Core.AI.A2A.Services;
+namespace CrestApps.OrchardCore.AI.A2A.Services;
 
 /// <summary>
 /// Provides a2 a host permissions functionality.
 /// </summary>
 public sealed class A2AHostPermissionsProvider : IPermissionProvider
 {
-    public static readonly Permission AccessA2AHost = new("AccessA2AHost", "Access the A2A Host", isSecurityCritical: true);
-
     private readonly IEnumerable<Permission> _allPermissions =
     [
-        AccessA2AHost,
+        A2APermissions.AccessA2AHost,
     ];
 
     /// <summary>

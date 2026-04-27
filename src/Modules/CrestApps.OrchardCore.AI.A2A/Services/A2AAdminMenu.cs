@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 using A2APermissions = CrestApps.OrchardCore.AI.A2A.A2APermissions;
 
@@ -26,7 +26,9 @@ internal sealed class A2AAdminMenu : AdminNavigationProvider
                     .Id("aiA2AConnections")
                     .Action("Index", "Connections", OrchardCore.AI.A2A.A2AConstants.Feature.Area)
                     .Permission(A2APermissions.ManageA2AConnections)
-                    .LocalNav()));
+                    .LocalNav()
+                )
+            );
 
         return ValueTask.CompletedTask;
     }

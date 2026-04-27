@@ -54,7 +54,6 @@ public sealed class SendEmailTool : AIFunction
 
       ]
     }
-
     """);
     public override string Name => TheName;
 

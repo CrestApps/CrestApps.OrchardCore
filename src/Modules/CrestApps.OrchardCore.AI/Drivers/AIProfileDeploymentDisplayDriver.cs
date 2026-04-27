@@ -1,10 +1,8 @@
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -15,7 +13,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISiteService _siteService;
-    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -29,12 +26,10 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
-        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _siteService = siteService;
-        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -88,8 +83,8 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? d.Name
-                : $"{d.Name} ({d.ModelName})";
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
             });

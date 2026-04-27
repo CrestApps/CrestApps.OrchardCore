@@ -3,7 +3,6 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -126,8 +125,6 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 // that do not include the Type property.
                 deployment.Type = AIDeploymentType.Chat;
             }
-
-            deployment.SetIsDefault(token["IsDefault"]?.GetValue<bool>() ?? false);
 
             var validationResult = await _manager.ValidateAsync(deployment);
 

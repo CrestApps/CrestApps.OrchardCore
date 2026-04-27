@@ -37,13 +37,13 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (template.Source != AITemplateSources.Profile)
-            {
-                return;
-            }
-
             var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             model.ChatDeploymentName = metadata.ChatDeploymentName;

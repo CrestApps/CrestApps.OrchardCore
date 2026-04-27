@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using YesSql;
 
 using ISession = YesSql.ISession;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AICompletionUsageService : IAICompletionUsageObserver
 {
     private readonly ISession _session;
-    private readonly TimeProvider _timeProvider;
+    private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIChatSessionEventService _chatSessionEventService;
     private readonly GeneralAIOptions _generalAIOptions;
@@ -25,19 +26,19 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
     /// Initializes a new instance of the <see cref="AICompletionUsageService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session used for persistence.</param>
-    /// <param name="timeProvider">The time provider for UTC timestamps.</param>
+    /// <param name="clock">The clock for UTC timestamps.</param>
     /// <param name="httpContextAccessor">The accessor for the current HTTP context.</param>
     /// <param name="chatSessionEventService">The service for recording session-level token usage.</param>
     /// <param name="generalAIOptions">The general AI options containing tracking configuration.</param>
     public AICompletionUsageService(
         ISession session,
-        TimeProvider timeProvider,
+        IClock clock,
         IHttpContextAccessor httpContextAccessor,
         AIChatSessionEventService chatSessionEventService,
         IOptions<GeneralAIOptions> generalAIOptions)
     {
         _session = session;
-        _timeProvider = timeProvider;
+        _clock = clock;
         _httpContextAccessor = httpContextAccessor;
         _chatSessionEventService = chatSessionEventService;
         _generalAIOptions = generalAIOptions.Value;
@@ -55,7 +56,7 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
             return;
         }
 
-        record.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        record.CreatedUtc = _clock.UtcNow;
 
         if (string.IsNullOrEmpty(record.UserName))
         {

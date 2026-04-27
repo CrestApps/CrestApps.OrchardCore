@@ -53,7 +53,6 @@ public sealed class SendNotificationTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
     public override string Name => TheName;
 

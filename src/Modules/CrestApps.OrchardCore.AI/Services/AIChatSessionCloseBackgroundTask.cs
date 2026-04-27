@@ -9,6 +9,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -40,14 +41,14 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
+        var clock = serviceProvider.GetRequiredService<IClock>();
         var session = serviceProvider.GetRequiredService<ISession>();
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var postCloseProcessor = serviceProvider.GetRequiredService<AIChatSessionPostCloseProcessor>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
 
-        var utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        var utcNow = clock.UtcNow;
         var profiles = await profileManager.GetAsync(AIProfileType.Chat, cancellationToken);
 
         foreach (var profile in profiles)

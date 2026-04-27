@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -513,8 +513,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         return deployments
             .Where(deployment => deployment.SupportsType(type))
-            .OrderByDescending(deployment => deployment.GetIsDefault())
-            .ThenBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(deployment => deployment.Name)
             .FirstOrDefault();
@@ -545,7 +544,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                     string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        return candidates.FirstOrDefault(deployment => deployment.GetIsDefault())?.Name
-        ?? candidates.FirstOrDefault()?.Name;
+        return candidates.FirstOrDefault()?.Name;
     }
 }

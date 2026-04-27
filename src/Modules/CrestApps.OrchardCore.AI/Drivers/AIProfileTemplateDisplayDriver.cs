@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -36,9 +36,9 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
     {
         return CombineAsync(
             View("AIProfileTemplate_Fields_SummaryAdmin", template).Location("Content:1"),
-        View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
-        View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
-        View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
+            View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
+            View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
+            View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
         );
     }
 

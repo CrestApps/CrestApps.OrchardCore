@@ -11,8 +11,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
-    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
 
@@ -23,12 +22,11 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
     /// <param name="shellReleaseManager">The shell release manager for requesting tenant restarts.</param>
     /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProviderConnectionDisplayDriver(
-        INamedCatalog<AIProviderConnection> connectionsCatalog,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IShellReleaseManager shellReleaseManager,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _connectionsCatalog = connectionsCatalog;
-        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -80,8 +78,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
 
         connection.DisplayText = model.DisplayText;
-
-        _shellReleaseManager.RequestRelease();
 
         return Edit(connection, context);
     }

@@ -1,8 +1,7 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using OrchardCore.Deployment;
 
@@ -47,7 +46,6 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
                 { "Type", deployment.Type.ToString() },
-                { "IsDefault", deployment.GetIsDefault() },
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },

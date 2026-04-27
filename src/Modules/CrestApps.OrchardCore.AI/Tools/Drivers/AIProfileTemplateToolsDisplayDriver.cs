@@ -42,7 +42,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
     {
-        if (_toolDefinitions.Tools.Count == 0)
+        if (template.Source != AITemplateSources.Profile || _toolDefinitions.Tools.Count == 0)
         {
             return null;
         }

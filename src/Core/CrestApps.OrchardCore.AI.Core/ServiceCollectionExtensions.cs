@@ -141,9 +141,9 @@ public static class ServiceCollectionExtensions
         ReplaceService<INamedSourceCatalogSource<AIDeployment>, ConfigurationAIDeploymentSource>(
             services,
             ServiceLifetime.Scoped,
-            static sp => new ConfigurationAIDeploymentSource(
+            static sp => ActivatorUtilities.CreateInstance<ConfigurationAIDeploymentSource>(
+                sp,
                 sp.GetRequiredService<IShellConfiguration>(),
-                sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<IOptions<AIOptions>>(),
                 sp.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>(),
                 sp.GetRequiredService<ILogger<ConfigurationAIDeploymentSource>>()));
@@ -151,9 +151,9 @@ public static class ServiceCollectionExtensions
         ReplaceService<INamedSourceCatalogSource<AIProviderConnection>, ConfigurationAIProviderConnectionSource>(
             services,
             ServiceLifetime.Scoped,
-            static sp => new ConfigurationAIProviderConnectionSource(
+            static sp => ActivatorUtilities.CreateInstance<ConfigurationAIProviderConnectionSource>(
+                sp,
                 sp.GetRequiredService<IShellConfiguration>(),
-                sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
                 sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionSource>>()));
     }

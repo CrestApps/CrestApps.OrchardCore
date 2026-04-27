@@ -46,11 +46,13 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
     public override string Name => TheName;
 
     public override string Description =>
-        "Queries aggregated chat session metrics from the analytics index. " +
-        "Returns statistics like total sessions, average messages per session, " +
-        "resolution rate, average handle time, token usage, rating distribution, " +
-        "and breakdowns by hour-of-day and day-of-week. " +
-        "Useful for generating charts and reports about chat performance.";
+        """
+        Queries aggregated chat session metrics from the analytics index.
+        Returns statistics like total sessions, average messages per session,
+        resolution rate, average handle time, token usage, rating distribution,
+        and breakdowns by hour-of-day and day-of-week.
+        Useful for generating charts and reports about chat performance.
+        """;
 
     public override JsonElement JsonSchema => _jsonSchema;
 

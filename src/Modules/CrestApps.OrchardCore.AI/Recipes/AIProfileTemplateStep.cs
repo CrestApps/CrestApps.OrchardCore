@@ -27,7 +27,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
     public AIProfileTemplateStep(
         INamedCatalogManager<AIProfileTemplate> templateManager,
         IStringLocalizer<AIProfileTemplateStep> stringLocalizer)
-    : base(StepKey)
+        : base(StepKey)
     {
         _templateManager = templateManager;
         S = stringLocalizer;

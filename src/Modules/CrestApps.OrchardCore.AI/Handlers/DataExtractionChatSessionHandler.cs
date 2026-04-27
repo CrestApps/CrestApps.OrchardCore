@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 /// </summary>
 public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 {
-    private readonly TimeProvider _timeProvider;
+    private readonly IClock _clock;
     private readonly IWorkflowManager _workflowManager;
     private readonly ILogger _logger;
 
@@ -23,15 +24,15 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     /// Initializes a new instance of the <see cref="DataExtractionChatSessionHandler"/> class.
     /// </summary>
     /// <param name="workflowManager">The workflow manager used to trigger workflow events.</param>
-    /// <param name="timeProvider">The time provider for obtaining UTC timestamps.</param>
+    /// <param name="clock">The time provider for obtaining UTC timestamps.</param>
     /// <param name="logger">The logger instance for this handler.</param>
     public DataExtractionChatSessionHandler(
         IWorkflowManager workflowManager,
-        TimeProvider timeProvider,
+        IClock clock,
         ILogger<DataExtractionChatSessionHandler> logger)
     {
         _workflowManager = workflowManager;
-        _timeProvider = timeProvider;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -43,7 +44,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
             return;
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var now = _clock.UtcNow;
 
         foreach (var field in changeSet.NewFields)
         {

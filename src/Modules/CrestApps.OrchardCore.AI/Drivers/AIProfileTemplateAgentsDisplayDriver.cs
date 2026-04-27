@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -29,7 +29,6 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
             .Count(a => a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
 
         var onDemandAgents = allAgents
-            .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
@@ -65,7 +64,6 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
 
         var validAgentNames = allAgents
-            .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

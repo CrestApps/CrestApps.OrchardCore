@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.A2A;
+namespace CrestApps.OrchardCore.AI.A2A;
 
 /// <summary>
 /// Contains constant values for a2 a.

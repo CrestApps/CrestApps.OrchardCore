@@ -1,5 +1,6 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -11,19 +12,19 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AIChatSessionEventService
 {
     private readonly ISession _session;
-    private readonly TimeProvider _timeProvider;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIChatSessionEventService"/> class.
     /// </summary>
     /// <param name="session">The session.</param>
-    /// <param name="timeProvider">The time provider.</param>
+    /// <param name="clock">The clock.</param>
     public AIChatSessionEventService(
         ISession session,
-        TimeProvider timeProvider)
+        IClock clock)
     {
         _session = session;
-        _timeProvider = timeProvider;
+        _clock = clock;
     }
 
     /// <summary>
@@ -32,7 +33,7 @@ public sealed class AIChatSessionEventService
     /// </summary>
     public async Task RecordSessionStartedAsync(AIChatSession chatSession)
     {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var now = _clock.UtcNow;
         var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
         var evt = new AIChatSessionEvent
@@ -63,7 +64,7 @@ public sealed class AIChatSessionEventService
         if (evt is null)
         {
             // If no start event exists, create a complete record.
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var now = _clock.UtcNow;
             var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
             evt = new AIChatSessionEvent
@@ -86,7 +87,7 @@ public sealed class AIChatSessionEventService
             return;
         }
 
-        var endTime = chatSession.ClosedAtUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
+        var endTime = chatSession.ClosedAtUtc ?? _clock.UtcNow;
 
         evt.SessionEndedUtc = endTime;
         evt.MessageCount = promptCount;

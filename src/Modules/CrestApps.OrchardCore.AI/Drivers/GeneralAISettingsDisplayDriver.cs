@@ -23,7 +23,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly IShellReleaseManager _shellReleaseManager;
 
-    internal readonly IStringLocalizer T;
+    internal readonly IStringLocalizer S;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
@@ -46,7 +46,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         _authorizationService = authorizationService;
         _shellReleaseManager = shellReleaseManager;
         _defaultAIOptions = defaultAIOptions.Value;
-        T = stringLocalizer;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, GeneralAISettings settings, BuildEditorContext context)
@@ -85,12 +85,12 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         if (model.MaximumIterationsPerRequest < 1)
         {
-            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request must be at least {0}.", 1]);
+            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", S["Maximum iterations per request must be at least {0}.", 1]);
         }
 
         if (model.MaximumIterationsPerRequest > _defaultAIOptions.AbsoluteMaximumIterationsPerRequest)
         {
-            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
+            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", S["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
         }
 
         if (!context.Updater.ModelState.IsValid)

@@ -84,21 +84,6 @@ public static class AILegacyDeploymentModelExtensions
     public static void SetLegacySpeechToTextDeploymentName(this AIProviderConnection connection, string value)
         => SetLegacyValue(connection, "SpeechToTextDeploymentName", value);
 
-    /// <summary>
-    /// Retrieves the is default.
-    /// </summary>
-    /// <param name="deployment">The deployment.</param>
-    public static bool GetIsDefault(this AIDeployment deployment)
-        => GetProperties(deployment).GetBooleanOrFalseValue("IsDefault");
-
-    /// <summary>
-    /// Sets the is default.
-    /// </summary>
-    /// <param name="deployment">The deployment.</param>
-    /// <param name="isDefault">The is default.</param>
-    public static void SetIsDefault(this AIDeployment deployment, bool isDefault)
-        => SetLegacyValue(deployment, "IsDefault", isDefault);
-
     private static IDictionary<string, object> GetProperties(ExtensibleEntity entity)
     {
         entity.Properties ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);

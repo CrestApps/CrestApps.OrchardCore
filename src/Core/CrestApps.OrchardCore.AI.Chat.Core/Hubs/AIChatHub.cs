@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
@@ -40,15 +41,15 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     /// Initializes a new instance of the <see cref="AIChatHub"/> class.
     /// </summary>
     /// <param name="services">The service provider for resolving dependencies.</param>
-    /// <param name="timeProvider">The time provider for obtaining the current time.</param>
+    /// <param name="clock">The clock for obtaining the current UTC time.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public AIChatHub(
         IServiceProvider services,
-        TimeProvider timeProvider,
+        IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
-        : base(services, timeProvider, logger)
+        : base(services, new ClockTimeProviderAdapter(clock), logger)
     {
         S = stringLocalizer;
     }
@@ -71,8 +72,8 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override DateTime GetUtcNow()
     {
-        var timeProvider = Context.GetHttpContext()?.RequestServices?.GetService<TimeProvider>();
-        return (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var clock = Context.GetHttpContext()?.RequestServices?.GetService<IClock>();
+        return clock?.UtcNow ?? base.GetUtcNow();
     }
 
     protected override string GenerateId()

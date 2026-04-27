@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -61,8 +61,8 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         [
             new PermissionStereotype
             {
-            Name = OrchardCoreConstants.Roles.Administrator,
-            Permissions = _allPermissions,
+                Name = OrchardCoreConstants.Roles.Administrator,
+                Permissions = _allPermissions,
             },
         ];
     }

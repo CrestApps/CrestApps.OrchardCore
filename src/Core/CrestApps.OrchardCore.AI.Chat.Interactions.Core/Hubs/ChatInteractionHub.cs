@@ -33,15 +33,15 @@ public class ChatInteractionHub : ChatInteractionHubBase
     /// Initializes a new instance of the <see cref="ChatInteractionHub"/> class.
     /// </summary>
     /// <param name="services">The service provider for resolving dependencies.</param>
-    /// <param name="timeProvider">The time provider for obtaining the current time.</param>
+    /// <param name="clock">The clock for obtaining the current UTC time.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public ChatInteractionHub(
         IServiceProvider services,
-        TimeProvider timeProvider,
+        IClock clock,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
-        : base(services, timeProvider, logger)
+        : base(services, new ClockTimeProviderAdapter(clock), logger)
     {
         S = stringLocalizer;
     }
