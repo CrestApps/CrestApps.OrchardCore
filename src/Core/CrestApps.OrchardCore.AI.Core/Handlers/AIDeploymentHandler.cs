@@ -140,7 +140,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         }
 
         var clientName = data[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
-        ?? data["ProviderName"]?.GetValue<string>()?.Trim();
+            ?? data["ProviderName"]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(clientName))
         {
@@ -157,13 +157,6 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
         {
             deployment.Type = type;
-        }
-
-        var isDefault = data["IsDefault"]?.GetValue<bool>();
-
-        if (isDefault.HasValue)
-        {
-            deployment.SetIsDefault(isDefault.Value);
         }
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();

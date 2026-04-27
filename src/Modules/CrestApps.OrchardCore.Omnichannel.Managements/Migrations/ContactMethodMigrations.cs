@@ -77,33 +77,33 @@ public sealed class ContactMethodMigrations : DataMigration
                 [
                     new ListValueOption()
                     {
-                    Name = "Home",
-                    Value = "Home",
+                        Name = "Home",
+                        Value = "Home",
                     },
                     new ListValueOption()
                     {
-                    Name = "Cell",
-                    Value = "Cell",
+                        Name = "Cell",
+                        Value = "Cell",
                     },
                     new ListValueOption()
                     {
-                    Name = "Fax",
-                    Value = "Fax",
+                        Name = "Fax",
+                        Value = "Fax",
                     },
                     new ListValueOption()
                     {
-                    Name = "Work",
-                    Value = "Work",
+                        Name = "Work",
+                        Value = "Work",
                     },
                     new ListValueOption()
                     {
-                    Name = "Office",
-                    Value = "Office",
+                        Name = "Office",
+                        Value = "Office",
                     },
                     new ListValueOption()
                     {
-                    Name = "Other",
-                    Value = "Other",
+                        Name = "Other",
+                        Value = "Other",
                     }
 
                 ];

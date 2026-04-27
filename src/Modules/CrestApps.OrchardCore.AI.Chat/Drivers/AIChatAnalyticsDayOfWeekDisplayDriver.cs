@@ -28,13 +28,13 @@ public sealed class AIChatAnalyticsDayOfWeekDisplayDriver : DisplayDriver<AIChat
         {
             var dayNames = new[]
             {
-            S["Sunday"].Value,
-            S["Monday"].Value,
-            S["Tuesday"].Value,
-            S["Wednesday"].Value,
-            S["Thursday"].Value,
-            S["Friday"].Value,
-            S["Saturday"].Value,
+                S["Sunday"].Value,
+                S["Monday"].Value,
+                S["Tuesday"].Value,
+                S["Wednesday"].Value,
+                S["Thursday"].Value,
+                S["Friday"].Value,
+                S["Saturday"].Value,
             };
 
             var dayGroups = context.Events

@@ -44,9 +44,9 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                Uri = resource.Resource.Uri,
-                MimeType = "application/schema+json",
-                Text = JsonSerializer.Serialize(recipeSchema),
+                    Uri = resource.Resource.Uri,
+                    MimeType = "application/schema+json",
+                    Text = JsonSerializer.Serialize(recipeSchema),
                 }
 
             ]

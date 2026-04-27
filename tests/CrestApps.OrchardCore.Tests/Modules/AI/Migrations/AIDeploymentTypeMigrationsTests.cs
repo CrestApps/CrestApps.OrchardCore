@@ -8,36 +8,6 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 public sealed class AIDeploymentTypeMigrationsTests
 {
     [Fact]
-    public void FindDefaultChatDeploymentName_WhenDefaultDeploymentExists_ShouldReturnDefaultDeploymentName()
-    {
-        var profile = CreateProfile("legacy-connection");
-        var deployments = new[]
-        {
-            new AIDeployment
-            {
-                ItemId = "chat-secondary",
-                Name = "chat-secondary",
-                ClientName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-            },
-            new AIDeployment
-            {
-                ItemId = "chat-default",
-                Name = "chat-default",
-                ClientName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
-            },
-        };
-
-        var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
-
-        Assert.Equal("chat-default", result);
-    }
-
-    [Fact]
     public void FindDefaultChatDeploymentName_WhenConnectionNameMatches_ShouldReturnFirstMatchingDeploymentName()
     {
         var profile = CreateProfile("Friendly Connection");

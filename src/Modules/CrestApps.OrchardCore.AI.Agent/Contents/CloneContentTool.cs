@@ -32,7 +32,6 @@ public sealed class CloneContentTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override string Name => TheName;

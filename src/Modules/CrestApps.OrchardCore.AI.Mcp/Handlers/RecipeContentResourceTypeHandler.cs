@@ -74,9 +74,9 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
             [
                 new TextResourceContents
                 {
-                Uri = resource.Resource.Uri,
-                MimeType = "application/json",
-                Text = json,
+                    Uri = resource.Resource.Uri,
+                    MimeType = "application/json",
+                    Text = json,
                 }
 
             ]

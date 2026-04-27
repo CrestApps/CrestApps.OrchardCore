@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +34,6 @@ public sealed class EnableFeatureTool : AIFunction
         "featureIds"
       ]
     }
-
     """);
 
     public override string Name => TheName;

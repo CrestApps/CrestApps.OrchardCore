@@ -37,8 +37,8 @@ public sealed class ChatAnalyticsPermissionProvider : IPermissionProvider
     [
         new PermissionStereotype
         {
-        Name = OrchardCoreConstants.Roles.Administrator,
-        Permissions = _generalPermissions,
+            Name = OrchardCoreConstants.Roles.Administrator,
+            Permissions = _generalPermissions,
         },
     ];
 }

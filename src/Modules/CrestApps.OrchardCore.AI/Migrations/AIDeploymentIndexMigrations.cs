@@ -1,9 +1,8 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
-using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -153,8 +152,6 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                     {
                         deployment.Type = deploymentType;
                     }
-
-                    deployment.SetIsDefault(deploymentObject["IsDefault"]?.GetValue<bool>() ?? false);
 
                     var validationResult = await deploymentManager.ValidateAsync(deployment);
                     if (!validationResult.Succeeded)

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -31,7 +31,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override string Name => TheName;

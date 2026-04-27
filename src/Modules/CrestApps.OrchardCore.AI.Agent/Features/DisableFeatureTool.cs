@@ -31,7 +31,6 @@ internal sealed class DisableFeatureTool : AIFunction
         "featureIds"
       ]
     }
-
     """);
 
     public override string Name => TheName;

@@ -83,9 +83,9 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                Uri = resource.Resource.Uri,
-                MimeType = "application/json",
-                Text = json,
+                    Uri = resource.Resource.Uri,
+                    MimeType = "application/json",
+                    Text = json,
                 }
 
             ]

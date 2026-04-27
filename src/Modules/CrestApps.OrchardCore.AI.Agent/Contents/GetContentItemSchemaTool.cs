@@ -35,7 +35,6 @@ public sealed class GetContentItemSchemaTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override string Name => TheName;

@@ -86,7 +86,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
             var subjectContentTypes = new List<SelectListItem>()
             {
-            new(S["Any subject"], ""),
+                new(S["Any subject"], ""),
             };
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())

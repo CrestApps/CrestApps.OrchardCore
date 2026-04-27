@@ -31,13 +31,13 @@ internal sealed class PermissionProvider : IPermissionProvider
     [
         new PermissionStereotype
         {
-        Name = OrchardCoreConstants.Roles.Administrator,
-        Permissions = _allPermissions,
+            Name = OrchardCoreConstants.Roles.Administrator,
+            Permissions = _allPermissions,
         },
         new PermissionStereotype
         {
-        Name = OmnichannelConstants.AgentRole,
-        Permissions = _agentPermissions,
+            Name = OmnichannelConstants.AgentRole,
+            Permissions = _agentPermissions,
         },
     ];
 

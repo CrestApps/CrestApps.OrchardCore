@@ -80,9 +80,9 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Text = content,
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
                     }
 
                 ]
@@ -98,9 +98,9 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new BlobResourceContents
                 {
-                Uri = resource.Resource.Uri,
-                MimeType = mimeType,
-                Blob = bytes,
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Blob = bytes,
                 }
 
             ]

@@ -29,8 +29,8 @@ public sealed class UserDisplayNamePermissionsProvider : IPermissionProvider
     [
         new PermissionStereotype
         {
-        Name = OrchardCoreConstants.Roles.Administrator,
-        Permissions = _allPermissions
+            Name = OrchardCoreConstants.Roles.Administrator,
+            Permissions = _allPermissions
         },
     ];
 }

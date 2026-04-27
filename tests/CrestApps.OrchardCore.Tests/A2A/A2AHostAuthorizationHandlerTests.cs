@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.A2A.Models;
+using CrestApps.OrchardCore.AI.A2A;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
-using CrestApps.OrchardCore.AI.A2A.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -42,7 +42,7 @@ public sealed class A2AHostAuthorizationHandlerTests
     [Fact]
     public void AccessA2AHostPermission_IsSecurityCritical()
     {
-        Assert.True(A2AHostPermissionsProvider.AccessA2AHost.IsSecurityCritical);
+        Assert.True(A2APermissions.AccessA2AHost.IsSecurityCritical);
     }
 
     // ───────────────────────────────────────────────────────────────

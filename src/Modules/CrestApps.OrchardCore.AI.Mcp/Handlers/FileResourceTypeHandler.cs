@@ -98,9 +98,9 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Text = content,
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
                     }
                 ]
             };
@@ -115,9 +115,9 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new BlobResourceContents
                 {
-                Uri = resource.Resource.Uri,
-                MimeType = mimeType,
-                Blob = memoryStream.ToArray(),
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Blob = memoryStream.ToArray(),
                 }
             ]
         };

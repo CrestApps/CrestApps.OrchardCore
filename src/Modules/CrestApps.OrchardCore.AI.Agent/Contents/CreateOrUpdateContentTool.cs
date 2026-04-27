@@ -61,7 +61,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override string Name => TheName;

@@ -1,5 +1,4 @@
 using CrestApps.Core.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -56,7 +55,7 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
                     {
                         _authorizationService ??= _serviceProvider.GetRequiredService<IAuthorizationService>();
 
-                        if (await _authorizationService.AuthorizeAsync(context.User, A2AHostPermissionsProvider.AccessA2AHost))
+                        if (await _authorizationService.AuthorizeAsync(context.User, A2APermissions.AccessA2AHost))
                         {
                             context.Succeed(requirement);
                         }

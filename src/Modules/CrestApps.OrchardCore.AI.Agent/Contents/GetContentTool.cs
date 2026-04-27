@@ -34,7 +34,6 @@ public sealed class GetContentTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override string Name => TheName;
