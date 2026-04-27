@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
@@ -24,11 +24,18 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceMetadataMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public DataSourceMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())
@@ -41,6 +48,9 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public int UpdateFrom1()
     {
         if (_shellSettings.IsInitializing())

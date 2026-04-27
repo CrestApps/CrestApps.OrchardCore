@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
@@ -37,6 +37,9 @@ internal sealed class AIProfileV1DocumentMigrations : DataMigration
     private const string _legacyProfileTypePrefix = "CrestApps.OrchardCore.AI.Models.AIProfile,";
     private const string _currentProfileTypePrefix = "CrestApps.Core.AI.Models.AIProfile,";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));

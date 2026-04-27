@@ -1,4 +1,4 @@
-using A2A;
+﻿using A2A;
 using A2A.AspNetCore;
 using CrestApps.Core.AI.A2A;
 using CrestApps.Core.AI.A2A.Models;
@@ -22,6 +22,9 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.A2A;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -41,6 +44,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the A2AHost feature.
+/// </summary>
 [Feature(A2AConstants.Feature.Host)]
 public sealed class A2AHostStartup : StartupBase
 {
@@ -48,6 +54,10 @@ public sealed class A2AHostStartup : StartupBase
 
     private readonly IShellConfiguration _shellConfiguration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AHostStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
     public A2AHostStartup(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;

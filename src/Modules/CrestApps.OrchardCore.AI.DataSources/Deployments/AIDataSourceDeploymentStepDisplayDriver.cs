@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.DataSources;
+﻿using CrestApps.Core.AI.DataSources;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,6 +13,11 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceDeploymentStepDisplayDriver(
         IAIDataSourceStore store,
         IStringLocalizer<AIDataSourceDeploymentStepDisplayDriver> stringLocalizer)

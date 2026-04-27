@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -18,6 +18,11 @@ public sealed class RecipeStepSchemaResourceTypeHandler : McpResourceTypeHandler
     private readonly RecipeSchemaService _recipeSchemaService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeStepSchemaResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="recipeSchemaService">The recipe schema service.</param>
+    /// <param name="logger">The logger.</param>
     public RecipeStepSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeStepSchemaResourceTypeHandler> logger)

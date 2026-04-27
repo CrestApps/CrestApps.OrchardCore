@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.SignalR.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +8,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.SignalR;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -9,11 +9,19 @@ using OrchardCore.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 
+/// <summary>
+/// Provides azure AI search memory vector search services.
+/// </summary>
 public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearchService
 {
     private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAISearchMemoryVectorSearchService"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AzureAISearchMemoryVectorSearchService(
         AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchMemoryVectorSearchService> logger)
@@ -22,6 +30,13 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
         _logger = logger;
     }
 
+    /// <summary>
+    /// Searches for async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="userId">The user id.</param>
+    /// <param name="topN">The top n.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
         SearchIndexProfile indexProfile,
         float[] embedding,

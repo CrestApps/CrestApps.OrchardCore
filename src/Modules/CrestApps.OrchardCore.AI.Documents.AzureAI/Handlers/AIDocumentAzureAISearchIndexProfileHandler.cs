@@ -13,8 +13,17 @@ using OrchardCore.Infrastructure.Entities;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 
+/// <summary>
+/// Handles events for AI document azure AI search index profile.
+/// </summary>
 public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentAzureAISearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AIDocumentAzureAISearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,

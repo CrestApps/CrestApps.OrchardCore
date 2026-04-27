@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +15,9 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 /// </summary>
 internal sealed class AIProfileDefaultContextMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>

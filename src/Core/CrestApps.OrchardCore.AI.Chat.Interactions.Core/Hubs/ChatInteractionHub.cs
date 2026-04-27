@@ -29,12 +29,19 @@ public class ChatInteractionHub : ChatInteractionHubBase
 {
     private readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionHub"/> class.
+    /// </summary>
+    /// <param name="services">The service provider for resolving dependencies.</param>
+    /// <param name="timeProvider">The time provider for obtaining the current time.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public ChatInteractionHub(
         IServiceProvider services,
         TimeProvider timeProvider,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
-    : base(services, timeProvider, logger)
+        : base(services, timeProvider, logger)
     {
         S = stringLocalizer;
     }

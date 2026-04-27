@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Models;
+﻿using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,6 +13,10 @@ public sealed class AIChatAnalyticsTimeOfDayDisplayDriver : DisplayDriver<AIChat
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatAnalyticsTimeOfDayDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatAnalyticsTimeOfDayDisplayDriver(IStringLocalizer<AIChatAnalyticsTimeOfDayDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;

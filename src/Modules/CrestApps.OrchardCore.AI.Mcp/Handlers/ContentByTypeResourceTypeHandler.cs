@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
@@ -23,6 +23,12 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly DocumentJsonSerializerOptions _jsonOptions;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentByTypeResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="jsonOptions">The json options.</param>
+    /// <param name="logger">The logger.</param>
     public ContentByTypeResourceTypeHandler(
         ISession session,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,

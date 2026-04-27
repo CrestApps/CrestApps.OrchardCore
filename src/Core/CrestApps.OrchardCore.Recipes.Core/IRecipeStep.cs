@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core;
 
+/// <summary>
+/// Defines the contract for recipe step.
+/// </summary>
 public interface IRecipeStep
 {
     /// <summary>

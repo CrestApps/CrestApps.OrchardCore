@@ -19,6 +19,12 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     private readonly IWorkflowManager _workflowManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataExtractionChatSessionHandler"/> class.
+    /// </summary>
+    /// <param name="workflowManager">The workflow manager used to trigger workflow events.</param>
+    /// <param name="timeProvider">The time provider for obtaining UTC timestamps.</param>
+    /// <param name="logger">The logger instance for this handler.</param>
     public DataExtractionChatSessionHandler(
         IWorkflowManager workflowManager,
         TimeProvider timeProvider,

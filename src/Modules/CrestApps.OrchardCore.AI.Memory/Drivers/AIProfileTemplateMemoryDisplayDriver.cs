@@ -8,10 +8,17 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template memory shape.
+/// </summary>
 public sealed class AIProfileTemplateMemoryDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly ISiteService _siteService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateMemoryDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
     public AIProfileTemplateMemoryDisplayDriver(ISiteService siteService)
     {
         _siteService = siteService;

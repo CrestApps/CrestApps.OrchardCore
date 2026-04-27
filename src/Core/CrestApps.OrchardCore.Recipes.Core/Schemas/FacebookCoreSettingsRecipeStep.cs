@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the facebook core settings recipe step.
+/// </summary>
 public sealed class FacebookCoreSettingsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "FacebookCoreSettings";

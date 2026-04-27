@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,6 +6,9 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the list content types definitions tool.
+/// </summary>
 public sealed class ListContentTypesDefinitionsTool : AIFunction
 {
     public const string TheName = "listContentTypesDefinitions";

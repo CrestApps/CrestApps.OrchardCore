@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Clients;
+﻿using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -38,6 +38,19 @@ public sealed class DataSourceIndexingService
     private const int BatchSize = 500;
     private const int MaxRetries = 3;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceIndexingService"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The store for index profile documents.</param>
+    /// <param name="dataSourceStore">The store for AI data source definitions.</param>
+    /// <param name="deploymentManager">The deployment manager for resolving embedding deployments.</param>
+    /// <param name="aiClientFactory">The factory for creating AI clients.</param>
+    /// <param name="textNormalizer">The text normalizer for cleaning document content.</param>
+    /// <param name="documentIndexHandlers">The handlers for building document index entries.</param>
+    /// <param name="serviceProvider">The service provider for resolving keyed services.</param>
+    /// <param name="distributedLock">The distributed lock for preventing concurrent indexing.</param>
+    /// <param name="clock">The clock for UTC timestamps.</param>
+    /// <param name="logger">The logger instance.</param>
     public DataSourceIndexingService(
         IIndexProfileStore indexProfileStore,
         IAIDataSourceStore dataSourceStore,

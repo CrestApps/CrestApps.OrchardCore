@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -22,6 +22,10 @@ internal static class AzureEventGridEndpoint
 {
     private const long _maximumRequestBodySizeBytes = 1024 * 1024;
 
+    /// <summary>
+    /// Adds the azure event grid endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddAzureEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("Omnichannel/webhook/AzureEventGrid", HandleAsync)

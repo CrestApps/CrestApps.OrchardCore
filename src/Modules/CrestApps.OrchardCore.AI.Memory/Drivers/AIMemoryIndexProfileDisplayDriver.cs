@@ -12,12 +12,20 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
+/// <summary>
+/// Display driver for the AI memory index profile shape.
+/// </summary>
 public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryIndexProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIMemoryIndexProfileDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IStringLocalizer<AIMemoryIndexProfileDisplayDriver> stringLocalizer)

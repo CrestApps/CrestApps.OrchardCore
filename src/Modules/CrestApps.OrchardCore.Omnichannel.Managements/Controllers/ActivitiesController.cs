@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -30,6 +30,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing activities resources.
+/// </summary>
 [Admin]
 public sealed class ActivitiesController : Controller
 {
@@ -50,6 +53,24 @@ public sealed class ActivitiesController : Controller
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivitiesController"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="contentItemManager">The content item manager.</param>
+    /// <param name="containerDisplayManager">The container display manager.</param>
+    /// <param name="activityDisplayManager">The activity display manager.</param>
+    /// <param name="omnichannelActivityManager">The omnichannel activity manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="contentItemDisplayManager">The content item display manager.</param>
+    /// <param name="workflowManager">The workflow manager.</param>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
     public ActivitiesController(
         ISession session,
         IUpdateModelAccessor updateModelAccessor,
@@ -84,6 +105,14 @@ public sealed class ActivitiesController : Controller
         H = htmlLocalizer;
     }
 
+    /// <summary>
+    /// Performs the activities operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
     [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<IActionResult> Activities(
         ListOmnichannelActivityFilter options,
@@ -157,6 +186,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the activities filter post operation.
+    /// </summary>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
     [HttpPost]
     [ActionName(nameof(Activities))]
     [FormValueRequired("submit.Filter")]
@@ -177,6 +210,11 @@ public sealed class ActivitiesController : Controller
         return RedirectToAction(nameof(Activities), options.RouteValues);
     }
 
+    /// <summary>
+    /// Performs the list operation.
+    /// </summary>
+    /// <param name="contentItemId">The content item id.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
     [Admin("omnichannel/activities/{contentItemId}")]
     public async Task<IActionResult> List(
         string contentItemId,
@@ -267,6 +305,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="contentItemId">The content item id.</param>
     [Admin("omnichannel/activities/create/{contentItemId}")]
     public async Task<IActionResult> Create(string contentItemId)
     {
@@ -300,6 +342,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
+    /// <param name="contentItemId">The content item id.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/activities/create/{contentItemId}")]
@@ -341,6 +387,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("omnichannel/activities/edit/{id}")]
     public async Task<IActionResult> Edit(string id)
     {
@@ -368,6 +418,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Asynchronously performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/activities/edit/{id}")]
@@ -409,6 +463,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the complete operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("omnichannel/activities/complete/{id}")]
     public async Task<IActionResult> Complete(string id)
     {
@@ -436,6 +494,10 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Asynchronously performs the complete operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Complete))]
     [Admin("omnichannel/activities/complete/{id}")]

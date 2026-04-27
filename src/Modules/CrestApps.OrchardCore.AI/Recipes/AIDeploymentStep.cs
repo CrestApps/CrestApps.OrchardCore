@@ -13,6 +13,9 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIDeployment";
 
     private readonly IAIDeploymentManager _manager;
@@ -20,6 +23,12 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI deployment manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIDeploymentStep(
         IAIDeploymentManager manager,
         IOptions<AIOptions> aiOptions,
@@ -138,6 +147,9 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
     private sealed class AIModelDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI deployment definitions to import.
+        /// </summary>
         public JsonArray Deployments { get; set; }
     }
 

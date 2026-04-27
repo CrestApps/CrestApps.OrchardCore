@@ -1,4 +1,4 @@
-using A2A;
+﻿using A2A;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
@@ -23,6 +23,10 @@ namespace CrestApps.Core.AI.A2A.Services;
 /// </summary>
 internal static class A2ATaskManagerFactory
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public static ITaskManager Create(IServiceProvider serviceProvider)
     {
         var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.AzureAIInference;
 using CrestApps.Core.AI.AzureAIInference.Services;
 using CrestApps.Core.AI.Clients;
@@ -16,10 +16,17 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AzureAIInference;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -45,11 +52,18 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagement feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionManagementStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
     {
         S = stringLocalizer;

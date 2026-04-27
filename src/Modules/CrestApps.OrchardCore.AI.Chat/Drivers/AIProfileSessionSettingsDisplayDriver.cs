@@ -7,10 +7,17 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile session settings shape.
+/// </summary>
 public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileSessionSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileSessionSettingsDisplayDriver(
         IStringLocalizer<AIProfileSessionSettingsDisplayDriver> stringLocalizer)
     {

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,11 +14,20 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
     private readonly ILogger _logger;
     private bool _taskAdded;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardAIDataSourceIndexingQueue"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
     public OrchardAIDataSourceIndexingQueue(ILogger<OrchardAIDataSourceIndexingQueue> logger)
     {
         _logger = logger;
     }
 
+    /// <summary>
+    /// Asynchronously performs the queue sync data source operation.
+    /// </summary>
+    /// <param name="dataSource">The data source.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public ValueTask QueueSyncDataSourceAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
@@ -30,6 +39,11 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Asynchronously performs the queue delete data source operation.
+    /// </summary>
+    /// <param name="dataSource">The data source.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public ValueTask QueueDeleteDataSourceAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
@@ -41,11 +55,23 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Asynchronously performs the queue sync source documents operation.
+    /// </summary>
+    /// <param name="sourceIndexProfileName">The source index profile name.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public ValueTask QueueSyncSourceDocumentsAsync(string sourceIndexProfileName, IReadOnlyCollection<string> documentIds, CancellationToken cancellationToken = default)
     {
         return QueueDocumentIdsAsync(sourceIndexProfileName, documentIds, OrchardAIDataSourceIndexingWorkItem.ForSyncSourceDocuments, cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the queue remove source documents operation.
+    /// </summary>
+    /// <param name="sourceIndexProfileName">The source index profile name.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public ValueTask QueueRemoveSourceDocumentsAsync(string sourceIndexProfileName, IReadOnlyCollection<string> documentIds, CancellationToken cancellationToken = default)
     {
         return QueueDocumentIdsAsync(sourceIndexProfileName, documentIds, OrchardAIDataSourceIndexingWorkItem.ForRemoveSourceDocuments, cancellationToken);

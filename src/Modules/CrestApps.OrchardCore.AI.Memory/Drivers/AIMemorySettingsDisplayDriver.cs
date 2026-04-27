@@ -15,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
+/// <summary>
+/// Display driver for the AI memory settings shape.
+/// </summary>
 public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySettings>
 {
     private readonly IIndexProfileStore _indexProfileStore;
@@ -26,6 +29,14 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemorySettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIMemorySettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,

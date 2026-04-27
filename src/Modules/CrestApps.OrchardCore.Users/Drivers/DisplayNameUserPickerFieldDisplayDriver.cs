@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Localization;
+﻿using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentFields.ViewModels;
@@ -14,6 +14,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the display name user picker field shape.
+/// </summary>
 public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDisplayDriver<UserPickerField>
 {
     private readonly ISession _session;
@@ -21,6 +24,12 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisplayNameUserPickerFieldDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DisplayNameUserPickerFieldDisplayDriver(
         ISession session,
         IDisplayNameProvider displayNameProvider,

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Memory;
+﻿using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
@@ -12,6 +12,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction memory settings shape.
+/// </summary>
 public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriver<MemoryMetadata>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -21,6 +24,13 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionMemorySettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
     public ChatInteractionMemorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

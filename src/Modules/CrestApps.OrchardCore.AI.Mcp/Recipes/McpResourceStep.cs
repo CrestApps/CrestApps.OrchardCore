@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
@@ -17,6 +17,11 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourceStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourceStep(
         ISourceCatalogManager<McpResource> manager,
         IStringLocalizer<McpResourceStep> stringLocalizer)
@@ -135,6 +140,9 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
 
     private sealed class McpResourceDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the resources.
+        /// </summary>
         public JsonArray Resources { get; set; }
     }
 }

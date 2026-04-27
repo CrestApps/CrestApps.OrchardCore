@@ -7,15 +7,26 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
+/// <summary>
+/// Handles events for azure open AI connection.
+/// </summary>
 public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     public AzureOpenAIConnectionHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
     }
 
+    /// <summary>
+    /// Performs the exporting operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Exporting(ExportingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
@@ -36,6 +47,10 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
         context.ExportData["Properties"][nameof(AzureConnectionMetadata)] = metadataNode;
     }
 
+    /// <summary>
+    /// Initializes the ializing.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Initializing(InitializingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -12,11 +12,18 @@ public sealed class ThemesRecipeStep : IRecipeStep
     private JsonSchema _cached;
     public string Name => "themes";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ThemesRecipeStep"/> class.
+    /// </summary>
+    /// <param name="featureProvider">The feature provider.</param>
     public ThemesRecipeStep(IFeatureSchemaProvider featureProvider)
     {
         _featureProvider = featureProvider;
     }
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)

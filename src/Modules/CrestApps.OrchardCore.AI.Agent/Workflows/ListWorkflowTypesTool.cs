@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +10,9 @@ using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
+/// <summary>
+/// Represents the list workflow types tool.
+/// </summary>
 public sealed class ListWorkflowTypesTool : AIFunction
 {
     public const string TheName = "listWorkflowTypes";

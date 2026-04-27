@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
@@ -12,20 +12,47 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
 {
     private readonly IIndexProfileStore _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreSearchIndexProfileStore"/> class.
+    /// </summary>
+    /// <param name="store">The underlying Orchard Core index profile store.</param>
     public OrchardCoreSearchIndexProfileStore(IIndexProfileStore store)
     {
         _store = store;
     }
 
+    /// <summary>
+    /// Finds a search index profile by its unique name.
+    /// </summary>
+    /// <param name="name">The name of the index profile.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The matching <see cref="SearchIndexProfile"/>, or <see langword="null"/> if not found.</returns>
     public async ValueTask<SearchIndexProfile> FindByNameAsync(string name, CancellationToken cancellationToken = default)
         => Map(await _store.FindByNameAsync(name));
 
+    /// <summary>
+    /// Retrieves all search index profiles of the specified type.
+    /// </summary>
+    /// <param name="type">The index profile type to filter by.</param>
+    /// <returns>A read-only collection of matching <see cref="SearchIndexProfile"/> entries.</returns>
     public async Task<IReadOnlyCollection<SearchIndexProfile>> GetByTypeAsync(string type)
         => (await _store.GetByTypeAsync(type)).Select(Map).ToArray();
 
+    /// <summary>
+    /// Finds a search index profile by its unique identifier.
+    /// </summary>
+    /// <param name="id">The identifier of the index profile.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The matching <see cref="SearchIndexProfile"/>, or <see langword="null"/> if not found.</returns>
     public async ValueTask<SearchIndexProfile> FindByIdAsync(string id, CancellationToken cancellationToken = default)
         => Map(await _store.FindByIdAsync(id));
 
+    /// <summary>
+    /// Retrieves search index profiles matching the specified identifiers.
+    /// </summary>
+    /// <param name="ids">The identifiers of the index profiles to retrieve.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A read-only collection of matching <see cref="SearchIndexProfile"/> entries.</returns>
     public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         var idSet = ids.Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet(StringComparer.Ordinal);
@@ -41,9 +68,23 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
             .ToArray();
     }
 
+    /// <summary>
+    /// Retrieves all search index profiles.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A read-only collection of all <see cref="SearchIndexProfile"/> entries.</returns>
     public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAllAsync(CancellationToken cancellationToken = default)
         => (await _store.GetAllAsync()).Select(Map).ToArray();
 
+    /// <summary>
+    /// Returns a paginated list of search index profiles.
+    /// </summary>
+    /// <param name="page">The one-based page number.</param>
+    /// <param name="pageSize">The number of entries per page.</param>
+    /// <param name="context">The query context containing optional filters.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <typeparam name="TQuery">The query context type.</typeparam>
+    /// <returns>A <see cref="PageResult{SearchIndexProfile}"/> containing the total count and the requested page.</returns>
     public async ValueTask<PageResult<SearchIndexProfile>> PageAsync<TQuery>(
         int page,
         int pageSize,
@@ -67,6 +108,12 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     public async ValueTask UpdateAsync(SearchIndexProfile record, CancellationToken cancellationToken = default)
         => await _store.UpdateAsync(Map(record));
 
+    /// <summary>
+    /// Deletes the specified search index profile.
+    /// </summary>
+    /// <param name="entry">The search index profile to delete.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="true"/> if the profile was deleted; otherwise <see langword="false"/>.</returns>
     public async ValueTask<bool> DeleteAsync(SearchIndexProfile entry, CancellationToken cancellationToken = default)
         => await _store.DeleteAsync(Map(entry));
 

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -12,6 +12,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction shape.
+/// </summary>
 public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAuthorizationService _authorizationService;
@@ -19,6 +22,13 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly OrchestratorOptions _orchestratorOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="promptStore">The prompt store.</param>
+    /// <param name="orchestratorOptions">The orchestrator options.</param>
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,

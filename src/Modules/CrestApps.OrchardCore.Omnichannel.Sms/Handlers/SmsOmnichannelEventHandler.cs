@@ -49,6 +49,22 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsOmnichannelEventHandler"/> class.
+    /// </summary>
+    /// <param name="chatSessionManager">The chat session manager.</param>
+    /// <param name="promptStore">The prompt store.</param>
+    /// <param name="aICompletionService">The AI completion service.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiTemplateService">The ai template service.</param>
+    /// <param name="channelEndpointsManager">The channel endpoints manager.</param>
+    /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="session">The session.</param>
+    /// <param name="smsService">The sms service.</param>
+    /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
+    /// <param name="jsonSerializerOptions">The json serializer options.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelEventHandler(
         IAIChatSessionManager chatSessionManager,
         IAIChatSessionPromptStore promptStore,
@@ -80,6 +96,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Handles the async.
+    /// </summary>
+    /// <param name="omnichannelEvent">The omnichannel event.</param>
     public async Task HandleAsync(OmnichannelEvent omnichannelEvent)
     {
         if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived ||
@@ -374,12 +394,24 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     private sealed class ConverationConclusionResult
     {
+        /// <summary>
+        /// Gets or sets the concluded.
+        /// </summary>
         public bool Concluded { get; set; }
 
+        /// <summary>
+        /// Gets or sets the disposition id.
+        /// </summary>
         public string DispositionId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the subject.
+        /// </summary>
         public ContentItem Subject { get; set; }
 
+        /// <summary>
+        /// Gets or sets the contact.
+        /// </summary>
         public ContentItem Contact { get; set; }
     }
 }

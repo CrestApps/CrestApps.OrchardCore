@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Copilot;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using Microsoft.AspNetCore.Identity;
@@ -18,6 +18,11 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
     private readonly IClock _clock;
     private readonly UserManager<IUser> _userManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreCopilotCredentialStore"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
+    /// <param name="userManager">The user manager.</param>
     public OrchardCoreCopilotCredentialStore(
         IClock clock,
         UserManager<IUser> userManager)
@@ -26,6 +31,11 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
         _userManager = userManager;
     }
 
+    /// <summary>
+    /// Retrieves the protected credential async.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<CopilotProtectedCredential> GetProtectedCredentialAsync(
         string userId, CancellationToken cancellationToken = default)
     {
@@ -51,6 +61,12 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
         };
     }
 
+    /// <summary>
+    /// Saves the protected credential async.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="credential">The credential.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task SaveProtectedCredentialAsync(
         string userId, CopilotProtectedCredential credential, CancellationToken cancellationToken = default)
     {
@@ -73,6 +89,11 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
         await _userManager.UpdateAsync(usr);
     }
 
+    /// <summary>
+    /// Asynchronously performs the clear credential operation.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task ClearCredentialAsync(
         string userId, CancellationToken cancellationToken = default)
     {

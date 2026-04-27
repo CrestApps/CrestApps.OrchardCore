@@ -14,8 +14,17 @@ using OrchardCore.Infrastructure.Entities;
 
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 
+/// <summary>
+/// Handles events for AI document elasticsearch index profile.
+/// </summary>
 public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentElasticsearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AIDocumentElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,

@@ -11,6 +11,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 
+/// <summary>
+/// Display driver for the AI data source settings shape.
+/// </summary>
 public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIDataSourceSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -19,6 +22,12 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
     public AIDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

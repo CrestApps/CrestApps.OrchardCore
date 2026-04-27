@@ -12,6 +12,10 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
+/// <summary>
+/// Display driver that presents the tool selection UI on AI profiles,
+/// allowing administrators to choose which AI tools are available for a profile.
+/// </summary>
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
@@ -20,6 +24,13 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileToolsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The options containing registered AI tool definitions.</param>
+    /// <param name="authorizationService">The authorization service for checking tool access permissions.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,

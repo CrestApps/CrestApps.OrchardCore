@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
@@ -18,6 +18,11 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
     private readonly AIChatSessionEventService _eventService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnalyticsChatSessionHandler"/> class.
+    /// </summary>
+    /// <param name="eventService">The event service.</param>
+    /// <param name="logger">The logger.</param>
     public AnalyticsChatSessionHandler(
         AIChatSessionEventService eventService,
         ILogger<AnalyticsChatSessionHandler> logger)

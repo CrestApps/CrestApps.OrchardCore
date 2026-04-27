@@ -1,7 +1,10 @@
-using OrchardCore.Security.Permissions;
+﻿using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
+/// <summary>
+/// Represents the mcp permissions.
+/// </summary>
 public static class McpPermissions
 {
     public static readonly Permission ManageMcpConnections = new("ManageMcpConnections", "Manage MCP Connections");
@@ -10,6 +13,9 @@ public static class McpPermissions
 
     public static readonly Permission ManageMcpResources = new("ManageMcpResources", "Manage MCP Resources");
 
+    /// <summary>
+    /// Represents the feature.
+    /// </summary>
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.AI.Mcp";

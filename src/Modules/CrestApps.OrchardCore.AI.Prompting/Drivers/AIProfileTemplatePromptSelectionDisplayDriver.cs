@@ -8,10 +8,17 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template prompt selection shape.
+/// </summary>
 public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplatePromptSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
     public AIProfileTemplatePromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;

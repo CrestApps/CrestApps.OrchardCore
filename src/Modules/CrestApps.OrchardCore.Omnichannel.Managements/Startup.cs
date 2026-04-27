@@ -1,4 +1,4 @@
-using CrestApps.Core.Data.YesSql;
+﻿using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -27,6 +27,9 @@ using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

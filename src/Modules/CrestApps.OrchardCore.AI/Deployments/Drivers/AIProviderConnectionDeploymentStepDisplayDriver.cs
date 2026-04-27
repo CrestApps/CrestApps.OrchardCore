@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
@@ -16,6 +16,11 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The connections catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProviderConnectionDeploymentStepDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)

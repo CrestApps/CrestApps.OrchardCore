@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -20,6 +20,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing resources resources.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 public sealed class ResourcesController : Controller
 {
@@ -35,6 +38,17 @@ public sealed class ResourcesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResourcesController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayDriver">The display driver.</param>
+    /// <param name="mcpOptions">The mcp options.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ResourcesController(
         ISourceCatalogManager<McpResource> manager,
         IAuthorizationService authorizationService,
@@ -55,6 +69,13 @@ public sealed class ResourcesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/mcp/resources", "AIMCPResourcesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -108,6 +129,10 @@ public sealed class ResourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -125,6 +150,10 @@ public sealed class ResourcesController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="source">The source.</param>
     [Admin("ai/mcp/resource/create/{source}", "AIMCPResourceCreate")]
     public async Task<ActionResult> Create(string source)
     {
@@ -151,6 +180,10 @@ public sealed class ResourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
+    /// <param name="source">The source.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/mcp/resource/create/{source}", "AIMCPResourceCreate")]
@@ -187,6 +220,10 @@ public sealed class ResourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("ai/mcp/resource/edit/{id}", "AIMCPResourceEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -211,6 +248,10 @@ public sealed class ResourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/mcp/resource/edit/{id}", "AIMCPResourceEdit")]
@@ -246,6 +287,10 @@ public sealed class ResourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/mcp/resource/delete/{id}", "AIMCPResourceDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -274,6 +319,11 @@ public sealed class ResourcesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

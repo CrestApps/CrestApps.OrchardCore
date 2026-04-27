@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -11,12 +11,20 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction index profile shape.
+/// </summary>
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionIndexProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionIndexProfileDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IStringLocalizer<ChatInteractionIndexProfileDisplayDriver> stringLocalizer)

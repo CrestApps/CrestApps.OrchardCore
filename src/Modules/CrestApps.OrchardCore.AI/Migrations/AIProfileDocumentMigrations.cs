@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
@@ -41,6 +41,9 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
     private const string _dictionaryDocumentTypePrefix =
         "CrestApps.OrchardCore.Models.DictionaryDocument`1[[CrestApps.OrchardCore.AI.Models.AIProfile, CrestApps.OrchardCore.AI.Abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null]], CrestApps.OrchardCore.Abstractions";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
@@ -48,6 +51,9 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
@@ -55,6 +61,9 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
     public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));

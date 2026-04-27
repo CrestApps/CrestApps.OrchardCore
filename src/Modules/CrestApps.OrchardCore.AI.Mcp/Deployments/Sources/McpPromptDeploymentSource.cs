@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
@@ -11,6 +11,10 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
 {
     private readonly INamedCatalog<McpPrompt> _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
     public McpPromptDeploymentSource(INamedCatalog<McpPrompt> store)
     {
         _store = store;

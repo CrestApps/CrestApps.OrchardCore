@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Services;
 using static CrestApps.OrchardCore.AI.Core.AIConstants;
@@ -18,6 +18,10 @@ public sealed class CitationReferenceCollector
 
     private readonly CompositeAIReferenceLinkResolver _linkResolver;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CitationReferenceCollector"/> class.
+    /// </summary>
+    /// <param name="linkResolver">The composite link resolver for turning reference IDs into URLs.</param>
     public CitationReferenceCollector(CompositeAIReferenceLinkResolver linkResolver)
     {
         _linkResolver = linkResolver;

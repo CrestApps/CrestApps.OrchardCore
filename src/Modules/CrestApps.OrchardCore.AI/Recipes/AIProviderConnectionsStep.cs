@@ -12,6 +12,9 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIProviderConnections";
 
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
@@ -19,6 +22,12 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionsStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI provider connection manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProviderConnectionsStep(
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
@@ -114,6 +123,9 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
     private sealed class AIProviderConnectionStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI provider connection definitions to import.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

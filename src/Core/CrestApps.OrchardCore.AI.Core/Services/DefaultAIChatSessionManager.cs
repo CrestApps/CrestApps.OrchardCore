@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -15,6 +15,10 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Default implementation of <see cref="IAIChatSessionManager"/> that manages
+/// chat sessions using YesSql storage and the current HTTP user context.
+/// </summary>
 public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 {
     private readonly IClock _clock;
@@ -26,6 +30,16 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IEnumerable<IAIChatSessionHandler> _handlers;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIChatSessionManager"/> class.
+    /// </summary>
+    /// <param name="clock">The clock for UTC timestamps.</param>
+    /// <param name="httpContextAccessor">The accessor for the current HTTP context.</param>
+    /// <param name="clientIPAddressAccessor">The accessor for deriving client identifiers.</param>
+    /// <param name="session">The YesSql session used for persistence.</param>
+    /// <param name="promptStore">The store for chat session prompts.</param>
+    /// <param name="handlers">The chat session lifecycle handlers.</param>
+    /// <param name="logger">The logger instance.</param>
     public DefaultAIChatSessionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
@@ -45,6 +59,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _logger = logger;
     }
 
+    /// <summary>
+    /// Creates a new chat session for the specified AI profile. Associates the session
+    /// with the current authenticated user or, for anonymous users, a hashed client identifier.
+    /// </summary>
+    /// <param name="profile">The AI profile to create a session for.</param>
+    /// <param name="context">The context containing options for the new session.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The newly created <see cref="AIChatSession"/>.</returns>
     public async Task<AIChatSession> NewAsync(
         AIProfile profile,
         NewAIChatSessionContext context,
@@ -109,6 +131,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         return chatSession;
     }
 
+    /// <summary>
+    /// Returns a paginated list of chat sessions belonging to the current authenticated user.
+    /// </summary>
+    /// <param name="page">The one-based page number.</param>
+    /// <param name="pageSize">The number of sessions per page.</param>
+    /// <param name="context">The query context containing optional filters such as profile ID and name.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>An <see cref="AIChatSessionResult"/> containing the total count and the requested page of sessions.</returns>
     public async Task<AIChatSessionResult> PageAsync(
         int page,
         int pageSize,
@@ -172,6 +202,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         };
     }
 
+    /// <summary>
+    /// Finds a chat session by its unique session identifier without user-scoping.
+    /// </summary>
+    /// <param name="id">The unique session identifier.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The matching <see cref="AIChatSession"/>, or <see langword="null"/> if not found.</returns>
     public Task<AIChatSession> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
@@ -180,6 +216,13 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Finds a chat session by its identifier, scoped to the current user. Authenticated users
+    /// match by user ID; anonymous users match by a hashed client identifier.
+    /// </summary>
+    /// <param name="id">The unique session identifier.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The matching <see cref="AIChatSession"/>, or <see langword="null"/> if not found or not owned by the current user.</returns>
     public async Task<AIChatSession> FindAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
@@ -214,6 +257,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         }
     }
 
+    /// <summary>
+    /// Persists the specified chat session to the data store.
+    /// </summary>
+    /// <param name="chatSession">The chat session to save.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
@@ -221,6 +269,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         return _session.SaveAsync(chatSession, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes a chat session and all of its prompts for the current authenticated user.
+    /// </summary>
+    /// <param name="sessionId">The unique session identifier to delete.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="true"/> if the session was found and deleted; otherwise <see langword="false"/>.</returns>
     public async Task<bool> DeleteAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
@@ -259,6 +313,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         return true;
     }
 
+    /// <summary>
+    /// Deletes all chat sessions and their prompts for the specified profile, scoped to the current authenticated user.
+    /// </summary>
+    /// <param name="profileId">The AI profile identifier whose sessions should be deleted.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The number of sessions deleted.</returns>
     public async Task<int> DeleteAllAsync(string profileId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(profileId);

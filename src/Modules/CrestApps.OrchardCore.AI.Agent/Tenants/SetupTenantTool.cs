@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Cysharp.Text;
 using Microsoft.AspNetCore.Identity;
@@ -14,6 +14,9 @@ using OrchardCore.Setup.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
+/// <summary>
+/// Represents the setup tenant tool.
+/// </summary>
 public sealed class SetupTenantTool : AIFunction
 {
     public const string TheName = "setupTenant";

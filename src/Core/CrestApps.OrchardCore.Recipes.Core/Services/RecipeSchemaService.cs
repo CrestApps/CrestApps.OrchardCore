@@ -5,6 +5,9 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Services;
 
+/// <summary>
+/// Provides JSON schema generation and step name discovery for Orchard Core recipes.
+/// </summary>
 public sealed class RecipeSchemaService
 {
     private readonly IEnumerable<IRecipeStepHandler> _handlers;
@@ -15,6 +18,12 @@ public sealed class RecipeSchemaService
 
     private string[] _names = null;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeSchemaService"/> class.
+    /// </summary>
+    /// <param name="handlers">The registered recipe step handlers.</param>
+    /// <param name="recipeSteps">The registered recipe step schema providers.</param>
+    /// <param name="memoryCache">The memory cache used to store discovered step names.</param>
     public RecipeSchemaService(
         IEnumerable<IRecipeStepHandler> handlers,
         IEnumerable<IRecipeStep> recipeSteps,
@@ -28,6 +37,10 @@ public sealed class RecipeSchemaService
         : null;
     }
 
+    /// <summary>
+    /// Gets the JSON schema for a specific recipe step by name.
+    /// </summary>
+    /// <param name="stepName">The name of the recipe step.</param>
     public ValueTask<JsonSchema> GetStepSchemaAsync(string stepName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stepName);
@@ -42,6 +55,9 @@ public sealed class RecipeSchemaService
         return ValueTask.FromResult<JsonSchema>(null);
     }
 
+    /// <summary>
+    /// Gets the full JSON schema for an Orchard Core recipe, including metadata and step definitions.
+    /// </summary>
     public async ValueTask<JsonSchema> GetRecipeSchemaAsync()
     {
         var stepsBuilder = new JsonSchemaBuilder()
@@ -85,6 +101,9 @@ public sealed class RecipeSchemaService
             .Build();
     }
 
+    /// <summary>
+    /// Gets the names of all known recipe steps by inspecting registered handlers and step providers.
+    /// </summary>
     public IEnumerable<string> GetStepNames()
     {
         _names ??= _handlers

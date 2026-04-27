@@ -1,9 +1,12 @@
-using CrestApps.Core.AI.Copilot.Models;
+﻿using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 
+/// <summary>
+/// Represents the view model for edit copilot profile.
+/// </summary>
 public class EditCopilotProfileViewModel
 {
     /// <summary>

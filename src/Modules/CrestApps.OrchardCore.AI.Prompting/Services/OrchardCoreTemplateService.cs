@@ -1,4 +1,4 @@
-using CrestApps.Core.Templates.Models;
+﻿using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Providers;
 using CrestApps.Core.Templates.Rendering;
 using CrestApps.Core.Templates.Services;
@@ -23,6 +23,14 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreTemplateService"/> class.
+    /// </summary>
+    /// <param name="providers">The providers.</param>
+    /// <param name="renderer">The renderer.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
+    /// <param name="memoryCache">The memory cache.</param>
+    /// <param name="logger">The logger.</param>
     public OrchardCoreTemplateService(
         IEnumerable<ITemplateProvider> providers,
         ITemplateEngine renderer,

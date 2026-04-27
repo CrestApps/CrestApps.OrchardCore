@@ -7,8 +7,15 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Represents the default AI data source store.
+/// </summary>
 public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>, IAIDataSourceStore
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIDataSourceStore"/> class.
+    /// </summary>
+    /// <param name="documentManager">The document manager.</param>
     public DefaultAIDataSourceStore(IDocumentManager<DictionaryDocument<AIDataSource>> documentManager)
         : base(documentManager)
     {

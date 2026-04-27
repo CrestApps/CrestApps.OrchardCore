@@ -10,12 +10,20 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIProfileStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIProfile";
 
     private readonly IAIProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileStep"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProfileStep(
         IAIProfileManager profileManager,
         IStringLocalizer<AIProfileStep> stringLocalizer)
@@ -85,6 +93,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
     private sealed class AIProfileStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI profile definitions to import.
+        /// </summary>
         public JsonArray Profiles { get; set; }
     }
 }

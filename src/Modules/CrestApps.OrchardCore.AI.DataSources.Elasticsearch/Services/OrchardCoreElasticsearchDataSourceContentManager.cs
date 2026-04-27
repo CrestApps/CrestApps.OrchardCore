@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
@@ -29,6 +29,11 @@ internal sealed class OrchardCoreElasticsearchDataSourceContentManager : IDataSo
         return queries;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreElasticsearchDataSourceContentManager"/> class.
+    /// </summary>
+    /// <param name="elasticClient">The elastic client.</param>
+    /// <param name="logger">The logger.</param>
     public OrchardCoreElasticsearchDataSourceContentManager(
         ElasticsearchClient elasticClient,
         ILogger<OrchardCoreElasticsearchDataSourceContentManager> logger)
@@ -37,6 +42,14 @@ internal sealed class OrchardCoreElasticsearchDataSourceContentManager : IDataSo
         _logger = logger;
     }
 
+    /// <summary>
+    /// Searches for async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="dataSourceId">The data source id.</param>
+    /// <param name="topN">The top n.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IEnumerable<DataSourceSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
         float[] embedding,
@@ -133,6 +146,12 @@ internal sealed class OrchardCoreElasticsearchDataSourceContentManager : IDataSo
         }
     }
 
+    /// <summary>
+    /// Removes the by data source id async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="dataSourceId">The data source id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<long> DeleteByDataSourceIdAsync(
         IIndexProfileInfo indexProfile,
         string dataSourceId,

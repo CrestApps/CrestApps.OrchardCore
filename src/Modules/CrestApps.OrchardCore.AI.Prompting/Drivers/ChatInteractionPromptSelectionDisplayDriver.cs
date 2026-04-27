@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
@@ -7,10 +7,17 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction prompt selection shape.
+/// </summary>
 public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionPromptSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
     public ChatInteractionPromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;

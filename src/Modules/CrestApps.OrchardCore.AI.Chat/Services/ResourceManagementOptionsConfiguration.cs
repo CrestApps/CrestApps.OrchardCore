@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
@@ -69,6 +69,10 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
     }
 
+    /// <summary>
+    /// Configures the .
+    /// </summary>
+    /// <param name="options">The options.</param>
     public void Configure(ResourceManagementOptions options)
     {
         options.ResourceManifests.Add(_manifest);

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.AzureAIInference;
@@ -19,6 +19,11 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAIInferenceConnectionSettingsHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAIInferenceConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureAIInferenceConnectionHandler> stringLocalizer)

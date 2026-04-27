@@ -36,12 +36,19 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     private readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatHub"/> class.
+    /// </summary>
+    /// <param name="services">The service provider for resolving dependencies.</param>
+    /// <param name="timeProvider">The time provider for obtaining the current time.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public AIChatHub(
         IServiceProvider services,
         TimeProvider timeProvider,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
-    : base(services, timeProvider, logger)
+        : base(services, timeProvider, logger)
     {
         S = stringLocalizer;
     }

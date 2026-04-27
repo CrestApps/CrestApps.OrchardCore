@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
@@ -18,6 +18,12 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="mcpClientOptions">The mcp client options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
@@ -96,6 +102,9 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
     private sealed class McpConnectionDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the connections.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

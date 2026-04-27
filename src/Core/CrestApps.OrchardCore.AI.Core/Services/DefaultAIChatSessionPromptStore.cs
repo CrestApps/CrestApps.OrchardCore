@@ -14,6 +14,11 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
 {
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIChatSessionPromptStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session used for persistence.</param>
+    /// <param name="clock">The clock for UTC timestamps.</param>
     public DefaultAIChatSessionPromptStore(
         ISession session,
         IClock clock)
@@ -21,6 +26,7 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
     {
         _clock = clock;
     }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<AIChatSessionPrompt>> GetPromptsAsync(string sessionId)
     {
@@ -36,6 +42,7 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
             .ThenBy(prompt => prompt.ItemId)
             .ToArray();
     }
+
     /// <inheritdoc />
     public async Task<int> DeleteAllPromptsAsync(string sessionId)
     {
@@ -56,6 +63,7 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
 
         return count;
     }
+
     /// <inheritdoc />
     public async Task<int> CountAsync(string sessionId)
     {

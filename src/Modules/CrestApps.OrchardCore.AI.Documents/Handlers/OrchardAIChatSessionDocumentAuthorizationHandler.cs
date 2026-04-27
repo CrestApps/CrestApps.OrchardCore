@@ -6,11 +6,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
+/// <summary>
+/// Handles events for orchard AI chat session document authorization.
+/// </summary>
 public sealed class OrchardAIChatSessionDocumentAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, AIChatSessionDocumentAuthorizationContext>
 {
     private readonly IServiceProvider _serviceProvider;
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardAIChatSessionDocumentAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public OrchardAIChatSessionDocumentAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

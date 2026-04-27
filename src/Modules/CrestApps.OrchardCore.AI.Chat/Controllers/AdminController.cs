@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -20,6 +20,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing admin resources.
+/// </summary>
 [Admin]
 public sealed class AdminController : Controller
 {
@@ -36,6 +39,19 @@ public sealed class AdminController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="sessionManager">The session manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="sessionDisplayManager">The session display manager.</param>
+    /// <param name="optionsDisplayManager">The options display manager.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
@@ -61,6 +77,12 @@ public sealed class AdminController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="sessionId">The session id.</param>
+    /// <param name="pagerOptions">The pager options.</param>
     [Admin("ai/chat/session/{profileId}/{sessionId?}", "AIChatSessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
@@ -131,6 +153,14 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the history operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/chat/history/{profileId}", "AIChatHistory")]
     public async Task<IActionResult> History(
         string profileId,
@@ -192,6 +222,10 @@ public sealed class AdminController : Controller
         return View(shapeViewModel);
     }
 
+    /// <summary>
+    /// Performs the history post operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     [HttpPost]
     [ActionName(nameof(History))]
     public async Task<ActionResult> HistoryPost(string profileId)
@@ -223,9 +257,17 @@ public sealed class AdminController : Controller
 
     [Admin("ai/chat/interact/{profileId}/", "AIChatNewSession")]
 
+    /// <summary>
+    /// Performs the chat operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 
+    /// <summary>
+    /// Performs the test operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     [Admin("ai/chat/test/{profileId}", "AIChatTestProfile")]
     public async Task<IActionResult> Test(string profileId)
     {
@@ -255,6 +297,10 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="sessionId">The session id.</param>
     [HttpPost]
     [Admin("ai/chat/chat-session/delete/{sessionId}", "DeleteChatSession")]
     public async Task<IActionResult> Delete(string sessionId)
@@ -295,6 +341,10 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(History), new { profileId = chatSession.ProfileId });
     }
 
+    /// <summary>
+    /// Removes the all.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     [HttpPost]
     [Admin("ai/chat/history/{profileId}/delete-all", "DeleteAllChatSessions")]
     public async Task<IActionResult> DeleteAll(string profileId)

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -13,6 +13,11 @@ public sealed class AIChatSessionEventService
     private readonly ISession _session;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionEventService"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="timeProvider">The time provider.</param>
     public AIChatSessionEventService(
         ISession session,
         TimeProvider timeProvider)
@@ -110,6 +115,11 @@ public sealed class AIChatSessionEventService
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
+    /// <summary>
+    /// Asynchronously performs the record response latency operation.
+    /// </summary>
+    /// <param name="sessionId">The session id.</param>
+    /// <param name="responseLatencyMs">The response latency ms.</param>
     public async Task RecordResponseLatencyAsync(string sessionId, double responseLatencyMs)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);

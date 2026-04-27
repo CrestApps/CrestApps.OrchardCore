@@ -9,10 +9,17 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session all fields extracted event shape.
+/// </summary>
 public sealed class AIChatSessionAllFieldsExtractedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventViewModel>
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionAllFieldsExtractedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatSessionAllFieldsExtractedEventDisplayDriver(
         IAIProfileStore profileStore)
     {

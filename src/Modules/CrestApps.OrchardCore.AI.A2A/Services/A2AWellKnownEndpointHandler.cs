@@ -1,4 +1,4 @@
-using A2A;
+﻿using A2A;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -16,6 +16,10 @@ namespace CrestApps.Core.AI.A2A.Services;
 /// </summary>
 internal static class A2AWellKnownEndpointHandler
 {
+    /// <summary>
+    /// Handles the async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public static async Task HandleAsync(HttpContext context)
     {
         var options = context.RequestServices.GetRequiredService<IOptions<A2AHostOptions>>().Value;

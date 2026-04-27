@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -27,6 +27,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
     private const string _legacyDictionaryDocumentTypePrefix =
         "CrestApps.OrchardCore.Models.DictionaryDocument`1[[CrestApps.OrchardCore.AI.Models.AIDeployment, CrestApps.OrchardCore.AI.Abstractions, Version=1.";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(scope => ImportAndBackfillAsync(scope.ServiceProvider));

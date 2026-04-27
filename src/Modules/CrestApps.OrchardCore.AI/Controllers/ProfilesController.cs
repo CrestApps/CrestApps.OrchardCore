@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Documents;
@@ -25,6 +25,9 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+/// <summary>
+/// Provides admin controller actions for managing AI profiles.
+/// </summary>
 public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -38,6 +41,16 @@ public sealed class ProfilesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfilesController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="profileDisplayManager">The profile display manager.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ProfilesController(
         IAIProfileManager profileManager,
         IAuthorizationService authorizationService,
@@ -56,6 +69,14 @@ public sealed class ProfilesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view.</returns>
     [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -108,6 +129,11 @@ public sealed class ProfilesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the profiles index.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -125,6 +151,11 @@ public sealed class ProfilesController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays the editor for creating a new AI profile.
+    /// </summary>
+    /// <param name="templateId">The optional template identifier to pre-populate the profile.</param>
+    /// <returns>The create view.</returns>
     [Admin("ai/profile/create", "AIProfilesCreate")]
     public async Task<ActionResult> Create([FromQuery] string templateId)
     {
@@ -162,6 +193,10 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI profile.
+    /// </summary>
+    /// <returns>A redirect to the index view on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/profile/create", "AIProfilesCreate")]
@@ -199,6 +234,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Displays the editor for editing an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>The edit view.</returns>
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -223,6 +263,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for updating an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>A redirect to the index view on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
@@ -258,6 +303,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Deletes an AI profile by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile to delete.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [Admin("ai/profile/delete/{id}", "AIProfilesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -295,11 +345,22 @@ public sealed class ProfilesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the bulk action form submission for AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the selected bulk action.</param>
+    /// <param name="itemIds">The identifiers of the selected profiles.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/profiles", "AIProfilesIndex")]
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))

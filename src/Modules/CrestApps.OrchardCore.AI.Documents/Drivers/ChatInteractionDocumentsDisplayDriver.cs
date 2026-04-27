@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents.Models;
+﻿using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
@@ -24,6 +24,13 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionDocumentsDisplayDriver(
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,

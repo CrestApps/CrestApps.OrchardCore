@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
@@ -13,6 +13,10 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
 {
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommunicationPreferencePartContentHandler"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
     public CommunicationPreferencePartContentHandler(IClock clock)
     {
         _clock = clock;

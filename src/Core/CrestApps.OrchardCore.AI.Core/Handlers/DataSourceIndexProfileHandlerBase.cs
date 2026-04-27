@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Clients;
+﻿using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
@@ -8,6 +8,9 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Represents the data source index profile handler base.
+/// </summary>
 public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }

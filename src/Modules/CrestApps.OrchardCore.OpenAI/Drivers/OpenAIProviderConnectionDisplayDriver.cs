@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -18,6 +18,11 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAIProviderConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OpenAIProviderConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<OpenAIProviderConnectionDisplayDriver> stringLocalizer)

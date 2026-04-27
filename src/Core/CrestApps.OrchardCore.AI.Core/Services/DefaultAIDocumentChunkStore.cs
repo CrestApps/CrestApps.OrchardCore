@@ -6,13 +6,24 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Represents the default AI document chunk store.
+/// </summary>
 public sealed class DefaultAIDocumentChunkStore : DocumentCatalog<AIDocumentChunk, AIDocumentChunkIndex>, IAIDocumentChunkStore
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIDocumentChunkStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
     public DefaultAIDocumentChunkStore(ISession session)
     : base(session, AIConstants.AIDocsCollectionName)
     {
     }
 
+    /// <summary>
+    /// Retrieves the chunks by AI document id async.
+    /// </summary>
+    /// <param name="documentId">The document id.</param>
     public async Task<IReadOnlyCollection<AIDocumentChunk>> GetChunksByAIDocumentIdAsync(string documentId)
     {
         ArgumentException.ThrowIfNullOrEmpty(documentId);
@@ -22,6 +33,11 @@ public sealed class DefaultAIDocumentChunkStore : DocumentCatalog<AIDocumentChun
             CollectionName).ListAsync()).ToArray();
     }
 
+    /// <summary>
+    /// Retrieves the chunks by reference async.
+    /// </summary>
+    /// <param name="referenceId">The reference id.</param>
+    /// <param name="referenceType">The reference type.</param>
     public async Task<IReadOnlyCollection<AIDocumentChunk>> GetChunksByReferenceAsync(string referenceId, string referenceType)
     {
         ArgumentException.ThrowIfNullOrEmpty(referenceId);
@@ -32,6 +48,10 @@ public sealed class DefaultAIDocumentChunkStore : DocumentCatalog<AIDocumentChun
             CollectionName).ListAsync()).ToArray();
     }
 
+    /// <summary>
+    /// Removes the by document id async.
+    /// </summary>
+    /// <param name="documentId">The document id.</param>
     public async Task DeleteByDocumentIdAsync(string documentId)
     {
         ArgumentException.ThrowIfNullOrEmpty(documentId);

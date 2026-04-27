@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the content definition recipe step base.
+/// </summary>
 public abstract class ContentDefinitionRecipeStepBase(
     IEnumerable<IContentDefinitionSchemaDefinition> schemaDefinitions,
     IContentSchemaProvider contentSchemaProvider) : IRecipeStep
@@ -11,10 +14,16 @@ public abstract class ContentDefinitionRecipeStepBase(
 
     private JsonSchema _cached;
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public abstract string Name { get; }
 
     protected virtual IReadOnlyList<string> RequiredProperties => ["name"];
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)

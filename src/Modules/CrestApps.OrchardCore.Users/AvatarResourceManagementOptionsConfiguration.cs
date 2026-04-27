@@ -1,8 +1,11 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Represents the avatar resource management options configuration.
+/// </summary>
 public sealed class AvatarResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
@@ -23,6 +26,10 @@ public sealed class AvatarResourceManagementOptionsConfiguration : IConfigureOpt
             .SetVersion("1.0.0");
     }
 
+    /// <summary>
+    /// Configures the .
+    /// </summary>
+    /// <param name="options">The options.</param>
     public void Configure(ResourceManagementOptions options)
     {
         options.ResourceManifests.Add(_manifest);

@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -13,6 +13,9 @@ namespace CrestApps.OrchardCore.AI.Memory.Migrations;
 
 internal sealed class MemoryMetadataMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>

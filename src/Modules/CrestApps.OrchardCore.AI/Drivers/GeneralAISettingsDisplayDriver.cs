@@ -13,6 +13,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
+/// <summary>
+/// Display driver for managing the general AI settings on the site settings page.
+/// </summary>
 public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAISettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -24,6 +27,14 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GeneralAISettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="defaultAIOptions">The default AI options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public GeneralAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

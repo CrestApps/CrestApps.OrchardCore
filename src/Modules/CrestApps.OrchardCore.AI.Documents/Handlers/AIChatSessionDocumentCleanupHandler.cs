@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
@@ -21,6 +21,11 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionDocumentCleanupHandler"/> class.
+    /// </summary>
+    /// <param name="documentStore">The document store.</param>
+    /// <param name="chunkStore">The chunk store.</param>
     public AIChatSessionDocumentCleanupHandler(
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore)

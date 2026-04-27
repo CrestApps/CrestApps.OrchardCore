@@ -1,9 +1,16 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
+/// <summary>
+/// Handles events for list omnichannel activity filter.
+/// </summary>
 public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActivityFilterHandler
 {
+    /// <summary>
+    /// Asynchronously performs the filtering operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task FilteringAsync(ListOmnichannelActivityFilterContext context)
     {
         var filter = context.Filter;

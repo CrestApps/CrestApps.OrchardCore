@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
@@ -22,6 +22,11 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceIndexProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DataSourceIndexProfileDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IStringLocalizer<DataSourceIndexProfileDisplayDriver> stringLocalizer)

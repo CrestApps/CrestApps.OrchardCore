@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +24,9 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
         ("CrestApps.AI.", "CrestApps.AI.Abstractions", "CrestApps.Core.AI."),
     ];
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
@@ -31,6 +34,9 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
@@ -38,6 +44,9 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
     public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));

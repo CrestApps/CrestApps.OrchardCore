@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents;
+﻿using CrestApps.Core.AI.Documents;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
@@ -10,6 +10,11 @@ internal sealed class DocumentFileSystemFileStoreOptionsPostConfiguration : IPos
     private readonly ShellSettings _shellSettings;
     private readonly IWebHostEnvironment _webHostEnvironment;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DocumentFileSystemFileStoreOptionsPostConfiguration"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
+    /// <param name="webHostEnvironment">The web host environment.</param>
     public DocumentFileSystemFileStoreOptionsPostConfiguration(
         ShellSettings shellSettings,
         IWebHostEnvironment webHostEnvironment)
@@ -18,6 +23,11 @@ internal sealed class DocumentFileSystemFileStoreOptionsPostConfiguration : IPos
         _webHostEnvironment = webHostEnvironment;
     }
 
+    /// <summary>
+    /// Performs the post configure operation.
+    /// </summary>
+    /// <param name="name">The name.</param>
+    /// <param name="options">The options.</param>
     public void PostConfigure(string name, DocumentFileSystemFileStoreOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

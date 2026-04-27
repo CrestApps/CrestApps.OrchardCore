@@ -7,10 +7,18 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Memory.Services;
 
+/// <summary>
+/// Represents the default AI memory store.
+/// </summary>
 public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemoryEntryIndex>, IAIMemoryStore
 {
     private readonly ILookupNormalizer _lookupNormalizer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIMemoryStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="lookupNormalizer">The lookup normalizer.</param>
     public DefaultAIMemoryStore(
         ISession session,
         ILookupNormalizer lookupNormalizer)
@@ -20,6 +28,10 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
         CollectionName = MemoryConstants.CollectionName;
     }
 
+    /// <summary>
+    /// Asynchronously performs the count by user operation.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
     public Task<int> CountByUserAsync(string userId)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
@@ -29,6 +41,11 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
             CollectionName).CountAsync();
     }
 
+    /// <summary>
+    /// Finds the by user and name async.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="name">The name.</param>
     public async Task<AIMemoryEntry> FindByUserAndNameAsync(string userId, string name)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
@@ -49,6 +66,11 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
         return entries.FirstOrDefault(entry => _lookupNormalizer.NormalizeName(entry.Name) == normalizedName);
     }
 
+    /// <summary>
+    /// Retrieves the by user async.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <param name="limit">The limit.</param>
     public async Task<IReadOnlyCollection<AIMemoryEntry>> GetByUserAsync(string userId, int limit = 100)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);

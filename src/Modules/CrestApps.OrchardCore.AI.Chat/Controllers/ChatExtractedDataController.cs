@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -11,6 +11,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing chat extracted data resources.
+/// </summary>
 [Admin("AI/ChatExtractedData/{action}", "ChatExtractedData.{action}")]
 public sealed class ChatExtractedDataController : Controller
 {
@@ -19,6 +22,13 @@ public sealed class ChatExtractedDataController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatExtractedDataController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="extractedDataService">The extracted data service.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="clock">The clock.</param>
     public ChatExtractedDataController(
         IAIProfileManager profileManager,
         AIChatSessionExtractedDataService extractedDataService,
@@ -31,6 +41,9 @@ public sealed class ChatExtractedDataController : Controller
         _clock = clock;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -42,6 +55,10 @@ public sealed class ChatExtractedDataController : Controller
         return View(await BuildViewModelAsync(new ChatExtractedDataIndexViewModel(), false));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> IndexPost(ChatExtractedDataIndexViewModel model)
@@ -69,6 +86,10 @@ public sealed class ChatExtractedDataController : Controller
         return View("Index", model);
     }
 
+    /// <summary>
+    /// Performs the export operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     public async Task<IActionResult> Export(ChatExtractedDataIndexViewModel model)
     {

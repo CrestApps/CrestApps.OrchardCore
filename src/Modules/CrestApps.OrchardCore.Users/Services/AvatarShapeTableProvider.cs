@@ -1,13 +1,20 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Utilities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Users.Services;
 
+/// <summary>
+/// Provides avatar shape table functionality.
+/// </summary>
 [Feature(UsersConstants.Feature.Avatars)]
 public sealed class AvatarShapeTableProvider : IShapeTableProvider
 {
+    /// <summary>
+    /// Asynchronously performs the discover operation.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public ValueTask DiscoverAsync(ShapeTableBuilder builder)
     {
         builder.Describe("UserDisplayNameIcon")

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -14,6 +14,10 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
     private readonly HashSet<string> _updatedIndexIds = [];
     private readonly HashSet<string> _deletedIndexIds = [];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionIndexingHandler"/> class.
+    /// </summary>
+    /// <param name="indexingTaskManager">The indexing task manager.</param>
     public ChatInteractionIndexingHandler(IIndexingTaskManager indexingTaskManager)
     {
         _indexingTaskManager = indexingTaskManager;

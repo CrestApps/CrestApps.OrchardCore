@@ -7,15 +7,26 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 
+/// <summary>
+/// Handles events for azure AI inference connection.
+/// </summary>
 public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHandler
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAIInferenceConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     public AzureAIInferenceConnectionHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
     }
 
+    /// <summary>
+    /// Performs the exporting operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Exporting(ExportingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
@@ -36,6 +47,10 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
         context.ExportData["Properties"][nameof(AzureAIInferenceConnectionMetadata)] = metadataNode;
     }
 
+    /// <summary>
+    /// Initializes the ializing.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Initializing(InitializingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))

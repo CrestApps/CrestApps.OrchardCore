@@ -13,8 +13,16 @@ using OrchardCore.Infrastructure.Entities;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
+/// <summary>
+/// Handles events for AI memory elasticsearch index profile.
+/// </summary>
 public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryElasticsearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
     public AIMemoryElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory)

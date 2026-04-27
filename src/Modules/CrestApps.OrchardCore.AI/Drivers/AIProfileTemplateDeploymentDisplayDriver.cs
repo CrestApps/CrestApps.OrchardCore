@@ -19,6 +19,12 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDeploymentDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The manager for retrieving AI deployments.</param>
+    /// <param name="siteService">The site service for accessing site settings.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileTemplateDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,

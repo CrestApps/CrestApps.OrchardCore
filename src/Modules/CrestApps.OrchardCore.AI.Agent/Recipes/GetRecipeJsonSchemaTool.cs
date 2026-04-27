@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -9,6 +9,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
+/// <summary>
+/// Represents the get recipe json schema tool.
+/// </summary>
 public sealed class GetRecipeJsonSchemaTool : AIFunction
 {
     public const string TheName = "getOrchardCoreRecipeJsonSchema";

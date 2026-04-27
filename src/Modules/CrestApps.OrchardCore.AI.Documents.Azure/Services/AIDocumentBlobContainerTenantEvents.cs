@@ -10,6 +10,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Azure.Services;
 
+/// <summary>
+/// Represents the AI document blob container tenant events.
+/// </summary>
 public sealed class AIDocumentBlobContainerTenantEvents : ModularTenantEvents
 {
     private readonly AIDocumentBlobStorageOptions _options;
@@ -18,6 +21,13 @@ public sealed class AIDocumentBlobContainerTenantEvents : ModularTenantEvents
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentBlobContainerTenantEvents"/> class.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="shellSettings">The shell settings.</param>
+    /// <param name="localizer">The localizer.</param>
+    /// <param name="logger">The logger.</param>
     public AIDocumentBlobContainerTenantEvents(
         IOptions<AIDocumentBlobStorageOptions> options,
         ShellSettings shellSettings,

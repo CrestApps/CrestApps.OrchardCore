@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -22,6 +22,9 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -48,6 +51,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatInteractions feature.
+/// </summary>
 [RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions)]
 public sealed class ChatInteractionsStartup : StartupBase
 {
@@ -57,6 +63,9 @@ public sealed class ChatInteractionsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the UserMemory feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Users")]
 public sealed class UserMemoryStartup : StartupBase
 {

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,6 +7,9 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Features;
 
+/// <summary>
+/// Represents the list features tool.
+/// </summary>
 public sealed class ListFeaturesTool : AIFunction
 {
     public const string TheName = "listSiteFeature";

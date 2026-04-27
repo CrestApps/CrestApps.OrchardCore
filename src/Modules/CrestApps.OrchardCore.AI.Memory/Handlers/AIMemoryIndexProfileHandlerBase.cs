@@ -8,6 +8,9 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Handlers;
 
+/// <summary>
+/// Represents the AI memory index profile handler base.
+/// </summary>
 public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }

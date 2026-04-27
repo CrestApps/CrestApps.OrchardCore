@@ -1,7 +1,13 @@
-namespace CrestApps.OrchardCore.Core.Models;
+﻿namespace CrestApps.OrchardCore.Core.Models;
 
+/// <summary>
+/// Represents the view model for edit catalog entry.
+/// </summary>
 public class EditCatalogEntryViewModel
 {
+    /// <summary>
+    /// Gets or sets the display name.
+    /// </summary>
     public string DisplayName { get; set; }
 
     /// <summary>

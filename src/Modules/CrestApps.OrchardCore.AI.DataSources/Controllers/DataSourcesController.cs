@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -21,6 +21,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing data sources resources.
+/// </summary>
 [Feature(AIConstants.Feature.DataSources)]
 public sealed class DataSourcesController : Controller
 {
@@ -36,6 +39,17 @@ public sealed class DataSourcesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourcesController"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="dataSourceManager">The data source manager.</param>
+    /// <param name="displayManager">The display manager.</param>
+    /// <param name="indexingQueue">The indexing queue.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -56,6 +70,13 @@ public sealed class DataSourcesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -108,6 +129,10 @@ public sealed class DataSourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -125,6 +150,9 @@ public sealed class DataSourcesController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("ai/data-source/create", "AIDataSourceCreate")]
     public async Task<ActionResult> Create()
     {
@@ -144,6 +172,9 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/data-source/create", "AIDataSourceCreate")]
@@ -174,6 +205,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -198,6 +233,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
@@ -233,6 +272,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/data-source/delete/{id}", "AIDataSourceDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -256,6 +299,10 @@ public sealed class DataSourcesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the sync index operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/data-source/sync-index/{id}", "AIDataSourceSyncIndex")]
     public async Task<IActionResult> SyncIndex(string id)
@@ -279,6 +326,11 @@ public sealed class DataSourcesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

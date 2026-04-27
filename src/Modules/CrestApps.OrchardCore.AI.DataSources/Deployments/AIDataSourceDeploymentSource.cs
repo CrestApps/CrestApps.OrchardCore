@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.DataSources;
 using OrchardCore.Deployment;
@@ -9,6 +9,10 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
 {
     private readonly IAIDataSourceStore _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
     public AIDataSourceDeploymentSource(IAIDataSourceStore store)
     {
         _store = store;

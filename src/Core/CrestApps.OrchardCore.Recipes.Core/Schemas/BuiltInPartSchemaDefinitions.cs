@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -14,6 +14,9 @@ public sealed class CommonPartSchema : PartSettingsSchemaBase
     Prop("DisplayOwnerEditor", BoolProp())));
 }
 
+/// <summary>
+/// Represents the title part schema.
+/// </summary>
 public sealed class TitlePartSchema : PartSettingsSchemaBase
 {
     public override string Name => "TitlePart";
@@ -30,6 +33,9 @@ public sealed class TitlePartSchema : PartSettingsSchemaBase
         .Description("This string must be a valid Liquid syntax"))));
 }
 
+/// <summary>
+/// Represents the autoroute part schema.
+/// </summary>
 public sealed class AutoroutePartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AutoroutePart";
@@ -49,6 +55,9 @@ public sealed class AutoroutePartSchema : PartSettingsSchemaBase
     Prop("AllowAbsolutePath", BoolProp())));
 }
 
+/// <summary>
+/// Represents the alias part schema.
+/// </summary>
 public sealed class AliasPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AliasPart";
@@ -66,6 +75,9 @@ public sealed class AliasPartSchema : PartSettingsSchemaBase
         .Description("Whether the alias is editable or auto-generated."))));
 }
 
+/// <summary>
+/// Represents the html body part schema.
+/// </summary>
 public sealed class HtmlBodyPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "HtmlBodyPart";
@@ -78,6 +90,9 @@ public sealed class HtmlBodyPartSchema : PartSettingsSchemaBase
             .Description("Sanitize HTML input. Liquid is disabled when true."))));
 }
 
+/// <summary>
+/// Represents the markdown body part schema.
+/// </summary>
 public sealed class MarkdownBodyPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "MarkdownBodyPart";
@@ -90,6 +105,9 @@ public sealed class MarkdownBodyPartSchema : PartSettingsSchemaBase
             .Description("Sanitize rendered HTML output."))));
 }
 
+/// <summary>
+/// Represents the list part schema.
+/// </summary>
 public sealed class ListPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "ListPart";
@@ -102,6 +120,9 @@ public sealed class ListPartSchema : PartSettingsSchemaBase
     Prop("ShowHeader", BoolProp())));
 }
 
+/// <summary>
+/// Represents the flow part schema.
+/// </summary>
 public sealed class FlowPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "FlowPart";
@@ -112,6 +133,9 @@ public sealed class FlowPartSchema : PartSettingsSchemaBase
     Prop("CollapseContainedItems", BoolProp())));
 }
 
+/// <summary>
+/// Represents the bag part schema.
+/// </summary>
 public sealed class BagPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "BagPart";
@@ -124,6 +148,9 @@ public sealed class BagPartSchema : PartSettingsSchemaBase
     Prop("CollapseContainedItems", BoolProp())));
 }
 
+/// <summary>
+/// Represents the widgets list part schema.
+/// </summary>
 public sealed class WidgetsListPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "WidgetsListPart";
@@ -132,6 +159,9 @@ public sealed class WidgetsListPartSchema : PartSettingsSchemaBase
     Obj(Prop("Zones", StringArray())));
 }
 
+/// <summary>
+/// Represents the preview part schema.
+/// </summary>
 public sealed class PreviewPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "PreviewPart";
@@ -143,6 +173,9 @@ public sealed class PreviewPartSchema : PartSettingsSchemaBase
             .Description("Pattern for building the preview path or display content."))));
 }
 
+/// <summary>
+/// Represents the seo meta part schema.
+/// </summary>
 public sealed class SeoMetaPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "SeoMetaPart";
@@ -156,6 +189,9 @@ public sealed class SeoMetaPartSchema : PartSettingsSchemaBase
     Prop("DisplayGoogleSchema", BoolProp())));
 }
 
+/// <summary>
+/// Represents the audit trail part schema.
+/// </summary>
 public sealed class AuditTrailPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AuditTrailPart";

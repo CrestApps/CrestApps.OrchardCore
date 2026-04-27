@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -12,6 +12,10 @@ namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class GetDeploymentsEndpoint
 {
+    /// <summary>
+    /// Adds the get deployments endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetDeploymentsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/deployments", HandleAsync)

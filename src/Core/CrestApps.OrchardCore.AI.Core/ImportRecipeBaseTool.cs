@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -10,6 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Represents the import recipe base tool.
+/// </summary>
 public abstract class ImportRecipeBaseTool : AIFunction
 {
     protected readonly static JsonSerializerOptions RecipeSerializerOptions = new(JOptions.Default)

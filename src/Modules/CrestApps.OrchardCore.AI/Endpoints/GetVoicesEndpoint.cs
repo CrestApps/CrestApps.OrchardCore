@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Services;
@@ -16,6 +16,10 @@ namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class GetVoicesEndpoint
 {
+    /// <summary>
+    /// Adds the get voices endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetVoicesEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/api/voices", HandleAsync)

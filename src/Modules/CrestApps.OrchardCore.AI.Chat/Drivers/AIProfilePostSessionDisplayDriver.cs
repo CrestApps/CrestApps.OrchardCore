@@ -12,6 +12,9 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile post session shape.
+/// </summary>
 public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
@@ -20,6 +23,13 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfilePostSessionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The tool definitions.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfilePostSessionDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,

@@ -25,6 +25,12 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfileTemplateDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="orchestratorOptions">The orchestrator options containing available orchestrator descriptors.</param>
+    /// <param name="handlerResolver">The resolver used to retrieve registered chat response handlers.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public ProfileTemplateDisplayDriver(
         IOptions<OrchestratorOptions> orchestratorOptions,
         IChatResponseHandlerResolver handlerResolver,

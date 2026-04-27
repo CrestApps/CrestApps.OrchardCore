@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Claude.Models;
+﻿using CrestApps.Core.AI.Claude.Models;
 using CrestApps.Core.AI.Claude.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
@@ -14,6 +14,11 @@ internal sealed class ClaudeOrchestratorAvailabilityProvider : IOrchestratorAvai
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClaudeOrchestratorAvailabilityProvider"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ClaudeOrchestratorAvailabilityProvider(
         ISiteService siteService,
         IStringLocalizer<ClaudeOrchestratorAvailabilityProvider> stringLocalizer)
@@ -24,6 +29,10 @@ internal sealed class ClaudeOrchestratorAvailabilityProvider : IOrchestratorAvai
 
     public string OrchestratorName => ClaudeOrchestrator.OrchestratorName;
 
+    /// <summary>
+    /// Retrieves the availability async.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<OrchestratorAvailability> GetAvailabilityAsync(CancellationToken cancellationToken = default)
     {
         var settings = await _siteService.GetSettingsAsync<ClaudeSettings>();

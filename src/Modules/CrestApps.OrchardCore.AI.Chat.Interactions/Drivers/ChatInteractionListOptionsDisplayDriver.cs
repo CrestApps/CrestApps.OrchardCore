@@ -1,9 +1,12 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+﻿using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction list options shape.
+/// </summary>
 public sealed class ChatInteractionListOptionsDisplayDriver : DisplayDriver<ChatInteractionListOptions>
 {
     public override IDisplayResult Edit(ChatInteractionListOptions options, BuildEditorContext context)

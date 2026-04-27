@@ -1,4 +1,4 @@
-using Azure;
+﻿using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure;
@@ -27,6 +27,11 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
         return odataFilter;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreAzureAISearchDataSourceContentManager"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
+    /// <param name="logger">The logger.</param>
     public OrchardCoreAzureAISearchDataSourceContentManager(
         AzureAIClientFactory clientFactory,
         ILogger<OrchardCoreAzureAISearchDataSourceContentManager> logger)
@@ -35,6 +40,14 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
         _logger = logger;
     }
 
+    /// <summary>
+    /// Searches for async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="dataSourceId">The data source id.</param>
+    /// <param name="topN">The top n.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IEnumerable<DataSourceSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
         float[] embedding,
@@ -141,6 +154,12 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
         }
     }
 
+    /// <summary>
+    /// Removes the by data source id async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="dataSourceId">The data source id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<long> DeleteByDataSourceIdAsync(
         IIndexProfileInfo indexProfile,
         string dataSourceId,

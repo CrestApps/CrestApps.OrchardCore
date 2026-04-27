@@ -3,10 +3,19 @@ using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
+/// <summary>
+/// Represents the view model for edit AI profile documents.
+/// </summary>
 public class EditAIProfileDocumentsViewModel
 {
+    /// <summary>
+    /// Gets or sets the profile id.
+    /// </summary>
     public string ProfileId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the documents.
+    /// </summary>
     public IList<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>

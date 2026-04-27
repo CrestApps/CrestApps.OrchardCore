@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Extensions;
@@ -20,11 +20,18 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
 
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIFeatureMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public AzureOpenAIFeatureMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())

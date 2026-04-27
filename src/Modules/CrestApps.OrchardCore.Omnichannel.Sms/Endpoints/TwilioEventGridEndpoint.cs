@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -17,6 +17,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 
 internal static class TwilioEventGridEndpoint
 {
+    /// <summary>
+    /// Adds the twilio event grid endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddTwilioEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("Omnichannel/webhook/TwilioEventGrid", HandleAsync)

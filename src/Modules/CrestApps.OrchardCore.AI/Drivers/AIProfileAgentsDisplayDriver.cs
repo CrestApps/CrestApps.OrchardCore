@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -11,6 +11,10 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIProfileManager _profileManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileAgentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
     public AIProfileAgentsDisplayDriver(IAIProfileManager profileManager)
     {
         _profileManager = profileManager;

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents.Models;
+﻿using CrestApps.Core.AI.Documents.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
+/// <summary>
+/// Display driver for the interaction document settings shape.
+/// </summary>
 public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver<InteractionDocumentSettings>
 {
     private readonly IIndexProfileStore _indexProfileStore;
@@ -26,6 +29,14 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InteractionDocumentSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public InteractionDocumentSettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,

@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.AzureAIInference;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Azure.Models;
@@ -19,6 +19,11 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAIInferenceConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAIInferenceConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureAIInferenceConnectionDisplayDriver> stringLocalizer)

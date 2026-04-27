@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Copilot;
+﻿using CrestApps.Core.AI.Copilot;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
@@ -14,10 +14,17 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
@@ -22,6 +22,14 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="phoneFormatValidator">The phone format validator.</param>
+    /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +8,9 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Features;
 
+/// <summary>
+/// Represents the features search tool.
+/// </summary>
 public sealed class FeaturesSearchTool : AIFunction
 {
     public const string TheName = "searchSiteFeature";

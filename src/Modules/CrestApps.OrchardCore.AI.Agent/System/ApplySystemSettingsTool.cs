@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Extensions;
+﻿using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
+/// <summary>
+/// Represents the apply system settings tool.
+/// </summary>
 public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
 {
     public const string TheName = "applySiteSettings";

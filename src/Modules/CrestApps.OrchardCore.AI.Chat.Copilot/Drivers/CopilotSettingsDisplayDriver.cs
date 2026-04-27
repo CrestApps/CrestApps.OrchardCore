@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Copilot.Models;
+﻿using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -15,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
+/// <summary>
+/// Display driver for the copilot settings shape.
+/// </summary>
 public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSettings>
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
@@ -27,6 +30,15 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CopilotSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="callbackUrlProvider">The callback url provider.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public CopilotSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

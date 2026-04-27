@@ -12,8 +12,16 @@ using OrchardCore.Infrastructure.Entities;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 
+/// <summary>
+/// Handles events for AI memory azure AI search index profile.
+/// </summary>
 public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryAzureAISearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
     public AIMemoryAzureAISearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory)

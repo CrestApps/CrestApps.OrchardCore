@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
@@ -39,6 +39,21 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="campaignsCatalog">The campaigns catalog.</param>
+    /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
+    /// <param name="aiProfileStore">The ai profile store.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="localClock">The local clock.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,

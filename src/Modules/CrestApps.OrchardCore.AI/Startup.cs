@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -47,6 +47,9 @@ using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -132,6 +135,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Indexing feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Indexing")]
 public sealed class IndexingStartup : StartupBase
 {
@@ -141,6 +147,9 @@ public sealed class IndexingStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
@@ -153,6 +162,9 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Workflows feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
@@ -167,6 +179,9 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OCDeployments feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class OCDeploymentsStartup : StartupBase
 {
@@ -179,6 +194,9 @@ public sealed class OCDeploymentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatCore feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase
 {
@@ -210,6 +228,9 @@ public sealed class ChatCoreStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatWorkflows feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.ChatCore, "OrchardCore.Workflows")]
 public sealed class ChatWorkflowsStartup : StartupBase
 {
@@ -220,6 +241,9 @@ public sealed class ChatWorkflowsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ApiChat feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatApi)]
 public sealed class ApiChatStartup : StartupBase
 {
@@ -232,6 +256,9 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagement feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
@@ -245,6 +272,9 @@ public sealed class ConnectionManagementStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagementRecipes feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class ConnectionManagementRecipesStartup : StartupBase
@@ -255,6 +285,9 @@ public sealed class ConnectionManagementRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagementOCDeployments feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
@@ -265,6 +298,9 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatAnalytics feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsStartup : StartupBase
 {

@@ -1,4 +1,4 @@
-using CrestApps.Core.Support;
+﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
@@ -17,6 +17,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 
 internal static class TwilioWebhookEndpoint
 {
+    /// <summary>
+    /// Adds the twilio webhook endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddTwilioWebhookEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("Omnichannel/webhook/Twilio", HandleAsync)

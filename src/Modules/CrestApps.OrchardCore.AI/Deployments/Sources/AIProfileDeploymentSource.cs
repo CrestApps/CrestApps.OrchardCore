@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
@@ -10,6 +10,10 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIProfileDeploymentSource(IAIProfileStore profileStore)
     {
         _profileStore = profileStore;

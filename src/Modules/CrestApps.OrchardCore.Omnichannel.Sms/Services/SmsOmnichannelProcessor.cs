@@ -16,6 +16,9 @@ using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 
+/// <summary>
+/// Represents the sms omnichannel processor.
+/// </summary>
 public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 {
     private readonly IAIChatSessionManager _aIChatSessionManager;
@@ -29,6 +32,18 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsOmnichannelProcessor"/> class.
+    /// </summary>
+    /// <param name="aIChatSessionManager">The AI chat session manager.</param>
+    /// <param name="promptStore">The prompt store.</param>
+    /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="channelEndpointCatalog">The channel endpoint catalog.</param>
+    /// <param name="smsService">The sms service.</param>
+    /// <param name="liquidTemplateManager">The liquid template manager.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
         IAIChatSessionPromptStore promptStore,
@@ -51,8 +66,16 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the channel.
+    /// </summary>
     public string Channel { get; } = OmnichannelConstants.Channels.Sms;
 
+    /// <summary>
+    /// Asynchronously performs the start operation.
+    /// </summary>
+    /// <param name="activity">The activity.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         AIChatSession chatSession = null;

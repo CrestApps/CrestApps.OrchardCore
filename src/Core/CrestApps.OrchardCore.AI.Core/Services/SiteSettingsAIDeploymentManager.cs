@@ -15,6 +15,13 @@ public sealed class SiteSettingsAIDeploymentManager : AIDeploymentManagerBase
 {
     private readonly ISiteService _siteService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SiteSettingsAIDeploymentManager"/> class.
+    /// </summary>
+    /// <param name="deploymentStore">The deployment store for persistence.</param>
+    /// <param name="handlers">The catalog entry handlers for deployment lifecycle events.</param>
+    /// <param name="siteService">The site service for reading global deployment settings.</param>
+    /// <param name="logger">The logger instance.</param>
     public SiteSettingsAIDeploymentManager(
         IAIDeploymentStore deploymentStore,
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,

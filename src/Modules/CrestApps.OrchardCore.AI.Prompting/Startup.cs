@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Templates.Providers;
 using CrestApps.Core.Templates.Services;
@@ -12,6 +12,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Prompting;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

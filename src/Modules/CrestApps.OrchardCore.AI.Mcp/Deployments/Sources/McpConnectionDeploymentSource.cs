@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
@@ -12,6 +12,10 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
 {
     private readonly ISourceCatalog<McpConnection> _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
     public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
     {
         _store = store;

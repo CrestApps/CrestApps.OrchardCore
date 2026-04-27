@@ -9,10 +9,17 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session closed event shape.
+/// </summary>
 public sealed class AIChatSessionClosedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionClosedEvent, AIChatSessionClosedEventViewModel>
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionClosedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatSessionClosedEventDisplayDriver(
         IAIProfileStore profileStore)
     {

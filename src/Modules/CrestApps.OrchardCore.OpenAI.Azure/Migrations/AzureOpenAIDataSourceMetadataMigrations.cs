@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
@@ -34,11 +34,18 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIDataSourceMetadataMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public AzureOpenAIDataSourceMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())
@@ -187,6 +194,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from1 async.
+    /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
         if (_shellSettings.IsInitializing())

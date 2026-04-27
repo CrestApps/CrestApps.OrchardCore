@@ -8,12 +8,20 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles events for AI deployment profile.
+/// </summary>
 public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentsCatalog">The deployments catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDeploymentProfileHandler(
         INamedCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<AIProfileHandler> stringLocalizer)

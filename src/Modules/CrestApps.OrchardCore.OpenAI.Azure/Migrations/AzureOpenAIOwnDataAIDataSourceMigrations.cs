@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.DataSources;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
@@ -11,11 +11,18 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
 {
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIOwnDataAIDataSourceMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public AzureOpenAIOwnDataAIDataSourceMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())

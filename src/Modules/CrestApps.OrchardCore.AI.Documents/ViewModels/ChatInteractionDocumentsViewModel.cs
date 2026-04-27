@@ -1,7 +1,10 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
+/// <summary>
+/// Represents the view model for chat interaction documents.
+/// </summary>
 public class ChatInteractionDocumentsViewModel
 {
     /// <summary>

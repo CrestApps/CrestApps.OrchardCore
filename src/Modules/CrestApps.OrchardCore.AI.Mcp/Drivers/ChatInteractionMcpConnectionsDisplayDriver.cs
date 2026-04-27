@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
@@ -14,6 +14,11 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionMcpConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<ChatInteractionMcpConnectionsDisplayDriver> stringLocalizer)

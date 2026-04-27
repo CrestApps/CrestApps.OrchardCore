@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+﻿using CrestApps.OrchardCore.AI.Mcp.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -8,6 +8,10 @@ internal sealed class McpResourcesAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourcesAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourcesAdminMenu(IStringLocalizer<McpResourcesAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

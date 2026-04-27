@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -33,6 +33,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing activity batches resources.
+/// </summary>
 [Admin]
 public sealed class ActivityBatchesController : Controller
 {
@@ -50,6 +53,17 @@ public sealed class ActivityBatchesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityBatchesController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="batchDisplayManager">The batch display manager.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
         ICatalogManager<OmnichannelActivityBatch> manager,
         IAuthorizationService authorizationService,
@@ -70,6 +84,13 @@ public sealed class ActivityBatchesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -118,6 +139,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -135,6 +160,9 @@ public sealed class ActivityBatchesController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
     public async Task<ActionResult> Create()
     {
@@ -154,6 +182,9 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
@@ -184,6 +215,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -210,6 +245,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
@@ -261,6 +300,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("omnichannel/activity/batches/delete/{id}", "OmnichannelActivityBatchesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -303,6 +346,10 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Loads the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("omnichannel/activity/batches/load/{id}", "OmnichannelActivityBatchesLoad")]
     public async Task<ActionResult> Load(string id)
@@ -490,6 +537,11 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

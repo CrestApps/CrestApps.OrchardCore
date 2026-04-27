@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +15,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles catalog lifecycle events for <see cref="AIProfile"/> entries, including initialization, validation, creation, and population from JSON data.
+/// </summary>
 public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -25,6 +28,15 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="profileStore">The profile store used for uniqueness validation.</param>
+    /// <param name="deploymentCatalog">The deployment catalog used for legacy deployment ID resolution.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for validating prompt templates.</param>
+    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,

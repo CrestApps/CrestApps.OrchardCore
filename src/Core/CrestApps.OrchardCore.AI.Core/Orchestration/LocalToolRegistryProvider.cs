@@ -17,6 +17,12 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalToolRegistryProvider"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The registered AI tool definitions.</param>
+    /// <param name="authorizationService">The authorization service for verifying tool access.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
     public LocalToolRegistryProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -27,6 +33,13 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
         _httpContextAccessor = httpContextAccessor;
     }
 
+    /// <summary>
+    /// Retrieves locally registered tool entries that are configured on the given completion context
+    /// and authorized for the current user.
+    /// </summary>
+    /// <param name="context">The AI completion context specifying the requested tool names.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A read-only list of authorized <see cref="ToolRegistryEntry"/> instances.</returns>
     public async Task<IReadOnlyList<ToolRegistryEntry>> GetToolsAsync(
         AICompletionContext context,
         CancellationToken cancellationToken = default)

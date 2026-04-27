@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI;
@@ -22,12 +22,20 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
     private readonly IShellConfiguration _shellConfiguration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="shellConfiguration">The shell configuration.</param>
     public Startup(
         IStringLocalizer<Startup> stringLocalizer,
         IShellConfiguration shellConfiguration)
@@ -74,6 +82,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSources feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.DataSources)]
 public sealed class DataSourcesStartup : StartupBase
 {
@@ -84,11 +95,18 @@ public sealed class DataSourcesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagement feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionManagementStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
     {
         S = stringLocalizer;

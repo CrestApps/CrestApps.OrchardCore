@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
@@ -17,6 +17,11 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpPromptStep(
         INamedCatalogManager<McpPrompt> manager,
         IStringLocalizer<McpPromptStep> stringLocalizer)
@@ -129,6 +134,9 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 
     private sealed class McpPromptDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the prompts.
+        /// </summary>
         public JsonArray Prompts { get; set; }
     }
 }

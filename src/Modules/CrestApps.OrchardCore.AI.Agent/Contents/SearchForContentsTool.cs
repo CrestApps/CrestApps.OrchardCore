@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +15,9 @@ using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// Represents the search for contents tool.
+/// </summary>
 public sealed class SearchForContentsTool : AIFunction
 {
     public const string TheName = "searchForContentItems";

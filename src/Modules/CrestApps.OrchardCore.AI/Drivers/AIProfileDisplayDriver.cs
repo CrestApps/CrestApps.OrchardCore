@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
@@ -27,6 +27,16 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The store for retrieving AI profiles.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for template validation.</param>
+    /// <param name="defaultAIOptions">The default AI configuration options.</param>
+    /// <param name="orchestratorOptions">The orchestrator configuration options.</param>
+    /// <param name="authorizationService">The authorization service for permission checks.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,

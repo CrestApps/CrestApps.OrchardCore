@@ -1,4 +1,4 @@
-using Azure;
+﻿using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -18,6 +18,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
     private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAISearchVectorSearchService"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AzureAISearchVectorSearchService(
         AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchVectorSearchService> logger)

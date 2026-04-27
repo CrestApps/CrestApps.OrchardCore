@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Copilot.Models;
+﻿using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
@@ -16,6 +16,9 @@ using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing copilot auth resources.
+/// </summary>
 [Authorize]
 public sealed class CopilotAuthController : Controller
 {
@@ -29,6 +32,17 @@ public sealed class CopilotAuthController : Controller
 
     internal readonly IHtmlLocalizer H;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CopilotAuthController"/> class.
+    /// </summary>
+    /// <param name="oauthService">The oauth service.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="callbackUrlProvider">The callback url provider.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="adminOptions">The admin options.</param>
     public CopilotAuthController(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,

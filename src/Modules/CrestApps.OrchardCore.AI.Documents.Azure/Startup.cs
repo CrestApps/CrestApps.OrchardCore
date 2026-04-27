@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents;
+﻿using CrestApps.Core.AI.Documents;
 using CrestApps.OrchardCore.AI.Documents.Azure.Services;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using Microsoft.AspNetCore.StaticFiles;
@@ -13,11 +13,19 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Azure;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     private readonly ILogger _logger;
     private readonly IShellConfiguration _configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configuration">The configuration.</param>
     public Startup(
         ILogger<Startup> logger,
         IShellConfiguration configuration)

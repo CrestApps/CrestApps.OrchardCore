@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
@@ -7,11 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 
+/// <summary>
+/// Provides elasticsearch memory vector search services.
+/// </summary>
 public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearchService
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ElasticsearchMemoryVectorSearchService"/> class.
+    /// </summary>
+    /// <param name="elasticClient">The elastic client.</param>
+    /// <param name="logger">The logger.</param>
     public ElasticsearchMemoryVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchMemoryVectorSearchService> logger)
@@ -20,6 +28,13 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
         _logger = logger;
     }
 
+    /// <summary>
+    /// Searches for async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="userId">The user id.</param>
+    /// <param name="topN">The top n.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
         SearchIndexProfile indexProfile,
         float[] embedding,

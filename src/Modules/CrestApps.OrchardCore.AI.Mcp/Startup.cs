@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp;
+﻿using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -30,10 +30,17 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -59,11 +66,18 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the StdIo feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Stdio)]
 public sealed class StdIoStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StdIoStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public StdIoStartup(IStringLocalizer<StdIoStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -77,6 +91,9 @@ public sealed class StdIoStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
@@ -87,6 +104,9 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OCDeployments feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class OCDeploymentsStartup : StartupBase
@@ -97,6 +117,9 @@ public sealed class OCDeploymentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpServer feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 public sealed class McpServerStartup : StartupBase
 {
@@ -104,6 +127,10 @@ public sealed class McpServerStartup : StartupBase
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpServerStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -189,6 +216,9 @@ public sealed class McpServerStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpPromptRecipes feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class McpPromptRecipesStartup : StartupBase
@@ -199,6 +229,9 @@ public sealed class McpPromptRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpPromptDeployments feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class McpPromptDeploymentsStartup : StartupBase
@@ -209,6 +242,9 @@ public sealed class McpPromptDeploymentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpResourceRecipes feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class McpResourceRecipesStartup : StartupBase
@@ -219,6 +255,9 @@ public sealed class McpResourceRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpResourceDeployments feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class McpResourceDeploymentsStartup : StartupBase
@@ -229,12 +268,19 @@ public sealed class McpResourceDeploymentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpContentResource feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.ContentManagement")]
 public sealed class McpContentResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpContentResourceStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpContentResourceStartup(IStringLocalizer<McpContentResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -265,12 +311,19 @@ public sealed class McpContentResourceStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpRecipeSchemaResource feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("CrestApps.OrchardCore.Recipes")]
 public sealed class McpRecipeSchemaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpRecipeSchemaResourceStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpRecipeSchemaResourceStartup(IStringLocalizer<McpRecipeSchemaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -306,12 +359,19 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the McpMediaResource feature.
+/// </summary>
 [Feature(McpPermissions.Feature.Server)]
 [RequireFeatures("OrchardCore.Media")]
 public sealed class McpMediaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpMediaResourceStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpMediaResourceStartup(IStringLocalizer<McpMediaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;

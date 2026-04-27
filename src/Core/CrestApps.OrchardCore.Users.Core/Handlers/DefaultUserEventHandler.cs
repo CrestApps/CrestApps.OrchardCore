@@ -1,13 +1,20 @@
-using OrchardCore.Environment.Cache;
+﻿using OrchardCore.Environment.Cache;
 using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 
 namespace CrestApps.OrchardCore.Users.Core.Handlers;
 
+/// <summary>
+/// Handles events for default user event.
+/// </summary>
 public sealed class DefaultUserEventHandler : UserEventHandlerBase
 {
     private readonly ITagCache _tagCache;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultUserEventHandler"/> class.
+    /// </summary>
+    /// <param name="tagCache">The tag cache.</param>
     public DefaultUserEventHandler(ITagCache tagCache)
     {
         _tagCache = tagCache;

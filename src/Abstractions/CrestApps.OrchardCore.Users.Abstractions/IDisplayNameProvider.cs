@@ -1,7 +1,10 @@
-using OrchardCore.Users;
+﻿using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Defines the contract for display name provider.
+/// </summary>
 public interface IDisplayNameProvider
 {
     /// <summary>

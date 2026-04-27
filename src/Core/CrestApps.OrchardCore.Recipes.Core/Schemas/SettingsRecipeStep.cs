@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -12,6 +12,9 @@ public sealed class SettingsRecipeStep : IRecipeStep
 
     public string Name => "Settings";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

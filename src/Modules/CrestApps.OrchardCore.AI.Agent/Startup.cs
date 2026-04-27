@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Agent.Analytics;
 using CrestApps.OrchardCore.AI.Agent.Communications;
 using CrestApps.OrchardCore.AI.Agent.Contents;
@@ -19,11 +19,18 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 [Feature(AIConstants.Feature.OrchardCoreAIAgent)]
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -39,11 +46,18 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RecipesStartup(IStringLocalizer<RecipesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -89,11 +103,18 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Tenants feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Tenants")]
 public sealed class TenantsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TenantsStartup(IStringLocalizer<TenantsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -157,11 +178,18 @@ public sealed class TenantsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Contents feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Contents")]
 public sealed class ContentsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentsStartup(IStringLocalizer<ContentsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -225,11 +253,18 @@ public sealed class ContentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentDefinitions feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes")]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDefinitionsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentDefinitionsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -271,11 +306,18 @@ public sealed class ContentDefinitionsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentDefinitionRecipesTools feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
 public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDefinitionRecipesToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentDefinitionRecipesToolsStartup(IStringLocalizer<ContentDefinitionRecipesToolsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -303,11 +345,18 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Features feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Features")]
 public sealed class FeaturesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeaturesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public FeaturesStartup(IStringLocalizer<FeaturesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -347,11 +396,18 @@ public sealed class FeaturesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Notifications feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Notifications")]
 public sealed class NotificationsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NotificationsStartup(IStringLocalizer<NotificationsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -367,11 +423,18 @@ public sealed class NotificationsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Email feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Email")]
 public sealed class EmailStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public EmailStartup(IStringLocalizer<EmailStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -387,11 +450,18 @@ public sealed class EmailStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Sms feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Sms")]
 public sealed class SmsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SmsStartup(IStringLocalizer<SmsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -407,11 +477,18 @@ public sealed class SmsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Users feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Users")]
 public sealed class UsersStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UsersStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UsersStartup(IStringLocalizer<UsersStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -433,11 +510,18 @@ public sealed class UsersStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Roles feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RolesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RolesStartup(IStringLocalizer<RolesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -453,11 +537,18 @@ public sealed class RolesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Workflows feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public WorkflowsStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -479,11 +570,18 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the WorkflowsRecipes feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
 public sealed class WorkflowsRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowsRecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public WorkflowsRecipesStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -505,11 +603,18 @@ public sealed class WorkflowsRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Profiles feature.
+/// </summary>
 [Feature(AIConstants.Feature.OrchardCoreAIAgent)]
 public sealed class ProfilesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfilesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ProfilesStartup(IStringLocalizer<ProfilesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -531,11 +636,18 @@ public sealed class ProfilesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatAnalyticsTools feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatAnalyticsToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatAnalyticsToolsStartup(IStringLocalizer<ChatAnalyticsToolsStartup> stringLocalizer)
     {
         S = stringLocalizer;

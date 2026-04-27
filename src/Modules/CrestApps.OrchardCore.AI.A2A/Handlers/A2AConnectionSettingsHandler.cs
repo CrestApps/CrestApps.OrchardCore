@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.Handlers;
@@ -11,6 +11,10 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AConnectionSettingsHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     public A2AConnectionSettingsHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;

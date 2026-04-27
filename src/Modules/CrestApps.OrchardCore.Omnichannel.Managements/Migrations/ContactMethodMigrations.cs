@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -7,15 +7,25 @@ using OrchardCore.Title.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
+/// <summary>
+/// Defines database migrations for the Migrations module.
+/// </summary>
 public sealed class ContactMethodMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactMethodMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
     public ContactMethodMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.EmailInfo, part => part

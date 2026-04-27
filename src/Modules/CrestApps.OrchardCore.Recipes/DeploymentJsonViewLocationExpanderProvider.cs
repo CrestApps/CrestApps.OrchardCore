@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.Razor;
+﻿using Microsoft.AspNetCore.Mvc.Razor;
 using OrchardCore.Mvc.LocationExpander;
 
 namespace CrestApps.OrchardCore.Recipes;
@@ -12,10 +12,19 @@ internal sealed class DeploymentJsonViewLocationExpander : IViewLocationExpander
     // Return your view location before the default ones
     public int Priority => 0;
 
+    /// <summary>
+    /// Performs the populate values operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void PopulateValues(ViewLocationExpanderContext context)
     {
     }
 
+    /// <summary>
+    /// Performs the expand view locations operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
+    /// <param name="viewLocations">The view locations.</param>
     public IEnumerable<string> ExpandViewLocations(ViewLocationExpanderContext context, IEnumerable<string> viewLocations)
     {
         // Only override the Import/Json view

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -9,10 +9,17 @@ using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
+/// <summary>
+/// Handles events for role based content item authorization.
+/// </summary>
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoleBasedContentItemAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public RoleBasedContentItemAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

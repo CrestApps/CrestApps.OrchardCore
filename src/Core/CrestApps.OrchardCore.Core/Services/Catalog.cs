@@ -6,16 +6,29 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
+/// <summary>
+/// Document-backed implementation of <see cref="ICatalog{T}"/> that stores catalog entries
+/// in an OrchardCore <see cref="DictionaryDocument{T}"/>.
+/// </summary>
+/// <typeparam name="T">The type of catalog item managed by this catalog.</typeparam>
 public class Catalog<T> : ICatalog<T>
     where T : CatalogItem
 {
+    /// <summary>
+    /// The document manager used to read and write the backing document.
+    /// </summary>
     protected readonly IDocumentManager<DictionaryDocument<T>> DocumentManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Catalog{T}"/> class.
+    /// </summary>
+    /// <param name="documentManager">The document manager for accessing the backing document.</param>
     public Catalog(IDocumentManager<DictionaryDocument<T>> documentManager)
     {
         DocumentManager = documentManager;
     }
 
+    /// <inheritdoc />
     public async ValueTask<bool> DeleteAsync(T entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -39,6 +52,7 @@ public class Catalog<T> : ICatalog<T>
         return removed;
     }
 
+    /// <inheritdoc />
     public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
@@ -53,6 +67,7 @@ public class Catalog<T> : ICatalog<T>
         return null;
     }
 
+    /// <inheritdoc />
     public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -64,6 +79,7 @@ public class Catalog<T> : ICatalog<T>
             .ToArray();
     }
 
+    /// <inheritdoc />
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(
         int page,
         int pageSize,
@@ -82,6 +98,7 @@ public class Catalog<T> : ICatalog<T>
         };
     }
 
+    /// <inheritdoc />
     public async ValueTask<IReadOnlyCollection<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
@@ -89,6 +106,7 @@ public class Catalog<T> : ICatalog<T>
         return document.Records.Values.Select(Clone).ToArray();
     }
 
+    /// <inheritdoc />
     public async ValueTask CreateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -111,6 +129,7 @@ public class Catalog<T> : ICatalog<T>
         await DocumentManager.UpdateAsync(document);
     }
 
+    /// <inheritdoc />
     public async ValueTask UpdateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);

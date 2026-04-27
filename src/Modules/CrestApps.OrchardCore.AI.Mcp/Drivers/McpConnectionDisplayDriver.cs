@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,6 +11,10 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpConnectionDisplayDriver(IStringLocalizer<McpConnectionDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;

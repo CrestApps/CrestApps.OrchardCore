@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -16,6 +16,9 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing chat analytics resources.
+/// </summary>
 [Admin("AI/ChatAnalytics/{action}", "ChatAnalytics.{action}")]
 public sealed class ChatAnalyticsController : Controller
 {
@@ -26,6 +29,15 @@ public sealed class ChatAnalyticsController : Controller
     private readonly IClock _clock;
     private readonly IUpdateModelAccessor _updateModelAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatAnalyticsController"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
+    /// <param name="reportDisplayManager">The report display manager.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public ChatAnalyticsController(
         ISession session,
         IAuthorizationService authorizationService,
@@ -42,6 +54,9 @@ public sealed class ChatAnalyticsController : Controller
         _updateModelAccessor = updateModelAccessor;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -63,6 +78,9 @@ public sealed class ChatAnalyticsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> IndexPost()
@@ -110,6 +128,9 @@ public sealed class ChatAnalyticsController : Controller
         return View(nameof(Index), viewModel);
     }
 
+    /// <summary>
+    /// Performs the export operation.
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Export()
     {

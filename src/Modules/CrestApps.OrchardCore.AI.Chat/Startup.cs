@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
@@ -25,6 +25,9 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -62,6 +65,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Widgets feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Widgets")]
 public sealed class WidgetsStartup : StartupBase
 {
@@ -75,6 +81,9 @@ public sealed class WidgetsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AdminWidget feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatAdminWidget)]
 public sealed class AdminWidgetStartup : StartupBase
 {
@@ -91,6 +100,9 @@ public sealed class AdminWidgetStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatAnalyticsUI feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsUIStartup : StartupBase
 {

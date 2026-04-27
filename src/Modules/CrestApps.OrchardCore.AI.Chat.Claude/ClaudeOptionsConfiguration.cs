@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Claude.Models;
+﻿using CrestApps.Core.AI.Claude.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -17,6 +17,13 @@ internal sealed class ClaudeOptionsConfiguration : IConfigureOptions<ClaudeOptio
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClaudeOptionsConfiguration"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="logger">The logger.</param>
     public ClaudeOptionsConfiguration(
         IShellConfiguration shellConfiguration,
         ISiteService siteService,
@@ -29,6 +36,10 @@ internal sealed class ClaudeOptionsConfiguration : IConfigureOptions<ClaudeOptio
         _logger = logger;
     }
 
+    /// <summary>
+    /// Configures the .
+    /// </summary>
+    /// <param name="options">The options.</param>
     public void Configure(ClaudeOptions options)
     {
         _shellConfiguration.GetSection("CrestApps:Claude").Bind(options);

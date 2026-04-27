@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp;
+﻿using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
@@ -20,6 +20,11 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
     private readonly IMediaFileStore _mediaFileStore;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MediaResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="mediaFileStore">The media file store.</param>
+    /// <param name="logger">The logger.</param>
     public MediaResourceTypeHandler(
         IMediaFileStore mediaFileStore,
         ILogger<MediaResourceTypeHandler> logger)

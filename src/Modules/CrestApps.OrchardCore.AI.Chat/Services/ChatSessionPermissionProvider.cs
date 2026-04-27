@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -12,9 +12,15 @@ internal sealed class ChatSessionPermissionProvider : IPermissionProvider
         AIPermissions.DeleteAllChatSessions,
     ];
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

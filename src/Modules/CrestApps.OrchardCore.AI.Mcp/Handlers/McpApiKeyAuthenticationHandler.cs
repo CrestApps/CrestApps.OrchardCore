@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -13,6 +13,13 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
 {
     private readonly IOptionsMonitor<McpServerOptions> _mcpServerOptionsMonitor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpApiKeyAuthenticationHandler"/> class.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="mcpServerOptionsMonitor">The mcp server options monitor.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="encoder">The encoder.</param>
     public McpApiKeyAuthenticationHandler(
         IOptionsMonitor<McpApiKeyAuthenticationOptions> options,
         IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,

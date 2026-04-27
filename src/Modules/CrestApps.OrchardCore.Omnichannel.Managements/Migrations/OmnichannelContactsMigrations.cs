@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -7,15 +7,25 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
+/// <summary>
+/// Defines database migrations for the Migrations module.
+/// </summary>
 public sealed class OmnichannelContactsMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelContactsMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
     public OmnichannelContactsMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelContact, part => part
@@ -44,6 +54,9 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from1 async.
+    /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelContact, part => part

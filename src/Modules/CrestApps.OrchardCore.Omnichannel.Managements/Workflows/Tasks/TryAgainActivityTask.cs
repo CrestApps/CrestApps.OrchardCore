@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
@@ -12,6 +12,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 
+/// <summary>
+/// Represents the try again activity task.
+/// </summary>
 public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
 {
     private readonly ISession _session;
@@ -19,6 +22,12 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TryAgainActivityTask"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TryAgainActivityTask(
         ISession session,
         IClock clock,

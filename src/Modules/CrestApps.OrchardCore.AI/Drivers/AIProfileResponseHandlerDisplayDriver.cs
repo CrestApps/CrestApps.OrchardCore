@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -18,6 +18,11 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileResponseHandlerDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="handlerResolver">The handler resolver.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileResponseHandlerDisplayDriver(
         IChatResponseHandlerResolver handlerResolver,
         IStringLocalizer<AIProfileResponseHandlerDisplayDriver> stringLocalizer)

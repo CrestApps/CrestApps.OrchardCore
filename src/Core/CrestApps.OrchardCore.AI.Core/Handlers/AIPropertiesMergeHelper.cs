@@ -4,6 +4,13 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 internal static class AIPropertiesMergeHelper
 {
+    /// <summary>
+    /// Recursively merges named entries from <paramref name="existing"/> into <paramref name="current"/>.
+    /// Arrays of objects that contain a <c>Name</c> property are merged by name, preserving
+    /// entries from <paramref name="current"/> and adding missing ones from <paramref name="existing"/>.
+    /// </summary>
+    /// <param name="current">The current JSON object to merge into.</param>
+    /// <param name="existing">The existing JSON object whose entries are merged when absent from <paramref name="current"/>.</param>
     public static void MergeNamedEntries(JsonObject current, JsonObject existing)
     {
         ArgumentNullException.ThrowIfNull(current);

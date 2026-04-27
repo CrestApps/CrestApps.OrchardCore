@@ -16,6 +16,12 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name.</param>
+    /// <param name="shellReleaseManager">The shell release manager for requesting tenant restarts.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProviderConnectionDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IShellReleaseManager shellReleaseManager,

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.DataSources;
+﻿using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using OrchardCore.Indexing.Core.Handlers;
@@ -16,6 +16,11 @@ public sealed class DataSourceIndexProfileHandler : IndexProfileHandlerBase
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIDataSourceIndexingQueue _indexingQueue;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="indexingQueue">The indexing queue.</param>
     public DataSourceIndexProfileHandler(
         IAIDataSourceStore dataSourceStore,
         IAIDataSourceIndexingQueue indexingQueue)

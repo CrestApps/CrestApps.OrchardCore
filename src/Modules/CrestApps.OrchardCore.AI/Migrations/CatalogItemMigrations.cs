@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,6 +14,9 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 [Obsolete("This class will be removed before the v1 is released.")]
 internal sealed class CatalogItemMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>

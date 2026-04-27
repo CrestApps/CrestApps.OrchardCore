@@ -10,12 +10,20 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Services;
 
+/// <summary>
+/// Handles events for orchard AI chat document event.
+/// </summary>
 public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {
     private readonly List<AIChatUploadedDocument> _uploadedDocuments = [];
     private readonly List<string> _removedChunkIds = [];
     private bool _taskAdded;
 
+    /// <summary>
+    /// Asynchronously performs the uploaded operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public Task UploadedAsync(AIChatDocumentUploadContext context, CancellationToken cancellationToken = default)
     {
         if (context.UploadedDocuments.Count == 0)
@@ -29,6 +37,11 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Removes the d async.
+    /// </summary>
+    /// <param name="context">The context.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public Task RemovedAsync(AIChatDocumentRemoveContext context, CancellationToken cancellationToken = default)
     {
         if (context.ChunkIds.Count == 0)

@@ -9,6 +9,10 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Records AI completion usage metrics and delegates session-level token aggregation
+/// to <see cref="AIChatSessionEventService"/>.
+/// </summary>
 public sealed class AICompletionUsageService : IAICompletionUsageObserver
 {
     private readonly ISession _session;
@@ -17,6 +21,14 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
     private readonly AIChatSessionEventService _chatSessionEventService;
     private readonly GeneralAIOptions _generalAIOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionUsageService"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session used for persistence.</param>
+    /// <param name="timeProvider">The time provider for UTC timestamps.</param>
+    /// <param name="httpContextAccessor">The accessor for the current HTTP context.</param>
+    /// <param name="chatSessionEventService">The service for recording session-level token usage.</param>
+    /// <param name="generalAIOptions">The general AI options containing tracking configuration.</param>
     public AICompletionUsageService(
         ISession session,
         TimeProvider timeProvider,
@@ -31,6 +43,11 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
         _generalAIOptions = generalAIOptions.Value;
     }
 
+    /// <summary>
+    /// Records a completion usage entry and updates session-level token counts when applicable.
+    /// </summary>
+    /// <param name="record">The usage record to persist.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task UsageRecordedAsync(AICompletionUsageRecord record, CancellationToken cancellationToken = default)
     {
         if (!_generalAIOptions.EnableAIUsageTracking)
@@ -54,6 +71,12 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
         }
     }
 
+    /// <summary>
+    /// Retrieves completion usage records within the specified date range, ordered by most recent first.
+    /// </summary>
+    /// <param name="startDateUtc">The inclusive start date, or <c>null</c> for no lower bound.</param>
+    /// <param name="endDateUtc">The inclusive end date, or <c>null</c> for no upper bound.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task<IReadOnlyList<AICompletionUsageRecord>> GetAsync(
         DateTime? startDateUtc,
         DateTime? endDateUtc,

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -27,10 +27,17 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     private readonly IShellConfiguration _configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="configuration">The configuration.</param>
     public Startup(IShellConfiguration configuration)
     {
         _configuration = configuration;
@@ -83,6 +90,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSource feature.
+/// </summary>
 [RequireFeatures(AIConstants.Feature.DataSources)]
 public sealed class DataSourceStartup : StartupBase
 {

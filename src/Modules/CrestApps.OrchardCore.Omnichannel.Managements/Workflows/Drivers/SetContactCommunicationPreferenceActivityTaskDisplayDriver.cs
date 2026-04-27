@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
+﻿using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,6 +12,10 @@ internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SetContactCommunicationPreferenceActivityTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SetContactCommunicationPreferenceActivityTaskDisplayDriver(IStringLocalizer<TryAgainActivityTaskDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;

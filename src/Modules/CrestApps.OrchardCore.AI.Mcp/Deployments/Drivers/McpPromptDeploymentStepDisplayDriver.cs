@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.ViewModels;
@@ -18,6 +18,11 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpPromptDeploymentStepDisplayDriver(
         INamedCatalog<McpPrompt> store,
         IStringLocalizer<McpPromptDeploymentStepDisplayDriver> stringLocalizer)

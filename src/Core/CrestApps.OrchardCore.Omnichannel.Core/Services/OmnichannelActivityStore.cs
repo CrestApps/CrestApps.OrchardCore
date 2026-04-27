@@ -6,10 +6,18 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
+/// <summary>
+/// Provides a YesSql-based implementation of <see cref="IOmnichannelActivityStore"/> for persisting and querying omnichannel activities.
+/// </summary>
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="handlers">The filter handlers applied when listing activities.</param>
     public OmnichannelActivityStore(
         ISession session,
         IEnumerable<IListOmnichannelActivityFilterHandler> handlers)
@@ -19,6 +27,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         _handlers = handlers;
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
@@ -40,6 +49,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
@@ -68,6 +78,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
@@ -88,6 +99,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);

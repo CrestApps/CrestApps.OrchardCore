@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.DataSources;
+﻿using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -13,6 +13,12 @@ internal sealed class AIDataSourceDocumentIndexNotificationHandler : IDocumentIn
     private readonly IAIDataSourceIndexingQueue _indexingQueue;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDocumentIndexNotificationHandler"/> class.
+    /// </summary>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="indexingQueue">The indexing queue.</param>
+    /// <param name="logger">The logger.</param>
     public AIDataSourceDocumentIndexNotificationHandler(
         IAIDataSourceStore dataSourceStore,
         IAIDataSourceIndexingQueue indexingQueue,
@@ -23,8 +29,18 @@ internal sealed class AIDataSourceDocumentIndexNotificationHandler : IDocumentIn
         _logger = logger;
     }
 
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context) => Task.CompletedTask;
 
+    /// <summary>
+    /// Asynchronously performs the documents added or updated operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="documents">The documents.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public Task DocumentsAddedOrUpdatedAsync(
         IndexProfile indexProfile,
         IEnumerable<DocumentIndex> documents,
@@ -36,6 +52,12 @@ internal sealed class AIDataSourceDocumentIndexNotificationHandler : IDocumentIn
         return QueueAsync(indexProfile, documents.Select(static document => document.Id), isDelete: false, cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the documents deleted operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public Task DocumentsDeletedAsync(
         IndexProfile indexProfile,
         IEnumerable<string> documentIds,

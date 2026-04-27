@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +16,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
     Description = "Processes omnichannel activities.",
     LockTimeout = 5_000,
     LockExpiration = 90_000)]
+
+/// <summary>
+/// Represents the automated activities processor background task.
+/// </summary>
 public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 {
     private const int _batchSize = 100;
 
+    /// <summary>
+    /// Asynchronously performs the do work operation.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var processors = serviceProvider.GetService<IEnumerable<IOmnichannelProcessor>>()

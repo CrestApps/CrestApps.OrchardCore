@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Models;
@@ -16,6 +16,11 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipesRecipeStep"/> class.
+    /// </summary>
+    /// <param name="recipeHarvesters">The recipe harvesters.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
     public RecipesRecipeStep(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager)
@@ -26,6 +31,9 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
     public string Name => "recipes";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)

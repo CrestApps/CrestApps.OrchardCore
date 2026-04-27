@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +7,9 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the get content part definitions tool.
+/// </summary>
 public sealed class GetContentPartDefinitionsTool : AIFunction
 {
     public const string TheName = "getContentPartDefinition";

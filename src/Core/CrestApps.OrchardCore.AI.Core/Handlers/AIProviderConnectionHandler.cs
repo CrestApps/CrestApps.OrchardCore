@@ -14,6 +14,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles catalog lifecycle events for <see cref="AIProviderConnection"/> entries, including initialization, validation, and population from JSON data.
+/// </summary>
 public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -23,6 +26,14 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="aiOptions">The AI options containing valid connection source definitions.</param>
+    /// <param name="connectionsCatalog">The connections catalog used for uniqueness validation.</param>
+    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIProviderConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IOptions<AIOptions> aiOptions,

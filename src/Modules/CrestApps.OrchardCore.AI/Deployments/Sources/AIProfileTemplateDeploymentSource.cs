@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -11,6 +11,10 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
 {
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="templatesCatalog">The templates catalog.</param>
     public AIProfileTemplateDeploymentSource(INamedCatalog<AIProfileTemplate> templatesCatalog)
     {
         _templatesCatalog = templatesCatalog;

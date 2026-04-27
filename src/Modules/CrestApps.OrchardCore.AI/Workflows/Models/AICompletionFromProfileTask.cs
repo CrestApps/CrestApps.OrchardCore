@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Completions;
+﻿using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -15,6 +15,9 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
+/// <summary>
+/// A workflow task activity that performs AI completion using an AI profile.
+/// </summary>
 public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromProfileTask>
 {
     private readonly INamedCatalogManager<AIProfile> _profileManager;
@@ -27,6 +30,16 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionFromProfileTask"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager for resolving AI profiles.</param>
+    /// <param name="completionService">The AI completion service.</param>
+    /// <param name="deploymentManager">The deployment manager for resolving deployments.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for rendering prompt templates.</param>
+    /// <param name="completionContextBuilder">The completion context builder.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="stringLocalizer">The string localizer for this task.</param>
     public AICompletionFromProfileTask(
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
@@ -49,18 +62,27 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
     public override LocalizedString Category => S["Artificial Intelligence"];
 
+    /// <summary>
+    /// Gets or sets the AI profile identifier to use for the completion.
+    /// </summary>
     public string ProfileId
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the Liquid prompt template used to generate the user prompt.
+    /// </summary>
     public string PromptTemplate
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the property name used to store the AI response in the workflow output.
+    /// </summary>
     public string ResultPropertyName
     {
         get => GetProperty<string>();

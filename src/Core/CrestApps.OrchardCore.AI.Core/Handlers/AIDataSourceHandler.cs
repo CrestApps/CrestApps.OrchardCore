@@ -10,6 +10,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles catalog lifecycle events for <see cref="AIDataSource"/> entries, including initialization, validation, and population from JSON data.
+/// </summary>
 public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -17,6 +20,12 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIDataSourceHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,

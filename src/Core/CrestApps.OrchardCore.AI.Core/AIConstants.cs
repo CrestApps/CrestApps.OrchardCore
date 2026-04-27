@@ -2,6 +2,9 @@ using OrchardCore.Indexing.Core;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Contains constant values for AI.
+/// </summary>
 public static class AIConstants
 {
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
@@ -16,6 +19,9 @@ public static class AIConstants
 
     public const string AISettingsGroupId = "ai-settings";
 
+    /// <summary>
+    /// Represents the feature.
+    /// </summary>
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.AI";
@@ -47,8 +53,14 @@ public static class AIConstants
         public const string ChatAnalytics = "CrestApps.OrchardCore.AI.Chat.Analytics";
     }
 
+    /// <summary>
+    /// Gets the task type identifier for AI documents indexing.
+    /// </summary>
     public static readonly string AIDocumentsIndexingTaskType = "AIDocuments";
 
+    /// <summary>
+    /// Represents the document reference types.
+    /// </summary>
     public static class DocumentReferenceTypes
     {
         public const string Profile = "profile";
@@ -60,6 +72,9 @@ public static class AIConstants
         public const string ChatSession = "chat-session";
     }
 
+    /// <summary>
+    /// Represents the data source reference types.
+    /// </summary>
     public static class DataSourceReferenceTypes
     {
         /// <summary>
@@ -74,6 +89,9 @@ public static class AIConstants
         public const string Document = "Document";
     }
 
+    /// <summary>
+    /// Represents the column names.
+    /// </summary>
     public static class ColumnNames
     {
         public const string ChunkId = "chunkId";
@@ -93,6 +111,9 @@ public static class AIConstants
         public const string ChunkIndex = "chunkIndex";
     }
 
+    /// <summary>
+    /// Represents the route names.
+    /// </summary>
     public static class RouteNames
     {
         public const string AICompletionRoute = "AIChatCompletion";

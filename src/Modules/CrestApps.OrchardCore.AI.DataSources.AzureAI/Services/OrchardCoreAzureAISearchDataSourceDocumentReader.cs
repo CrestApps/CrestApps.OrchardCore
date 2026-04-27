@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -14,11 +14,23 @@ internal sealed class OrchardCoreAzureAISearchDataSourceDocumentReader : IDataSo
 
     private readonly AzureAIClientFactory _clientFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreAzureAISearchDataSourceDocumentReader"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
     public OrchardCoreAzureAISearchDataSourceDocumentReader(AzureAIClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
+    /// <summary>
+    /// Performs the i async enumerable operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="keyFieldName">The key field name.</param>
+    /// <param name="titleFieldName">The title field name.</param>
+    /// <param name="contentFieldName">The content field name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
         IIndexProfileInfo indexProfile,
         string keyFieldName,
@@ -60,6 +72,15 @@ internal sealed class OrchardCoreAzureAISearchDataSourceDocumentReader : IDataSo
         }
     }
 
+    /// <summary>
+    /// Performs the i async enumerable operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="keyFieldName">The key field name.</param>
+    /// <param name="titleFieldName">The title field name.</param>
+    /// <param name="contentFieldName">The content field name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadByIdsAsync(
         IIndexProfileInfo indexProfile,
         IEnumerable<string> documentIds,

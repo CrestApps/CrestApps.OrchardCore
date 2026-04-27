@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.Documents.Models;
@@ -29,6 +29,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -59,6 +62,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatInteractionDocuments feature.
+/// </summary>
 [Feature(ChatInteractionsConstants.Feature.ChatInteractionDocuments)]
 public sealed class ChatInteractionDocumentsStartup : StartupBase
 {
@@ -83,6 +89,9 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ProfileDocuments feature.
+/// </summary>
 [Feature(AIConstants.Feature.ProfileDocuments)]
 public sealed class ProfileDocumentsStartup : StartupBase
 {
@@ -93,6 +102,9 @@ public sealed class ProfileDocumentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatSessionDocuments feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatSessionDocuments)]
 public sealed class ChatSessionDocumentsStartup : StartupBase
 {

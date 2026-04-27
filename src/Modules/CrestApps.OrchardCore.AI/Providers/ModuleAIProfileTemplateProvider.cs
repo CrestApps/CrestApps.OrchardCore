@@ -26,6 +26,13 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
 
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModuleAIProfileTemplateProvider"/> class.
+    /// </summary>
+    /// <param name="extensionManager">The extension manager used to enumerate installed modules.</param>
+    /// <param name="applicationContext">The application context providing module information.</param>
+    /// <param name="parsers">The available template parsers for different file formats.</param>
+    /// <param name="logger">The logger instance for this provider.</param>
     public ModuleAIProfileTemplateProvider(
         IExtensionManager extensionManager,
         IApplicationContext applicationContext,
@@ -38,6 +45,10 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
         _logger = logger;
     }
 
+    /// <summary>
+    /// Discovers and returns AI profile templates from OrchardCore module directories.
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default)
     {
         var templates = new List<AIProfileTemplate>();

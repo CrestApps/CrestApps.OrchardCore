@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
@@ -20,6 +20,11 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIConnectionSettingsHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureOpenAIConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureOpenAIConnectionHandler> stringLocalizer)

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the list content fields tool.
+/// </summary>
 public sealed class ListContentFieldsTool : AIFunction
 {
     public const string TheName = "listContentFieldDefinitions";

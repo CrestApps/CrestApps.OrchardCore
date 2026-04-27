@@ -16,6 +16,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Filters;
 
+/// <summary>
+/// Represents the AI chat admin widget filter.
+/// </summary>
 public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
 {
     private readonly ILayoutAccessor _layoutAccessor;
@@ -28,6 +31,17 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
 
     private readonly AdminOptions _adminOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatAdminWidgetFilter"/> class.
+    /// </summary>
+    /// <param name="layoutAccessor">The layout accessor.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="sessionManager">The session manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="resourceManager">The resource manager.</param>
+    /// <param name="adminOptions">The admin options.</param>
     public AIChatAdminWidgetFilter(
         ILayoutAccessor layoutAccessor,
         IShapeFactory shapeFactory,
@@ -48,6 +62,11 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         _adminOptions = adminOptions.Value;
     }
 
+    /// <summary>
+    /// Asynchronously performs the on result execution operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
+    /// <param name="next">The next.</param>
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
         if (!IsAdminPage(context))

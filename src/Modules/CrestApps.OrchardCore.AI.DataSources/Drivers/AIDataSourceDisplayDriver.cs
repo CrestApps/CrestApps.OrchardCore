@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -16,6 +16,11 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IStringLocalizer<AIDataSourceDisplayDriver> stringLocalizer)

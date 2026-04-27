@@ -5,6 +5,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
+/// <summary>
+/// Represents the AI site settings admin menu.
+/// </summary>
 public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
@@ -15,6 +18,10 @@ public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AISiteSettingsAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AISiteSettingsAdminMenu(IStringLocalizer<AISiteSettingsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

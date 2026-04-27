@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Extensions;
+﻿using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
+/// <summary>
+/// Represents the create or update workflow tool.
+/// </summary>
 public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 {
     public const string TheName = "createOrUpdateWorkflow";

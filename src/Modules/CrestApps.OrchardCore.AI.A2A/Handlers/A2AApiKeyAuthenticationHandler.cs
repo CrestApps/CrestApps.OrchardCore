@@ -13,6 +13,13 @@ internal sealed class A2AApiKeyAuthenticationHandler : AuthenticationHandler<A2A
 {
     private readonly IOptionsMonitor<A2AHostOptions> _hostOptionsMonitor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AApiKeyAuthenticationHandler"/> class.
+    /// </summary>
+    /// <param name="options">The options to configure.</param>
+    /// <param name="hostOptionsMonitor">The host options monitor.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="encoder">The encoder.</param>
     public A2AApiKeyAuthenticationHandler(
         IOptionsMonitor<A2AApiKeyAuthenticationOptions> options,
         IOptionsMonitor<A2AHostOptions> hostOptionsMonitor,
@@ -103,5 +110,8 @@ internal sealed class A2AApiKeyAuthenticationOptions : AuthenticationSchemeOptio
 
 internal static class A2AApiKeyAuthenticationDefaults
 {
+    /// <summary>
+    /// The authentication scheme constant.
+    /// </summary>
     public const string AuthenticationScheme = "A2AApiKey";
 }

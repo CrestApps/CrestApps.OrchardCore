@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,6 +6,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
+/// <summary>
+/// Represents the list time zone tool.
+/// </summary>
 public sealed class ListTimeZoneTool : AIFunction
 {
     public const string TheName = "listTimeZones";

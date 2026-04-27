@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -11,6 +11,10 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
 {
     private readonly IAIProfileManager _profileManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionAgentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
     public ChatInteractionAgentsDisplayDriver(IAIProfileManager profileManager)
     {
         _profileManager = profileManager;

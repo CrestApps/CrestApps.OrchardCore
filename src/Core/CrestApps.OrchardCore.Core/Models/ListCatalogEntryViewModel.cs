@@ -1,7 +1,13 @@
-namespace CrestApps.OrchardCore.Core.Models;
+﻿namespace CrestApps.OrchardCore.Core.Models;
 
+/// <summary>
+/// Represents the view model for list catalog entry.
+/// </summary>
 public class ListCatalogEntryViewModel
 {
+    /// <summary>
+    /// Gets or sets the options.
+    /// </summary>
     public CatalogEntryOptions Options { get; set; }
 
     /// <summary>
@@ -11,7 +17,13 @@ public class ListCatalogEntryViewModel
     public object Pager { get; set; }
 }
 
+/// <summary>
+/// Represents the view model for list catalog entry.
+/// </summary>
 public class ListCatalogEntryViewModel<T> : ListCatalogEntryViewModel
 {
+    /// <summary>
+    /// Gets or sets the models.
+    /// </summary>
     public IList<T> Models { get; set; }
 }

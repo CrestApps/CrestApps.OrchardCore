@@ -27,6 +27,12 @@ namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
 internal static class ApiAICompletionEndpoint
 {
+    /// <summary>
+    /// Maps the API endpoint for AI chat completion requests.
+    /// </summary>
+    /// <typeparam name="T">The type used for logger category resolution.</typeparam>
+    /// <param name="builder">The endpoint route builder to add the endpoint to.</param>
+    /// <returns>The <see cref="IEndpointRouteBuilder"/> for chaining.</returns>
     public static IEndpointRouteBuilder AddApiAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)

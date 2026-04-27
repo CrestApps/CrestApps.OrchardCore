@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.Users.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +19,9 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the user avatar part shape.
+/// </summary>
 public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, UserAvatarPart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,6 +33,16 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserAvatarPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="attachedMediaFieldFileService">The attached media field file service.</param>
+    /// <param name="contentTypeProvider">The content type provider.</param>
+    /// <param name="userAvatarOptions">The user avatar options.</param>
+    /// <param name="mediaOptions">The media options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UserAvatarPartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

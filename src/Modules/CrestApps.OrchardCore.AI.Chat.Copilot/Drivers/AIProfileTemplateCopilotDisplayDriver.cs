@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
@@ -27,6 +27,14 @@ internal sealed class AIProfileTemplateCopilotDisplayDriver : DisplayDriver<AIPr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateCopilotDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="oauthService">The oauth service.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,

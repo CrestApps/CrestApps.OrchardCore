@@ -2,6 +2,9 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
+/// <summary>
+/// Represents a message exchanged through an omnichannel communication channel.
+/// </summary>
 public sealed class OmnichannelMessage : Entity
 {
     /// <summary>

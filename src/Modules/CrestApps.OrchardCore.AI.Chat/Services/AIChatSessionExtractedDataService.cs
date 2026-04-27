@@ -9,11 +9,19 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
+/// <summary>
+/// Provides AI chat session extracted data services.
+/// </summary>
 public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedDataRecorder
 {
     private readonly ISession _session;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionExtractedDataService"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="clock">The clock.</param>
     public AIChatSessionExtractedDataService(
         ISession session,
         IClock clock)
@@ -22,6 +30,12 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
         _clock = clock;
     }
 
+    /// <summary>
+    /// Asynchronously performs the record extracted data operation.
+    /// </summary>
+    /// <param name="profile">The profile.</param>
+    /// <param name="session">The session.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task RecordExtractedDataAsync(
         AIProfile profile,
         AIChatSession session,
@@ -59,6 +73,13 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
         await _session.SaveAsync(record, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Retrieves the async.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="startDateUtc">The start date utc.</param>
+    /// <param name="endDateUtc">The end date utc.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IReadOnlyList<AIChatSessionExtractedDataRecord>> GetAsync(
         string profileId,
         DateTime? startDateUtc,

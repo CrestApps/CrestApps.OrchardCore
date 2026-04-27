@@ -21,6 +21,13 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateToolsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The AI tool definition options.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,

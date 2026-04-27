@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +11,10 @@ namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class GetConnectionsEndpoint
 {
+    /// <summary>
+    /// Adds the get connections endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetConnectionsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/connections", HandleAsync)

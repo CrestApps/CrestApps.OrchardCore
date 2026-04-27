@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Claude.Models;
+﻿using CrestApps.Core.AI.Claude.Models;
 using CrestApps.Core.AI.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
@@ -15,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Claude.Drivers;
 
+/// <summary>
+/// Display driver for the claude settings shape.
+/// </summary>
 public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettings>
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Claude.Settings";
@@ -26,6 +29,14 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClaudeSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="claudeClientService">The claude client service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ClaudeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

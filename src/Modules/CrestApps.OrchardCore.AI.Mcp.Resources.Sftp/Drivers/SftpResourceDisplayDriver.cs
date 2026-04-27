@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,12 +10,20 @@ using OrchardSftpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Sft
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Drivers;
 
+/// <summary>
+/// Display driver for the sftp resource shape.
+/// </summary>
 public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SftpResourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SftpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<SftpResourceDisplayDriver> stringLocalizer)

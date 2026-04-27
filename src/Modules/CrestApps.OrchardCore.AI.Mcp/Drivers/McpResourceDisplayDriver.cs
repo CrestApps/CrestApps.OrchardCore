@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -15,6 +15,11 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="mcpOptions">The mcp options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourceDisplayDriver(
         IOptions<McpOptions> mcpOptions,
         IStringLocalizer<McpResourceDisplayDriver> stringLocalizer)

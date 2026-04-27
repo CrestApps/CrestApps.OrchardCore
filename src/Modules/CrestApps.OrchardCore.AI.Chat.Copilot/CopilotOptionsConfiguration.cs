@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Copilot.Models;
+﻿using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,6 +22,13 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CopilotOptionsConfiguration"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="logger">The logger.</param>
     public CopilotOptionsConfiguration(
         IShellConfiguration shellConfiguration,
         ISiteService siteService,
@@ -34,6 +41,10 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
         _logger = logger;
     }
 
+    /// <summary>
+    /// Configures the .
+    /// </summary>
+    /// <param name="options">The options.</param>
     public void Configure(CopilotOptions options)
     {
         // 1. Bind from shell configuration (appsettings.json / environment variables).

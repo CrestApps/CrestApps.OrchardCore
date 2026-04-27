@@ -22,8 +22,15 @@ using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Provides extension methods for service collection.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds the AI core services.
+    /// </summary>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services.AddCrestAppsCore(crestApps => crestApps
@@ -73,6 +80,10 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the AI deployment services.
+    /// </summary>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
@@ -82,6 +93,10 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the AI data source services.
+    /// </summary>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
@@ -94,6 +109,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the orchard core indexing adapters.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="providerName">The provider name.</param>
     public static IServiceCollection AddOrchardCoreIndexingAdapters(this IServiceCollection services, string providerName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);

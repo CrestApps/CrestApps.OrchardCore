@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Tooling;
+﻿using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -15,12 +15,19 @@ internal sealed class AIToolPermissionProvider : IPermissionProvider
 
     private readonly AIToolDefinitionOptions _toolDefinitions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIToolPermissionProvider"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The tool definitions.</param>
     public AIToolPermissionProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions)
     {
         _toolDefinitions = toolDefinitions.Value;
     }
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
@@ -35,6 +42,9 @@ internal sealed class AIToolPermissionProvider : IPermissionProvider
         return Task.FromResult<IEnumerable<Permission>>(permissions);
     }
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

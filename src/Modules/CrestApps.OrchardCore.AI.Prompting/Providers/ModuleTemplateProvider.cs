@@ -1,4 +1,4 @@
-using CrestApps.Core.Templates.Models;
+﻿using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Parsing;
 using CrestApps.Core.Templates.Providers;
 using Microsoft.Extensions.Logging;
@@ -24,6 +24,13 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
     private readonly IEnumerable<ITemplateParser> _parsers;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModuleTemplateProvider"/> class.
+    /// </summary>
+    /// <param name="extensionManager">The extension manager.</param>
+    /// <param name="applicationContext">The application context.</param>
+    /// <param name="parsers">The parsers.</param>
+    /// <param name="logger">The logger.</param>
     public ModuleTemplateProvider(
         IExtensionManager extensionManager,
         IApplicationContext applicationContext,
@@ -36,6 +43,9 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves the templates async.
+    /// </summary>
     public Task<IReadOnlyList<Template>> GetTemplatesAsync()
     {
         var templates = new List<Template>();

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +12,10 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpServerAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public McpServerAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

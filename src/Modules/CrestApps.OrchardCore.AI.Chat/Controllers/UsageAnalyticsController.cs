@@ -9,6 +9,9 @@ using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing usage analytics resources.
+/// </summary>
 [Admin("AI/UsageAnalytics/{action}", "UsageAnalytics.{action}")]
 public sealed class UsageAnalyticsController : Controller
 {
@@ -16,6 +19,12 @@ public sealed class UsageAnalyticsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly GeneralAIOptions _generalAIOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UsageAnalyticsController"/> class.
+    /// </summary>
+    /// <param name="usageService">The usage service.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="generalAIOptions">The general AI options.</param>
     public UsageAnalyticsController(
         AICompletionUsageService usageService,
         IAuthorizationService authorizationService,
@@ -26,6 +35,9 @@ public sealed class UsageAnalyticsController : Controller
         _generalAIOptions = generalAIOptions.Value;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -40,6 +52,10 @@ public sealed class UsageAnalyticsController : Controller
         });
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> IndexPost(UsageAnalyticsIndexViewModel model)

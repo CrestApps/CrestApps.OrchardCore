@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.Models;
@@ -16,6 +16,11 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateA2AConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<AIProfileTemplateA2AConnectionsDisplayDriver> stringLocalizer)

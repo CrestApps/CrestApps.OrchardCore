@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
@@ -12,6 +12,10 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
 {
     private readonly ISiteService _siteService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileSessionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
     public AIProfileSessionDocumentsDisplayDriver(ISiteService siteService)
     {
         _siteService = siteService;

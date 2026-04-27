@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 internal static class OmnichannelHelper
 {
+    /// <summary>
+    /// Retrieves the preferred destenation.
+    /// </summary>
+    /// <param name="contact">The contact.</param>
+    /// <param name="channel">The channel.</param>
     public static string GetPreferredDestenation(ContentItem contact, string channel)
     {
         if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -19,6 +19,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing connections resources.
+/// </summary>
 public sealed class ConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -33,6 +36,17 @@ public sealed class ConnectionsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionsController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="instanceDisplayManager">The instance display manager.</param>
+    /// <param name="mcpClientOptions">The mcp client options.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ConnectionsController(
         ISourceCatalogManager<McpConnection> manager,
         IAuthorizationService authorizationService,
@@ -53,6 +67,13 @@ public sealed class ConnectionsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/mcp/connections", "AIMCPConnectionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -106,6 +127,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -123,6 +148,10 @@ public sealed class ConnectionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="source">The source.</param>
     [Admin("ai/mcp/connection/create/{source}", "AIMCPConnectionCreate")]
     public async Task<ActionResult> Create(string source)
     {
@@ -149,6 +178,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
+    /// <param name="source">The source.</param>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/mcp/connection/create/{source}", "AIMcpConnectionCreate")]
@@ -185,6 +218,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("ai/mcp/connection/edit/{id}", "AIMCPConnectionEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -209,6 +246,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/mcp/connection/edit/{id}", "AIMCPConnectionEdit")]
@@ -244,6 +285,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/mcp/connection/delete/{id}", "AIMCPConnectionDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -272,6 +317,11 @@ public sealed class ConnectionsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
@@ -13,11 +13,18 @@ public sealed class FeatureRecipeStep : IRecipeStep
     private JsonSchema _cached;
     public string Name => "feature";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeatureRecipeStep"/> class.
+    /// </summary>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
     public FeatureRecipeStep(IShellFeaturesManager shellFeaturesManager)
     {
         _shellFeaturesManager = shellFeaturesManager;
     }
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)

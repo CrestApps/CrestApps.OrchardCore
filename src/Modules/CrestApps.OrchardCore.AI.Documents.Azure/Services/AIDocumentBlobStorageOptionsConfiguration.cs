@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
@@ -12,6 +12,12 @@ internal sealed class AIDocumentBlobStorageOptionsConfiguration : BlobStorageOpt
 
     private readonly IShellConfiguration _shellConfiguration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentBlobStorageOptionsConfiguration"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    /// <param name="shellSettings">The shell settings.</param>
+    /// <param name="logger">The logger.</param>
     public AIDocumentBlobStorageOptionsConfiguration(
         IShellConfiguration shellConfiguration,
         ShellSettings shellSettings,

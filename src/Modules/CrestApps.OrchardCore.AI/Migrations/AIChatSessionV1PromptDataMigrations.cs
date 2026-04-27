@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
@@ -26,6 +26,9 @@ internal sealed class AIChatSessionV1PromptDataMigrations : DataMigration
     private const string _legacySessionDocumentTypePrefix = "CrestApps.OrchardCore.AI.Models.AIChatSession,";
     private const string _currentSessionDocumentTypePrefix = "CrestApps.Core.AI.Models.AIChatSession,";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(scope => MigrateV1SessionsAsync(scope.ServiceProvider));

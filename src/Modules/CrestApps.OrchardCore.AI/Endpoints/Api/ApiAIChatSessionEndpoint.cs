@@ -15,6 +15,10 @@ namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
 internal static class ApiAIChatSessionEndpoint
 {
+    /// <summary>
+    /// Adds the api AI chat session endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddApiAIChatSessionEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("api/ai/chat/session", HandleAsync)

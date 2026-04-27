@@ -12,6 +12,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
+/// <summary>
+/// Display driver for managing the default AI deployment settings on the site settings page.
+/// </summary>
 public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver<DefaultAIDeploymentSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -20,6 +23,12 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIDeploymentSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="deploymentManager">The AI deployment manager.</param>
     public DefaultAIDeploymentSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

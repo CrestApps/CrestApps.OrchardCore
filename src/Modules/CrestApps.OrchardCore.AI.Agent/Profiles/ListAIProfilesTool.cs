@@ -10,6 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
+/// <summary>
+/// Represents the list AI profiles tool.
+/// </summary>
 public sealed class ListAIProfilesTool : AIFunction
 {
     public const string TheName = "listAIProfiles";

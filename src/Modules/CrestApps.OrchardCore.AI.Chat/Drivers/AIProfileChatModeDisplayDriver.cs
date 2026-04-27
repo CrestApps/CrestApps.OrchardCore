@@ -9,6 +9,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile chat mode shape.
+/// </summary>
 public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
@@ -16,6 +19,12 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileChatModeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,

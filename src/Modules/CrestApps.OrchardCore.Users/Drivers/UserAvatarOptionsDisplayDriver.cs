@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +10,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the user avatar options shape.
+/// </summary>
 public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvatarOptions>
 {
     public const string GroupId = "avatarOptions";
@@ -18,6 +21,12 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellReleaseManager _shellReleaseManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserAvatarOptionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
     public UserAvatarOptionsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

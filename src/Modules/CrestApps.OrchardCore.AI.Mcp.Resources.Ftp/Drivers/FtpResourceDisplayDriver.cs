@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,12 +10,20 @@ using OrchardFtpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
 
+/// <summary>
+/// Display driver for the ftp resource shape.
+/// </summary>
 public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FtpResourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public FtpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer)

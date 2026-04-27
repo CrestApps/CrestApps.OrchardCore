@@ -19,6 +19,13 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="cacheService">The cache service.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public A2AConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IA2AAgentCardCacheService cacheService,

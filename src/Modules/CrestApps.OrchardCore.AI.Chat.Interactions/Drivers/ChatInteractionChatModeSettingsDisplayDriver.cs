@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -14,6 +14,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction chat mode settings shape.
+/// </summary>
 public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDriver<ChatInteractionChatModeSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -24,6 +27,13 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionChatModeSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionChatModeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

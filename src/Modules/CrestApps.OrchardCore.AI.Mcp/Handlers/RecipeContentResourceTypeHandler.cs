@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
@@ -22,6 +22,12 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeContentResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="recipeHarvesters">The recipe harvesters.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
+    /// <param name="logger">The logger.</param>
     public RecipeContentResourceTypeHandler(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager,

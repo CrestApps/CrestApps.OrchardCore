@@ -8,12 +8,22 @@ using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Services;
 
+/// <summary>
+/// Provides functionality to execute recipe data by writing it to a temporary file
+/// and dispatching it through the deployment target handlers.
+/// </summary>
 public sealed class RecipeExecutionService
 {
     private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
     private readonly DocumentJsonSerializerOptions _options;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeExecutionService"/> class.
+    /// </summary>
+    /// <param name="deploymentTargetHandlers">The deployment target handlers that process recipe files.</param>
+    /// <param name="options">The document JSON serializer options.</param>
+    /// <param name="logger">The logger instance.</param>
     public RecipeExecutionService(
         IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
         IOptions<DocumentJsonSerializerOptions> options,
@@ -24,6 +34,11 @@ public sealed class RecipeExecutionService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Executes a recipe from the provided JSON data by writing it to a temporary file
+    /// and importing it through all registered deployment target handlers.
+    /// </summary>
+    /// <param name="data">The JSON node containing the recipe data to execute.</param>
     public async Task<bool> ExecuteRecipeAsync(JsonNode data)
     {
         ArgumentNullException.ThrowIfNull(data);

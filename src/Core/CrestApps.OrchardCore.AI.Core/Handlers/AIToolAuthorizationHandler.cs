@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Tooling;
+﻿using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +16,10 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIToolAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public AIToolAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

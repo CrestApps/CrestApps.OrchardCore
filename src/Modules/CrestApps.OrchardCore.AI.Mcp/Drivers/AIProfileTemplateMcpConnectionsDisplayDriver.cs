@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
@@ -16,6 +16,11 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateMcpConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileTemplateMcpConnectionsDisplayDriver> stringLocalizer)

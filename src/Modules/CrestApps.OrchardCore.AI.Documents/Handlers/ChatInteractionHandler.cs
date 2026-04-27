@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents;
+﻿using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -12,6 +12,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
+/// <summary>
+/// Handles events for chat interaction.
+/// </summary>
 public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInteraction>
 {
     private readonly Dictionary<string, ChatInteraction> _interactions = [];

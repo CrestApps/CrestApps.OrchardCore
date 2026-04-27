@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,6 +9,9 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
+/// <summary>
+/// Represents the list non startup recipes tool.
+/// </summary>
 public sealed class ListNonStartupRecipesTool : AIFunction
 {
     public const string TheName = "listNonStartupRecipes";

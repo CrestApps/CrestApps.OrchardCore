@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Claude.Models;
 using CrestApps.Core.AI.Claude.Services;
@@ -19,6 +19,11 @@ internal sealed class AIProfileTemplateClaudeDisplayDriver : DisplayDriver<AIPro
     private readonly ClaudeClientService _claudeClientService;
     private readonly ISiteService _siteService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateClaudeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="claudeClientService">The claude client service.</param>
+    /// <param name="siteService">The site service.</param>
     public AIProfileTemplateClaudeDisplayDriver(
         ClaudeClientService claudeClientService,
         ISiteService siteService)

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
+﻿using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using OrchardCore.Environment.Extensions;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Services;
@@ -13,11 +13,18 @@ public sealed class OrchardFeatureSchemaProvider : IFeatureSchemaProvider
 
     private readonly IExtensionManager _extensionManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardFeatureSchemaProvider"/> class.
+    /// </summary>
+    /// <param name="extensionManager">The extension manager.</param>
     public OrchardFeatureSchemaProvider(IExtensionManager extensionManager)
     {
         _extensionManager = extensionManager;
     }
 
+    /// <summary>
+    /// Retrieves the feature ids async.
+    /// </summary>
     public Task<IEnumerable<string>> GetFeatureIdsAsync()
     {
         var ids = _extensionManager.GetFeatures()
@@ -28,6 +35,9 @@ public sealed class OrchardFeatureSchemaProvider : IFeatureSchemaProvider
         return Task.FromResult<IEnumerable<string>>(ids);
     }
 
+    /// <summary>
+    /// Retrieves the theme ids async.
+    /// </summary>
     public Task<IEnumerable<string>> GetThemeIdsAsync()
     {
         var ids = _extensionManager.GetFeatures()

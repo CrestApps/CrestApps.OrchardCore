@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -22,6 +22,13 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
     internal readonly IStringLocalizer<ChatInteractionDataSourceDisplayDriver> S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDataSourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="oDataValidator">The o data validator.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionDataSourceDisplayDriver(
         ISiteService siteService,
         IAIDataSourceStore dataSourceStore,

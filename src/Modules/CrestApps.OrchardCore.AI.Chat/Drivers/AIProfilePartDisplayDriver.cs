@@ -15,6 +15,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat profile part shape.
+/// </summary>
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -24,6 +27,14 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatProfilePartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="chatSessionManager">The chat session manager.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,

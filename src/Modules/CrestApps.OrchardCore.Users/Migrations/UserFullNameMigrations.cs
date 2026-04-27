@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core.Indexes;
+﻿using CrestApps.OrchardCore.Users.Core.Indexes;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -9,11 +9,18 @@ internal sealed class UserFullNameMigrations : DataMigration
 {
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserFullNameMigrations"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
     public UserFullNameMigrations(ILogger<UserFullNameMigrations> logger)
     {
         _logger = logger;
     }
 
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         // In version 2, we changed the package name where UserFullNameMigrations reside.

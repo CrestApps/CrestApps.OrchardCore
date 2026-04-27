@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Elasticsearch;
 using CrestApps.Core.Infrastructure;
 using OrchardCore.Indexing;
@@ -8,6 +8,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 
 internal sealed class DataSourceElasticsearchDocumentIndexHandler : IDocumentIndexHandler
 {
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
         if (context.Record is not DataSourceEmbeddingDocument embeddingDocument)

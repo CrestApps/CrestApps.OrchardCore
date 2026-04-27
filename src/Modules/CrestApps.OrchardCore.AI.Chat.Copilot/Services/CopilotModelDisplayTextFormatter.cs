@@ -1,10 +1,14 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CrestApps.Core.AI.Copilot.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
 internal static class CopilotModelDisplayTextFormatter
 {
+    /// <summary>
+    /// Formats the .
+    /// </summary>
+    /// <param name="model">The model.</param>
     public static string Format(CopilotModelInfo model)
     {
         if (model is null)

@@ -9,8 +9,14 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that performs get content item link operations.
+/// </summary>
 public sealed class GetContentItemLinkTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "getLinkForContentItem";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -45,6 +51,9 @@ public sealed class GetContentItemLinkTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

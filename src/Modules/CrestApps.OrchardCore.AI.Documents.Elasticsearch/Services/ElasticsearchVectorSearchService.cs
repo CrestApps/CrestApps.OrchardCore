@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -16,6 +16,11 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ElasticsearchVectorSearchService"/> class.
+    /// </summary>
+    /// <param name="elasticClient">The elastic client.</param>
+    /// <param name="logger">The logger.</param>
     public ElasticsearchVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchVectorSearchService> logger)

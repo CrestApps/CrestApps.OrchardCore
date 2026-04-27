@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql.Indexes.ChatInteractions;
 using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Services;
@@ -6,8 +6,15 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Represents the default chat interaction catalog.
+/// </summary>
 public sealed class DefaultChatInteractionCatalog : DocumentCatalog<ChatInteraction, ChatInteractionIndex>, ICatalog<ChatInteraction>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultChatInteractionCatalog"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
     public DefaultChatInteractionCatalog(ISession session)
     : base(session, AIConstants.AICollectionName)
     {

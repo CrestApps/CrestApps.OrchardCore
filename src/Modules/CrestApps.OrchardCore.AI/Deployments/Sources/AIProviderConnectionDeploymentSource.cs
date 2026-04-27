@@ -15,6 +15,12 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name.</param>
+    /// <param name="handlers">The collection of handlers invoked during connection export.</param>
+    /// <param name="logger">The logger instance for this source.</param>
     public AIProviderConnectionDeploymentSource(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IEnumerable<IAIProviderConnectionHandler> handlers,

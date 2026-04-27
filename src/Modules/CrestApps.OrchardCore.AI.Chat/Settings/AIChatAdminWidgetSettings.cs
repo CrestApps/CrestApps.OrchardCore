@@ -1,5 +1,8 @@
 namespace CrestApps.OrchardCore.AI.Chat.Settings;
 
+/// <summary>
+/// Represents the AI chat admin widget settings.
+/// </summary>
 public sealed class AIChatAdminWidgetSettings
 {
     public const string DefaultPrimaryColor = "#41b670";

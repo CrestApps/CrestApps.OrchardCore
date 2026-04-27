@@ -6,8 +6,15 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 
+/// <summary>
+/// Handles events for AI document azure AI search document index.
+/// </summary>
 public sealed class AIDocumentAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
 {
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
         if (context.Record is not AIDocumentChunkContext chunk)

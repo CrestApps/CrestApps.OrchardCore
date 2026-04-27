@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -14,6 +14,9 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
+/// <summary>
+/// A workflow task activity that performs AI completion using direct configuration parameters.
+/// </summary>
 public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithConfigTask>
 {
     private readonly IAIClientFactory _aIClientFactory;
@@ -25,6 +28,17 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionWithConfigTask"/> class.
+    /// </summary>
+    /// <param name="aIClientFactory">The AI client factory for creating chat clients.</param>
+    /// <param name="aIToolsService">The AI tools service for resolving tool definitions.</param>
+    /// <param name="deploymentManager">The deployment manager for resolving deployments.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for rendering prompt templates.</param>
+    /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
+    /// <param name="defaultOptions">The default AI options.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="stringLocalizer">The string localizer for this task.</param>
     public AICompletionWithConfigTask(
         IAIClientFactory aIClientFactory,
         IAIToolsService aIToolsService,
@@ -51,60 +65,90 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     public override LocalizedString Category => S["Artificial Intelligence"];
 
+    /// <summary>
+    /// Gets or sets the deployment name used for the AI completion.
+    /// </summary>
     public string DeploymentName
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the Liquid prompt template used to generate the user prompt.
+    /// </summary>
     public string PromptTemplate
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the system message sent to the AI model.
+    /// </summary>
     public string SystemMessage
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the frequency penalty for the AI completion.
+    /// </summary>
     public float? FrequencyPenalty
     {
         get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the presence penalty for the AI completion.
+    /// </summary>
     public float? PresencePenalty
     {
         get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the temperature for the AI completion.
+    /// </summary>
     public float? Temperature
     {
         get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the top-P (nucleus sampling) value for the AI completion.
+    /// </summary>
     public float? TopP
     {
         get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the maximum number of tokens for the AI completion output.
+    /// </summary>
     public int? MaxTokens
     {
         get => GetProperty<int?>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the property name used to store the AI response in the workflow output.
+    /// </summary>
     public string ResultPropertyName
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the names of the AI tools to enable for this task.
+    /// </summary>
     public string[] ToolNames
     {
         get => GetProperty<string[]>();

@@ -1,10 +1,17 @@
-using OrchardCore.DisplayManagement.Descriptors;
+﻿using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Utilities;
 
 namespace CrestApps.OrchardCore.Users.Services;
 
+/// <summary>
+/// Provides navbar shape table functionality.
+/// </summary>
 public sealed class NavbarShapeTableProvider : IShapeTableProvider
 {
+    /// <summary>
+    /// Asynchronously performs the discover operation.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public ValueTask DiscoverAsync(ShapeTableBuilder builder)
     {
         builder.Describe("UserMenuItems")

@@ -13,6 +13,11 @@ internal sealed class OrchardCoreSearchDocumentManager : ISearchDocumentManager
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreSearchDocumentManager"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The store for resolving index profiles.</param>
+    /// <param name="serviceProvider">The service provider for resolving keyed document index managers.</param>
     public OrchardCoreSearchDocumentManager(
         IIndexProfileStore indexProfileStore,
         IServiceProvider serviceProvider)
@@ -21,6 +26,13 @@ internal sealed class OrchardCoreSearchDocumentManager : ISearchDocumentManager
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Adds or updates the specified documents in the search index for the given profile.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="documents">The documents to add or update.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="true"/> if the documents were successfully indexed; otherwise <see langword="false"/>.</returns>
     public async Task<bool> AddOrUpdateAsync(
         IIndexProfileInfo profile,
         IReadOnlyCollection<IndexDocument> documents,
@@ -35,6 +47,12 @@ internal sealed class OrchardCoreSearchDocumentManager : ISearchDocumentManager
         return await manager.AddOrUpdateDocumentsAsync(indexProfile, orchardDocuments);
     }
 
+    /// <summary>
+    /// Deletes the specified documents from the search index for the given profile.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="documentIds">The identifiers of the documents to delete.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task DeleteAsync(
         IIndexProfileInfo profile,
         IEnumerable<string> documentIds,
@@ -48,6 +66,11 @@ internal sealed class OrchardCoreSearchDocumentManager : ISearchDocumentManager
         await manager.DeleteDocumentsAsync(indexProfile, documentIds);
     }
 
+    /// <summary>
+    /// Deletes all documents from the search index for the given profile.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task DeleteAllAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
     {
         var indexProfile = await ResolveIndexProfileAsync(profile);

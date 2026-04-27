@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Roles.Drivers;
 using CrestApps.OrchardCore.Roles.Migrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +10,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Roles;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +10,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
+/// <summary>
+/// Display driver for the default orchestrator settings shape.
+/// </summary>
 public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver<DefaultOrchestratorSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -17,6 +20,11 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultOrchestratorSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
     public DefaultOrchestratorSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)

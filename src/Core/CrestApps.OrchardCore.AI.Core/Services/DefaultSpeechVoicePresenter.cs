@@ -9,6 +9,10 @@ using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Retrieves available text-to-speech voices for a given deployment and presents them
+/// as grouped <see cref="SelectListItem"/> entries filtered by supported cultures.
+/// </summary>
 public sealed class DefaultSpeechVoicePresenter
 {
     private readonly IAIDeploymentManager _deploymentManager;
@@ -16,6 +20,13 @@ public sealed class DefaultSpeechVoicePresenter
     private readonly ILocalizationService _localizationService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultSpeechVoicePresenter"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager for resolving TTS deployments.</param>
+    /// <param name="speechVoiceResolver">The resolver for fetching available speech voices.</param>
+    /// <param name="localizationService">The localization service for determining supported cultures.</param>
+    /// <param name="logger">The logger instance.</param>
     public DefaultSpeechVoicePresenter(
         IAIDeploymentManager deploymentManager,
         ISpeechVoiceResolver speechVoiceResolver,
@@ -28,6 +39,11 @@ public sealed class DefaultSpeechVoicePresenter
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves available TTS voices for the specified deployment and returns them as
+    /// culture-grouped <see cref="SelectListItem"/> entries.
+    /// </summary>
+    /// <param name="deploymentName">The deployment name to resolve, or <c>null</c> to use the default TTS deployment.</param>
     public async Task<IEnumerable<SelectListItem>> GetVoiceMenuItemsAsync(string deploymentName)
     {
         try

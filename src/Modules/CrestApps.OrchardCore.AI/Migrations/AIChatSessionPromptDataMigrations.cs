@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -25,6 +25,9 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
     private const int _batchSize = 50;
     private const string _sessionDocumentType = "CrestApps.Core.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>

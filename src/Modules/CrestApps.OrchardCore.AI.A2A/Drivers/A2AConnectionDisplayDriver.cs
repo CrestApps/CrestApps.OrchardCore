@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
@@ -17,6 +17,11 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public A2AConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<A2AConnectionDisplayDriver> stringLocalizer)

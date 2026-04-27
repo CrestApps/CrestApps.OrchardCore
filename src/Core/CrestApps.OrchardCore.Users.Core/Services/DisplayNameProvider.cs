@@ -12,12 +12,22 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// Resolves a user's display name based on site-level <see cref="DisplayNameSettings"/>,
+/// supporting first/last name composition, explicit display name, and custom Liquid templates.
+/// </summary>
 public sealed class DisplayNameProvider : IDisplayNameProvider
 {
     private readonly ISiteService _siteService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisplayNameProvider"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service used to retrieve display-name settings.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager used for custom display-name templates.</param>
+    /// <param name="logger">The logger instance.</param>
     public DisplayNameProvider(
         ISiteService siteService,
         ILiquidTemplateManager liquidTemplateManager,
@@ -27,7 +37,8 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
         _liquidTemplateManager = liquidTemplateManager;
         _logger = logger;
     }
-
+
+    /// <inheritdoc />
     public async Task<string> GetAsync(IUser user)
     {
         if (user == null)

@@ -4,10 +4,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;
 
+/// <summary>
+/// Represents the view model for AI template selection.
+/// </summary>
 public class AITemplateSelectionViewModel
 {
+    /// <summary>
+    /// Gets or sets the prompt templates.
+    /// </summary>
     public List<PromptTemplateSelectionItemViewModel> PromptTemplates { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the available prompts.
+    /// </summary>
     [BindNever]
     public IList<PromptTemplateOptionViewModel> AvailablePrompts { get; set; } = [];
 

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents;
+﻿using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -7,11 +7,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
+/// <summary>
+/// Handles events for orchard chat interaction document authorization.
+/// </summary>
 public sealed class OrchardChatInteractionDocumentAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, ChatInteraction>
 {
     private readonly IServiceProvider _serviceProvider;
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardChatInteractionDocumentAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public OrchardChatInteractionDocumentAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

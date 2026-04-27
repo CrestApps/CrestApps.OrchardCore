@@ -3,10 +3,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Workflows.ViewModels;
 
+/// <summary>
+/// Represents the view model for AI chat session all fields extracted event.
+/// </summary>
 public class AIChatSessionAllFieldsExtractedEventViewModel
 {
+    /// <summary>
+    /// Gets or sets the profile id.
+    /// </summary>
     public string ProfileId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the profiles.
+    /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
 }

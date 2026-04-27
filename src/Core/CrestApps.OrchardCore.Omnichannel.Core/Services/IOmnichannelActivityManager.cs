@@ -1,9 +1,12 @@
-using CrestApps.Core.Models;
+﻿using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
+/// <summary>
+/// Defines the contract for omnichannel activity manager.
+/// </summary>
 public interface IOmnichannelActivityManager : ICatalogManager<OmnichannelActivity>
 {
     /// <summary>

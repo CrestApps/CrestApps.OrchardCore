@@ -17,6 +17,9 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the <see cref="AICompletionWithConfigTask"/> workflow activity.
+/// </summary>
 public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDriver<AICompletionWithConfigTask, AICompletionWithConfigTaskViewModel>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
@@ -27,6 +30,14 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionWithConfigTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The AI tool definition options.</param>
+    /// <param name="deploymentManager">The AI deployment manager for resolving deployments.</param>
+    /// <param name="defaultAIOptions">The default AI options for initial configuration values.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for template validation.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AICompletionWithConfigTaskDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAIDeploymentManager deploymentManager,

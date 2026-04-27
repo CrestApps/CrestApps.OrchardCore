@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -16,6 +16,10 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatAnalyticsProfileFilterDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatAnalyticsProfileFilterDisplayDriver(
         IAIProfileStore profileStore)
     {

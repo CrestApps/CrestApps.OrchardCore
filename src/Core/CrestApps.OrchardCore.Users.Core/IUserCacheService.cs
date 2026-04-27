@@ -1,7 +1,10 @@
-using OrchardCore.Users;
+﻿using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Users.Core;
 
+/// <summary>
+/// Defines the contract for user cache service.
+/// </summary>
 public interface IUserCacheService
 {
     /// <summary>

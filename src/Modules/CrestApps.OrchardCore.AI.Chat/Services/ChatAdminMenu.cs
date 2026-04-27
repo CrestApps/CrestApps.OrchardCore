@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
@@ -10,6 +10,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
+/// <summary>
+/// Represents the chat admin menu.
+/// </summary>
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
     private readonly IAIProfileStore _profileStore;
@@ -17,6 +20,12 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatAdminMenu"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="aiOptions">The ai options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatAdminMenu(
         IAIProfileStore profileStore,
         IOptions<AIOptions> aiOptions,

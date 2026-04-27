@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -19,6 +19,13 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionToolsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The tool definitions.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,

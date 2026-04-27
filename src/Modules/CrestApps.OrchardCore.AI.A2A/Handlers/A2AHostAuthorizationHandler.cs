@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.A2A.Models;
+﻿using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.A2A.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +12,10 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AHostAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public A2AHostAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

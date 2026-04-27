@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Mcp;
+﻿using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Ftp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
@@ -10,10 +10,17 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

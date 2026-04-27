@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.Elasticsearch;
@@ -16,6 +16,12 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 
 internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceElasticsearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
     public DataSourceElasticsearchIndexProfileHandler(
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -18,6 +18,10 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
     private readonly Dictionary<string, ContentTypeDefinition> _evaluatedContentTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ContentTypeDefinition> _contactWithHeaderContentTypes = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelContactDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
     public OmnichannelContactDisplayDriver(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;

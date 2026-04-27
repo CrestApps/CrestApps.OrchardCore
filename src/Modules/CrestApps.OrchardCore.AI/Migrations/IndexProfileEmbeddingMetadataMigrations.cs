@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,11 +14,18 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
 {
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IndexProfileEmbeddingMetadataMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public IndexProfileEmbeddingMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())

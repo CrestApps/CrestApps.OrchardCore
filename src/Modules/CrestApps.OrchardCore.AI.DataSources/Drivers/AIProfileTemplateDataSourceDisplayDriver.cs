@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
@@ -20,6 +20,13 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDataSourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="oDataValidator">The o data validator.</param>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDataSourceDisplayDriver(
         ISiteService siteService,
         IODataValidator oDataValidator,

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -11,6 +11,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction connection shape.
+/// </summary>
 public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIDeploymentManager _deploymentManager;
@@ -19,6 +22,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="aiOptions">The ai options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,

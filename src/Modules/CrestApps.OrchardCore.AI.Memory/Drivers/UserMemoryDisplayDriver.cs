@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -23,6 +23,15 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserMemoryDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="memoryManager">The memory manager.</param>
+    /// <param name="memoryStore">The memory store.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ICatalogManager<AIMemoryEntry> memoryManager,

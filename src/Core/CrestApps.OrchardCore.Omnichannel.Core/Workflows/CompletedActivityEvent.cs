@@ -7,6 +7,9 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 
+/// <summary>
+/// A workflow event activity that is triggered when an omnichannel activity is completed.
+/// </summary>
 public sealed class CompletedActivityEvent : EventActivity
 {
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
@@ -14,6 +17,12 @@ public sealed class CompletedActivityEvent : EventActivity
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CompletedActivityEvent"/> class.
+    /// </summary>
+    /// <param name="campaignsCatalog">The catalog used to retrieve omnichannel campaigns.</param>
+    /// <param name="dispositionsCatalog">The catalog used to retrieve omnichannel dispositions.</param>
+    /// <param name="stringLocalizer">The string localizer for this event.</param>
     public CompletedActivityEvent(
         ICatalog<OmnichannelCampaign> campaignsCatalog,
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
@@ -31,6 +40,9 @@ public sealed class CompletedActivityEvent : EventActivity
 
     public override LocalizedString Category => S["Omnichannel"];
 
+    /// <summary>
+    /// Gets or sets the identifier of the campaign associated with this event.
+    /// </summary>
     public string CampaignId
     {
         get => GetProperty<string>();

@@ -13,6 +13,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles catalog lifecycle events for <see cref="AIProfileTemplate"/> entries, including initialization, validation, creation, and population from JSON data.
+/// </summary>
 public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfileTemplate>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -21,6 +24,13 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="templatesCatalog">The templates catalog used for uniqueness validation.</param>
+    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIProfileTemplateHandler(
         IHttpContextAccessor httpContextAccessor,
         INamedCatalog<AIProfileTemplate> templatesCatalog,

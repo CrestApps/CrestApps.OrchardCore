@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -7,6 +7,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Migrations;
 
 internal sealed class OminchannelActivityAIChatSessionIndexMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OminchannelActivityAIChatSessionIndex>(table => table

@@ -5,11 +5,20 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Provides methods for reading and writing consolidated embedding metadata on an <see cref="IndexProfile"/>.
+/// Merges legacy per-feature metadata keys into a single canonical entry.
+/// </summary>
 public static class IndexProfileEmbeddingMetadataAccessor
 {
     private const string ChatInteractionMetadataKey = "ChatInteractionIndexProfileMetadata";
     private const string AIMemoryMetadataKey = "AIMemoryIndexProfileMetadata";
 
+    /// <summary>
+    /// Retrieves the consolidated <see cref="DataSourceIndexProfileMetadata"/> from the given index profile,
+    /// merging any legacy chat-interaction and AI-memory metadata entries.
+    /// </summary>
+    /// <param name="indexProfile">The index profile to read metadata from.</param>
     public static DataSourceIndexProfileMetadata GetMetadata(IndexProfile indexProfile)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
@@ -32,6 +41,12 @@ public static class IndexProfileEmbeddingMetadataAccessor
         return metadata;
     }
 
+    /// <summary>
+    /// Stores the given <see cref="DataSourceIndexProfileMetadata"/> on the index profile
+    /// and removes any legacy per-feature metadata keys.
+    /// </summary>
+    /// <param name="indexProfile">The index profile to store metadata on.</param>
+    /// <param name="metadata">The embedding metadata to persist.</param>
     public static void StoreMetadata(IndexProfile indexProfile, DataSourceIndexProfileMetadata metadata)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);

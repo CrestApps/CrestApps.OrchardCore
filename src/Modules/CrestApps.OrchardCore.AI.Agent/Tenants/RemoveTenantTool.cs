@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +8,9 @@ using OrchardCore.Environment.Shell.Removing;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
+/// <summary>
+/// Represents the remove tenant tool.
+/// </summary>
 public sealed class RemoveTenantTool : AIFunction
 {
     public const string TheName = "removeTenant";

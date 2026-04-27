@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -13,6 +13,10 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
 {
     private readonly IAIProfileTemplateManager _templateManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="templateManager">The template manager.</param>
     public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
     {
         _templateManager = templateManager;

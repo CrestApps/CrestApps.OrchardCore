@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
@@ -15,6 +15,9 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
+/// <summary>
+/// Defines database migrations for the Migrations module.
+/// </summary>
 public sealed class AIProviderConnectionIndexMigrations : DataMigration
 {
     private const int _batchSize = 50;
@@ -25,11 +28,18 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
 
     private readonly YesSqlStoreOptions _option;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionIndexMigrations"/> class.
+    /// </summary>
+    /// <param name="option">The option.</param>
     public AIProviderConnectionIndexMigrations(IOptions<YesSqlStoreOptions> option)
     {
         _option = option.Value;
     }
 
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateAIProviderConnectionIndexSchemaAsync(_option);
@@ -39,6 +49,9 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));
@@ -46,6 +59,9 @@ public sealed class AIProviderConnectionIndexMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
     public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(scope => ImportLegacyProviderConnectionsAsync(scope.ServiceProvider));

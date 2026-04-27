@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -12,6 +12,10 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelDispositionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelDispositionDisplayDriver(
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {

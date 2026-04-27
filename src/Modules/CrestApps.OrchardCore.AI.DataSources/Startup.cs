@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -32,6 +32,9 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.DataSources;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -70,6 +73,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesContents feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Contents")]
 public sealed class DataSourcesContentsStartup : StartupBase
 {
@@ -79,6 +85,9 @@ public sealed class DataSourcesContentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesRecipes feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class DataSourcesRecipesStartup : StartupBase
 {
@@ -88,6 +97,9 @@ public sealed class DataSourcesRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesOCDeployment feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class DataSourcesOCDeploymentStartup : StartupBase
 {

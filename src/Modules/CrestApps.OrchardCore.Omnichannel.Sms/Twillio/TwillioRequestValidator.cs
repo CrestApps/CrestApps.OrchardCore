@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -102,6 +102,12 @@ internal sealed class TwillioRequestValidator
         return false;
     }
 
+    /// <summary>
+    /// Validates the .
+    /// </summary>
+    /// <param name="url">The url.</param>
+    /// <param name="body">The body.</param>
+    /// <param name="expected">The expected.</param>
     public bool Validate(string url, string body, string expected)
     {
         ArgumentException.ThrowIfNullOrEmpty(url);

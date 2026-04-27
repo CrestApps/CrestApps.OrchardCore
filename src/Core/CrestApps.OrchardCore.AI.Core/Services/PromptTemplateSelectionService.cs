@@ -8,6 +8,11 @@ using CrestApps.Core.Templates.Services;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
+/// <summary>
+/// Manages the selection and composition of prompt templates for AI profiles,
+/// merging runtime templates from the profile template store with static templates
+/// from the template service.
+/// </summary>
 public sealed class PromptTemplateSelectionService
 {
     private readonly ITemplateService _aiTemplateService;
@@ -15,6 +20,12 @@ public sealed class PromptTemplateSelectionService
 
     private readonly IAIProfileTemplateManager _profileTemplateManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptTemplateSelectionService"/> class.
+    /// </summary>
+    /// <param name="aiTemplateService">The template service for listing static templates.</param>
+    /// <param name="aiTemplateEngine">The template engine for rendering template content.</param>
+    /// <param name="profileTemplateManager">The manager for runtime AI profile templates.</param>
     public PromptTemplateSelectionService(
         ITemplateService aiTemplateService,
         ITemplateEngine aiTemplateEngine,
@@ -24,6 +35,10 @@ public sealed class PromptTemplateSelectionService
         _aiTemplateEngine = aiTemplateEngine;
         _profileTemplateManager = profileTemplateManager;
     }
+
+    /// <summary>
+    /// Lists all available prompt templates, giving precedence to runtime templates over static ones.
+    /// </summary>
     public async Task<IReadOnlyList<Template>> ListAsync()
     {
         var templates = new List<Template>();
@@ -42,6 +57,11 @@ public sealed class PromptTemplateSelectionService
 
         return templates;
     }
+
+    /// <summary>
+    /// Retrieves a single prompt template by its identifier.
+    /// </summary>
+    /// <param name="id">The template identifier.</param>
     public async Task<Template> GetAsync(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -51,6 +71,12 @@ public sealed class PromptTemplateSelectionService
         return templates.FirstOrDefault(template => string.Equals(template.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Composes a full system message by rendering each selected prompt template
+    /// and appending the provided system message.
+    /// </summary>
+    /// <param name="systemMessage">The base system message to append, or <c>null</c> to omit.</param>
+    /// <param name="metadata">The template selection metadata containing template IDs and parameters.</param>
     public async Task<string> ComposeSystemMessageAsync(string systemMessage, PromptTemplateMetadata metadata)
     {
         var parts = new List<string>();

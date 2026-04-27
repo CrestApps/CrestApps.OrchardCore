@@ -7,6 +7,9 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core.Extensions;
 
+/// <summary>
+/// Provides extension methods for AI function arguments.
+/// </summary>
 public static class AIFunctionArgumentsExtensions
 {
     /// <summary>

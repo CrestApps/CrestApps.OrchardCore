@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -23,6 +23,9 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ManageActivityBatches,
     ];
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
         =>
     [
@@ -38,6 +41,9 @@ internal sealed class PermissionProvider : IPermissionProvider
         },
     ];
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
 }

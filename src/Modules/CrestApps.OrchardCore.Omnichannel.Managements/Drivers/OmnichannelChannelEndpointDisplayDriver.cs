@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -17,6 +17,12 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="phoneFormatValidator">The phone format validator.</param>
+    /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointDisplayDriver(
         IPhoneFormatValidator phoneFormatValidator,
         IEmailAddressValidator emailAddressValidator,

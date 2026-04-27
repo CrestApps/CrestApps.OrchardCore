@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the users recipe step.
+/// </summary>
 public sealed class UsersRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "Users";

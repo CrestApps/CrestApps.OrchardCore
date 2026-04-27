@@ -15,17 +15,29 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
+/// <summary>
+/// Background task that periodically closes inactive AI chat sessions, retries pending post-close processing, and triggers workflow events.
+/// </summary>
 [BackgroundTask(
     Title = "AI Chat Session Close",
     Schedule = "*/10 * * * *",
     Description = "Periodically closes inactive AI chat sessions, retries pending post-close processing, and triggers workflow events.",
     LockTimeout = 5_000,
     LockExpiration = 30_000)]
+
+/// <summary>
+/// Represents the AI chat session close background task.
+/// </summary>
 public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _defaultInactivityTimeout = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan _retryDelay = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// Executes the background work to close inactive sessions and retry pending post-close processing.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();

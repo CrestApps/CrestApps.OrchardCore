@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Roles.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -18,6 +18,11 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RolePickerPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="roleManager">The role manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RolePickerPartDisplayDriver(
         RoleManager<IRole> roleManager,
         IStringLocalizer<RolePickerPartDisplayDriver> stringLocalizer)

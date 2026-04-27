@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
@@ -40,6 +40,20 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="documentStore">The document store.</param>
+    /// <param name="chunkStore">The chunk store.</param>
+    /// <param name="documentProcessingService">The document processing service.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="extractorOptions">The extractor options.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDocumentsDisplayDriver(
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,

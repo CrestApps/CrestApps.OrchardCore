@@ -1,10 +1,17 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
+/// <summary>
+/// Represents the chat interaction settings validator.
+/// </summary>
 public static class ChatInteractionSettingsValidator
 {
+    /// <summary>
+    /// Validates the .
+    /// </summary>
+    /// <param name="settings">The settings.</param>
     public static string Validate(JsonElement settings)
     {
         if (IsOutsideRange(settings, "strictness", 1, 5))

@@ -1,4 +1,4 @@
-using CrestApps.Core.Services;
+﻿using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -18,6 +18,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing channel endpoints resources.
+/// </summary>
 [Admin]
 public sealed class ChannelEndpointsController : Controller
 {
@@ -32,6 +35,16 @@ public sealed class ChannelEndpointsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChannelEndpointsController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayManager">The display manager.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChannelEndpointsController(
         ICatalogManager<OmnichannelChannelEndpoint> manager,
         IAuthorizationService authorizationService,
@@ -50,6 +63,13 @@ public sealed class ChannelEndpointsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("omnichannel/channel-endpoints", "OmnichannelChannelEndpointsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -98,6 +118,10 @@ public sealed class ChannelEndpointsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -115,6 +139,9 @@ public sealed class ChannelEndpointsController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
     public async Task<ActionResult> Create()
     {
@@ -134,6 +161,9 @@ public sealed class ChannelEndpointsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
@@ -164,6 +194,10 @@ public sealed class ChannelEndpointsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("omnichannel/channel-endpoints/edit/{id}", "OmnichannelChannelEndpointsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -188,6 +222,10 @@ public sealed class ChannelEndpointsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/channel-endpoints/edit/{id}", "OmnichannelChannelEndpointsEdit")]

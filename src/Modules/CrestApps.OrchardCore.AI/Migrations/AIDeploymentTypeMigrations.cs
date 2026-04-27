@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -18,6 +18,9 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIDeploymentTypeMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -55,6 +58,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 1;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -109,6 +115,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
     public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -131,6 +140,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from3.
+    /// </summary>
     public static int UpdateFrom3()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -171,6 +183,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 4;
     }
 
+    /// <summary>
+    /// Updates the from4.
+    /// </summary>
     public static int UpdateFrom4()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -190,6 +205,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 5;
     }
 
+    /// <summary>
+    /// Updates the from5.
+    /// </summary>
     public static int UpdateFrom5()
     {
         ShellScope.AddDeferredTask(async scope =>

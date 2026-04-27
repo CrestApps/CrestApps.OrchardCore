@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -19,6 +19,11 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="templatesCatalog">The templates catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)

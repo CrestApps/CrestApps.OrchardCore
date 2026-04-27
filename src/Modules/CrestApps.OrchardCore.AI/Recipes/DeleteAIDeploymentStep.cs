@@ -8,12 +8,20 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "DeleteAIDeployments";
 
     private readonly IAIDeploymentManager _manager;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeleteAIDeploymentStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public DeleteAIDeploymentStep(
         IAIDeploymentManager manager,
         IStringLocalizer<DeleteAIDeploymentStep> stringLocalizer)
@@ -68,8 +76,14 @@ internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
 
     private sealed class DeleteAIDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether all deployments should be deleted.
+        /// </summary>
         public bool IncludeAll { get; set; }
 
+        /// <summary>
+        /// Gets or sets the names of specific deployments to delete.
+        /// </summary>
         public string[] DeploymentNames { get; set; }
     }
 }

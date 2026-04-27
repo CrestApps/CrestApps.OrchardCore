@@ -7,6 +7,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template menu shape.
+/// </summary>
 public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)

@@ -8,8 +8,14 @@ using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
 
+/// <summary>
+/// AI tool that performs send SMS operations.
+/// </summary>
 public sealed class SendSmsTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "sendSmsMessage";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -40,6 +46,9 @@ public sealed class SendSmsTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

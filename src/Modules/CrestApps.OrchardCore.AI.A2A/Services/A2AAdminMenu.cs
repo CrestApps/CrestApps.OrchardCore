@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Localization;
+﻿using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 using A2APermissions = CrestApps.OrchardCore.AI.A2A.A2APermissions;
 
@@ -8,6 +8,10 @@ internal sealed class A2AAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public A2AAdminMenu(IStringLocalizer<A2AAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

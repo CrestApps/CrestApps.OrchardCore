@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,6 +12,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
     public AIProfileDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor)

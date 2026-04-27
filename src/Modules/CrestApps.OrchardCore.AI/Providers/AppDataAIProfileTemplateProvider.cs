@@ -25,6 +25,13 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
 
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppDataAIProfileTemplateProvider"/> class.
+    /// </summary>
+    /// <param name="shellOptions">The shell options containing application data paths.</param>
+    /// <param name="shellSettings">The current shell settings identifying the tenant.</param>
+    /// <param name="parsers">The available template parsers for different file formats.</param>
+    /// <param name="logger">The logger instance for this provider.</param>
     public AppDataAIProfileTemplateProvider(
         Microsoft.Extensions.Options.IOptions<ShellOptions> shellOptions,
         ShellSettings shellSettings,
@@ -37,6 +44,10 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
         _logger = logger;
     }
 
+    /// <summary>
+    /// Discovers and returns AI profile templates from the App_Data directories.
+    /// </summary>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default)
     {
         var templates = new List<AIProfileTemplate>();

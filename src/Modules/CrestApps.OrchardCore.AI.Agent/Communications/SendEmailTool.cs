@@ -10,8 +10,14 @@ using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
 
+/// <summary>
+/// AI tool that performs send email operations.
+/// </summary>
 public sealed class SendEmailTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "sendEmail";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -56,6 +62,9 @@ public sealed class SendEmailTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

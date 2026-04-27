@@ -15,8 +15,14 @@ using YSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that performs create or update content operations.
+/// </summary>
 public sealed class CreateOrUpdateContentTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "createOrUpdateContentItem";
 
     private static readonly JsonMergeSettings _updateJsonMergeSettings = new()
@@ -64,6 +70,9 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>
     {
         ["Strict"] = false,

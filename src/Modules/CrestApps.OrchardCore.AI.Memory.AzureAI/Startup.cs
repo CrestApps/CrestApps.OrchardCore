@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Memory;
+﻿using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
@@ -12,10 +12,17 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

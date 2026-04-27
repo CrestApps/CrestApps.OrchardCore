@@ -15,6 +15,13 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
     private readonly IEnumerable<Type> _partTypes;
     private readonly IEnumerable<Type> _fieldTypes;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardContentSchemaProvider"/> class.
+    /// </summary>
+    /// <param name="defManager">The content definition manager for retrieving type and part definitions.</param>
+    /// <param name="parts">The registered content parts.</param>
+    /// <param name="fields">The registered content fields.</param>
+    /// <param name="options">The content options containing part and field type registrations.</param>
     public OrchardContentSchemaProvider(
         IContentDefinitionManager defManager,
         IEnumerable<ContentPart> parts,
@@ -30,6 +37,9 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
             .Union(options.Value.ContentFieldOptions.Select(o => o.Type));
     }
 
+    /// <summary>
+    /// Gets the names of all available content parts, excluding parts that share a name with a content type.
+    /// </summary>
     public async Task<IEnumerable<string>> GetPartNamesAsync()
     {
         var typeNames = new HashSet<string>(
@@ -46,6 +56,9 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
         return codePartNames.Union(definedPartNames).Distinct().OrderBy(n => n);
     }
 
+    /// <summary>
+    /// Gets the type names of all available content fields.
+    /// </summary>
     public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
         => Task.FromResult(_fieldTypes.Select(t => t.Name));
 }

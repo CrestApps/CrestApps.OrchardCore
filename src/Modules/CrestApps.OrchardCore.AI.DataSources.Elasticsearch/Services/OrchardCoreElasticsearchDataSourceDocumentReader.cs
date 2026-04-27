@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
@@ -13,11 +13,23 @@ internal sealed class OrchardCoreElasticsearchDataSourceDocumentReader : IDataSo
 
     private readonly ElasticsearchClient _elasticClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreElasticsearchDataSourceDocumentReader"/> class.
+    /// </summary>
+    /// <param name="elasticClient">The elastic client.</param>
     public OrchardCoreElasticsearchDataSourceDocumentReader(ElasticsearchClient elasticClient)
     {
         _elasticClient = elasticClient;
     }
 
+    /// <summary>
+    /// Performs the i async enumerable operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="keyFieldName">The key field name.</param>
+    /// <param name="titleFieldName">The title field name.</param>
+    /// <param name="contentFieldName">The content field name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
         IIndexProfileInfo indexProfile,
         string keyFieldName,
@@ -81,6 +93,15 @@ internal sealed class OrchardCoreElasticsearchDataSourceDocumentReader : IDataSo
         }
     }
 
+    /// <summary>
+    /// Performs the i async enumerable operation.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="keyFieldName">The key field name.</param>
+    /// <param name="titleFieldName">The title field name.</param>
+    /// <param name="contentFieldName">The content field name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadByIdsAsync(
         IIndexProfileInfo indexProfile,
         IEnumerable<string> documentIds,

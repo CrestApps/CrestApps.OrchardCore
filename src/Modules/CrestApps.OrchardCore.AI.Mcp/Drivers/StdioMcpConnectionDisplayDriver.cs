@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
@@ -14,6 +14,10 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StdioMcpConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public StdioMcpConnectionDisplayDriver(IStringLocalizer<StdioMcpConnectionDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;

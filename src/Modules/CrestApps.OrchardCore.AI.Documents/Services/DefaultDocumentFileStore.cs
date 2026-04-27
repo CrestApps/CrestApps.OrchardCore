@@ -1,20 +1,32 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using CrestApps.Core.AI.Documents;
 using OrchardCore.FileStorage;
 
 namespace CrestApps.OrchardCore.AI.Documents.Services;
 
+/// <summary>
+/// Represents the default document file store.
+/// </summary>
 public sealed class DefaultDocumentFileStore : IDocumentFileStore
 {
     private static readonly Regex _safePathSegmentExpression = new("^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);
 
     private readonly IFileStore _fileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultDocumentFileStore"/> class.
+    /// </summary>
+    /// <param name="fileStore">The file store.</param>
     public DefaultDocumentFileStore(IFileStore fileStore)
     {
         _fileStore = fileStore;
     }
 
+    /// <summary>
+    /// Saves the file async.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
+    /// <param name="content">The content.</param>
     public async Task<string> SaveFileAsync(string fileName, Stream content)
     {
         ArgumentNullException.ThrowIfNull(fileName);
@@ -25,6 +37,10 @@ public sealed class DefaultDocumentFileStore : IDocumentFileStore
         return await _fileStore.CreateFileFromStreamAsync(relativePath, content, overwrite: true);
     }
 
+    /// <summary>
+    /// Retrieves the file async.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
     public async Task<Stream> GetFileAsync(string fileName)
     {
         ArgumentNullException.ThrowIfNull(fileName);
@@ -40,6 +56,10 @@ public sealed class DefaultDocumentFileStore : IDocumentFileStore
         return await _fileStore.GetFileStreamAsync(relativePath);
     }
 
+    /// <summary>
+    /// Removes the file async.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
     public async Task<bool> DeleteFileAsync(string fileName)
     {
         ArgumentNullException.ThrowIfNull(fileName);

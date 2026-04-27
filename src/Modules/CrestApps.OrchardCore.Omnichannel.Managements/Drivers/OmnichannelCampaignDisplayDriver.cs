@@ -26,6 +26,16 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelCampaignDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
+    /// <param name="connectionsCatalog">The connections catalog.</param>
+    /// <param name="toolDefinitions">The tool definitions.</param>
+    /// <param name="defaultAIOptions">The default AI options.</param>
+    /// <param name="liquidTemplateManager">The liquid template manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelCampaignDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,

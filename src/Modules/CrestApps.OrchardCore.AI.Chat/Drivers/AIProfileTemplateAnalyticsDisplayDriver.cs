@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
@@ -13,6 +13,10 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateAnalyticsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateAnalyticsDisplayDriver(
         IStringLocalizer<AIProfileTemplateAnalyticsDisplayDriver> stringLocalizer)
     {

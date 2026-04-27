@@ -24,6 +24,12 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
     private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentOrchestrationContextBuilderHandler"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager for retrieving agent profiles.</param>
+    /// <param name="templateService">The template service for rendering agent availability prompts.</param>
+    /// <param name="logger">The logger instance.</param>
     public AgentOrchestrationContextBuilderHandler(
         IAIProfileManager profileManager,
         ITemplateService templateService,
@@ -34,9 +40,11 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
         => Task.CompletedTask;
 
+    /// <inheritdoc />
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
         var completionContext = context.OrchestrationContext.CompletionContext;
@@ -104,8 +112,14 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
 
     private sealed class AgentInfo
     {
+        /// <summary>
+        /// Gets or sets the name of the agent.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets the description of the agent.
+        /// </summary>
         public string Description { get; set; }
     }
 }

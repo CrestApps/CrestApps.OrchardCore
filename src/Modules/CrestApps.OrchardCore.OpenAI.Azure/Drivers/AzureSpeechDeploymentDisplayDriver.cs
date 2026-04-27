@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -17,6 +17,11 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureSpeechDeploymentDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureSpeechDeploymentDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureSpeechDeploymentDisplayDriver> stringLocalizer)

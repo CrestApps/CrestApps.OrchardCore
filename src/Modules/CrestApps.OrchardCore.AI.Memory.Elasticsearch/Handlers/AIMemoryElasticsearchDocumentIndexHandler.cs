@@ -6,8 +6,15 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
+/// <summary>
+/// Handles events for AI memory elasticsearch document index.
+/// </summary>
 public sealed class AIMemoryElasticsearchDocumentIndexHandler : IDocumentIndexHandler
 {
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
         if (context.Record is not AIMemoryEntryIndexDocument memory)

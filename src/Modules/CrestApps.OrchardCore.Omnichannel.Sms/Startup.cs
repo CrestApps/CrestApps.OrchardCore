@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
@@ -14,6 +14,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

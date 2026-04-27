@@ -1,4 +1,4 @@
-using CrestApps.Core.Services;
+﻿using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
@@ -27,6 +27,14 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NewActivityTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NewActivityTaskDisplayDriver(
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,

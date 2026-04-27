@@ -11,6 +11,11 @@ internal sealed class OrchardCoreSearchIndexManager : ISearchIndexManager
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchardCoreSearchIndexManager"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The store for resolving index profiles.</param>
+    /// <param name="serviceProvider">The service provider for resolving keyed index managers.</param>
     public OrchardCoreSearchIndexManager(
         IIndexProfileStore indexProfileStore,
         IServiceProvider serviceProvider)
@@ -19,6 +24,12 @@ internal sealed class OrchardCoreSearchIndexManager : ISearchIndexManager
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Composes the full index name for the given profile by delegating to the provider-specific
+    /// <see cref="IIndexNameProvider"/>, falling back to <see cref="IIndexProfileInfo.IndexFullName"/>.
+    /// </summary>
+    /// <param name="profile">The index profile to compose the full name for.</param>
+    /// <returns>The fully qualified index name.</returns>
     public string ComposeIndexFullName(IIndexProfileInfo profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -37,6 +48,12 @@ internal sealed class OrchardCoreSearchIndexManager : ISearchIndexManager
         return profile.IndexFullName;
     }
 
+    /// <summary>
+    /// Determines whether the search index for the given profile exists.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="true"/> if the index exists; otherwise <see langword="false"/>.</returns>
     public async Task<bool> ExistsAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
     {
         var indexProfile = await ResolveIndexProfileAsync(profile);
@@ -45,6 +62,12 @@ internal sealed class OrchardCoreSearchIndexManager : ISearchIndexManager
         return await manager.ExistsAsync(indexProfile.IndexFullName);
     }
 
+    /// <summary>
+    /// Creates a new search index for the given profile.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="fields">The field definitions for the index schema.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task CreateAsync(
         IIndexProfileInfo profile,
         IReadOnlyCollection<SearchIndexField> fields,
@@ -58,6 +81,11 @@ internal sealed class OrchardCoreSearchIndexManager : ISearchIndexManager
         await manager.CreateAsync(indexProfile);
     }
 
+    /// <summary>
+    /// Deletes the search index for the given profile.
+    /// </summary>
+    /// <param name="profile">The index profile identifying the target search index.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     public async Task DeleteAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
     {
         var indexProfile = await ResolveIndexProfileAsync(profile);

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core.Indexes;
+﻿using CrestApps.OrchardCore.Users.Core.Indexes;
 using CrestApps.OrchardCore.Users.Core.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,10 +13,17 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// Provides display name users admin list filter functionality.
+/// </summary>
 public sealed class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFilterProvider
 {
     public const string DefaultTermName = "display-name";
 
+    /// <summary>
+    /// Builds the .
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public void Build(QueryEngineBuilder<User> builder)
     {
         builder

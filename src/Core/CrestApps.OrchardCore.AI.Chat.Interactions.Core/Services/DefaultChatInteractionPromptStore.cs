@@ -15,6 +15,11 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
 {
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultChatInteractionPromptStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session for database access.</param>
+    /// <param name="clock">The clock for obtaining the current UTC time.</param>
     public DefaultChatInteractionPromptStore(
         ISession session,
         IClock clock)

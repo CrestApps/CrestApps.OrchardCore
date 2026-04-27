@@ -9,10 +9,17 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session post processed event shape.
+/// </summary>
 public sealed class AIChatSessionPostProcessedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventViewModel>
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionPostProcessedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatSessionPostProcessedEventDisplayDriver(
         IAIProfileStore profileStore)
     {

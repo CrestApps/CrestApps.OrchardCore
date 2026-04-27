@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.A2A.Models;
+﻿using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
@@ -14,6 +14,11 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionA2AConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<ChatInteractionA2AConnectionsDisplayDriver> stringLocalizer)

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Services;
 
@@ -13,10 +13,17 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowTypeRecipeStep"/> class.
+    /// </summary>
+    /// <param name="library">The library.</param>
     public WorkflowTypeRecipeStep(IActivityLibrary library) => _library = library;
 
     public string Name => "WorkflowType";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)

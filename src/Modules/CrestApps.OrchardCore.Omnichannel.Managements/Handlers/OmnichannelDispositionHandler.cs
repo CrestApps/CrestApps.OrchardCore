@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
@@ -17,6 +17,12 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelDispositionHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelDispositionHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
@@ -20,6 +20,9 @@ using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+/// <summary>
+/// Controller for managing AI profile templates in the admin area.
+/// </summary>
 public sealed class AITemplatesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -34,6 +37,17 @@ public sealed class AITemplatesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AITemplatesController"/> class.
+    /// </summary>
+    /// <param name="manager">The AI profile template manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayDriver">The display manager for AI profile templates.</param>
+    /// <param name="aiOptions">The AI options.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AITemplatesController(
         IAIProfileTemplateManager manager,
         IAuthorizationService authorizationService,
@@ -54,6 +68,14 @@ public sealed class AITemplatesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI profile templates.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view with the list of templates.</returns>
     [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -106,6 +128,11 @@ public sealed class AITemplatesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the templates index page.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the index action with the applied filter.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -123,6 +150,11 @@ public sealed class AITemplatesController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays the form for creating a new AI profile template.
+    /// </summary>
+    /// <param name="source">The template source identifier.</param>
+    /// <returns>The create view with the editor form.</returns>
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
     public async Task<ActionResult> Create(string source)
     {
@@ -156,6 +188,11 @@ public sealed class AITemplatesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI profile template.
+    /// </summary>
+    /// <param name="source">The template source identifier.</param>
+    /// <returns>A redirect to the index on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
@@ -200,6 +237,11 @@ public sealed class AITemplatesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Displays the form for editing an existing AI profile template.
+    /// </summary>
+    /// <param name="id">The unique identifier of the template to edit.</param>
+    /// <returns>The edit view with the editor form.</returns>
     [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -224,6 +266,11 @@ public sealed class AITemplatesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for editing an existing AI profile template.
+    /// </summary>
+    /// <param name="id">The unique identifier of the template to update.</param>
+    /// <returns>A redirect to the index on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
@@ -259,6 +306,11 @@ public sealed class AITemplatesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Deletes an AI profile template by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the template to delete.</param>
+    /// <returns>A redirect to the index action.</returns>
     [HttpPost]
     [Admin("ai/template/delete/{id}", "AITemplatesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -287,6 +339,12 @@ public sealed class AITemplatesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles bulk actions on selected AI profile templates.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the bulk action to perform.</param>
+    /// <param name="itemIds">The identifiers of the selected templates.</param>
+    /// <returns>A redirect to the index action.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

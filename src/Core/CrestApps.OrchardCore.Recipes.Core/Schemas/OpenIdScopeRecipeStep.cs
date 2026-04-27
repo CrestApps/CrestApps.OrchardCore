@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the open id scope recipe step.
+/// </summary>
 public sealed class OpenIdScopeRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "OpenIdScope";

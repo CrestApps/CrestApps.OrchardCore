@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
@@ -14,6 +14,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing chat conversion goals resources.
+/// </summary>
 [Admin("AI/ChatConversionGoals/{action}", "ChatConversionGoals.{action}")]
 public sealed class ChatConversionGoalsController : Controller
 {
@@ -22,6 +25,13 @@ public sealed class ChatConversionGoalsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatConversionGoalsController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="session">The session.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="clock">The clock.</param>
     public ChatConversionGoalsController(
         IAIProfileManager profileManager,
         ISession session,
@@ -34,6 +44,9 @@ public sealed class ChatConversionGoalsController : Controller
         _clock = clock;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -45,6 +58,10 @@ public sealed class ChatConversionGoalsController : Controller
         return View(await BuildViewModelAsync(new ChatConversionGoalsIndexViewModel(), false));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> IndexPost(ChatConversionGoalsIndexViewModel model)
@@ -72,6 +89,10 @@ public sealed class ChatConversionGoalsController : Controller
         return View("Index", model);
     }
 
+    /// <summary>
+    /// Performs the export operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     public async Task<IActionResult> Export(ChatConversionGoalsIndexViewModel model)
     {
