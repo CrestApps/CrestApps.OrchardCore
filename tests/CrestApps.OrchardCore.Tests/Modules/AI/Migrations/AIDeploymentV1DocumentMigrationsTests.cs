@@ -68,7 +68,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
     }
 
     [Fact]
-    public void TryPopulateDefaultDeploymentSettings_WhenUiDefaultExists_ShouldPreferUiDefaultOverLegacyAppSettings()
+    public void TryPopulateDefaultDeploymentSettings_WhenLegacyDeploymentNameMatches_ShouldUseLegacyDeploymentName()
     {
         // Arrange
         var settings = new DefaultAIDeploymentSettings();
@@ -90,7 +90,6 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
                 ClientName = "Azure",
                 ConnectionName = "legacy-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -108,11 +107,11 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
 
         // Assert
         Assert.True(updated);
-        Assert.Equal("ui-default", settings.DefaultChatDeploymentName);
+        Assert.Equal("legacy-default", settings.DefaultChatDeploymentName);
     }
 
     [Fact]
-    public void TryPopulateDefaultDeploymentSettings_WhenNoUiOrLegacyDefaultExists_ShouldPickFirstChatDeployment()
+    public void TryPopulateDefaultDeploymentSettings_WhenNoLegacyDeploymentNameExists_ShouldPickFirstChatDeployment()
     {
         // Arrange
         var settings = new DefaultAIDeploymentSettings();

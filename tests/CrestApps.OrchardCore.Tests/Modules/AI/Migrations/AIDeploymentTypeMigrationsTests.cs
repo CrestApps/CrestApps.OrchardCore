@@ -20,7 +20,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "Friendly Connection",
                 Type = AIDeploymentType.Embedding,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -50,7 +49,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "legacy-connection",
                 Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
         };
 
@@ -78,7 +76,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "secondary-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -87,7 +84,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -96,7 +92,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Utility,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -105,7 +100,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "speech-connection",
                 Type = AIDeploymentType.SpeechToText,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -114,7 +108,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "speech-connection",
                 Type = AIDeploymentType.TextToSpeech,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
         };
 
@@ -145,7 +138,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "default-connection",
                 Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
         };
 
@@ -199,7 +191,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "legacy-connection",
                 Type = AIDeploymentType.Chat,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -208,7 +199,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "legacy-connection",
                 Type = AIDeploymentType.Embedding,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
             new AIDeployment
             {
@@ -217,7 +207,6 @@ public sealed class AIDeploymentTypeMigrationsTests
                 ClientName = "OpenAI",
                 ConnectionName = "legacy-connection",
                 Type = AIDeploymentType.Image,
-                Properties = new Dictionary<string, object> { ["IsDefault"] = true },
             },
         };
 
