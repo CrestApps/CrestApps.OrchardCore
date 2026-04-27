@@ -1,10 +1,11 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -77,8 +78,9 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         }
 
         var session = arguments.Services.GetRequiredService<ISession>();
+        var yesSqlStoreOptions = arguments.Services.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
-        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
+        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: yesSqlStoreOptions.AICollectionName);
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
         {

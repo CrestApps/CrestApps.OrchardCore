@@ -11,7 +11,7 @@
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableSessionMetrics" />
-        <label class="form-check-label" asp-for="EnableSessionMetrics">@T["Enable Session Metrics"]</label>
+        <label class="form-check-label" asp-for="EnableSessionMetrics">@T["Enable session metrics"]</label>
         <span class="hint">@T["When enabled, session metrics such as usage, token consumption, response latency, and user feedback are captured for analytics. Metrics can be viewed in the Chat Analytics dashboard."]</span>
     </div>
 </div>
@@ -19,7 +19,7 @@
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableAIResolutionDetection" />
-        <label class="form-check-label" asp-for="EnableAIResolutionDetection">@T["Enable AI Resolution Detection"]</label>
+        <label class="form-check-label" asp-for="EnableAIResolutionDetection">@T["Enable AI resolution detection"]</label>
         <span class="hint dashed">@T["When enabled, AI semantically analyzes conversations to determine if the user's request was resolved, rather than relying only on timeout-based abandonment detection. This operates independently of session metrics."]</span>
     </div>
 </div>
@@ -27,7 +27,7 @@
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableConversionMetrics" />
-        <label class="form-check-label" asp-for="EnableConversionMetrics">@T["Enable Conversion Metrics"]</label>
+        <label class="form-check-label" asp-for="EnableConversionMetrics">@T["Enable conversion metrics"]</label>
         <span class="hint dashed">@T["When enabled, AI evaluates each session against defined goals and assigns scores to measure session success and conversion rates. This operates independently of session metrics."]</span>
     </div>
 </div>
@@ -70,12 +70,12 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">@T["Min Score"]</label>
+                                    <label class="form-label">@T["Min score"]</label>
                                     <input type="number" class="form-control" name="@Html.NameFor(m => m.ConversionGoals[i].MinScore)" value="@goal.MinScore" min="0" />
                                     <span class="hint">@T["Minimum score (default: 0)."]</span>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">@T["Max Score"]</label>
+                                    <label class="form-label">@T["Max score"]</label>
                                     <input type="number" class="form-control" name="@Html.NameFor(m => m.ConversionGoals[i].MaxScore)" value="@goal.MaxScore" min="1" />
                                     <span class="hint">@T["Maximum score (default: 10)."]</span>
                                 </div>

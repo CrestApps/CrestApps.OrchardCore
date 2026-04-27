@@ -11,12 +11,12 @@ public class EditUserMemoryViewModel
     public int MemoryCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the clear memories.
+    /// Gets or sets the current user identifier.
     /// </summary>
-    public bool ClearMemories { get; set; }
+    public string UserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the confirm clear memories.
+    /// Gets or sets the local return URL back to the user profile editor.
     /// </summary>
-    public bool ConfirmClearMemories { get; set; }
+    public string ReturnUrl { get; set; }
 }

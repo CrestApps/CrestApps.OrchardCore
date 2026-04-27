@@ -1,5 +1,4 @@
-﻿using CrestApps.Core;
-using CrestApps.Core.AI;
+using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
@@ -211,8 +210,7 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
         // Register the AI chat session prompt store.
-        services.AddScoped<DefaultAIChatSessionPromptStore>()
-            .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
+        services
             .AddDataMigration<AIChatSessionPromptIndexMigrations>()
             .AddDataMigration<AIChatSessionPromptDataMigrations>()
             .AddDataMigration<AIChatSessionV1PromptDataMigrations>();

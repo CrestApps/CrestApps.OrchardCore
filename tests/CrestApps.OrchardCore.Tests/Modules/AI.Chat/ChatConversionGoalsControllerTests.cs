@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Chat.Controllers;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using YSession = YesSql.ISession;
@@ -45,18 +47,22 @@ public sealed class ChatConversionGoalsControllerTests
                 It.IsAny<string>()))
             .ReturnsAsync(AuthorizationResult.Success());
 
+        var yesSqlStoreOptions = new Mock<IOptions<YesSqlStoreOptions>>();
+
         var controller = new ChatConversionGoalsController(
             profileManager.Object,
             new Mock<YSession>().Object,
             authorizationService.Object,
-            new Mock<IClock>().Object);
-
-        controller.ControllerContext = new ControllerContext
+            yesSqlStoreOptions.Object,
+            new Mock<IClock>().Object)
         {
-            HttpContext = new DefaultHttpContext
+            ControllerContext = new ControllerContext
             {
-                User = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "Test")),
-            },
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "Test")),
+                },
+            }
         };
 
         // Act

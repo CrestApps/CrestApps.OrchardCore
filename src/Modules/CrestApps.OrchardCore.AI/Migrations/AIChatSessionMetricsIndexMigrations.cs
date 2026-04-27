@@ -1,6 +1,5 @@
-﻿using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
@@ -26,7 +25,6 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
     {
         var options = new AIChatSessionMetricsIndexSchemaOptions
         {
-            CollectionName = AIConstants.AICollectionName,
             SessionIdLength = 26,
             ProfileIdLength = 26,
             VisitorIdLength = 64,

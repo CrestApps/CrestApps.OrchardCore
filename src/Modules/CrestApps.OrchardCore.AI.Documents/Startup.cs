@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.Documents.Models;
@@ -7,7 +7,6 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
@@ -38,6 +37,7 @@ public sealed class Startup : StartupBase
     {
         services.AddCoreAIDocumentProcessing()
             .AddCoreAIDocumentProcessingStoresYesSql()
+            .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>()
             .AddDataMigration<AIDocumentIndexMigrations>()
             .AddDataMigration<AIDocumentChunkIndexMigrations>();
 
@@ -46,12 +46,6 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-
-        // Register unified document store, index provider, and migration.
-        services
-            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AIDocsCollectionName))
-            .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
-            .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
         services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();

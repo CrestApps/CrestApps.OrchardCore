@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI;
@@ -155,11 +154,8 @@ public sealed class AIProfileDocumentMigrationsTests
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 3, 25, 19, 47, 47, DateTimeKind.Utc));
 
         var handler = new AIProfileHandler(
-            httpContextAccessor.Object,
-            Mock.Of<IAIProfileStore>(),
             deploymentCatalog.Object,
             liquidTemplateManager.Object,
-            clock.Object,
             Mock.Of<IStringLocalizer<AIProfileHandler>>());
 
         var logger = Mock.Of<ILogger<NamedCatalogManager<AIProfile>>>();

@@ -1,17 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using System.Text.Json.Settings;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
@@ -20,36 +14,24 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// </summary>
 public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
     private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileHandler"/> class.
     /// </summary>
-    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
-    /// <param name="profileStore">The profile store used for uniqueness validation.</param>
     /// <param name="deploymentCatalog">The deployment catalog used for legacy deployment ID resolution.</param>
     /// <param name="liquidTemplateManager">The Liquid template manager for validating prompt templates.</param>
-    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
     /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIProfileHandler(
-        IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
         INamedCatalog<AIDeployment> deploymentCatalog,
         ILiquidTemplateManager liquidTemplateManager,
-        IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _profileStore = profileStore;
         _deploymentCatalog = deploymentCatalog;
         _liquidTemplateManager = liquidTemplateManager;
-        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -61,92 +43,18 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(context.Model.Name))
-        {
-            context.Result.Fail(new ValidationResult(S["Profile Name is required."], [nameof(AIProfile.Name)]));
-        }
-        else
-        {
-            var profile = await _profileStore.FindByNameAsync(context.Model.Name, cancellationToken);
-
-            if (profile is not null && profile.ItemId != context.Model.ItemId)
-            {
-                context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(AIProfile.Name)]));
-            }
-        }
-
         if (context.Model.Type == AIProfileType.TemplatePrompt)
         {
-            if (string.IsNullOrWhiteSpace(context.Model.PromptTemplate))
-            {
-                context.Result.Fail(new ValidationResult(S["Prompt template is required."], [nameof(AIProfile.PromptTemplate)]));
-            }
-            else if (!_liquidTemplateManager.Validate(context.Model.PromptTemplate, out var _))
+            if (!string.IsNullOrWhiteSpace(context.Model.PromptTemplate) &&
+                !_liquidTemplateManager.Validate(context.Model.PromptTemplate, out var _))
             {
                 context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(AIProfile.PromptTemplate)]));
             }
         }
-
-        if (context.Model.Type == AIProfileType.Agent)
-        {
-            if (string.IsNullOrWhiteSpace(context.Model.Description))
-            {
-                context.Result.Fail(new ValidationResult(S["Description is required for agent profiles."], [nameof(AIProfile.Description)]));
-            }
-        }
-    }
-
-    public override Task InitializedAsync(InitializedContext<AIProfile> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Model.Author = user.Identity.Name;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public override Task CreatingAsync(CreatingContext<AIProfile> context, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
-        {
-            context.Model.DisplayText = context.Model.Name;
-        }
-
-        return Task.CompletedTask;
     }
 
     private async Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
     {
-        if (isNew)
-        {
-            var name = data[nameof(AIProfile.Name)]?.GetValue<string>()?.Trim();
-
-            if (!string.IsNullOrEmpty(name))
-            {
-                profile.Name = name;
-            }
-        }
-
-        var displayText = data[nameof(AIProfile.DisplayText)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(displayText))
-        {
-            profile.DisplayText = displayText;
-        }
-
-        var description = data[nameof(AIProfile.Description)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(description))
-        {
-            profile.Description = description;
-        }
-
         var type = data[nameof(AIProfile.Type)]?.GetEnumValue<AIProfileType>();
 
         if (type.HasValue)
@@ -190,59 +98,6 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 #pragma warning restore CS0618 // Type or member is obsolete
 
             profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
-        }
-
-        var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(welcomeMessage))
-        {
-            profile.WelcomeMessage = welcomeMessage;
-        }
-
-        var promptTemplate = data[nameof(AIProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(promptTemplate))
-        {
-            profile.PromptTemplate = promptTemplate;
-        }
-
-        var properties = data[nameof(AIProfile.Properties)]?.AsObject();
-
-        if (properties != null)
-        {
-            profile.Properties ??= new Dictionary<string, object>();
-
-            // Convert current properties to JsonObject for merge.
-            var currentJson = JsonSerializer.SerializeToNode(profile.Properties)?.AsObject() ?? [];
-
-            // Snapshot existing properties before merge so named entries can be
-            // merged by name (upsert) instead of being fully replaced.
-            var existingPropertiesSnapshot = currentJson.Clone();
-
-            // Merge incoming properties.
-            currentJson.Merge(properties, new JsonMergeSettings
-            {
-                MergeArrayHandling = MergeArrayHandling.Replace,
-            });
-
-            AIPropertiesMergeHelper.MergeNamedEntries(currentJson, existingPropertiesSnapshot);
-
-            // Convert back to dictionary.
-            profile.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
-        }
-
-        var settings = data[nameof(AIProfile.Settings)]?.AsObject();
-
-        if (settings != null)
-        {
-            var existingSettingsSnapshot = profile.Settings.Clone();
-
-            profile.Settings.Merge(settings, new JsonMergeSettings
-            {
-                MergeArrayHandling = MergeArrayHandling.Replace,
-            });
-
-            AIPropertiesMergeHelper.MergeNamedEntries(profile.Settings, existingSettingsSnapshot);
         }
 
         if (string.IsNullOrWhiteSpace(profile.DisplayText))

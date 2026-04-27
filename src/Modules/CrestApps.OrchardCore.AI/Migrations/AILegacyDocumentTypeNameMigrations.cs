@@ -1,7 +1,8 @@
-﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.Data.YesSql;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
@@ -59,9 +60,10 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
         var store = scope.GetRequiredService<IStore>();
         var dbConnectionAccessor = scope.GetRequiredService<IDbConnectionAccessor>();
         var logger = scope.GetRequiredService<ILogger<AILegacyDocumentTypeNameMigrations>>();
+        var yesSqlStoreOptions = scope.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
         var dialect = store.Configuration.SqlDialect;
-        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(yesSqlStoreOptions.AICollectionName);
         var table = $"{store.Configuration.TablePrefix}{documentTableName}";
         var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
         var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));

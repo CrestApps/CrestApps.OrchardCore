@@ -1,12 +1,13 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.Data.YesSql;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
@@ -211,9 +212,10 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
         var store = serviceProvider.GetRequiredService<IStore>();
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIProfileDocumentMigrations>>();
+        var yesSqlStoreOptions = serviceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
         var dialect = store.Configuration.SqlDialect;
-        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(yesSqlStoreOptions.AICollectionName);
         var table = $"{store.Configuration.TablePrefix}{documentTableName}";
         var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
         var quotedIdColumnName = dialect.QuoteForColumnName(nameof(Document.Id));

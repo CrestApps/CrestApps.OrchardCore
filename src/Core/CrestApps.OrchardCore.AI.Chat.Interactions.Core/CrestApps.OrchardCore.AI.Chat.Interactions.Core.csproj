@@ -21,4 +21,8 @@
     <PackageReference Include="CrestApps.Core.AI.Chat" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+
 </Project>

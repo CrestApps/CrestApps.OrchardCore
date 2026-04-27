@@ -1,11 +1,12 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.Data.YesSql;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
@@ -36,10 +37,10 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionPromptDataMigrations>>();
             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-
+            var yesSqlStoreOptions = scope.ServiceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
             var dialect = store.Configuration.SqlDialect;
 
-            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(yesSqlStoreOptions.AICollectionName);
             var table = $"{store.Configuration.TablePrefix}{documentTableName}";
             var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
 
@@ -135,7 +136,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     CreatedUtc = createdUtc,
                                 };
 
-                                await session.SaveAsync(prompt, collection: AIConstants.AICollectionName);
+                                await session.SaveAsync(prompt, collection: yesSqlStoreOptions.AICollectionName);
                             }
 
                             // Remove the Prompts property from the original document.

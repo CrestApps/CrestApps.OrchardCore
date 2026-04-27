@@ -1,10 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
-using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Markdown;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -50,18 +48,13 @@ public static class ServiceCollectionExtensions
         services
             .AddCatalogManagers()
             .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
-            .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
-            .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
-            .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<DefaultSpeechVoicePresenter>()
-            .AddScoped<AIProviderConnectionStore>()
-            .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
-            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AICollectionName));
+            .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>();
 
         services.Configure<TemplateOptions>(o =>
         {
@@ -100,11 +93,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
-            .AddScoped<DefaultAIDataSourceStore>()
-            .AddScoped<IAIDataSourceStore>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
-            .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
-            .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
-            .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
+            .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>();
 
         return services;
     }

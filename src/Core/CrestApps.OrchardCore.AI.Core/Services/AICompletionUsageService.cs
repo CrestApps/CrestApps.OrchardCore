@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,7 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIChatSessionEventService _chatSessionEventService;
     private readonly GeneralAIOptions _generalAIOptions;
+    private readonly YesSqlStoreOptions _yesSqlStoreOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionUsageService"/> class.
@@ -35,13 +37,15 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
         AIChatSessionEventService chatSessionEventService,
-        IOptions<GeneralAIOptions> generalAIOptions)
+        IOptions<GeneralAIOptions> generalAIOptions,
+        IOptions<YesSqlStoreOptions> yesSqlStoreOptions)
     {
         _session = session;
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
         _chatSessionEventService = chatSessionEventService;
         _generalAIOptions = generalAIOptions.Value;
+        _yesSqlStoreOptions = yesSqlStoreOptions.Value;
     }
 
     /// <summary>
@@ -63,7 +67,7 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
             record.UserName = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
         }
 
-        await _session.SaveAsync(record, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
+        await _session.SaveAsync(record, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
 
         if (!string.IsNullOrEmpty(record.SessionId) &&
             (record.InputTokenCount > 0 || record.OutputTokenCount > 0))
@@ -83,7 +87,7 @@ public sealed class AICompletionUsageService : IAICompletionUsageObserver
         DateTime? endDateUtc,
         CancellationToken cancellationToken = default)
     {
-        var query = _session.Query<AICompletionUsageRecord, AICompletionUsageIndex>(collection: AIConstants.AICollectionName);
+        var query = _session.Query<AICompletionUsageRecord, AICompletionUsageIndex>(collection: _yesSqlStoreOptions.AICollectionName);
 
         if (startDateUtc.HasValue)
         {

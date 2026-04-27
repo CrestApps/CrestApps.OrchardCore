@@ -4,7 +4,7 @@
 
 <div class="row mb-3">
     <div class="col-md-6">
-        <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
+        <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session inactivity timeout (minutes)"]</label>
         <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
         <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
     </div>

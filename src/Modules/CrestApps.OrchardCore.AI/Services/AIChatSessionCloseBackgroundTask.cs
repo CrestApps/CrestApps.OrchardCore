@@ -2,12 +2,13 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
@@ -47,6 +48,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var postCloseProcessor = serviceProvider.GetRequiredService<AIChatSessionPostCloseProcessor>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
+        var yesSqlStoreOptions = serviceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
         var utcNow = clock.UtcNow;
         var profiles = await profileManager.GetAsync(AIProfileType.Chat, cancellationToken);
@@ -58,8 +60,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            await CloseInactiveSessionsAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
-            await RetryPendingProcessingAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
+            await CloseInactiveSessionsAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, yesSqlStoreOptions, cancellationToken);
+            await RetryPendingProcessingAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, yesSqlStoreOptions, cancellationToken);
         }
     }
 
@@ -71,13 +73,14 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         AIProfile profile,
         DateTime utcNow,
         ILogger logger,
+        YesSqlStoreOptions yesSqlStoreOptions,
         CancellationToken cancellationToken)
     {
         var cutoffUtc = utcNow - GetInactivityTimeout(profile);
 
         var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
-            collection: AIConstants.AICollectionName)
+            collection: yesSqlStoreOptions.AICollectionName)
             .ListAsync(cancellationToken);
 
         foreach (var chatSession in inactiveSessions)
@@ -93,7 +96,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             var result = await RunPostCloseProcessingAsync(postCloseProcessor, profile, chatSession, prompts, logger, cancellationToken);
 
-            await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
+            await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
 
             await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, logger);
 
@@ -112,12 +115,13 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         AIProfile profile,
         DateTime utcNow,
         ILogger logger,
+        YesSqlStoreOptions yesSqlStoreOptions,
         CancellationToken cancellationToken)
     {
         var pendingSessions = (await session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.ProfileId == profile.ItemId
                 && (i.Status == ChatSessionStatus.Closed || i.Status == ChatSessionStatus.Abandoned),
-            collection: AIConstants.AICollectionName)
+            collection: yesSqlStoreOptions.AICollectionName)
             .ListAsync(cancellationToken))
             .Where(chatSession => chatSession.PostSessionProcessingStatus == PostSessionProcessingStatus.Pending)
             .ToArray();
@@ -132,7 +136,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             if (chatSession.PostSessionProcessingAttempts >= AIChatSessionPostCloseProcessor.MaxPostCloseAttempts)
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
-                await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
+                await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
 
                 logger.LogWarning(
                     "Post-close processing for session '{SessionId}' exceeded the maximum number of attempts ({MaxAttempts}).",
@@ -150,7 +154,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
             var result = await RunPostCloseProcessingAsync(postCloseProcessor, profile, chatSession, prompts, logger, cancellationToken);
 
-            await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
+            await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
 
             if (result.PostSessionTasksCompletedNow)
             {

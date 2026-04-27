@@ -1,7 +1,8 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
-using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedDataRecorder
 {
     private readonly ISession _session;
+    private readonly YesSqlStoreOptions _yesSqlStoreOptions;
     private readonly IClock _clock;
 
     /// <summary>
@@ -24,9 +26,11 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
     /// <param name="clock">The clock.</param>
     public AIChatSessionExtractedDataService(
         ISession session,
+        IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
         IClock clock)
     {
         _session = session;
+        _yesSqlStoreOptions = yesSqlStoreOptions.Value;
         _clock = clock;
     }
 
@@ -70,7 +74,7 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
                 pair => pair.Value.Values.ToList(),
                 StringComparer.OrdinalIgnoreCase);
 
-        await _session.SaveAsync(record, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
+        await _session.SaveAsync(record, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -88,7 +92,7 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
     {
         var query = _session.Query<AIChatSessionExtractedDataRecord, AIChatSessionExtractedDataIndex>(
             index => index.ProfileId == profileId,
-            collection: AIConstants.AICollectionName);
+            collection: _yesSqlStoreOptions.AICollectionName);
 
         if (startDateUtc.HasValue)
         {
@@ -109,6 +113,6 @@ public sealed class AIChatSessionExtractedDataService : IAIChatSessionExtractedD
     private async Task<AIChatSessionExtractedDataRecord> FindBySessionIdAsync(string sessionId) =>
         await _session.Query<AIChatSessionExtractedDataRecord, AIChatSessionExtractedDataIndex>(
             index => index.SessionId == sessionId,
-            collection: AIConstants.AICollectionName)
+            collection: _yesSqlStoreOptions.AICollectionName)
             .FirstOrDefaultAsync();
 }

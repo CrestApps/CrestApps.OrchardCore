@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
@@ -46,9 +46,9 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.GetOrCreate<AzureConnectionMetadata>();
-
-        if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
+        if (context.Model.TryGet<AzureConnectionMetadata>(out var metadata) &&
+            metadata.AuthenticationType == AzureAuthenticationType.ApiKey &&
+            string.IsNullOrEmpty(metadata.ApiKey))
         {
             context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureConnectionMetadata.ApiKey)]));
         }

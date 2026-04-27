@@ -14,18 +14,18 @@
         <div class="alert alert-warning" role="alert">
             <strong>@T["Danger zone"]</strong>
             <div>@T["You currently have {0} saved AI memories linked to your account.", Model.MemoryCount]</div>
-            <div>@T["Clearing memory permanently removes all saved preferences and other remembered details for your account. Save the profile to apply this action."]</div>
-        </div>
+            <div>@T["Clearing memory permanently removes all saved preferences and other remembered details for your account. Review the confirmation page before you continue."]</div>
 
-        <div class="form-check mb-2">
-            <input asp-for="ClearMemories" class="form-check-input" />
-            <label asp-for="ClearMemories" class="form-check-label">@T["Clear all saved AI memory"]</label>
-        </div>
-
-        <div class="form-check">
-            <input asp-for="ConfirmClearMemories" class="form-check-input" />
-            <label asp-for="ConfirmClearMemories" class="form-check-label">@T["I understand this permanently removes everything the AI has remembered about me."]</label>
-            <span asp-validation-for="ConfirmClearMemories" class="text-danger"></span>
+            <div class="mt-3">
+                <a
+                    asp-controller="UserMemory"
+                    asp-action="Clear"
+                    asp-route-userId="@Model.UserId"
+                    asp-route-returnUrl="@Model.ReturnUrl"
+                    class="btn btn-danger">
+                    @T["Clear saved AI memory"]
+                </a>
+            </div>
         </div>
     }
 </fieldset>

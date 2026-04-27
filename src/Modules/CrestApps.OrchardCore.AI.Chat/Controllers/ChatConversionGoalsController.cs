@@ -1,13 +1,14 @@
-﻿using System.Text;
+using System.Text;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 using YesSql;
@@ -23,6 +24,7 @@ public sealed class ChatConversionGoalsController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly ISession _session;
     private readonly IAuthorizationService _authorizationService;
+    private readonly YesSqlStoreOptions _yesSqlStoreOptions;
     private readonly IClock _clock;
 
     /// <summary>
@@ -36,11 +38,13 @@ public sealed class ChatConversionGoalsController : Controller
         IAIProfileManager profileManager,
         ISession session,
         IAuthorizationService authorizationService,
+        IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
         IClock clock)
     {
         _profileManager = profileManager;
         _session = session;
         _authorizationService = authorizationService;
+        _yesSqlStoreOptions = yesSqlStoreOptions.Value;
         _clock = clock;
     }
 
@@ -139,7 +143,7 @@ public sealed class ChatConversionGoalsController : Controller
     {
         var query = _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
             index => index.ProfileId == model.ProfileId,
-            collection: AIConstants.AICollectionName);
+            collection: _yesSqlStoreOptions.AICollectionName);
 
         if (model.StartDateUtc.HasValue)
         {

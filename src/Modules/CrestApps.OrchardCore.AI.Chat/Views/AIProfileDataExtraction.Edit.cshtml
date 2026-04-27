@@ -5,7 +5,7 @@
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" />
-        <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable Data Extraction"]</label>
+        <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable data extraction"]</label>
         <span class="hint dashed">@T["When enabled, the system will extract structured data from chat messages."]</span>
     </div>
 </div>
@@ -22,14 +22,14 @@
 
     <div class="row mb-3">
         <div class="col-md-6">
-            <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction Check Interval"]</label>
+            <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction check interval"]</label>
             <input type="number" class="form-control" asp-for="ExtractionCheckInterval" min="1" />
             <span class="hint">@T["Run extraction every N user messages. Default is 1 (every message)."]</span>
         </div>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">@T["Extraction Entries"]</label>
+        <label class="form-label">@T["Extraction entries"]</label>
         <span class="hint dashed d-block mb-2">@T["Define the fields to extract from the conversation."]</span>
 
         <div id="extractionEntriesContainer">

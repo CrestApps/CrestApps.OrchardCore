@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -32,11 +32,11 @@ public sealed class Startup : StartupBase
         services
             .AddCoreAIMemory()
             .AddCoreAIMemoryStoresYesSql()
+            .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>()
             .AddDataMigration<AIMemoryEntryMigrations>();
 
         services.AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
                 .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
-                .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()
                 .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
                 .AddScoped<AIMemoryIndexingService>()
                 .AddDataMigration<MemoryMetadataMigrations>()
@@ -46,7 +46,6 @@ public sealed class Startup : StartupBase
                 .AddSiteDisplayDriver<AIMemorySettingsDisplayDriver>()
                 .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services.Configure<StoreCollectionOptions>(o => o.Collections.Add(MemoryConstants.CollectionName));
         services.AddIndexProfileHandler<AIMemoryIndexProfileHandler>();
     }
 }

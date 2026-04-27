@@ -1,13 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
-using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users.Models;
 
@@ -16,36 +12,19 @@ namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ICatalogManager<AIMemoryEntry> _memoryManager;
     private readonly IAIMemoryStore _memoryStore;
-    private readonly INotifier _notifier;
-
-    internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UserMemoryDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
-    /// <param name="memoryManager">The memory manager.</param>
     /// <param name="memoryStore">The memory store.</param>
-    /// <param name="notifier">The notifier.</param>
-    /// <param name="htmlLocalizer">The html localizer.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        ICatalogManager<AIMemoryEntry> memoryManager,
-        IAIMemoryStore memoryStore,
-        INotifier notifier,
-        IHtmlLocalizer<UserMemoryDisplayDriver> htmlLocalizer,
-        IStringLocalizer<UserMemoryDisplayDriver> stringLocalizer)
+        IAIMemoryStore memoryStore)
     {
         _httpContextAccessor = httpContextAccessor;
-        _memoryManager = memoryManager;
         _memoryStore = memoryStore;
-        _notifier = notifier;
-        H = htmlLocalizer;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(User user, BuildEditorContext context)
@@ -58,48 +37,9 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
         return Initialize<EditUserMemoryViewModel>("UserMemory_Edit", async model =>
         {
             model.MemoryCount = await _memoryStore.CountByUserAsync(user.UserId);
+            model.UserId = user.UserId;
+            model.ReturnUrl = _httpContextAccessor.HttpContext?.Request.GetEncodedPathAndQuery();
         }).Location("Content:10");
-    }
-
-    public override async Task<IDisplayResult> UpdateAsync(User user, UpdateEditorContext context)
-    {
-        if (!IsCurrentUser(user))
-        {
-            return null;
-        }
-
-        var model = new EditUserMemoryViewModel();
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (!model.ClearMemories)
-        {
-            return Edit(user, context);
-        }
-
-        if (!model.ConfirmClearMemories)
-        {
-            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.ConfirmClearMemories)}", S["Please confirm that you want to permanently clear all saved AI memory."]);
-
-            return Edit(user, context);
-        }
-
-        var memories = await _memoryStore.GetByUserAsync(user.UserId, 0);
-
-        if (memories.Count == 0)
-        {
-            await _notifier.WarningAsync(H["No saved AI memory was found for your account."]);
-
-            return Edit(user, context);
-        }
-
-        foreach (var memory in memories)
-        {
-            await _memoryManager.DeleteAsync(memory);
-        }
-
-        await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
-
-        return Edit(user, context);
     }
 
     private bool IsCurrentUser(User user)

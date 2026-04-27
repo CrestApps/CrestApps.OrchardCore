@@ -1,13 +1,15 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
@@ -28,6 +30,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IAIChatSessionPromptStore _promptStore;
 
     private readonly IEnumerable<IAIChatSessionHandler> _handlers;
+    private readonly YesSqlStoreOptions _yesSqlStoreOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -47,6 +50,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         ISession session,
         IAIChatSessionPromptStore promptStore,
         IEnumerable<IAIChatSessionHandler> handlers,
+        IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
         ILogger<DefaultAIChatSessionManager> logger)
     {
         _clock = clock;
@@ -55,7 +59,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _session = session;
         _promptStore = promptStore;
         _handlers = handlers;
-
+        _yesSqlStoreOptions = yesSqlStoreOptions.Value;
         _logger = logger;
     }
 
@@ -160,7 +164,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId, collection: AIConstants.AICollectionName);
+        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId, collection: _yesSqlStoreOptions.AICollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -212,7 +216,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
-        return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
+        return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: _yesSqlStoreOptions.AICollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -233,7 +237,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.AICollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: _yesSqlStoreOptions.AICollectionName)
                 .FirstOrDefaultAsync(cancellationToken);
         }
         else
@@ -245,7 +249,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                 throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
             }
 
-            var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
+            var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: _yesSqlStoreOptions.AICollectionName)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (chatSession?.UserId is not null || chatSession?.ClientId != clientId)
@@ -266,7 +270,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        return _session.SaveAsync(chatSession, collection: AIConstants.AICollectionName, cancellationToken: cancellationToken);
+        return _session.SaveAsync(chatSession, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -290,7 +294,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
-            collection: AIConstants.AICollectionName)
+            collection: _yesSqlStoreOptions.AICollectionName)
                 .FirstOrDefaultAsync(cancellationToken);
 
         if (chatSession == null)
@@ -305,7 +309,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         await _promptStore.DeleteAllPromptsAsync(chatSession.SessionId);
 
-        _session.Delete(chatSession, collection: AIConstants.AICollectionName);
+        _session.Delete(chatSession, collection: _yesSqlStoreOptions.AICollectionName);
 
         var deletedContext = new CrestApps.Core.Models.DeletedContext<AIChatSession>(chatSession);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
@@ -334,7 +338,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.UserId == userId && i.ProfileId == profileId,
-            collection: AIConstants.AICollectionName)
+            collection: _yesSqlStoreOptions.AICollectionName)
                 .ListAsync(cancellationToken);
 
         var totalDeleted = 0;
@@ -348,7 +352,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
             await _promptStore.DeleteAllPromptsAsync(session.SessionId);
 
-            _session.Delete(session, collection: AIConstants.AICollectionName);
+            _session.Delete(session, collection: _yesSqlStoreOptions.AICollectionName);
 
             var deletedContext = new CrestApps.Core.Models.DeletedContext<AIChatSession>(session);
             await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);

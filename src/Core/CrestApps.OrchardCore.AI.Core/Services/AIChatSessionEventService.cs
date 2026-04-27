@@ -1,5 +1,7 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -12,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AIChatSessionEventService
 {
     private readonly ISession _session;
+    private readonly YesSqlStoreOptions _storeOptions;
     private readonly IClock _clock;
 
     /// <summary>
@@ -21,9 +24,11 @@ public sealed class AIChatSessionEventService
     /// <param name="clock">The clock.</param>
     public AIChatSessionEventService(
         ISession session,
+        IOptions<YesSqlStoreOptions> storeOptions,
         IClock clock)
     {
         _session = session;
+        _storeOptions = storeOptions.Value;
         _clock = clock;
     }
 
@@ -51,7 +56,7 @@ public sealed class AIChatSessionEventService
             CreatedUtc = now,
         };
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -83,7 +88,7 @@ public sealed class AIChatSessionEventService
                 CreatedUtc = now,
             };
 
-            await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+            await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
             return;
         }
 
@@ -94,7 +99,7 @@ public sealed class AIChatSessionEventService
         evt.IsResolved = isResolved;
         evt.HandleTimeSeconds = (endTime - evt.SessionStartedUtc).TotalSeconds;
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -113,7 +118,7 @@ public sealed class AIChatSessionEventService
         evt.TotalInputTokens += inputTokens;
         evt.TotalOutputTokens += outputTokens;
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -134,7 +139,7 @@ public sealed class AIChatSessionEventService
         evt.AverageResponseLatencyMs =
             ((evt.AverageResponseLatencyMs * (evt.CompletionCount - 1)) + responseLatencyMs) / evt.CompletionCount;
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -151,7 +156,7 @@ public sealed class AIChatSessionEventService
 
         evt.IsResolved = isResolved;
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -170,7 +175,7 @@ public sealed class AIChatSessionEventService
         evt.ConversionScore = goalResults.Sum(r => r.Score);
         evt.ConversionMaxScore = goalResults.Sum(r => r.MaxScore);
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     /// <summary>
@@ -198,14 +203,14 @@ public sealed class AIChatSessionEventService
             evt.UserRating = null;
         }
 
-        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+        await _session.SaveAsync(evt, collection: _storeOptions.AICollectionName);
     }
 
     private async Task<AIChatSessionEvent> FindEventBySessionIdAsync(string sessionId)
     {
         return await _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
             i => i.SessionId == sessionId,
-            collection: AIConstants.AICollectionName)
+            collection: _storeOptions.AICollectionName)
                 .FirstOrDefaultAsync();
     }
 }
