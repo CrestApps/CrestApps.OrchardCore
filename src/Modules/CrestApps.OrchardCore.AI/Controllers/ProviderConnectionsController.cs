@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -29,7 +30,7 @@ namespace CrestApps.OrchardCore.AI.Controllers;
 public sealed class ProviderConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
+    private readonly IAIProviderConnectionStore _store;
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -54,6 +55,7 @@ public sealed class ProviderConnectionsController : Controller
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ProviderConnectionsController(
+        IAIProviderConnectionStore store,
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -64,6 +66,7 @@ public sealed class ProviderConnectionsController : Controller
         IHtmlLocalizer<ProviderConnectionsController> htmlLocalizer,
         IStringLocalizer<ProviderConnectionsController> stringLocalizer)
     {
+        _store = store;
         _manager = manager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
@@ -95,9 +98,7 @@ public sealed class ProviderConnectionsController : Controller
             return Forbid();
         }
 
-        var allEntries = await _manager.GetAllAsync();
-
-        IEnumerable<AIProviderConnection> filtered = allEntries;
+        IEnumerable<AIProviderConnection> filtered = await _store.GetAllAsync();
 
         if (!string.IsNullOrEmpty(options.Search))
         {
