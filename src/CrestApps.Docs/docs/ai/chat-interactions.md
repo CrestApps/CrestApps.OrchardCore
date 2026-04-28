@@ -45,6 +45,8 @@ Deployment dropdowns are grouped by connection, making it easy to find the right
 
 When a response cites uploaded or indexed content, the interaction UI renders `[doc:N]` markers as superscript citations and shows the resolved references beneath the assistant message.
 
+The admin **Chat Interactions** list includes integrated search, multi-select, and bulk actions through the shared list management resource used across CrestApps admin catalogs.
+
 ## Orchestration
 
 Each chat interaction session is bound to an orchestrator that manages the execution pipeline. The orchestrator handles:

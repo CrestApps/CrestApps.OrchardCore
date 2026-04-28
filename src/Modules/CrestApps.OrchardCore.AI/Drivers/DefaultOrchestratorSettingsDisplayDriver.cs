@@ -38,7 +38,7 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
         return Initialize<DefaultOrchestratorSettingsViewModel>("DefaultOrchestratorSettings_Edit", model =>
         {
             model.EnablePreemptiveRag = settings.EnablePreemptiveRag;
-        }).Location("Content:5%Default Orchestrator;1")
+        }).Location("Content:3%Default Orchestrator;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

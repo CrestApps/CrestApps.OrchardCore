@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
         // Use GetAwaiter().GetResult() as this runs once during options resolution.
         var settings = _siteService.GetSettings<CopilotSettings>();
 
-        if (settings.AuthenticationType != default)
+        if (settings.AuthenticationType != default || settings.HasStoredConfiguration())
         {
             options.AuthenticationType = settings.AuthenticationType;
         }

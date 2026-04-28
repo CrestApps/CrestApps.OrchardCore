@@ -1,4 +1,4 @@
-listManagementUI = function () {
+window.listManagementUI = function () {
 
     const defaultOptions = {
         clientSideSearch: true,

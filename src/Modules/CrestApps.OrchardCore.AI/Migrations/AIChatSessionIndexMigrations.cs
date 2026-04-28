@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.Extensions.Logging;
@@ -39,37 +39,47 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
     /// <summary>
     /// Updates the from1 async.
     /// </summary>
-    public static Task<int> UpdateFrom1Async()
+    public async Task<int> UpdateFrom1Async()
     {
-        return Task.FromResult(4);
+        await BackwardCompatibleMigrationStep();
+
+        return 4;
     }
 
     /// <summary>
-    /// Updates the from2 async.
+    /// Updates the from1 async.
     /// </summary>
-    public static Task<int> UpdateFrom2Async()
+    public async Task<int> UpdateFrom2Async()
     {
-        return Task.FromResult(4);
+        await BackwardCompatibleMigrationStep();
+
+        return 2;
     }
 
     /// <summary>
-    /// Updates the from3 async.
+    /// Updates the from1 async.
     /// </summary>
     public async Task<int> UpdateFrom3Async()
+    {
+        await BackwardCompatibleMigrationStep();
+
+        return 4;
+    }
+
+    private async Task BackwardCompatibleMigrationStep()
     {
         try
         {
             await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
             {
                 table.AddColumn<ChatSessionStatus>("Status");
+                table.AddColumn<DateTime>("LastActivityUtc");
             }, collection: _option.AICollectionName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add the Status column to the AI chat session index table.");
+            _logger.LogError(ex, "Failed to add the Status and LastActivityUtc columns to the AI chat session index table.");
             throw;
         }
-
-        return 4;
     }
 }

@@ -68,7 +68,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
             var textToSpeechModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech);
             model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
-        }).Location("Content:4%Default Deployments;1")
+        }).Location("Content:2%Default Deployments;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

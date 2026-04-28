@@ -51,7 +51,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
         {
             model.EnableUserMemory = settings.EnableUserMemory ?? true;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:4.6%Chat Interactions;2")
+        }).Location("Content:6%Memory;2")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }

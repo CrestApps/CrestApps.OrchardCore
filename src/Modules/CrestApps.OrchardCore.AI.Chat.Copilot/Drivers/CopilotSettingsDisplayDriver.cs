@@ -77,6 +77,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             // Select list options
             model.AuthenticationTypes =
             [
+                new SelectListItem(S["Not configured"], nameof(CopilotAuthenticationType.NotConfigured)),
                 new SelectListItem(S["GitHub signed-in user"], nameof(CopilotAuthenticationType.GitHubOAuth)),
                 new SelectListItem(S["API key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
             ];
@@ -127,7 +128,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
                 context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client secret is required."]);
             }
         }
-        else
+        else if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
             // BYOK (API Key) validation
             settings.ProviderType = model.ProviderType;

@@ -6,6 +6,30 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Chat.Copilot.Settings;
 public sealed class CopilotSettingsExtensionsTests
 {
     [Fact]
+    public void HasStoredConfiguration_WhenNoValuesExist_ShouldReturnFalse()
+    {
+        var settings = new CopilotSettings
+        {
+            AuthenticationType = CopilotAuthenticationType.NotConfigured,
+        };
+
+        Assert.False(settings.HasStoredConfiguration());
+    }
+
+    [Fact]
+    public void HasStoredConfiguration_WhenDisabledWithStoredValues_ShouldReturnTrue()
+    {
+        var settings = new CopilotSettings
+        {
+            AuthenticationType = CopilotAuthenticationType.NotConfigured,
+            ClientId = "client-id",
+            ProtectedClientSecret = "protected-secret",
+        };
+
+        Assert.True(settings.HasStoredConfiguration());
+    }
+
+    [Fact]
     public void CopilotAuthenticationType_DefaultValue_ShouldBeNotConfigured()
     {
         Assert.Equal(CopilotAuthenticationType.NotConfigured, default(CopilotAuthenticationType));

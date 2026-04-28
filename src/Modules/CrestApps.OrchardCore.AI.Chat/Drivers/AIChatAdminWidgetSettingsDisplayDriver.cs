@@ -59,7 +59,7 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
                 .OrderBy(p => p.DisplayText ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.ItemId));
         })
-        .Location("Content:9%Admin Widget;1")
+        .Location("Content:7%Admin Widget;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AIPermissions.ManageAIProfiles));
     }
