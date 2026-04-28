@@ -53,7 +53,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
     {
         await BackwardCompatibleMigrationStep();
 
-        return 2;
+        return 4;
     }
 
     /// <summary>
