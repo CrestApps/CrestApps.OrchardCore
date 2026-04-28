@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -16,7 +16,7 @@ public static class AIProviderConnectionCatalogExtensions
     /// <param name="connectionName">The connection name or item identifier to match.</param>
     /// <returns>The matching <see cref="AIProviderConnection"/>, or <see langword="null"/> if not found.</returns>
     public static async ValueTask<AIProviderConnection> FindByConnectionNameAsync(
-        this INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
+        this IAIProviderConnectionStore connectionsCatalog,
         string providerName,
         string connectionName)
     {

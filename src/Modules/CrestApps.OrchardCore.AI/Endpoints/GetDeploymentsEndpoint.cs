@@ -1,6 +1,5 @@
-﻿using CrestApps.Core.AI.Deployments;
-using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
+using CrestApps.Core.AI.Connections;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -29,7 +28,7 @@ internal static class GetDeploymentsEndpoint
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
         [FromServices] IAIDeploymentManager deploymentManager,
-        [FromServices] INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
+        [FromServices] IAIProviderConnectionStore connectionsCatalog,
         [FromQuery] string providerName,
         [FromQuery] string connection)
     {

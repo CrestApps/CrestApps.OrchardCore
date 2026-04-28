@@ -3,10 +3,10 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly IAIProviderConnectionStore _connectionStore;
     private readonly AIOptions _aiOptions;
     private readonly IClock _clock;
 
@@ -36,13 +36,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
     /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
-        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
+        IAIProviderConnectionStore connectionsCatalog,
         IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _connectionsCatalog = connectionsCatalog;
+        _connectionStore = connectionsCatalog;
         _aiOptions = aiOptions.Value;
         _clock = clock;
         S = stringLocalizer;
@@ -88,13 +88,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         {
             if (hasConnectionName)
             {
-                var connections = await _connectionsCatalog.GetAsync(context.Model.ClientName, cancellationToken);
+                var connections = await _connectionStore.GetAsync(context.Model.ClientName, cancellationToken);
 
                 if (connections.Count == 0)
                 {
                     context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ClientName], [nameof(AIDeployment.ClientName)]));
                 }
-                else if (await _connectionsCatalog.FindByConnectionNameAsync(context.Model.ClientName, context.Model.ConnectionName) is null)
+                else if (await _connectionStore.FindByConnectionNameAsync(context.Model.ClientName, context.Model.ConnectionName) is null)
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }

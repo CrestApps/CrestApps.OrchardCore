@@ -1,4 +1,5 @@
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIOptions _aiOptions;
-    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly IAIProviderConnectionStore _connectionsStore;
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
@@ -24,16 +25,16 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     /// Initializes a new instance of the <see cref="AIDeploymentDisplayDriver"/> class.
     /// </summary>
     /// <param name="deploymentCatalog">The catalog for retrieving AI deployments by name.</param>
-    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name and source.</param>
+    /// <param name="connectionsStore">The catalog for retrieving AI provider connections by name and source.</param>
     /// <param name="aiOptions">The AI configuration options.</param>
     /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIDeploymentDisplayDriver(
         INamedCatalog<AIDeployment> deploymentCatalog,
-        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
+        IAIProviderConnectionStore connectionsStore,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
-        _connectionsCatalog = connectionsCatalog;
+        _connectionsStore = connectionsStore;
         _aiOptions = aiOptions.Value;
         _deploymentsCatalog = deploymentCatalog;
         S = stringLocalizer;
@@ -127,7 +128,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             var connectionModel = new EditDeploymentConnectionViewModel();
             await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
-            var connections = await _connectionsCatalog.GetAsync(deployment.ClientName);
+            var connections = await _connectionsStore.GetAsync(deployment.ClientName);
 
             if (connections.Count == 0)
             {
@@ -141,7 +142,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
                 }
                 else
                 {
-                    var connection = await _connectionsCatalog.FindByConnectionNameAsync(deployment.ClientName, connectionModel.ConnectionName);
+                    var connection = await _connectionsStore.FindByConnectionNameAsync(deployment.ClientName, connectionModel.ConnectionName);
 
                     if (connection is null)
                     {
@@ -174,8 +175,8 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     {
         var selectedConnection = string.IsNullOrWhiteSpace(deployment.ConnectionName)
             ? null
-            : await _connectionsCatalog.FindByConnectionNameAsync(deployment.ClientName, deployment.ConnectionName);
-        var connections = await _connectionsCatalog.GetAsync(deployment.ClientName);
+            : await _connectionsStore.FindByConnectionNameAsync(deployment.ClientName, deployment.ConnectionName);
+        var connections = await _connectionsStore.GetAsync(deployment.ClientName);
 
         model.ConnectionName = selectedConnection?.ItemId ?? deployment.ConnectionName;
         model.Connections = connections
