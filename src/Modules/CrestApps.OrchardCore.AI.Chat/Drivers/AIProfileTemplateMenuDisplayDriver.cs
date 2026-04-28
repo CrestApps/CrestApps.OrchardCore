@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -16,9 +17,8 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
     {
         return Initialize<AIProfileMenuViewModel>("AIProfileMenu_Edit", model =>
         {
-            if (template.Properties.ContainsKey(nameof(AIChatProfileSettings)))
+            if (template.TryGet<AIChatProfileSettings>(out var settings))
             {
-                var settings = template.GetOrCreate<AIChatProfileSettings>();
                 model.IsOnAdminMenu = settings.IsOnAdminMenu;
             }
             else

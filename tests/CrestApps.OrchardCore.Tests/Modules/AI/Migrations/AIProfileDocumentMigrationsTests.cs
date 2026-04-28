@@ -10,6 +10,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Chat.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;

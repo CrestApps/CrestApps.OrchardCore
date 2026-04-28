@@ -1,9 +1,11 @@
-﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
+using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -39,6 +41,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddScoped<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()

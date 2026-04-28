@@ -1,10 +1,8 @@
-﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.Mvc.Utilities;
 using OrchardCore.Navigation;
 
@@ -15,30 +13,26 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 /// </summary>
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
-    private readonly IAIProfileStore _profileStore;
-    private readonly AIOptions _aiOptions;
+    private readonly IAIProfileAdminMenuCacheService _cacheService;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatAdminMenu"/> class.
     /// </summary>
-    /// <param name="profileStore">The profile store.</param>
-    /// <param name="aiOptions">The ai options.</param>
+    /// <param name="cacheService">The cache service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChatAdminMenu(
-        IAIProfileStore profileStore,
-        IOptions<AIOptions> aiOptions,
+        IAIProfileAdminMenuCacheService cacheService,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {
-        _profileStore = profileStore;
-        _aiOptions = aiOptions.Value;
+        _cacheService = cacheService;
         S = stringLocalizer;
     }
 
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
+        var profiles = await _cacheService.GetProfilesAsync();
 
         builder
             .Add(S["Artificial Intelligence"], artificialIntelligence =>
