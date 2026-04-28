@@ -139,11 +139,17 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
             }
         }
 
-        if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
+        if (importedCount > 0)
         {
-            logger.LogInformation(
-                "Imported or updated {Count} legacy AI data sources into the indexed store.",
-                importedCount);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Imported or updated {Count} legacy AI data sources into the indexed store.",
+                    importedCount);
+            }
+
+            var session = serviceProvider.GetRequiredService<ISession>();
+            await session.SaveChangesAsync();
         }
     }
 

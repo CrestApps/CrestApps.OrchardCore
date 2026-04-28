@@ -3,18 +3,19 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Liquid;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
@@ -22,7 +23,10 @@ public sealed class AIProfileDocumentMigrationsTests
 {
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
-        Converters = { new JsonStringEnumConverter() },
+        Converters =
+        {
+            new JsonStringEnumConverter(),
+        },
     };
 
     [Fact]
@@ -145,22 +149,100 @@ public sealed class AIProfileDocumentMigrationsTests
     private static NamedCatalogManager<AIProfile> CreateManager(IEnumerable<AIProfile> profiles)
     {
         var catalog = new TestNamedCatalog(profiles);
-        var httpContextAccessor = new Mock<IHttpContextAccessor>();
-        httpContextAccessor.SetupGet(accessor => accessor.HttpContext).Returns(new DefaultHttpContext());
-
-        var deploymentCatalog = new Mock<INamedCatalog<AIDeployment>>();
-        var liquidTemplateManager = new Mock<ILiquidTemplateManager>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 3, 25, 19, 47, 47, DateTimeKind.Utc));
-
-        var handler = new AIProfileHandler(
-            deploymentCatalog.Object,
-            liquidTemplateManager.Object,
-            Mock.Of<IStringLocalizer<AIProfileHandler>>());
-
+        var coreHandler = CreateCoreProfileHandler(catalog);
         var logger = Mock.Of<ILogger<NamedCatalogManager<AIProfile>>>();
 
-        return new NamedCatalogManager<AIProfile>(catalog, [handler], logger);
+        return new NamedCatalogManager<AIProfile>(catalog, [coreHandler], logger);
+    }
+
+    private static ICatalogEntryHandler<AIProfile> CreateCoreProfileHandler(INamedCatalog<AIProfile> catalog)
+    {
+        var handlerAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(assembly => string.Equals(assembly.GetName().Name, "CrestApps.Core.AI", StringComparison.Ordinal))
+            ?? Assembly.Load("CrestApps.Core.AI");
+        var handlerType = handlerAssembly.GetType("CrestApps.Core.AI.Handlers.AIProfileHandler");
+        Assert.NotNull(handlerType);
+        var constructor = Assert.Single(handlerType.GetConstructors());
+        var handler = constructor.Invoke(constructor.GetParameters()
+            .Select(parameter => ResolveCoreProfileHandlerArgument(parameter.ParameterType, handlerType, catalog))
+            .ToArray());
+
+        return Assert.IsAssignableFrom<ICatalogEntryHandler<AIProfile>>(handler);
+    }
+
+    private static object ResolveCoreProfileHandlerArgument(Type parameterType, Type handlerType, INamedCatalog<AIProfile> catalog)
+    {
+        if (parameterType == typeof(INamedCatalog<AIProfile>))
+        {
+            return catalog;
+        }
+
+        if (parameterType == typeof(IAIProfileStore))
+        {
+            return catalog;
+        }
+
+        if (parameterType == typeof(INamedCatalog<AIDeployment>))
+        {
+            return new TestDeploymentCatalog();
+        }
+
+        if (parameterType == typeof(IAIDeploymentStore))
+        {
+            return CreateDeploymentStore();
+        }
+
+        if (parameterType == typeof(ILiquidTemplateManager))
+        {
+            return Mock.Of<ILiquidTemplateManager>();
+        }
+
+        if (parameterType == typeof(IHttpContextAccessor))
+        {
+            return new HttpContextAccessor();
+        }
+
+        if (parameterType == typeof(TimeProvider))
+        {
+            return TimeProvider.System;
+        }
+
+        if (parameterType == typeof(IStringLocalizer<>).MakeGenericType(handlerType))
+        {
+            var localizerType = typeof(PassThroughStringLocalizer<>).MakeGenericType(handlerType);
+            var localizer = Activator.CreateInstance(localizerType);
+            Assert.NotNull(localizer);
+
+            return localizer;
+        }
+
+        if (parameterType.IsGenericType &&
+            parameterType.GetGenericTypeDefinition() == typeof(ILogger<>))
+        {
+            var loggerType = typeof(NullLogger<>).MakeGenericType(parameterType.GenericTypeArguments[0]);
+            var instanceProperty = loggerType.GetProperty(nameof(NullLogger<object>.Instance), BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(instanceProperty);
+
+            var logger = instanceProperty.GetValue(null);
+            Assert.NotNull(logger);
+
+            return logger;
+        }
+
+        throw new InvalidOperationException($"Unsupported {handlerType.FullName} constructor dependency: {parameterType.FullName}");
+    }
+
+    private static IAIDeploymentStore CreateDeploymentStore()
+    {
+        var deploymentStore = new Mock<IAIDeploymentStore>();
+        deploymentStore.Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AIDeployment>());
+        deploymentStore.Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AIDeployment)null);
+        deploymentStore.Setup(store => store.FindByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AIDeployment)null);
+
+        return deploymentStore.Object;
     }
 
     private static JsonObject CreateLegacyProfileToken()
@@ -277,6 +359,17 @@ public sealed class AIProfileDocumentMigrationsTests
         };
     }
 
+    private sealed class PassThroughStringLocalizer<T> : IStringLocalizer<T>
+    {
+        public LocalizedString this[string name] => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments] => new(name, string.Format(name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+
+        public PassThroughStringLocalizer<T> WithCulture(System.Globalization.CultureInfo culture) => this;
+    }
+
     private static bool InvokeNormalizePersistedProfileDocument(JsonObject profileDocument)
     {
         var method = typeof(Startup).Assembly
@@ -286,7 +379,7 @@ public sealed class AIProfileDocumentMigrationsTests
         return (bool)method.Invoke(null, [profileDocument]);
     }
 
-    private sealed class TestNamedCatalog : INamedCatalog<AIProfile>
+    private sealed class TestNamedCatalog : IAIProfileStore
     {
         private readonly List<AIProfile> _profiles;
 
@@ -311,6 +404,14 @@ public sealed class AIProfileDocumentMigrationsTests
 
             return ValueTask.FromResult<IReadOnlyCollection<AIProfile>>(
                 _profiles.Where(profile => idSet.Contains(profile.ItemId)).ToList());
+        }
+
+        public ValueTask<IReadOnlyCollection<AIProfile>> GetByTypeAsync(
+            AIProfileType type,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<IReadOnlyCollection<AIProfile>>(
+                _profiles.Where(profile => profile.Type == type).ToList());
         }
 
         public ValueTask<PageResult<AIProfile>> PageAsync<TQuery>(
@@ -354,5 +455,55 @@ public sealed class AIProfileDocumentMigrationsTests
             return ValueTask.FromResult(
                 _profiles.FirstOrDefault(profile => string.Equals(profile.Name, name, StringComparison.Ordinal)));
         }
+    }
+
+    private sealed class TestDeploymentCatalog : INamedCatalog<AIDeployment>
+    {
+        public ValueTask<AIDeployment> FindByIdAsync(
+            string id,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<AIDeployment>(null);
+
+        public ValueTask<IReadOnlyCollection<AIDeployment>> GetAllAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyCollection<AIDeployment>>(Array.Empty<AIDeployment>());
+
+        public ValueTask<IReadOnlyCollection<AIDeployment>> GetAsync(
+            IEnumerable<string> ids,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyCollection<AIDeployment>>(Array.Empty<AIDeployment>());
+
+        public ValueTask<PageResult<AIDeployment>> PageAsync<TQuery>(
+            int page,
+            int pageSize,
+            TQuery context,
+            CancellationToken cancellationToken = default)
+            where TQuery : QueryContext
+        {
+            return ValueTask.FromResult(new PageResult<AIDeployment>
+            {
+                Count = 0,
+                Entries = [],
+            });
+        }
+
+        public ValueTask<bool> DeleteAsync(
+            AIDeployment entry,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(false);
+
+        public ValueTask CreateAsync(
+            AIDeployment entry,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask UpdateAsync(
+            AIDeployment entry,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<AIDeployment> FindByNameAsync(
+            string name,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<AIDeployment>(null);
     }
 }
