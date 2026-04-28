@@ -36,6 +36,10 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 3. **Automatic Indexing** — Documents from the source index are chunked, embedded, and stored in the KB index for efficient retrieval.
 4. **AI Integration** — Attach data sources to AI profiles or chat interactions. The RAG tool searches the KB index and provides relevant context to the AI model.
 
+:::tip
+When upgrading older tenants, the data-source migrations now backfill missing **Source Index**, **Knowledge Base Index**, and default key/title/content field mappings from the current index-profile configuration when those values were not stored in the original legacy document payload.
+:::
+
 ## Configuration
 
 ### Site Settings

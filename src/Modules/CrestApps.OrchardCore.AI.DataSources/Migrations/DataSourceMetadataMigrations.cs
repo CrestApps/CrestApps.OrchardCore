@@ -1,14 +1,22 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Services;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Entities;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
 using YesSql;
 using YesSql.Sql;
 
@@ -21,6 +29,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private const int _batchSize = 50;
     private const string _legacyDocumentTypePrefix =
         "CrestApps.OrchardCore.Models.DictionaryDocument`1[[CrestApps.OrchardCore.AI.Models.AIDataSource, CrestApps.OrchardCore.AI.Abstractions";
+    private const string _knowledgeBaseIndexUniqueName = "AI Knowledge Base Warehouse";
 
     private readonly ShellSettings _shellSettings;
 
@@ -40,12 +49,12 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 2;
+            return 3;
         }
 
         ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -63,6 +72,21 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
+    public int UpdateFrom2()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 3;
+        }
+
+        ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
+
+        return 3;
+    }
+
     private static async Task MigrateLegacyDataSourcesAsync(IServiceProvider serviceProvider)
     {
         await ImportLegacyDataSourcesAsync(serviceProvider);
@@ -74,6 +98,8 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
         var store = serviceProvider.GetRequiredService<IStore>();
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
+        var indexProfileStore = serviceProvider.GetRequiredService<IIndexProfileStore>();
+        var dataSourceOptions = serviceProvider.GetRequiredService<IOptions<AIDataSourceOptions>>().Value;
         var logger = serviceProvider.GetRequiredService<ILogger<DataSourceMetadataMigrations>>();
 
         var dialect = store.Configuration.SqlDialect;
@@ -118,6 +144,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
                         continue;
                     }
 
+                    MigrateLegacySourceIndexProfileName(dataSourceObject);
                     dataSourceObject[nameof(AIDataSource.ItemId)] ??= record.Key;
 
                     var itemId = dataSourceObject[nameof(AIDataSource.ItemId)]?.GetValue<string>();
@@ -137,6 +164,13 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
                         dataSource = await dataSourceManager.NewAsync(dataSourceObject);
                         dataSource.ItemId = itemId;
                     }
+
+                    await PopulateIndexConfigurationAsync(
+                        serviceProvider,
+                        indexProfileStore,
+                        dataSourceOptions,
+                        dataSource,
+                        logger);
 
                     var validationResult = await dataSourceManager.ValidateAsync(dataSource);
                     if (!validationResult.Succeeded)
@@ -180,6 +214,172 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
             await profileStore.UpdateAsync(profile);
         }
+    }
+
+    private static void MigrateLegacySourceIndexProfileName(JsonObject dataSourceObject)
+    {
+        if (dataSourceObject[nameof(AIDataSource.SourceIndexProfileName)]?.GetValue<string>() is { Length: > 0 })
+        {
+            return;
+        }
+
+        if (dataSourceObject["ProfileSource"]?.GetValue<string>() is not { Length: > 0 } profileSource)
+        {
+            return;
+        }
+
+        dataSourceObject[nameof(AIDataSource.SourceIndexProfileName)] = profileSource;
+    }
+
+    private static async Task PopulateIndexConfigurationAsync(
+        IServiceProvider serviceProvider,
+        IIndexProfileStore indexProfileStore,
+        AIDataSourceOptions dataSourceOptions,
+        AIDataSource dataSource,
+        ILogger logger)
+    {
+        if (!string.IsNullOrWhiteSpace(dataSource.SourceIndexProfileName))
+        {
+            var sourceProfile = await indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
+
+            if (sourceProfile != null)
+            {
+                var masterProfiles = await indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType);
+
+                if (TryPopulateIndexConfiguration(dataSource, sourceProfile, masterProfiles, dataSourceOptions))
+                {
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(dataSource.AIKnowledgeBaseIndexProfileName))
+                {
+                    var knowledgeBaseIndex = await GetOrCreateKnowledgeBaseIndexAsync(
+                        serviceProvider,
+                        sourceProfile.ProviderName,
+                        logger);
+
+                    if (knowledgeBaseIndex != null)
+                    {
+                        dataSource.AIKnowledgeBaseIndexProfileName = knowledgeBaseIndex.Name;
+                        TryPopulateFieldMapping(dataSource, sourceProfile, dataSourceOptions);
+                    }
+                }
+            }
+        }
+    }
+
+    private static bool TryPopulateIndexConfiguration(
+        AIDataSource dataSource,
+        IndexProfile sourceProfile,
+        IEnumerable<IndexProfile> masterProfiles,
+        AIDataSourceOptions dataSourceOptions)
+    {
+        if (string.IsNullOrWhiteSpace(dataSource.AIKnowledgeBaseIndexProfileName))
+        {
+            var knowledgeBaseIndex = masterProfiles
+                .FirstOrDefault(profile => string.Equals(profile.ProviderName, sourceProfile.ProviderName, StringComparison.OrdinalIgnoreCase))
+                ?? masterProfiles.FirstOrDefault();
+
+            if (knowledgeBaseIndex != null)
+            {
+                dataSource.AIKnowledgeBaseIndexProfileName = knowledgeBaseIndex.Name;
+            }
+        }
+
+        return TryPopulateFieldMapping(dataSource, sourceProfile, dataSourceOptions);
+    }
+
+    private static bool TryPopulateFieldMapping(
+        AIDataSource dataSource,
+        IndexProfile sourceProfile,
+        AIDataSourceOptions dataSourceOptions)
+    {
+        if (dataSourceOptions.GetFieldMapping(sourceProfile.ProviderName, sourceProfile.Type) is not DataSourceFieldMapping fieldMapping)
+        {
+            return !string.IsNullOrWhiteSpace(dataSource.ContentFieldName);
+        }
+
+        dataSource.KeyFieldName ??= fieldMapping.DefaultKeyField;
+        dataSource.TitleFieldName ??= fieldMapping.DefaultTitleField;
+        dataSource.ContentFieldName ??= fieldMapping.DefaultContentField;
+
+        return !string.IsNullOrWhiteSpace(dataSource.ContentFieldName);
+    }
+
+    private static async Task<IndexProfile> GetOrCreateKnowledgeBaseIndexAsync(
+        IServiceProvider serviceProvider,
+        string providerName,
+        ILogger logger)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return null;
+        }
+
+        var indexProfileManager = serviceProvider.GetService<IIndexProfileManager>();
+        if (indexProfileManager is null)
+        {
+            return null;
+        }
+
+        var knowledgeBaseIndex = await indexProfileManager.FindByNameAsync(_knowledgeBaseIndexUniqueName);
+        if (knowledgeBaseIndex != null)
+        {
+            return knowledgeBaseIndex;
+        }
+
+        var indexManager = serviceProvider.GetKeyedService<IIndexManager>(providerName);
+        if (indexManager is null)
+        {
+            logger.LogWarning(
+                "Unable to create the AI knowledge base index profile for provider '{ProviderName}' because the index manager is missing.",
+                providerName);
+
+            return null;
+        }
+
+        knowledgeBaseIndex = await indexProfileManager.NewAsync(providerName, DataSourceConstants.IndexingTaskType, new JsonObject
+        {
+            { "Name", _knowledgeBaseIndexUniqueName },
+            { "IndexName", "AIKnowledgeBaseWarehouse" },
+        });
+
+        knowledgeBaseIndex.Put(await FindFirstEmbeddingMetadataAsync(serviceProvider, logger));
+        await indexProfileManager.CreateAsync(knowledgeBaseIndex);
+
+        if (!await indexManager.ExistsAsync(knowledgeBaseIndex.IndexFullName) &&
+            !await indexManager.CreateAsync(knowledgeBaseIndex))
+        {
+            logger.LogWarning("Unable to create the '{IndexName}' knowledge base index in provider '{ProviderName}'.", _knowledgeBaseIndexUniqueName, providerName);
+
+            await indexProfileManager.DeleteAsync(knowledgeBaseIndex);
+
+            return null;
+        }
+
+        return knowledgeBaseIndex;
+    }
+
+    private static async Task<DataSourceIndexProfileMetadata> FindFirstEmbeddingMetadataAsync(IServiceProvider serviceProvider, ILogger logger)
+    {
+        var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
+        var deployment = (await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)).FirstOrDefault();
+
+        if (deployment != null)
+        {
+            return new DataSourceIndexProfileMetadata
+            {
+                EmbeddingDeploymentId = deployment.ItemId,
+            };
+        }
+
+        logger.LogWarning(
+            "No embedding deployment was found. " +
+            "The 'AI Knowledge Base Warehouse' index was created without an embedding deployment. " +
+            "To enable knowledge base indexing, configure an embedding deployment, " +
+            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding deployment.");
+
+        return new DataSourceIndexProfileMetadata();
     }
 
     private static IEnumerable<IReadOnlyList<Document>> BatchDocuments(List<Document> documents)
