@@ -8,6 +8,7 @@ using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -484,10 +485,10 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         if (deployment != null)
         {
-            return new DataSourceIndexProfileMetadata
-            {
-                EmbeddingDeploymentId = deployment.ItemId,
-            };
+            var metadata = new DataSourceIndexProfileMetadata();
+            metadata.SetEmbeddingDeploymentName(deployment.Name);
+
+            return metadata;
         }
 
         logger.LogWarning(

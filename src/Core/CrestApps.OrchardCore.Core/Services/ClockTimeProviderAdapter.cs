@@ -1,8 +1,8 @@
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+namespace CrestApps.OrchardCore.Core.Services;
 
-internal sealed class ClockTimeProviderAdapter : TimeProvider
+public sealed class ClockTimeProviderAdapter : TimeProvider
 {
     private readonly IClock _clock;
 

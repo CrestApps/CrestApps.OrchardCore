@@ -52,12 +52,6 @@ public static class IndexProfileEmbeddingMetadataAccessor
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentNullException.ThrowIfNull(metadata);
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        metadata.EmbeddingProviderName = null;
-        metadata.EmbeddingConnectionName = null;
-        metadata.EmbeddingDeploymentName = null;
-#pragma warning restore CS0618 // Type or member is obsolete
-
         indexProfile.Put(metadata);
         indexProfile.Remove(ChatInteractionMetadataKey);
         indexProfile.Remove(AIMemoryMetadataKey);
@@ -70,12 +64,11 @@ public static class IndexProfileEmbeddingMetadataAccessor
             return;
         }
 
-        target.EmbeddingDeploymentId ??= source.EmbeddingDeploymentId;
+        var sourceEmbeddingDeploymentName = source.GetEmbeddingDeploymentName();
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        target.EmbeddingProviderName ??= source.EmbeddingProviderName;
-        target.EmbeddingConnectionName ??= source.EmbeddingConnectionName;
-        target.EmbeddingDeploymentName ??= source.EmbeddingDeploymentName;
-#pragma warning restore CS0618 // Type or member is obsolete
+        if (string.IsNullOrWhiteSpace(target.GetEmbeddingDeploymentName()) && !string.IsNullOrWhiteSpace(sourceEmbeddingDeploymentName))
+        {
+            target.SetEmbeddingDeploymentName(sourceEmbeddingDeploymentName);
+        }
     }
 }

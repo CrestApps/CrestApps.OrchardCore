@@ -41,7 +41,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
-            .AddScoped<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
+            .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()

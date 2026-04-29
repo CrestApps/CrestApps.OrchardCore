@@ -1,8 +1,11 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
+using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 
@@ -28,7 +31,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The matching <see cref="SearchIndexProfile"/>, or <see langword="null"/> if not found.</returns>
     public async ValueTask<SearchIndexProfile> FindByNameAsync(string name, CancellationToken cancellationToken = default)
-        => Map(await _store.FindByNameAsync(name));
+        => MapToSearchIndexProfile(await _store.FindByNameAsync(name));
 
     /// <summary>
     /// Retrieves all search index profiles of the specified type.
@@ -36,7 +39,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// <param name="type">The index profile type to filter by.</param>
     /// <returns>A read-only collection of matching <see cref="SearchIndexProfile"/> entries.</returns>
     public async Task<IReadOnlyCollection<SearchIndexProfile>> GetByTypeAsync(string type)
-        => (await _store.GetByTypeAsync(type)).Select(Map).ToArray();
+        => (await _store.GetByTypeAsync(type)).Select(MapToSearchIndexProfile).ToArray();
 
     /// <summary>
     /// Finds a search index profile by its unique identifier.
@@ -45,7 +48,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The matching <see cref="SearchIndexProfile"/>, or <see langword="null"/> if not found.</returns>
     public async ValueTask<SearchIndexProfile> FindByIdAsync(string id, CancellationToken cancellationToken = default)
-        => Map(await _store.FindByIdAsync(id));
+        => MapToSearchIndexProfile(await _store.FindByIdAsync(id));
 
     /// <summary>
     /// Retrieves search index profiles matching the specified identifiers.
@@ -64,7 +67,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
 
         return (await _store.GetAllAsync())
             .Where(profile => idSet.Contains(profile.Id))
-            .Select(Map)
+            .Select(MapToSearchIndexProfile)
             .ToArray();
     }
 
@@ -74,7 +77,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A read-only collection of all <see cref="SearchIndexProfile"/> entries.</returns>
     public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAllAsync(CancellationToken cancellationToken = default)
-        => (await _store.GetAllAsync()).Select(Map).ToArray();
+        => (await _store.GetAllAsync()).Select(MapToSearchIndexProfile).ToArray();
 
     /// <summary>
     /// Returns a paginated list of search index profiles.
@@ -103,10 +106,10 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     }
 
     public async ValueTask CreateAsync(SearchIndexProfile record, CancellationToken cancellationToken = default)
-        => await _store.CreateAsync(Map(record));
+        => await _store.CreateAsync(MapToIndexProfile(record));
 
     public async ValueTask UpdateAsync(SearchIndexProfile record, CancellationToken cancellationToken = default)
-        => await _store.UpdateAsync(Map(record));
+        => await _store.UpdateAsync(MapToIndexProfile(record));
 
     /// <summary>
     /// Deletes the specified search index profile.
@@ -115,16 +118,18 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns><see langword="true"/> if the profile was deleted; otherwise <see langword="false"/>.</returns>
     public async ValueTask<bool> DeleteAsync(SearchIndexProfile entry, CancellationToken cancellationToken = default)
-        => await _store.DeleteAsync(Map(entry));
+        => await _store.DeleteAsync(MapToIndexProfile(entry));
 
-    private static SearchIndexProfile Map(IndexProfile profile)
+    private static SearchIndexProfile MapToSearchIndexProfile(IndexProfile profile)
     {
         if (profile == null)
         {
             return null;
         }
 
-        return new SearchIndexProfile
+        profile.TryGet(out DataSourceIndexProfileMetadata metadata);
+
+        var searchIndexProfile = new SearchIndexProfile
         {
             ItemId = profile.Id,
             Name = profile.Name,
@@ -134,13 +139,17 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
             Type = profile.Type,
             Properties = DeserializeProperties(profile.Properties),
         };
+
+        searchIndexProfile.SetEmbeddingDeploymentName(metadata?.GetEmbeddingDeploymentName());
+
+        return searchIndexProfile;
     }
 
-    private static IndexProfile Map(SearchIndexProfile profile)
+    private static IndexProfile MapToIndexProfile(SearchIndexProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        return new IndexProfile
+        var indexProfile = new IndexProfile
         {
             Id = profile.ItemId,
             Name = profile.Name,
@@ -150,6 +159,27 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
             Type = profile.Type,
             Properties = SerializeProperties(profile.Properties),
         };
+
+        profile.TryGet(out DataSourceIndexProfileMetadata metadata);
+        var embeddingDeploymentName = profile.GetEmbeddingDeploymentName();
+
+        metadata ??= string.IsNullOrWhiteSpace(embeddingDeploymentName)
+            ? null
+            : new DataSourceIndexProfileMetadata
+            {
+            };
+
+        if (metadata != null)
+        {
+            if (string.IsNullOrWhiteSpace(metadata.GetEmbeddingDeploymentName()))
+            {
+                metadata.SetEmbeddingDeploymentName(embeddingDeploymentName);
+            }
+
+            IndexProfileEmbeddingMetadataAccessor.StoreMetadata(indexProfile, metadata);
+        }
+
+        return indexProfile;
     }
 
     private static Dictionary<string, object> DeserializeProperties(JsonObject properties)

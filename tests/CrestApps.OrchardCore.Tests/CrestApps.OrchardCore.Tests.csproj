@@ -53,6 +53,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Core\Services\OrchardCoreSearchIndexProfileStoreTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

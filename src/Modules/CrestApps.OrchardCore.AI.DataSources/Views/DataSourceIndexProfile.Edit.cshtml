@@ -1,12 +1,12 @@
 @model CrestApps.OrchardCore.AI.DataSources.ViewModels.EditDataSourceIndexProfileViewModel
 
 <div class="mb-3">
-    <label asp-for="EmbeddingDeploymentId" class="form-label">@T["Embedding deployment"]</label>
+    <label asp-for="EmbeddingDeploymentName" class="form-label">@T["Embedding deployment"]</label>
 
     @if (Model.IsLocked)
     {
         <input type="text" class="form-control" value="@Model.EmbeddingDeploymentText" readonly />
-        <input type="hidden" asp-for="EmbeddingDeploymentId" />
+        <input type="hidden" asp-for="EmbeddingDeploymentName" />
         <span class="hint">@T["The embedding deployment cannot be changed after the index is created."]</span>
     }
     else if (Model.EmbeddingDeployments.Count == 0)
@@ -18,7 +18,7 @@
     }
     else
     {
-        <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+        <select asp-for="EmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
             <option value="">@T["Select an embedding deployment"]</option>
         </select>
 

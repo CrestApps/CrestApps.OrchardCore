@@ -43,11 +43,14 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
         return Initialize<ChatInteractionIndexProfileViewModel>("ChatInteractionIndexProfile_Edit", async model =>
         {
             var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
-            var selectedDeployment = await EmbeddingDeploymentResolver.FindEmbeddingDeploymentAsync(_deploymentManager, metadata);
+            var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+            var selectedDeployment = string.IsNullOrWhiteSpace(embeddingDeploymentName)
+                ? null
+                : await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
             var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
 
-            model.EmbeddingDeploymentId = selectedDeployment?.ItemId ?? metadata.EmbeddingDeploymentId;
-            model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentId);
+            model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
+            model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
         }).Location("Content:3");
     }
 
@@ -62,13 +65,13 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.EmbeddingDeploymentId))
+        if (string.IsNullOrEmpty(model.EmbeddingDeploymentName))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["Embedding deployment is required."]);
             return Edit(indexProfile, context);
         }
 
-        var deployment = await _deploymentManager.FindByIdAsync(model.EmbeddingDeploymentId);
+        var deployment = await _deploymentManager.FindByNameAsync(model.EmbeddingDeploymentName);
 
         if (deployment == null || !deployment.SupportsType(AIDeploymentType.Embedding))
         {
@@ -77,7 +80,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
         }
 
         var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
-        metadata.EmbeddingDeploymentId = deployment.ItemId;
+        metadata.SetEmbeddingDeploymentName(deployment.Name);
 
         IndexProfileEmbeddingMetadataAccessor.StoreMetadata(indexProfile, metadata);
 
@@ -89,7 +92,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
         return string.Equals(AIConstants.AIDocumentsIndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static List<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentId)
+    private static List<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentName)
     {
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
@@ -107,10 +110,10 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(GetDeploymentDisplayText(deployment), deployment.ItemId)
+                return new SelectListItem(GetDeploymentDisplayText(deployment), deployment.Name)
                 {
                     Group = group,
-                    Selected = string.Equals(deployment.ItemId, selectedDeploymentId, StringComparison.OrdinalIgnoreCase),
+                    Selected = string.Equals(deployment.Name, selectedDeploymentName, StringComparison.OrdinalIgnoreCase),
                 };
             })
             .ToList();

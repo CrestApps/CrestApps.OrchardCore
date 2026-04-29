@@ -9,9 +9,9 @@ namespace CrestApps.OrchardCore.AI.Memory.ViewModels;
 public class AIMemoryIndexProfileViewModel
 {
     /// <summary>
-    /// Gets or sets the embedding deployment id.
+    /// Gets or sets the embedding deployment name.
     /// </summary>
-    public string EmbeddingDeploymentId { get; set; }
+    public string EmbeddingDeploymentName { get; set; }
 
     /// <summary>
     /// Gets or sets the embedding deployments.

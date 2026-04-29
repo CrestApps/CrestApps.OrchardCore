@@ -1,7 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
@@ -14,7 +14,7 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
     private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(15);
 
     private readonly IMemoryCache _memoryCache;
-    private readonly IAIProfileStore _aIProfileStore;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAIProfileAdminMenuCacheService"/> class.
@@ -23,10 +23,10 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
     /// <param name="serviceScopeFactory">The service scope factory.</param>
     public DefaultAIProfileAdminMenuCacheService(
         IMemoryCache memoryCache,
-        IAIProfileStore aIProfileStore)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _memoryCache = memoryCache;
-        _aIProfileStore = aIProfileStore;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     /// <summary>
@@ -35,12 +35,15 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
     /// <param name="cancellationToken">The cancellation token.</param>
     public async ValueTask<IReadOnlyList<AIProfile>> GetProfilesAsync(CancellationToken cancellationToken = default)
     {
-        if (_memoryCache.TryGetValue(_cacheKey, out AIProfile[] cachedProfiles))
+        if (_memoryCache.TryGetValue(_cacheKey, out AIProfile[] cachedProfiles) &&
+            cachedProfiles is not null)
         {
-            return cachedProfiles;
+            return CloneProfiles(cachedProfiles);
         }
 
-        var profiles = await _aIProfileStore.GetByTypeAsync(AIProfileType.Chat, cancellationToken);
+        using var scope = _serviceScopeFactory.CreateScope();
+        var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
+        var profiles = await profileStore.GetByTypeAsync(AIProfileType.Chat, cancellationToken);
 
         var menuProfiles = profiles
             .Where(static profile => profile.TryGetSettings<AIChatProfileSettings>(out var settings) && settings.IsOnAdminMenu)
@@ -49,7 +52,7 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
 
         _memoryCache.Set(_cacheKey, menuProfiles, _cacheDuration);
 
-        return menuProfiles;
+        return CloneProfiles(menuProfiles);
     }
 
     /// <summary>
@@ -61,4 +64,7 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
 
         return ValueTask.CompletedTask;
     }
+
+    private static AIProfile[] CloneProfiles(IEnumerable<AIProfile> profiles) =>
+        [.. profiles.Select(static profile => profile.Clone())];
 }

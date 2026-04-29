@@ -38,10 +38,21 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
 
         try
         {
-            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
-                _deploymentManager,
-                _aiClientFactory,
-                metadata);
+            var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+
+            if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+            {
+                return defaultDimensions;
+            }
+
+            var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
+
+            if (deployment == null)
+            {
+                return defaultDimensions;
+            }
+
+            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
 
             if (embeddingGenerator == null)
             {

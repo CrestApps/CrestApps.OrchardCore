@@ -28,6 +28,7 @@ using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +61,8 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIProviderConnectionIndexMigrations>()
             .AddCatalogManagers()
             .TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
+
+        services.AddSingleton<TimeProvider, ClockTimeProviderAdapter>();
 
         // Register embedded templates from this module so they are always
         // available, even when the Templating feature is not enabled.

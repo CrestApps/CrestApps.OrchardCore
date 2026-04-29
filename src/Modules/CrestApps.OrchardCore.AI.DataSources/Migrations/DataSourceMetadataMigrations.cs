@@ -1,21 +1,20 @@
 using System.Text.Json.Nodes;
-using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Entities;
 using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using YesSql;
 using YesSql.Sql;
@@ -128,63 +127,61 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
         var importedCount = 0;
 
-        foreach (var batch in BatchDocuments(documents))
+
+        foreach (var document in documents)
         {
-            foreach (var document in batch)
+            if (JsonNode.Parse(document.Content)?["Records"] is not JsonObject recordsObject)
             {
-                if (JsonNode.Parse(document.Content)?["Records"] is not JsonObject recordsObject)
+                continue;
+            }
+
+            foreach (var record in recordsObject)
+            {
+                if (record.Value is not JsonObject dataSourceObject)
                 {
                     continue;
                 }
 
-                foreach (var record in recordsObject)
+                MigrateLegacySourceIndexProfileName(dataSourceObject);
+                dataSourceObject[nameof(AIDataSource.ItemId)] ??= record.Key;
+
+                var itemId = dataSourceObject[nameof(AIDataSource.ItemId)]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(itemId))
                 {
-                    if (record.Value is not JsonObject dataSourceObject)
-                    {
-                        continue;
-                    }
-
-                    MigrateLegacySourceIndexProfileName(dataSourceObject);
-                    dataSourceObject[nameof(AIDataSource.ItemId)] ??= record.Key;
-
-                    var itemId = dataSourceObject[nameof(AIDataSource.ItemId)]?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(itemId))
-                    {
-                        continue;
-                    }
-
-                    var dataSource = await dataSourceManager.FindByIdAsync(itemId);
-
-                    if (dataSource is not null)
-                    {
-                        await dataSourceManager.UpdateAsync(dataSource, dataSourceObject);
-                    }
-                    else
-                    {
-                        dataSource = await dataSourceManager.NewAsync(dataSourceObject);
-                        dataSource.ItemId = itemId;
-                    }
-
-                    await PopulateIndexConfigurationAsync(
-                        serviceProvider,
-                        indexProfileStore,
-                        dataSourceOptions,
-                        dataSource,
-                        logger);
-
-                    var validationResult = await dataSourceManager.ValidateAsync(dataSource);
-                    if (!validationResult.Succeeded)
-                    {
-                        logger.LogWarning(
-                            "Skipping legacy AI data source {ItemId} because validation failed: {Errors}",
-                            itemId,
-                            string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
-                        continue;
-                    }
-
-                    await dataSourceManager.CreateAsync(dataSource);
-                    importedCount++;
+                    continue;
                 }
+
+                var dataSource = await dataSourceManager.FindByIdAsync(itemId);
+
+                if (dataSource is not null)
+                {
+                    await dataSourceManager.UpdateAsync(dataSource, dataSourceObject);
+                }
+                else
+                {
+                    dataSource = await dataSourceManager.NewAsync(dataSourceObject);
+                    dataSource.ItemId = itemId;
+                }
+
+                await PopulateIndexConfigurationAsync(
+                    serviceProvider,
+                    indexProfileStore,
+                    dataSourceOptions,
+                    dataSource,
+                    logger);
+
+                var validationResult = await dataSourceManager.ValidateAsync(dataSource);
+                if (!validationResult.Succeeded)
+                {
+                    logger.LogWarning(
+                        "Skipping legacy AI data source {ItemId} because validation failed: {Errors}",
+                        itemId,
+                        string.Join("; ", validationResult.Errors.Select(error => error.ErrorMessage)));
+                    continue;
+                }
+
+                await dataSourceManager.CreateAsync(dataSource);
+                importedCount++;
             }
         }
 
@@ -367,10 +364,10 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
         if (deployment != null)
         {
-            return new DataSourceIndexProfileMetadata
-            {
-                EmbeddingDeploymentId = deployment.ItemId,
-            };
+            var metadata = new DataSourceIndexProfileMetadata();
+            metadata.SetEmbeddingDeploymentName(deployment.Name);
+
+            return metadata;
         }
 
         logger.LogWarning(
@@ -380,13 +377,5 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding deployment.");
 
         return new DataSourceIndexProfileMetadata();
-    }
-
-    private static IEnumerable<IReadOnlyList<Document>> BatchDocuments(List<Document> documents)
-    {
-        for (var index = 0; index < documents.Count; index += _batchSize)
-        {
-            yield return documents.Skip(index).Take(_batchSize).ToList();
-        }
     }
 }

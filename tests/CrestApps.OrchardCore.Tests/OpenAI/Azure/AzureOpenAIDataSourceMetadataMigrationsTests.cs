@@ -2,6 +2,7 @@ using System.Reflection;
 
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,7 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
             .Setup(x => x.GetByTypeAsync(AIDeploymentType.Embedding))
             .Returns(new ValueTask<IEnumerable<AIDeployment>>(
             [
-                new AIDeployment { ItemId = "embedding-1" },
+                new AIDeployment { ItemId = "embedding-1", Name = "embedding-1" },
             ]));
 
         var serviceProvider = new ServiceCollection()
@@ -34,7 +35,7 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
         var logger = Mock.Of<ILogger>();
         var metadata = await InvokeFindFirstEmbeddingMetadata(serviceProvider, logger);
 
-        Assert.Equal("embedding-1", metadata.EmbeddingDeploymentId);
+        Assert.Equal("embedding-1", metadata.GetEmbeddingDeploymentName());
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
         var logger = new Mock<ILogger>();
         var metadata = await InvokeFindFirstEmbeddingMetadata(serviceProvider, logger.Object);
 
-        Assert.True(string.IsNullOrEmpty(metadata.EmbeddingDeploymentId));
+        Assert.True(string.IsNullOrEmpty(metadata.GetEmbeddingDeploymentName()));
 
         logger.Verify(x => x.Log(
             LogLevel.Warning,

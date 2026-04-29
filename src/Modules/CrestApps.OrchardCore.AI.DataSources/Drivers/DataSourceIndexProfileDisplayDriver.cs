@@ -45,13 +45,16 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
         return Initialize<EditDataSourceIndexProfileViewModel>("DataSourceIndexProfile_Edit", async model =>
         {
             var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
-            var selectedDeployment = await EmbeddingDeploymentResolver.FindEmbeddingDeploymentAsync(_deploymentManager, metadata);
+            var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+            var selectedDeployment = string.IsNullOrWhiteSpace(embeddingDeploymentName)
+                ? null
+                : await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
             var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
 
-            model.EmbeddingDeploymentId = selectedDeployment?.ItemId ?? metadata.EmbeddingDeploymentId;
-            model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentId;
-            model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentId);
-            model.IsLocked = !string.IsNullOrEmpty(model.EmbeddingDeploymentId) &&
+            model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
+            model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentName;
+            model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
+            model.IsLocked = !string.IsNullOrEmpty(model.EmbeddingDeploymentName) &&
                 !string.IsNullOrEmpty(indexProfile.IndexFullName);
         }).Location("Content:3");
     }
@@ -70,19 +73,19 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
         var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
         // Don't allow changes if already locked.
-        if (!string.IsNullOrEmpty(metadata.EmbeddingDeploymentId) &&
+        if (!string.IsNullOrEmpty(metadata.GetEmbeddingDeploymentName()) &&
             !string.IsNullOrEmpty(indexProfile.IndexFullName))
         {
             return Edit(indexProfile, context);
         }
 
-        if (string.IsNullOrEmpty(model.EmbeddingDeploymentId))
+        if (string.IsNullOrEmpty(model.EmbeddingDeploymentName))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["Embedding deployment is required."]);
             return Edit(indexProfile, context);
         }
 
-        var deployment = await _deploymentManager.FindByIdAsync(model.EmbeddingDeploymentId);
+        var deployment = await _deploymentManager.FindByNameAsync(model.EmbeddingDeploymentName);
 
         if (deployment == null || !deployment.SupportsType(AIDeploymentType.Embedding))
         {
@@ -90,7 +93,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
             return Edit(indexProfile, context);
         }
 
-        metadata.EmbeddingDeploymentId = deployment.ItemId;
+        metadata.SetEmbeddingDeploymentName(deployment.Name);
         IndexProfileEmbeddingMetadataAccessor.StoreMetadata(indexProfile, metadata);
 
         return Edit(indexProfile, context);
@@ -101,7 +104,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
         return string.Equals(DataSourceConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static List<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentId)
+    private static List<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentName)
     {
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
@@ -119,10 +122,10 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(GetDeploymentDisplayText(deployment), deployment.ItemId)
+                return new SelectListItem(GetDeploymentDisplayText(deployment), deployment.Name)
                 {
                     Group = group,
-                    Selected = string.Equals(deployment.ItemId, selectedDeploymentId, StringComparison.OrdinalIgnoreCase),
+                    Selected = string.Equals(deployment.Name, selectedDeploymentName, StringComparison.OrdinalIgnoreCase),
                 };
             })
             .ToList();

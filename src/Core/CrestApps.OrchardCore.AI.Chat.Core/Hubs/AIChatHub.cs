@@ -46,10 +46,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public AIChatHub(
         IServiceProvider services,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
-        : base(services, new ClockTimeProviderAdapter(clock), logger)
+        : base(services, timeProvider, logger)
     {
         S = stringLocalizer;
     }

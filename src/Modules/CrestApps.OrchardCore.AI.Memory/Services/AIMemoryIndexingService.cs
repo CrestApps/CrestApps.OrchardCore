@@ -248,9 +248,22 @@ internal sealed class AIMemoryIndexingService
 
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(IndexProfile indexProfile)
     {
-        return await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
-            _deploymentManager,
-            _aiClientFactory,
-            IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile));
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
+
+        var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+        {
+            return null;
+        }
+
+        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
+
+        if (deployment == null)
+        {
+            return null;
+        }
+
+        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
     }
 }

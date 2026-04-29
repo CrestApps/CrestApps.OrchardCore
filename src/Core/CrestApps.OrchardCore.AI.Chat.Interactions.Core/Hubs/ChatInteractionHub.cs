@@ -38,10 +38,10 @@ public class ChatInteractionHub : ChatInteractionHubBase
     /// <param name="stringLocalizer">The string localizer for this hub.</param>
     public ChatInteractionHub(
         IServiceProvider services,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
-        : base(services, new ClockTimeProviderAdapter(clock), logger)
+        : base(services, timeProvider, logger)
     {
         S = stringLocalizer;
     }

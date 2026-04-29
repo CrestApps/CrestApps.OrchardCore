@@ -435,10 +435,21 @@ public sealed class DataSourceIndexingService
         }
 
         var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
-        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
-            _deploymentManager,
-            _aiClientFactory,
-            profileMetadata);
+        var embeddingDeploymentName = profileMetadata.GetEmbeddingDeploymentName();
+
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+        {
+            return;
+        }
+
+        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
+
+        if (deployment == null)
+        {
+            return;
+        }
+
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
 
         if (embeddingGenerator == null)
         {
@@ -678,10 +689,25 @@ public sealed class DataSourceIndexingService
         }
 
         var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
-        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
-            _deploymentManager,
-            _aiClientFactory,
-            profileMetadata);
+        var embeddingDeploymentName = profileMetadata.GetEmbeddingDeploymentName();
+
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+        {
+            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
+
+            return;
+        }
+
+        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
+
+        if (deployment == null)
+        {
+            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
+
+            return;
+        }
+
+        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
 
         if (embeddingGenerator == null)
         {

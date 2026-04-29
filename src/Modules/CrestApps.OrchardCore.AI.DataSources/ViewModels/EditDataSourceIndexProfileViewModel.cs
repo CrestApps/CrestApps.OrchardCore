@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.AI.DataSources.ViewModels;
 public class EditDataSourceIndexProfileViewModel
 {
     /// <summary>
-    /// Gets or sets the selected embedding deployment identifier.
+    /// Gets or sets the selected embedding deployment name.
     /// </summary>
-    public string EmbeddingDeploymentId { get; set; }
+    public string EmbeddingDeploymentName { get; set; }
 
     /// <summary>
     /// Gets or sets the available embedding deployments.

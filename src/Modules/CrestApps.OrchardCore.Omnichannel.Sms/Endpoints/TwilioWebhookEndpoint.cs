@@ -88,8 +88,7 @@ internal static class TwilioWebhookEndpoint
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
-            from.SanitizeLogValue(), to.SanitizeLogValue(), messageSid.SanitizeLogValue());
+            logger.LogInformation("Twilio message received.");
         }
 
         var omnichannelMessage = new OmnichannelMessage
