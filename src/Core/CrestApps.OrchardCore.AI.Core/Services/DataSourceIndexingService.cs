@@ -434,15 +434,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
-        var embeddingDeploymentName = profileMetadata.GetEmbeddingDeploymentName();
-
-        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
-        {
-            return;
-        }
-
-        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
+        var deployment = await ResolveEmbeddingDeploymentAsync(masterProfile, cancellationToken);
 
         if (deployment == null)
         {
@@ -688,22 +680,10 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
-        var embeddingDeploymentName = profileMetadata.GetEmbeddingDeploymentName();
-
-        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
-        {
-            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
-
-            return;
-        }
-
-        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
+        var deployment = await ResolveEmbeddingDeploymentAsync(masterProfile, cancellationToken);
 
         if (deployment == null)
         {
-            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
-
             return;
         }
 
@@ -711,7 +691,10 @@ public sealed class DataSourceIndexingService
 
         if (embeddingGenerator == null)
         {
-            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
+            _logger.LogWarning(
+                "Embedding generator could not be created for deployment '{DeploymentName}' on master index '{IndexName}'.",
+                deployment.Name,
+                masterProfile.IndexName);
 
             return;
         }
@@ -867,6 +850,71 @@ public sealed class DataSourceIndexingService
             _logger.LogInformation("Synced {DocumentCount} chunks for data source '{DataSourceId}' to master index '{IndexName}'.",
             documentCount, dataSource.ItemId, masterProfile.IndexName);
         }
+    }
+
+    private async Task<AIDeployment> ResolveEmbeddingDeploymentAsync(
+        IndexProfile masterProfile,
+        CancellationToken cancellationToken)
+    {
+        var resolvedProfile = await ReloadProfileWithMetadataAsync(masterProfile);
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(resolvedProfile);
+        var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+        {
+            _logger.LogWarning(
+                "Embedding deployment is missing for master index '{IndexName}'.",
+                resolvedProfile.IndexName);
+
+            return null;
+        }
+
+        var configuredDeployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
+
+        if (configuredDeployment?.SupportsType(AIDeploymentType.Embedding) != true)
+        {
+            _logger.LogWarning(
+                "Configured embedding deployment '{DeploymentName}' was not found for master index '{IndexName}'.",
+                embeddingDeploymentName,
+                resolvedProfile.IndexName);
+
+            return null;
+        }
+
+        return configuredDeployment;
+    }
+
+    private async Task<IndexProfile> ReloadProfileWithMetadataAsync(IndexProfile masterProfile)
+    {
+        ArgumentNullException.ThrowIfNull(masterProfile);
+
+        if (HasEmbeddingDeployment(masterProfile))
+        {
+            return masterProfile;
+        }
+
+        IndexProfile reloadedProfile = null;
+
+        if (!string.IsNullOrWhiteSpace(masterProfile.Id))
+        {
+            reloadedProfile = await _indexProfileStore.FindByIdAsync(masterProfile.Id);
+        }
+
+        if (reloadedProfile == null &&
+            !string.IsNullOrWhiteSpace(masterProfile.Name))
+        {
+            reloadedProfile = await _indexProfileStore.FindByNameAsync(masterProfile.Name);
+        }
+
+        return reloadedProfile ?? masterProfile;
+    }
+
+    private static bool HasEmbeddingDeployment(IndexProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        return !string.IsNullOrWhiteSpace(
+            IndexProfileEmbeddingMetadataAccessor.GetMetadata(profile).GetEmbeddingDeploymentName());
     }
 
     private static Dictionary<string, object> BuildFilterFields(Dictionary<string, object> sourceFields)
