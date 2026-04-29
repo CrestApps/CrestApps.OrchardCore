@@ -78,8 +78,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add the Status and LastActivityUtc columns to the AI chat session index table.");
-            throw;
+            _logger.LogError(ex, "Failed to add the Status and LastActivityUtc columns to the AI chat session index table. It's probably that the columns exists. You can ignore it.");
         }
     }
 }

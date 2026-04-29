@@ -64,7 +64,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while updating from version 3.");
+            _logger.LogError(ex, "An error occurred while updating from version 3. It's probably that the columns exists. You can ignore it.");
         }
 
         return 4;
