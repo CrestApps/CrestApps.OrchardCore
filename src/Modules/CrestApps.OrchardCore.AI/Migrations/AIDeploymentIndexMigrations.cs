@@ -66,7 +66,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
     {
         ShellScope.AddDeferredTask(scope => ImportLegacyDeploymentsAsync(scope.ServiceProvider));
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
