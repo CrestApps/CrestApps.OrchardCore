@@ -871,17 +871,81 @@ public sealed class DataSourceIndexingService
 
         var configuredDeployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
 
-        if (configuredDeployment?.SupportsType(AIDeploymentType.Embedding) != true)
+        if (configuredDeployment?.SupportsType(AIDeploymentType.Embedding) == true)
         {
-            _logger.LogWarning(
-                "Configured embedding deployment '{DeploymentName}' was not found for master index '{IndexName}'.",
-                embeddingDeploymentName,
-                resolvedProfile.IndexName);
+            return configuredDeployment;
+        }
+
+        var canonicalDeployment = await ResolveCanonicalEmbeddingDeploymentAsync(
+            resolvedProfile,
+            embeddingDeploymentName,
+            cancellationToken);
+
+        if (canonicalDeployment != null)
+        {
+            return canonicalDeployment;
+        }
+
+        _logger.LogWarning(
+            "Configured embedding deployment '{DeploymentName}' was not found for master index '{IndexName}'.",
+            embeddingDeploymentName,
+            resolvedProfile.IndexName);
+
+        return null;
+    }
+
+    private async Task<AIDeployment> ResolveCanonicalEmbeddingDeploymentAsync(
+        IndexProfile resolvedProfile,
+        string embeddingDeploymentName,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resolvedProfile);
+
+        var selectorCandidates = GetEmbeddingSelectorCandidates(embeddingDeploymentName);
+
+        if (selectorCandidates.Count == 0)
+        {
+            return null;
+        }
+
+        var deployments = (await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding, cancellationToken) ?? [])
+            .Where(deployment => MatchesEmbeddingSelector(deployment, selectorCandidates))
+            .ToArray();
+
+        if (deployments.Length != 1)
+        {
+            if (deployments.Length > 1)
+            {
+                _logger.LogWarning(
+                    "Configured embedding deployment selector '{DeploymentName}' matched multiple embedding deployments for master index '{IndexName}'. Matches: {DeploymentMatches}.",
+                    embeddingDeploymentName,
+                    resolvedProfile.IndexName,
+                    string.Join(", ", deployments.Select(deployment => deployment.Name)));
+            }
 
             return null;
         }
 
-        return configuredDeployment;
+        var resolvedDeployment = deployments[0];
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(resolvedProfile);
+
+        if (!string.Equals(metadata.GetEmbeddingDeploymentName(), resolvedDeployment.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            metadata.SetEmbeddingDeploymentName(resolvedDeployment.Name);
+            IndexProfileEmbeddingMetadataAccessor.StoreMetadata(resolvedProfile, metadata);
+            await _indexProfileStore.UpdateAsync(resolvedProfile);
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Resolved embedding deployment selector '{DeploymentName}' to deployment '{ResolvedDeploymentName}' for master index '{IndexName}'.",
+                embeddingDeploymentName,
+                resolvedDeployment.Name,
+                resolvedProfile.IndexName);
+        }
+
+        return resolvedDeployment;
     }
 
     private async Task<IndexProfile> ReloadProfileWithMetadataAsync(IndexProfile masterProfile)
@@ -915,6 +979,39 @@ public sealed class DataSourceIndexingService
 
         return !string.IsNullOrWhiteSpace(
             IndexProfileEmbeddingMetadataAccessor.GetMetadata(profile).GetEmbeddingDeploymentName());
+    }
+
+    private static bool MatchesEmbeddingSelector(AIDeployment deployment, HashSet<string> selectorCandidates)
+    {
+        ArgumentNullException.ThrowIfNull(deployment);
+        ArgumentNullException.ThrowIfNull(selectorCandidates);
+
+        return deployment.SupportsType(AIDeploymentType.Embedding) &&
+            (selectorCandidates.Contains(deployment.Name) ||
+                selectorCandidates.Contains(deployment.ModelName));
+    }
+
+    private static HashSet<string> GetEmbeddingSelectorCandidates(string embeddingDeploymentName)
+    {
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
+        {
+            return [];
+        }
+
+        var selectorCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            embeddingDeploymentName.Trim(),
+        };
+
+        foreach (var prefix in new[] { "Azure-", "AzureOpenAI-", "AzureOpenAIOwnData-" })
+        {
+            if (embeddingDeploymentName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                selectorCandidates.Add(embeddingDeploymentName.Substring(prefix.Length));
+            }
+        }
+
+        return selectorCandidates;
     }
 
     private static Dictionary<string, object> BuildFilterFields(Dictionary<string, object> sourceFields)
