@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <CrestAppsCoreVersion>1.0.0-preview-68</CrestAppsCoreVersion>
-    <OrchardCoreVersion>[3.0.0-preview-18990, )</OrchardCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-73</CrestAppsCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-18995, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -131,7 +131,7 @@
   <ItemGroup>
     <!-- Testing Packages -->
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

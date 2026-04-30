@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Parsing;
 using CrestApps.Core.Templates.Providers;
 using Microsoft.Extensions.Logging;
@@ -46,7 +46,7 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
     /// <summary>
     /// Retrieves the templates async.
     /// </summary>
-    public Task<IReadOnlyList<Template>> GetTemplatesAsync()
+    public Task<IReadOnlyList<Template>> GetTemplatesAsync(CancellationToken cancellationToken = default)
     {
         var templates = new List<Template>();
         var application = _applicationContext.Application;

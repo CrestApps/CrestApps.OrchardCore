@@ -57,6 +57,8 @@ dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.cspr
 ```
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
+>
+> The asset pipeline now waits for each generated CSS and JavaScript stream to finish before Gulp completes the task. This keeps `npm run rebuild` reliable on current Node.js and Gulp releases instead of failing with a premature stream-close error.
 
 ## Run the startup apps
 

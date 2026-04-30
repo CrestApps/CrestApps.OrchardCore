@@ -41,11 +41,11 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
     }
 
     /// <inheritdoc />
-    public Task BuildingAsync(OrchestrationContextBuildingContext context)
+    public Task BuildingAsync(OrchestrationContextBuildingContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     /// <inheritdoc />
-    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
+    public async Task BuiltAsync(OrchestrationContextBuiltContext context, CancellationToken cancellationToken = default)
     {
         var completionContext = context.OrchestrationContext.CompletionContext;
 
@@ -55,7 +55,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
         }
 
         var requestedAgentNames = completionContext.AgentNames;
-        var agents = await _profileManager.GetAsync(AIProfileType.Agent);
+        var agents = await _profileManager.GetAsync(AIProfileType.Agent, cancellationToken);
 
         if (!agents.Any())
         {
@@ -101,7 +101,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
             ["agents"] = availableAgents,
         };
 
-        var header = await _templateService.RenderAsync(AITemplateIds.AgentAvailability, arguments);
+        var header = await _templateService.RenderAsync(AITemplateIds.AgentAvailability, arguments, cancellationToken);
 
         if (!string.IsNullOrEmpty(header))
         {

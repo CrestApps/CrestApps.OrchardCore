@@ -1,7 +1,6 @@
 var fs = require("graceful-fs"),
     glob = require("glob"),
     path = require("path-posix"),
-    merge = require("merge-stream"),
     gulp = require("gulp"),
     gulpif = require("gulp-if"),
     newer = require("gulp-newer"),
@@ -19,7 +18,8 @@ var fs = require("graceful-fs"),
     log = require('fancy-log'),
     postcss = require('gulp-postcss'),
     rtl = require('postcss-rtl'),
-    babel = require('gulp-babel');
+    babel = require('gulp-babel'),
+    finished = require('stream/promises').finished;
 
 // For compat with older versions of Node.js.
 require("es6-promise").polyfill();
@@ -40,7 +40,7 @@ gulp.task("build-assets", function () {
         var doRebuild = false;
         return createAssetGroupTask(assetGroup, doRebuild);
     });
-    return merge(assetGroupTasks);
+    return waitForAll(assetGroupTasks);
 });
 
 // Full rebuild (all assets groups are built regardless of timestamps).
@@ -49,7 +49,7 @@ gulp.task("rebuild-assets", function () {
         var doRebuild = true;
         return createAssetGroupTask(assetGroup, doRebuild);
     });
-    return merge(assetGroupTasks);
+    return waitForAll(assetGroupTasks);
 });
 
 // Continuous watch (each asset group is built whenever one of its inputs changes).
@@ -191,6 +191,18 @@ function createAssetGroupTask(assetGroup, doRebuild) {
     }
 }
 
+function waitForAll(results) {
+    return Promise.all(results.filter(Boolean).map(waitForCompletion));
+}
+
+function waitForCompletion(result) {
+    if (typeof result?.then === "function") {
+        return result;
+    }
+
+    return finished(result);
+}
+
 /*
 ** PROCESSING PIPELINES
 */
@@ -268,7 +280,7 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulp.dest(assetGroup.outputDir));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
-    return merge([minifiedStream, devStream]);
+    return waitForAll([minifiedStream, devStream]);
 }
 
 function buildJsPipeline(assetGroup, doConcat, doRebuild) {
@@ -336,7 +348,7 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
 
-    return merge([devStream, minifiedStream]);
+    return waitForAll([devStream, minifiedStream]);
 }
 
 function buildCopyPipeline(assetGroup, doRebuild) {

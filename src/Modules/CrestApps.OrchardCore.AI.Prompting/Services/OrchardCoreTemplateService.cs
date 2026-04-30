@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Providers;
 using CrestApps.Core.Templates.Rendering;
 using CrestApps.Core.Templates.Services;
@@ -44,11 +44,11 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
         _logger = logger;
     }
 
-    public override async Task<IReadOnlyList<Template>> ListAsync()
+    public override async Task<IReadOnlyList<Template>> ListAsync(CancellationToken cancellationToken = default)
     {
         if (!_memoryCache.TryGetValue(CacheKey, out IReadOnlyList<Template> allTemplates))
         {
-            allTemplates = await base.ListAsync();
+            allTemplates = await base.ListAsync(cancellationToken);
             _memoryCache.Set(CacheKey, allTemplates);
         }
 
@@ -73,11 +73,11 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
         return deduplicatedTemplates;
     }
 
-    public override async Task<Template> GetAsync(string id)
+    public override async Task<Template> GetAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        var allTemplates = await ListAsync();
+        var allTemplates = await ListAsync(cancellationToken);
 
         var template = allTemplates.FirstOrDefault(t =>
         string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
