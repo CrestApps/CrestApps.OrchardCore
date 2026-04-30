@@ -36,6 +36,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreAIDocumentProcessing()
+            .AddCoreAIDocumentReferenceDownloads()
             .AddCoreAIDocumentProcessingStoresYesSql()
             .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>()
             .AddDataMigration<AIDocumentIndexMigrations>()
@@ -53,6 +54,11 @@ public sealed class Startup : StartupBase
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddDownloadAIDocumentEndpoint();
     }
 }
 

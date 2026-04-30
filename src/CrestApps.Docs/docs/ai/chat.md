@@ -24,7 +24,7 @@ The AI Profile editor groups the most common profile settings into five cards at
 
 - **General** — title, technical name, data source, profile type, orchestrator, and admin menu visibility
 - **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome/initial prompt behavior, prompt subject, chat mode, and per-profile user memory
+- **Interactions** — title behavior, welcome/initial prompt behavior, chat mode, and per-profile user memory. **Prompt subject** appears only for **Template generated prompt** profiles.
 - **Instructions** — prompt template selection, template-specific prompt text, and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
@@ -32,7 +32,7 @@ Profile-source AI Templates use the same top-level card grouping:
 
 - **General** — title, technical name, category, profile type, orchestrator, response handler, data source, and admin menu visibility
 - **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome message, prompt subject, chat mode, and per-template user memory
+- **Interactions** — title behavior, welcome message, chat mode, and per-template user memory. **Prompt subject** appears only for **Template generated prompt** profile-source templates.
 - **Instructions** — prompt template text and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
