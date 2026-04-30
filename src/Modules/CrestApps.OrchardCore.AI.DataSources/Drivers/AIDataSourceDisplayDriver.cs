@@ -1,5 +1,7 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -33,10 +35,10 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     {
         return CombineAsync(
             View("AIDataSource_Fields_SummaryAdmin", dataSource).Location("Content:1"),
-        View("AIDataSource_Buttons_SummaryAdmin", dataSource).Location("Actions:5"),
-        View("AIDataSource_DefaultTags_SummaryAdmin", dataSource).Location("Tags:5"),
-        View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource).Location("Meta:5"),
-        View("AIDataSource_ActionsMenu_SummaryAdmin", dataSource).Location("ActionsMenu:10")
+            View("AIDataSource_Buttons_SummaryAdmin", dataSource).Location("Actions:5"),
+            View("AIDataSource_DefaultTags_SummaryAdmin", dataSource).Location("Tags:5"),
+            View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource).Location("Meta:5"),
+            View("AIDataSource_ActionsMenu_SummaryAdmin", dataSource).Location("ActionsMenu:10")
         );
     }
 
@@ -57,11 +59,14 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
                 !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
                     !string.IsNullOrEmpty(dataSource.ContentFieldName);
 
-            // Show ALL source indexes from all providers, excluding master indexes.
+            // Show source indexes from all providers, excluding AI-managed index profiles.
             var allIndexes = await _indexProfileStore.GetAllAsync();
 
             model.SourceIndexProfileNames = allIndexes
-                .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
+                .Where(i =>
+                    !string.Equals(i.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(i.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
                 .GroupBy(i => i.ProviderName)
                 .OrderBy(g => g.Key)
                 .SelectMany(g =>

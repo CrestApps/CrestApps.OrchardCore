@@ -103,7 +103,9 @@ The core **AI Memory** feature is enabled by dependency when one of those provid
 3. Create a new index using either:
    - **AI Memory (Azure AI Search)**
    - **AI Memory (Elasticsearch)**
-4. Choose the embedding connection that should be used for memory indexing and search.
+4. Choose the embedding deployment that should be used for memory indexing and search.
+
+The selected embedding deployment is only configurable when the memory index profile is first created. After the index exists, the admin UI shows the configured deployment as read-only so the index keeps using the same vector dimensions.
 
 ### 3. Configure global memory settings
 

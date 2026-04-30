@@ -51,7 +51,9 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
             var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
 
             model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
+            model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentName;
             model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
+            model.IsLocked = !context.IsNew;
         }).Location("Content:3");
     }
 
@@ -64,6 +66,11 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
 
         var model = new AIMemoryIndexProfileViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (!context.IsNew)
+        {
+            return Edit(indexProfile, context);
+        }
 
         if (string.IsNullOrEmpty(model.EmbeddingDeploymentName))
         {
@@ -90,7 +97,7 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
     private static bool CanHandle(IndexProfile indexProfile)
         => string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase);
 
-    private static IEnumerable<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentName)
+    private static List<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentName)
     {
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
@@ -112,7 +119,8 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
                     Group = group,
                     Selected = string.Equals(deployment.Name, selectedDeploymentName, StringComparison.OrdinalIgnoreCase),
                 };
-            });
+            })
+            .ToList();
     }
 
     private static string GetDeploymentDisplayText(AIDeployment deployment)

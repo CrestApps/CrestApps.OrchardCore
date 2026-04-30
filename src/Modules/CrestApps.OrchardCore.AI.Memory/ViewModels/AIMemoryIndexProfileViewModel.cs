@@ -17,5 +17,17 @@ public class AIMemoryIndexProfileViewModel
     /// Gets or sets the embedding deployments.
     /// </summary>
     [BindNever]
-    public IEnumerable<SelectListItem> EmbeddingDeployments { get; set; } = [];
+    public IList<SelectListItem> EmbeddingDeployments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the selected embedding deployment label for read-only display.
+    /// </summary>
+    [BindNever]
+    public string EmbeddingDeploymentText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the embedding deployment is locked.
+    /// </summary>
+    [BindNever]
+    public bool IsLocked { get; set; }
 }

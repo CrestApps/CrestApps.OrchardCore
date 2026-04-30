@@ -6,9 +6,25 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="EmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Embedding deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="EmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
-            <option value="">@T["Select an embedding deployment"]</option>
-        </select>
-        <span class="hint">@T["Choose the embedding deployment that will be used to index and search user memories."]</span>
+        @if (Model.IsLocked)
+        {
+            <input type="text" class="form-control" value="@Model.EmbeddingDeploymentText" readonly />
+            <input type="hidden" asp-for="EmbeddingDeploymentName" />
+            <span class="hint">@T["The embedding deployment cannot be changed after the index is created."]</span>
+        }
+        else if (Model.EmbeddingDeployments.Count == 0)
+        {
+            <div class="alert alert-warning">
+                <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
+                @T["No embedding deployments are available. Please configure at least one embedding deployment before creating this index."]
+            </div>
+        }
+        else
+        {
+            <select asp-for="EmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
+                <option value="">@T["Select an embedding deployment"]</option>
+            </select>
+            <span class="hint">@T["Choose the embedding deployment that will be used to index and search user memories. This cannot be changed after the index is created."]</span>
+        }
     </div>
 </div>
