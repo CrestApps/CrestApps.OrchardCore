@@ -145,6 +145,8 @@ Documents are managed directly through the AI Profile editor form. When you save
 
 There are no separate API endpoints for profile document management — everything is handled through the standard profile editor workflow.
 
+Legacy profile-document rows stored under older `CrestApps.OrchardCore.AI.*` or `CrestApps.AI.*` YesSql type names are normalized to the current `CrestApps.Core.AI.*` document types when the AI Documents feature runs its migrations. This keeps previously uploaded profile documents removable and queryable after upgrading to the shared `CrestApps.Core` packages.
+
 ### Getting Started
 
 1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.

@@ -39,6 +39,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIDocumentReferenceDownloads()
             .AddCoreAIDocumentProcessingStoresYesSql()
             .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>()
+            .AddDataMigration<AIDocumentLegacyTypeNameMigrations>()
             .AddDataMigration<AIDocumentIndexMigrations>()
             .AddDataMigration<AIDocumentChunkIndexMigrations>();
 
