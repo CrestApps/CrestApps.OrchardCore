@@ -1,7 +1,7 @@
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 [Admin("AI/UsageAnalytics/{action}", "UsageAnalytics.{action}")]
 public sealed class UsageAnalyticsController : Controller
 {
-    private readonly AICompletionUsageService _usageService;
+    private readonly IAICompletionUsageService _usageService;
     private readonly IAuthorizationService _authorizationService;
     private readonly GeneralAIOptions _generalAIOptions;
 
@@ -26,7 +26,7 @@ public sealed class UsageAnalyticsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="generalAIOptions">The general AI options.</param>
     public UsageAnalyticsController(
-        AICompletionUsageService usageService,
+        IAICompletionUsageService usageService,
         IAuthorizationService authorizationService,
         IOptions<GeneralAIOptions> generalAIOptions)
     {

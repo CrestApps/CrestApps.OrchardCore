@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -18,7 +19,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 public sealed class ChatExtractedDataController : Controller
 {
     private readonly IAIProfileManager _profileManager;
-    private readonly AIChatSessionExtractedDataService _extractedDataService;
+    private readonly IAIChatSessionExtractedDataStore _extractedDataStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
 
@@ -26,17 +27,17 @@ public sealed class ChatExtractedDataController : Controller
     /// Initializes a new instance of the <see cref="ChatExtractedDataController"/> class.
     /// </summary>
     /// <param name="profileManager">The profile manager.</param>
-    /// <param name="extractedDataService">The extracted data service.</param>
+    /// <param name="extractedDataStore">The extracted data store.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="clock">The clock.</param>
     public ChatExtractedDataController(
         IAIProfileManager profileManager,
-        AIChatSessionExtractedDataService extractedDataService,
+        IAIChatSessionExtractedDataStore extractedDataStore,
         IAuthorizationService authorizationService,
         IClock clock)
     {
         _profileManager = profileManager;
-        _extractedDataService = extractedDataService;
+        _extractedDataStore = extractedDataStore;
         _authorizationService = authorizationService;
         _clock = clock;
     }
@@ -80,7 +81,7 @@ public sealed class ChatExtractedDataController : Controller
             return View("Index", model);
         }
 
-        var records = await _extractedDataService.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
+        var records = await _extractedDataStore.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
         ApplyReport(model, records);
 
         return View("Index", model);
@@ -103,7 +104,7 @@ public sealed class ChatExtractedDataController : Controller
             return BadRequest();
         }
 
-        var records = await _extractedDataService.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
+        var records = await _extractedDataStore.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
         var rows = BuildRows(records);
         var columns = rows
             .SelectMany(row => row.Values.Keys)

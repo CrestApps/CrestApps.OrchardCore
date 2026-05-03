@@ -115,7 +115,6 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
         services
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
-            .AddScoped<AIChatSessionExtractedDataService>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
@@ -128,7 +127,5 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
-
-        services.AddScoped<IAIChatSessionExtractedDataRecorder>(sp => sp.GetRequiredService<AIChatSessionExtractedDataService>());
     }
 }

@@ -1,24 +1,24 @@
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
-using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
-using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
 /// <summary>
-/// Background task that periodically closes inactive AI chat sessions, retries pending post-close processing, and triggers workflow events.
+/// Background task that periodically closes inactive AI chat sessions, retries
+/// pending post-close processing, and triggers workflow events.
+/// Uses <see cref="IAIChatSessionStore"/> for unscoped data access (no HTTP context dependency),
+/// and <see cref="AIChatSessionPostCloseProcessor"/> from the framework for post-close logic.
 /// </summary>
 [BackgroundTask(
     Title = "AI Chat Session Close",
@@ -26,10 +26,6 @@ namespace CrestApps.OrchardCore.AI.Services;
     Description = "Periodically closes inactive AI chat sessions, retries pending post-close processing, and triggers workflow events.",
     LockTimeout = 5_000,
     LockExpiration = 30_000)]
-
-/// <summary>
-/// Represents the AI chat session close background task.
-/// </summary>
 public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _defaultInactivityTimeout = TimeSpan.FromMinutes(30);
@@ -43,12 +39,12 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var clock = serviceProvider.GetRequiredService<IClock>();
-        var session = serviceProvider.GetRequiredService<ISession>();
+        var sessionStore = serviceProvider.GetRequiredService<IAIChatSessionStore>();
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var postCloseProcessor = serviceProvider.GetRequiredService<AIChatSessionPostCloseProcessor>();
+        var storeCommitter = serviceProvider.GetRequiredService<IStoreCommitter>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
-        var yesSqlStoreOptions = serviceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
         var utcNow = clock.UtcNow;
         var profiles = await profileManager.GetAsync(AIProfileType.Chat, cancellationToken);
@@ -60,28 +56,25 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            await CloseInactiveSessionsAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, yesSqlStoreOptions, cancellationToken);
-            await RetryPendingProcessingAsync(serviceProvider, session, promptStore, postCloseProcessor, profile, utcNow, logger, yesSqlStoreOptions, cancellationToken);
+            await CloseInactiveSessionsAsync(serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
+            await RetryPendingProcessingAsync(serviceProvider, sessionStore, promptStore, postCloseProcessor, profile, utcNow, logger, cancellationToken);
         }
+
+        await storeCommitter.CommitAsync(cancellationToken);
     }
 
     private static async Task CloseInactiveSessionsAsync(
         IServiceProvider serviceProvider,
-        ISession session,
+        IAIChatSessionStore sessionStore,
         IAIChatSessionPromptStore promptStore,
         AIChatSessionPostCloseProcessor postCloseProcessor,
         AIProfile profile,
         DateTime utcNow,
         ILogger logger,
-        YesSqlStoreOptions yesSqlStoreOptions,
         CancellationToken cancellationToken)
     {
         var cutoffUtc = utcNow - GetInactivityTimeout(profile);
-
-        var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
-            i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
-            collection: yesSqlStoreOptions.AICollectionName)
-            .ListAsync(cancellationToken);
+        var inactiveSessions = await sessionStore.GetInactiveActiveSessionsAsync(profile.ItemId, cutoffUtc, cancellationToken);
 
         foreach (var chatSession in inactiveSessions)
         {
@@ -94,36 +87,44 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             chatSession.Status = DetermineInactiveSessionStatus(prompts);
             chatSession.ClosedAtUtc = utcNow;
 
-            var result = await RunPostCloseProcessingAsync(postCloseProcessor, profile, chatSession, prompts, logger, cancellationToken);
+            if (postCloseProcessor.QueueIfNeeded(profile, chatSession))
+            {
+                await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
+            }
+            else
+            {
+                chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.None;
+            }
 
-            await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
+            await sessionStore.SaveAsync(chatSession, cancellationToken);
 
             await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, logger);
 
-            if (result.PostSessionTasksCompletedNow)
+            if (logger.IsEnabled(LogLevel.Debug))
             {
-                await TriggerPostProcessedWorkflowAsync(serviceProvider, profile, chatSession, logger);
+                logger.LogDebug(
+                    "Finalized inactive session '{SessionId}' for profile '{ProfileId}' as '{Status}'.",
+                    chatSession.SessionId,
+                    profile.ItemId,
+                    chatSession.Status);
             }
         }
     }
 
     private static async Task RetryPendingProcessingAsync(
         IServiceProvider serviceProvider,
-        ISession session,
+        IAIChatSessionStore sessionStore,
         IAIChatSessionPromptStore promptStore,
         AIChatSessionPostCloseProcessor postCloseProcessor,
         AIProfile profile,
         DateTime utcNow,
         ILogger logger,
-        YesSqlStoreOptions yesSqlStoreOptions,
         CancellationToken cancellationToken)
     {
-        var pendingSessions = (await session.Query<AIChatSession, AIChatSessionIndex>(
-            i => i.ProfileId == profile.ItemId
-                && (i.Status == ChatSessionStatus.Closed || i.Status == ChatSessionStatus.Abandoned),
-            collection: yesSqlStoreOptions.AICollectionName)
-            .ListAsync(cancellationToken))
-            .Where(chatSession => chatSession.PostSessionProcessingStatus == PostSessionProcessingStatus.Pending)
+        var closedSessions = await sessionStore.GetClosedSessionsAsync(profile.ItemId, cancellationToken);
+
+        var pendingSessions = closedSessions
+            .Where(s => postCloseProcessor.NeedsProcessing(profile, s))
             .ToArray();
 
         foreach (var chatSession in pendingSessions)
@@ -133,15 +134,16 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            if (chatSession.PostSessionProcessingAttempts >= AIChatSessionPostCloseProcessor.MaxPostCloseAttempts)
+            if (chatSession.PostSessionProcessingAttempts >= postCloseProcessor.MaxPostCloseAttempts)
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
-                await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
+                await sessionStore.SaveAsync(chatSession, cancellationToken);
 
                 logger.LogWarning(
                     "Post-close processing for session '{SessionId}' exceeded the maximum number of attempts ({MaxAttempts}).",
                     chatSession.SessionId,
-                    AIChatSessionPostCloseProcessor.MaxPostCloseAttempts);
+                    postCloseProcessor.MaxPostCloseAttempts);
+
                 continue;
             }
 
@@ -152,46 +154,21 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
-            var result = await RunPostCloseProcessingAsync(postCloseProcessor, profile, chatSession, prompts, logger, cancellationToken);
+            await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
+            await sessionStore.SaveAsync(chatSession, cancellationToken);
 
-            await session.SaveAsync(chatSession, false, collection: yesSqlStoreOptions.AICollectionName, cancellationToken);
-
-            if (result.PostSessionTasksCompletedNow)
+            if (chatSession.PostSessionProcessingStatus == PostSessionProcessingStatus.Completed)
             {
                 await TriggerPostProcessedWorkflowAsync(serviceProvider, profile, chatSession, logger);
             }
         }
     }
 
-    private static async Task<AIChatSessionPostCloseProcessingResult> RunPostCloseProcessingAsync(
-        AIChatSessionPostCloseProcessor postCloseProcessor,
-        AIProfile profile,
-        AIChatSession chatSession,
-        IReadOnlyList<AIChatSessionPrompt> prompts,
-        ILogger logger,
-        CancellationToken cancellationToken)
-    {
-        if (!AIChatSessionPostCloseProcessor.NeedsProcessing(profile, chatSession))
-        {
-            chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.None;
-            return new AIChatSessionPostCloseProcessingResult { IsCompleted = true };
-        }
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Running shared post-close processing for session '{SessionId}' (attempt {Attempt}).",
-                chatSession.SessionId,
-                chatSession.PostSessionProcessingAttempts + 1);
-        }
-
-        return await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
-    }
-
     private static TimeSpan GetInactivityTimeout(AIProfile profile)
     {
-        var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
-        return settings.SessionInactivityTimeoutInMinutes > 0
+        var settings = profile.GetOrCreateSettings<AIProfileDataExtractionSettings>();
+
+        return settings?.SessionInactivityTimeoutInMinutes > 0
             ? TimeSpan.FromMinutes(settings.SessionInactivityTimeoutInMinutes)
             : _defaultInactivityTimeout;
     }

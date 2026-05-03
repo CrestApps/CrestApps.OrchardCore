@@ -164,7 +164,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         AIChatSession chatSession,
         IAIChatSessionPromptStore promptStore)
     {
-        var eventService = services.GetService<AIChatSessionEventService>();
+        var eventService = services.GetService<IAIChatSessionEventService>();
 
         if (eventService is null)
         {

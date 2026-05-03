@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -33,6 +34,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -73,7 +75,7 @@ public sealed class Startup : StartupBase
             .AddCatalogs()
             .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
             .AddScoped<CompositeAIReferenceLinkResolver>()
-            .AddScoped<CitationReferenceCollector>()
+            .AddScoped<CrestApps.OrchardCore.AI.Core.Services.CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
@@ -219,6 +221,19 @@ public sealed class ChatCoreStartup : StartupBase
 
         services.AddCoreAIChatSessionProcessing();
 
+        // OC uses IBackgroundTask with distributed locking instead of IHostedService,
+        // so remove the framework's hosted service and runner.
+        services.RemoveAll<AIChatSessionCloseRunner>();
+
+        var hostedServiceDescriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IHostedService) &&
+            d.ImplementationType == typeof(AIChatSessionCloseBackgroundService));
+
+        if (hostedServiceDescriptor is not null)
+        {
+            services.Remove(hostedServiceDescriptor);
+        }
+
         // Register orchestration services for AI Profile chat
         services.AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>();
 
@@ -307,16 +322,8 @@ public sealed class ChatAnalyticsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<AIChatSessionEventService>()
-            .AddScoped<AICompletionUsageService>()
-            .AddScoped<IAICompletionUsageObserver>(sp => sp.GetRequiredService<AICompletionUsageService>())
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddDataMigration<AICompletionUsageIndexMigrations>()
             .AddIndexProvider<AICompletionUsageIndexProvider>();
-
-        services.TryAddScoped<AIChatSessionEventPostCloseObserver>();
-        services.TryAddScoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>());
-        services.TryAddScoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>());
     }
 }
