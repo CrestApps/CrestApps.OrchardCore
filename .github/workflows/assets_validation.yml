@@ -7,7 +7,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'mkdocs.yml'
-      - 'src/CrestApps.Core.Docs/**'
+      - 'src/CrestApps.Docs/**'
     branches: [ main, release/** ]
   pull_request:
     branches: [ main, release/** ]
