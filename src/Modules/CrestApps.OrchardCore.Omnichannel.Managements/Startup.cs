@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -11,8 +11,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.YesSql.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;

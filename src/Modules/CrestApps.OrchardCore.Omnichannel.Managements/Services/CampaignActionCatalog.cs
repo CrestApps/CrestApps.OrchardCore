@@ -12,7 +12,7 @@ internal sealed class CampaignActionCatalog : SourceCatalog<CampaignAction>
     {
     }
 
-    protected override IEnumerable<CampaignAction> GetSortable(QueryContext context, IEnumerable<CampaignAction> records)
+    protected override IEnumerable<CampaignAction> GetSortable(CrestApps.Core.Models.QueryContext context, IEnumerable<CampaignAction> records)
     {
         if (context is CampaignActionQueryContext campaignContext)
         {

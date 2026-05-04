@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -39,13 +39,13 @@ internal sealed class CampaignActionHandler : CatalogEntryHandlerBase<CampaignAc
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<CampaignAction> context)
+    public override Task InitializingAsync(InitializingContext<CampaignAction> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<CampaignAction> context)
+    public override Task UpdatingAsync(UpdatingContext<CampaignAction> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override async Task ValidatingAsync(ValidatingContext<CampaignAction> context)
+    public override async Task ValidatingAsync(ValidatingContext<CampaignAction> context, CancellationToken cancellationToken = default)
     {
         var model = context.Model;
 
@@ -55,7 +55,7 @@ internal sealed class CampaignActionHandler : CatalogEntryHandlerBase<CampaignAc
         }
         else
         {
-            var campaign = await _campaignsCatalog.FindByIdAsync(model.CampaignId);
+            var campaign = await _campaignsCatalog.FindByIdAsync(model.CampaignId, cancellationToken);
 
             if (campaign is null)
             {
@@ -69,7 +69,7 @@ internal sealed class CampaignActionHandler : CatalogEntryHandlerBase<CampaignAc
         }
         else
         {
-            var disposition = await _dispositionsCatalog.FindByIdAsync(model.DispositionId);
+            var disposition = await _dispositionsCatalog.FindByIdAsync(model.DispositionId, cancellationToken);
 
             if (disposition is null)
             {
@@ -87,7 +87,7 @@ internal sealed class CampaignActionHandler : CatalogEntryHandlerBase<CampaignAc
         }
     }
 
-    public override Task InitializedAsync(InitializedContext<CampaignAction> context)
+    public override Task InitializedAsync(InitializedContext<CampaignAction> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -127,8 +127,11 @@ internal sealed class CampaignActionHandler : CatalogEntryHandlerBase<CampaignAc
 
         if (properties != null)
         {
-            action.Properties ??= [];
-            action.Properties.Merge(properties);
+            action.Properties ??= new Dictionary<string, object>();
+
+            var currentJson = JsonSerializer.SerializeToNode(action.Properties)?.AsObject() ?? [];
+            currentJson.Merge(properties);
+            action.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         return Task.CompletedTask;
