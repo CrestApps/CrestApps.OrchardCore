@@ -26,10 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Core\CrestApps.OrchardCore.AI.Chat.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <PackageReference Include="CrestApps.Core.AI.Chat" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,8 +37,8 @@
       they won't need to manually include the AI and SignalR packages. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

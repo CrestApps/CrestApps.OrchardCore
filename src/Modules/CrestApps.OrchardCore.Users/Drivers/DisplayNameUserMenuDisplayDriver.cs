@@ -1,9 +1,12 @@
-using OrchardCore.DisplayManagement.Handlers;
+﻿using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the display name user menu shape.
+/// </summary>
 public sealed class DisplayNameUserMenuDisplayDriver : DisplayDriver<UserMenu>
 {
     public override IDisplayResult Display(UserMenu model, BuildDisplayContext buildDisplayContext)

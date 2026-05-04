@@ -16,7 +16,7 @@ public static class OrchardCoreHelpers
     /// <returns>True if the legacy format should be used, otherwise false.</returns>
     public static bool UseLegacyAdminMenuFormat()
     {
-        if (IsVersionIsLess(GetCurrentOrchardCoreVersion(), "3.0.0-preview-18490"))
+        if (IsVersionLessThan(GetCurrentOrchardCoreVersion(), "3.0.0-preview-18490"))
         {
             // The legacy format was introduced in Orchard Core version 3.0.0-preview-18490.
             // Legacy format should always be used if the current version of Orchard Core is earlier than this.
@@ -43,7 +43,7 @@ public static class OrchardCoreHelpers
             var assembly = typeof(OrchardCoreConstants).GetTypeInfo().Assembly;
 
             _currentVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion;
+            ?.InformationalVersion;
 
             if (string.IsNullOrWhiteSpace(_currentVersion))
             {
@@ -102,7 +102,7 @@ public static class OrchardCoreHelpers
     /// <param name="currentVersion">The current version string.</param>
     /// <param name="compareTo">The minimum required version string.</param>
     /// <returns>True if the current version is less than to the minimum version, otherwise false.</returns>
-    public static bool IsVersionIsLess(string currentVersion, string compareTo)
+    public static bool IsVersionLessThan(string currentVersion, string compareTo)
     {
         if (TryNormalizeSemanticVersion(currentVersion, out var semVerCurrent) &&
             TryNormalizeSemanticVersion(compareTo, out var semCompareTo))

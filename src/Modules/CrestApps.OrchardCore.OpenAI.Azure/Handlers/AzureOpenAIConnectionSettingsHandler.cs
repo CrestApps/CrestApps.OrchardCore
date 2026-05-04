@@ -1,24 +1,30 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.Azure.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
 internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
+    private const string _legacyAzureConnectionMetadataPropertyName = "AzureOpenAIConnectionMetadata";
+
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIConnectionSettingsHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureOpenAIConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureOpenAIConnectionHandler> stringLocalizer)
@@ -27,24 +33,24 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
-        if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureOpenAIConnectionMetadata>();
-
-        if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
+        if (context.Model.TryGet<AzureConnectionMetadata>(out var metadata) &&
+            metadata.AuthenticationType == AzureAuthenticationType.ApiKey &&
+            string.IsNullOrEmpty(metadata.ApiKey))
         {
-            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureOpenAIConnectionMetadata.ApiKey)]));
+            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureConnectionMetadata.ApiKey)]));
         }
 
         return Task.CompletedTask;
@@ -52,19 +58,21 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode =
+            data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject() ??
+            data[nameof(AIProviderConnection.Properties)]?[_legacyAzureConnectionMetadataPropertyName]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 
@@ -74,7 +82,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         }
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>()
-            ?? AzureAuthenticationType.Default;
+        ?? AzureAuthenticationType.Default;
 
         var identityId = metadataNode[nameof(metadata.IdentityId)]?.GetValue<string>()?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(identityId) ? null : identityId;

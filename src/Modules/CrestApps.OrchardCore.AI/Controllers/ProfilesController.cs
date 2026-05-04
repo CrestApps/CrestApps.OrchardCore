@@ -1,8 +1,11 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,12 +20,14 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+/// <summary>
+/// Provides admin controller actions for managing AI profiles.
+/// </summary>
 public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -31,18 +36,26 @@ public sealed class ProfilesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfilesController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="profileDisplayManager">The profile display manager.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ProfilesController(
         IAIProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)
@@ -51,12 +64,19 @@ public sealed class ProfilesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _profileDisplayManager = profileDisplayManager;
-        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view.</returns>
     [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -85,12 +105,11 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIProfile>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIProfile>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -110,6 +129,11 @@ public sealed class ProfilesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the profiles index.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -127,26 +151,24 @@ public sealed class ProfilesController : Controller
         });
     }
 
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source, [FromQuery] string templateId)
+    /// <summary>
+    /// Displays the editor for creating a new AI profile.
+    /// </summary>
+    /// <param name="templateId">The optional template identifier to pre-populate the profile.</param>
+    /// <returns>The create view.</returns>
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> Create([FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var profile = await _profileManager.NewAsync(source);
+        var profile = await _profileManager.NewAsync();
 
         if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -164,42 +186,39 @@ public sealed class ProfilesController : Controller
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI profile.
+    /// </summary>
+    /// <returns>A redirect to the index view on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var profile = await _profileManager.NewAsync(source);
+        var profile = await _profileManager.NewAsync();
 
         if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -215,6 +234,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Displays the editor for editing an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>The edit view.</returns>
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -239,6 +263,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for updating an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>A redirect to the index view on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
@@ -274,6 +303,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Deletes an AI profile by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile to delete.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [Admin("ai/profile/delete/{id}", "AIProfilesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -311,11 +345,22 @@ public sealed class ProfilesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the bulk action form submission for AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the selected bulk action.</param>
+    /// <param name="itemIds">The identifiers of the selected profiles.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/profiles", "AIProfilesIndex")]
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -370,7 +415,7 @@ public sealed class ProfilesController : Controller
         // Copy all extensibility properties from the template to the profile.
         // This transfers settings stored by external module drivers (e.g., analytics,
         // data extraction, post-session, MCP connections, data sources, etc.).
-        // Template drivers store settings in template.Properties (via Entity.As<T>/Put<T>).
+        // Template drivers store settings in template.Properties (via Entity.GetOrCreate<T>/Put<T>).
         // Profile drivers may read from either profile.Properties or profile.Settings,
         // so we copy to both to ensure all drivers can read the applied values.
         if (template.Properties != null)
@@ -384,8 +429,8 @@ public sealed class ProfilesController : Controller
                     continue;
                 }
 
-                profile.Properties[property.Key] = property.Value?.DeepClone();
-                profile.Settings[property.Key] = property.Value?.DeepClone();
+                profile.Properties[property.Key] = property.Value;
+                profile.Settings[property.Key] = JsonSerializer.SerializeToNode(property.Value);
             }
         }
 
@@ -399,21 +444,21 @@ public sealed class ProfilesController : Controller
             profile.Name = template.Name;
         }
 
-        var templateMetadata = template.As<ProfileTemplateMetadata>();
+        var templateMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (templateMetadata.ProfileType.HasValue)
         {
             profile.Type = templateMetadata.ProfileType.Value;
         }
 
-        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentId))
+        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentName))
         {
-            profile.ChatDeploymentId = templateMetadata.ChatDeploymentId;
+            profile.ChatDeploymentName = templateMetadata.ChatDeploymentName;
         }
 
-        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentId))
+        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentName))
         {
-            profile.UtilityDeploymentId = templateMetadata.UtilityDeploymentId;
+            profile.UtilityDeploymentName = templateMetadata.UtilityDeploymentName;
         }
 
         if (!string.IsNullOrEmpty(templateMetadata.OrchestratorName))
@@ -441,7 +486,7 @@ public sealed class ProfilesController : Controller
             profile.PromptTemplate = templateMetadata.PromptTemplate;
         }
 
-        var metadata = profile.As<AIProfileMetadata>();
+        var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
         if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
         {
@@ -482,14 +527,14 @@ public sealed class ProfilesController : Controller
 
         if (templateMetadata.ToolNames != null && templateMetadata.ToolNames.Length > 0)
         {
-            var toolMetadata = profile.As<FunctionInvocationMetadata>();
+            var toolMetadata = profile.GetOrCreate<FunctionInvocationMetadata>();
             toolMetadata.Names = [.. templateMetadata.ToolNames];
             profile.Put(toolMetadata);
         }
 
         if (templateMetadata.AgentNames != null && templateMetadata.AgentNames.Length > 0)
         {
-            var agentMetadata = profile.As<AgentInvocationMetadata>();
+            var agentMetadata = profile.GetOrCreate<AgentInvocationMetadata>();
             agentMetadata.Names = [.. templateMetadata.AgentNames];
             profile.Put(agentMetadata);
         }
@@ -501,7 +546,7 @@ public sealed class ProfilesController : Controller
 
         if (templateMetadata.AgentAvailability.HasValue)
         {
-            var agentMeta = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            var agentMeta = profile.GetOrCreate<AgentMetadata>();
             agentMeta.Availability = templateMetadata.AgentAvailability.Value;
             profile.Put(agentMeta);
         }
@@ -512,7 +557,7 @@ public sealed class ProfilesController : Controller
 
     private async Task CloneTemplateDocumentsAsync(AIProfile profile, AIProfileTemplate template)
     {
-        var documentsMetadata = template.As<DocumentsMetadata>();
+        var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
 
         if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
         {

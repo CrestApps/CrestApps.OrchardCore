@@ -1,10 +1,13 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using OrchardCore.Entities;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 
+/// <summary>
+/// Provides ominchannel activity AI chat session index functionality.
+/// </summary>
 public sealed class OminchannelActivityAIChatSessionIndexProvider : IndexProvider<AIChatSession>
 {
     public override void Describe(DescribeContext<AIChatSession> context)

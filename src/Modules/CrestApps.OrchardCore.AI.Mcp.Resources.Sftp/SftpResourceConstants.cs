@@ -1,5 +1,8 @@
-namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp;
+﻿namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp;
 
+/// <summary>
+/// Contains constant values for sftp resource.
+/// </summary>
 public static class SftpResourceConstants
 {
     public const string Type = "sftp";

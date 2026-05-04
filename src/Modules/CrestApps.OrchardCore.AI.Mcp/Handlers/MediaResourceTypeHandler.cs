@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -16,13 +16,19 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
     public const string TypeName = "media";
 
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     private readonly IMediaFileStore _mediaFileStore;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MediaResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="mediaFileStore">The media file store.</param>
+    /// <param name="logger">The logger.</param>
     public MediaResourceTypeHandler(
         IMediaFileStore mediaFileStore,
         ILogger<MediaResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _mediaFileStore = mediaFileStore;
         _logger = logger;
@@ -51,6 +57,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
 
         // Determine MIME type.
         var mimeType = resource.Resource?.MimeType;
+
         if (string.IsNullOrEmpty(mimeType))
         {
             if (!_contentTypeProvider.TryGetContentType(mediaPath, out mimeType))
@@ -77,6 +84,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
                         MimeType = mimeType,
                         Text = content,
                     }
+
                 ]
             };
         }
@@ -94,6 +102,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
                     MimeType = mimeType,
                     Blob = bytes,
                 }
+
             ]
         };
     }

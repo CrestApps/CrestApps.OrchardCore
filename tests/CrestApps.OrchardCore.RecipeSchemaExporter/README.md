@@ -15,7 +15,7 @@ The exporter exists so contributors can refresh the recipe schema reference file
 When you do not pass an output path, the exporter:
 
 1. walks up from the running process location
-2. finds the `CrestApps.OrchardCore` repository root by looking for markers such as `global.json`, `NuGet.config`, or `CrestApps.OrchardCore.slnx`
+2. finds the `CrestApps.OrchardCore` repository root by looking for markers such as `global.json`, `NuGet.config`, `CrestApps.OrchardCore.sln`, or `CrestApps.OrchardCore.slnx`
 3. moves to the parent directory of that repo
 4. writes to the sibling AgentSkills path:
 

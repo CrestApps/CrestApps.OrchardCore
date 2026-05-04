@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Samples.McpClient.Services;
+﻿using CrestApps.OrchardCore.Samples.McpClient.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ModelContextProtocol.Client;
@@ -6,24 +6,45 @@ using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 
+/// <summary>
+/// Represents the resources model.
+/// </summary>
 public sealed class ResourcesModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResourcesModel"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
     public ResourcesModel(McpClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
+    /// <summary>
+    /// Gets or sets the resources.
+    /// </summary>
     public IList<McpClientResource> Resources { get; private set; } = [];
 
+    /// <summary>
+    /// Gets or sets the error message.
+    /// </summary>
     public string ErrorMessage { get; private set; }
 
+    /// <summary>
+    /// Asynchronously performs the on get operation.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadResourcesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the on post refresh operation.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IActionResult> OnPostRefreshAsync(CancellationToken cancellationToken)
     {
         await LoadResourcesAsync(cancellationToken);
@@ -31,6 +52,11 @@ public sealed class ResourcesModel : PageModel
         return Page();
     }
 
+    /// <summary>
+    /// Asynchronously performs the on post read resource operation.
+    /// </summary>
+    /// <param name="resourceUri">The resource uri.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IActionResult> OnPostReadResourceAsync(string resourceUri, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(resourceUri))

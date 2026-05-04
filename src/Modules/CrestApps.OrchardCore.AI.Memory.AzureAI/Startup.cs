@@ -1,19 +1,28 @@
+﻿using CrestApps.Core.AI.Memory;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -21,6 +30,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIMemoryAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIMemoryAzureAISearchDocumentIndexHandler>();
         services.AddKeyedScoped<IMemoryVectorSearchService, AzureAISearchMemoryVectorSearchService>(AzureAISearchConstants.ProviderName);

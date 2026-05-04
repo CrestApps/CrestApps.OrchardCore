@@ -1,7 +1,7 @@
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -11,6 +11,9 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Services;
 
+/// <summary>
+/// Provides AI documents indexing services.
+/// </summary>
 public sealed class AIDocumentsIndexingService
 {
     private readonly ILogger _logger;
@@ -18,7 +21,7 @@ public sealed class AIDocumentsIndexingService
     private readonly IIndexProfileStore _indexProfileStore;
 
     private readonly IIndexingTaskManager _indexingTaskManager;
-    private readonly ISourceCatalog<ChatInteraction> _sourceCatalog;
+    private readonly ICatalog<ChatInteraction> _sourceCatalog;
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
@@ -28,10 +31,21 @@ public sealed class AIDocumentsIndexingService
 
     private const int _batchSize = 100;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentsIndexingService"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="indexingTaskManager">The indexing task manager.</param>
+    /// <param name="sourceCatalog">The source catalog.</param>
+    /// <param name="documentStore">The document store.</param>
+    /// <param name="chunkStore">The chunk store.</param>
+    /// <param name="documentIndexHandlers">The document index handlers.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="logger">The logger.</param>
     public AIDocumentsIndexingService(
         IIndexProfileStore indexProfileStore,
         IIndexingTaskManager indexingTaskManager,
-        ISourceCatalog<ChatInteraction> sourceCatalog,
+        ICatalog<ChatInteraction> sourceCatalog,
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
@@ -48,11 +62,18 @@ public sealed class AIDocumentsIndexingService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Processes the records for all indexes async.
+    /// </summary>
     public async Task ProcessRecordsForAllIndexesAsync()
     {
         await ProcessRecordsAsync(await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType));
     }
 
+    /// <summary>
+    /// Processes the records async.
+    /// </summary>
+    /// <param name="indexIds">The index ids.</param>
     public async Task ProcessRecordsAsync(IEnumerable<string> indexIds)
     {
         ArgumentNullException.ThrowIfNull(indexIds);

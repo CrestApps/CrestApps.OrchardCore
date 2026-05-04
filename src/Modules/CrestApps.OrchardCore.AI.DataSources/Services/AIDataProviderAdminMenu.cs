@@ -4,10 +4,17 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Services;
 
+/// <summary>
+/// Represents the AI data provider admin menu.
+/// </summary>
 public sealed class AIDataProviderAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataProviderAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataProviderAdminMenu(IStringLocalizer<AIDataProviderAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

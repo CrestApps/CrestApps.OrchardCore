@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -8,6 +8,10 @@ internal sealed class AdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AdminMenu(IStringLocalizer<AdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -53,11 +57,9 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
                     .LocalNav()
-                )
-
-            , priority: 1);
+                ),
+                priority: 1);
 
         return ValueTask.CompletedTask;
     }
 }
-

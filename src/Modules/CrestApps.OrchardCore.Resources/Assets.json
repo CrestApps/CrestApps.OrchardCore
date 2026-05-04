@@ -22,6 +22,13 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/chart.js/dist/chart.umd.min.js.map"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.umd.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/chart.js/dist/chart.umd.min.js"
     ],
     "output": "wwwroot/vendors/chartjs/chart.min.js"
@@ -121,5 +128,47 @@
       "node_modules/highlight.js/styles/github.min.css"
     ],
     "output": "wwwroot/vendors/highlightjs/css/highlightjs.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/technical-name-generator.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/technical-name-generator.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.css"
   }
 ]

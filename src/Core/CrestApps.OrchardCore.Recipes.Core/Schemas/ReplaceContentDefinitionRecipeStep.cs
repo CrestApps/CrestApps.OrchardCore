@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class ReplaceContentDefinitionRecipeStep(
     IEnumerable<IContentDefinitionSchemaDefinition> schemaDefinitions,
     IContentSchemaProvider contentSchemaProvider)
-    : ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
+: ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
 {
     public override string Name => "ReplaceContentDefinition";
 }

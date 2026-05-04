@@ -81,6 +81,98 @@ cd src/Startup/CrestApps.Aspire.AppHost
 dotnet run
 ```
 
+### Code Guidelines
+
+* Follow `.editorconfig` at all times.
+* Prefer constructor injection.
+* Do not add `ArgumentNullException.ThrowIf...` guards in constructors.
+
+#### Null Handling
+
+* Add null guards in public implementation methods when a non-nullable input is required and the method does not intentionally support `null`.
+* Skip null guards for nullable or intentionally null-tolerant parameters.
+* After the final null-check or argument-validation line in a method, add a blank line before the next statement (even if it is the only guard).
+
+#### Formatting & Layout
+
+* Never use more than one consecutive blank line.
+* Add a blank line before a `return` statement unless it is the first statement in a `{ ... }` block.
+* Add a blank line before and after `if`, `switch`, and loop blocks unless the block is immediately preceded by `{`.
+* Do not add a blank line between a control statement (`if`/`else`/`switch`/loop) and its opening `{`.
+* Do not leave extra blank lines between consecutive closing braces.
+* Add a blank line after `};` and after multi-line object initializers unless returned inline.
+* When an object initializer spans multiple lines, place each property assignment on its own line.
+* Format conditional (`?:`) operators across multiple lines with the condition, `?`, and `:` each on their own properly indented lines.
+* Always keep exactly one trailing newline at the end of each file.
+
+#### `#pragma` Rules
+
+* Do not add a blank line immediately after `#pragma warning disable`.
+* Do not add a blank line immediately before `#pragma warning restore`.
+* Do not add a blank line after `#pragma warning restore` if followed by `{`.
+* Add a blank line before a `#pragma warning disable` block when it starts a new member after a `}`.
+* Add a blank line between `#pragma warning restore` and the next `#pragma warning disable` when guarding separate members.
+
+#### Usings & Types
+
+* Do not use `global using`; declare explicit `using` statements at the top of each file.
+* Prefer top-of-file `using` directives over fully qualified type names.
+* Prefer `using` statements over fully qualified names when there is no conflict.
+* Use `var` consistently with repository style.
+
+#### Members & Structure
+
+* Only use expression-bodied members when the entire member fits on a single short line.
+* Use full block bodies for anything longer or multi-line.
+* When a constructor has more than one parameter, place each parameter on its own line.
+* Place constructor initializer clauses (`: base(...)`) on their own indented line.
+* Seal publicly accessible classes by default unless inheritance is intentionally required (Except for View Models). In OrchardCore, we can't seal view models.
+
+#### Time Abstraction
+
+* Avoid `DateTime.UtcNow`; always use an injected `IClock`.
+
+#### Documentation
+
+* Keep public docs and comments accurate and aligned with the code.
+* Always document:
+
+  * Every public method (including constructors) with XML `<summary>` and `<param>` tags.
+  * Every public property with an XML `<summary>`.
+  * All interfaces and their members.
+* Only include `<param>` tags for actual parameters, in the exact order of the signature.
+* Improve existing XML docs in place—do not duplicate `<summary>` blocks.
+* Always insert a blank line before XML `<summary>` blocks unless immediately preceded by `{`.
+* Never insert a blank line between an XML doc block and the member it documents.
+* Always leave a blank line between a property and a following XML documentation block.
+* Remove decorative or low-value comments; prefer meaningful XML documentation.
+
+#### Testing
+
+* In unit tests:
+
+  * Separate setup, act, and assert sections.
+  * Use `// Arrange`, `// Act`, and `// Assert` when helpful.
+  * Wrap long fluent chains across multiple lines with consistent indentation.
+  * Add a blank line after multi-line setup statements.
+
+#### JavaScript in `.cshtml`
+
+* Ensure proper indentation for all JavaScript inside `.cshtml` files.
+
+#### Architecture & Design
+
+* Prefer SOLID, DRY, KISS, and YAGNI principles.
+* Consolidate duplicated provider, transport, or store logic into shared abstractions before introducing new one-off implementations.
+* Favor additive shared infrastructure first, then migrate consumers in safe, incremental steps.
+* Optimize framework code for consistency, extensibility, and long-term maintainability across providers and hosts.
+* For optional provider integrations in sample hosts, do not eagerly read validated options in UI setup paths—unconfigured providers should appear unavailable rather than cause failures.
+
+#### Quality Enforcement
+
+* Treat all warnings as errors and resolve every warning.
+* Continuously evolve and update `copilot-instructions.md` with newly established preferences and patterns.
+
 ### Validation Scenarios
 
 **When the build succeeds**, always validate changes by:
@@ -109,9 +201,9 @@ src/
 │   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
 │   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
 ├── Common/                     # Shared utility libraries
-│   └── CrestApps.Support/                          # General support utilities
+│   └── CrestApps.Core.Support/                          # General support utilities
 ├── Core/                       # Core service libraries (not Orchard modules)
-│   ├── CrestApps.Azure.Core/                       # Azure utilities
+│   ├── CrestApps.Core.Azure.Core/                       # Azure utilities
 │   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
 │   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
 │   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
@@ -121,7 +213,6 @@ src/
 │   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
 │   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
 │   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
-│   ├── CrestApps.OrchardCore.SignalR.Core/         # SignalR core services
 │   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
 │   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
 ├── Modules/                    # All CrestApps Orchard Core modules
@@ -160,9 +251,9 @@ src/
 │   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
 │   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
 │   └── CrestApps.OrchardCore.Users/               # Enhanced user management
-├── CrestApps.OrchardCore.Documentations/  # Docusaurus documentation site
+├── CrestApps.Docs/  # Docusaurus documentation site
 ├── Startup/                    # Runnable applications
-│   ├── CrestApps.Aspire.AppHost/                   # .NET Aspire orchestration host
+│   ├── CrestApps.Aspire.AppHost/                        # .NET Aspire orchestration host
 │   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
 │   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
 └── Targets/                    # MSBuild package bundle targets
@@ -203,7 +294,7 @@ tests/
 - **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
 - **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
 - **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
-- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `AITemplates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `IAITemplateService`.
+- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `Templates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `ITemplateService`.
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
@@ -226,12 +317,20 @@ tests/
 
 ### Documentation Workflow
 
-Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.OrchardCore.Documentations`:
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
 
-1. **Update feature documentation first** – find the relevant page under `src/CrestApps.OrchardCore.Documentations/docs/` and keep it accurate with the latest behavior.
-2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
-3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
-4. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
+2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
+3. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+
+## Documentation expectations
+
+When a change affects public behavior, configuration, setup, or project guidance:
+
+1. Update the relevant page under `src\CrestApps.Docs\docs`
+2. Update the changelog or release-notes file under `src\CrestApps.Docs\docs\changelog` that matches `VersionPrefix` in `Directory.Build.props` (for example, `VersionPrefix` `2.0.0` maps to `v2.0.0.md`)
+3. Do not create a new changelog version file unless `VersionPrefix` changed or the user explicitly instructs you to create a different file
+4. Build the docs site
 
 ## Troubleshooting
 
@@ -283,7 +382,18 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
 - **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
-- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods.
+- **Interface and domain-model docs**: Every method declared on an interface or domain model should have an honest XML `<summary>` comment.
+- **Parameter docs**: Interface methods with parameters should document each parameter with an XML `<param>` tag.
+- **Namespace usage**: Prefer file-level `using` directives over fully qualified namespace references when no ambiguity exists.
+- **Constructor layout**: Constructors with more than one parameter should place each parameter on its own line.
+- **Initializer layout**: Multi-line object initializers should put each property on its own line and should usually be followed by a blank line after the terminating `};`, unless the initializer is returned on the same line.
+- **Property/doc spacing**: Leave a blank line between a property and any following XML documentation block.
+- **Brace spacing**: Do not insert an extra blank line between consecutive closing braces.
+- **Unit test readability**: Keep setup, act, and assertion sections visually separated, use standard `// Arrange`, `// Act`, and `// Assert` comments where helpful, and wrap crowded fluent chains onto multiple lines with aligned indentation.
+- **Dependency injection**: Prefer constructor injection over lazy service resolution. Only fall back to lazy resolution when it is absolutely necessary to break a real framework or container circular dependency.
+- **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
+- **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
 - **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
@@ -291,6 +401,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
 - **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
+- **AI site settings navigation**: Every `SiteDisplayDriver<>` that sets `SettingsGroupId => AIConstants.AISettingsGroupId` must also register `.AddNavigationProvider<AISiteSettingsAdminMenu>()` in its feature's `Startup` class. This ensures the **Settings → Artificial Intelligence** admin menu entry exists whenever the feature is enabled, so users can navigate to the settings page.
 
 ### Module Structure Conventions
 
@@ -386,7 +497,7 @@ Every module MUST have a README.md file with:
 - Dependencies on other modules
 
 ### Documentation Project
-The Docusaurus documentation site is located at `src/CrestApps.OrchardCore.Documentations`. It contains:
+The Docusaurus documentation site is located at `src/CrestApps.Docs`. It contains:
 - Feature documentation under `docs/`
 - Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
 - A changelog under `docs/changelog/`
@@ -461,7 +572,7 @@ npm run watch
 1. **Build Validation**: Ensure both .NET and asset builds succeed
 2. **Test Coverage**: Add tests for new features and bug fixes
 3. **Code Quality**: Follow coding standards and conventions
-4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.OrchardCore.Documentations`
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs`
 5. **Commit Messages**: Write clear, descriptive commit messages
 6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
 
@@ -542,6 +653,13 @@ services.AddNavigationProvider<MyAdminMenu>();
 - Don't leave unused services injected through dependency injection
 - Don't leave unused `using` statements in source files
 - Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- Don't leave interface or domain-model methods undocumented.
+- Don't omit `<param>` documentation on interface methods that take parameters.
+- Don't use fully qualified namespaces when a normal `using` directive would be clear and conflict-free.
+- Don't keep multi-parameter constructors on a single line.
+- Don't leave decorative region blocks or useless AI-style comments in source.
+- Don't place an XML documentation block immediately after a property without a blank line between them.
+- Don't crowd unit tests by running setup, act, and assertion code together without visual separation.
 - Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
 - Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
 

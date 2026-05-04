@@ -1,6 +1,7 @@
-using System.Threading.Channels;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+﻿using System.Threading.Channels;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,9 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the stop conversation operation.
+    /// </summary>
     public Task StopConversation()
     {
         if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
@@ -105,7 +109,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     /// Synthesizes the given text as speech and streams audio chunks to the caller.
     /// </summary>
     protected async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
+        ITextToSpeechClient textToSpeechClient,
         string identifier,
         string text,
         string voiceName,
@@ -126,7 +130,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
             return;
         }
 
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+        await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
         {
             var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
             if (audioContent?.Data is not { Length: > 0 } audioData)
@@ -145,7 +149,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     /// Reads sentences from a channel and synthesizes each as speech, streaming audio chunks to the caller.
     /// </summary>
     protected async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
+        ITextToSpeechClient textToSpeechClient,
         Func<string> getIdentifier,
         ChannelReader<string> sentenceReader,
         string voiceName,
@@ -174,7 +178,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
             }
 
             // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
                 var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
                 if (audioContent?.Data is not { Length: > 0 } audioData)

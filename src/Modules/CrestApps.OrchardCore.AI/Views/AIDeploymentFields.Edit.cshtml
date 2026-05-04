@@ -3,58 +3,58 @@
 
 @model EditDeploymentViewModel
 
-@if (!Model.HasContainedConnection && (Model.Connections == null || Model.Connections.Count == 0))
-{
-    <div class="alert alert-danger" role="alert">
-        @T["There are no configured connections."]
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ModelName" class="@Orchard.GetLabelClasses()">@T["Model name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="ModelName" class="form-control" />
+        <span asp-validation-for="ModelName" class="text-danger"></span>
+        <span class="hint">@T["The provider-facing model or deployment name to send when this deployment is used. This value does not need to be unique."]</span>
     </div>
-
-    return;
-}
+</div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Technical name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
         <span asp-validation-for="Name" class="text-danger"></span>
         @if (Model.IsNew)
         {
-            <span class="hint">@T["Deployment name. This name cannot be changed later."]</span>
+            <span class="hint">@T["The unique technical name used in settings, profiles, and recipes. This name cannot be changed later."]</span>
         }
         else
         {
-            <span class="hint">@T["Deployment name."]</span>
+            <span class="hint">@T["The unique technical name used in settings, profiles, and recipes."]</span>
         }
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Type" class="@Orchard.GetLabelClasses()">@T["Type"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
-        <span asp-validation-for="Type" class="text-danger"></span>
-        <span class="hint">@T["The capability type of this deployment."]</span>
-    </div>
-</div>
-
-@if (!Model.HasContainedConnection)
+@if (Model.IsNew)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            <span class="hint">@T["Connection name to use for this deployment."]</span>
-        </div>
-    </div>
+    <script asp-name="technical-name-generator"></script>
+    <script at="Foot" depends-on="technical-name-generator">
+        window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.ModelName)', '@Html.IdFor(x => x.Name)');
+    </script>
 }
 
 <div class="@Orchard.GetWrapperClasses()">
     <div class="@Orchard.GetEndClasses(true)">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="IsDefault">
-            <label class="form-check-label" asp-for="IsDefault">@T["Is default"]</label>
-            <span class="hint dashed">@T["When enabled, this deployment is the default for its type within its connection."]</span>
+        <h6>@T["Types"]</h6>
+        <div>
+            @foreach (var type in Model.Types)
+            {
+                var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
+                <div class="form-check">
+                    <input id="@(Html.IdFor(m => m.SelectedTypes))_@type.Value"
+                           name="@Html.NameFor(m => m.SelectedTypes)"
+                           type="checkbox"
+                           value="@type.Value"
+                           class="form-check-input"
+                           checked="@isChecked" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.SelectedTypes))_@type.Value">@type.Text</label>
+                </div>
+            }
+            <span asp-validation-for="SelectedTypes" class="text-danger"></span>
+            <span class="hint">@T["Select one or more capability types for this deployment."]</span>
         </div>
     </div>
 </div>

@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
 
@@ -11,30 +12,30 @@ namespace CrestApps.OrchardCore.Tests.Core.Services;
 
 public sealed class DefaultAIDeploymentManagerTests
 {
-    private readonly Mock<INamedSourceCatalog<AIDeployment>> _storeMock;
+    private readonly Mock<IAIDeploymentStore> _storeMock;
     private readonly Mock<ISiteService> _siteServiceMock;
     private readonly Mock<ISite> _siteMock;
     private readonly DefaultAIDeploymentSettings _settings;
-    private readonly DefaultAIDeploymentManager _manager;
+    private readonly SiteSettingsAIDeploymentManager _manager;
 
     public DefaultAIDeploymentManagerTests()
     {
-        _storeMock = new Mock<INamedSourceCatalog<AIDeployment>>();
+        _storeMock = new Mock<IAIDeploymentStore>();
         _siteServiceMock = new Mock<ISiteService>();
         _siteMock = new Mock<ISite>();
         _settings = new DefaultAIDeploymentSettings();
 
-        _siteMock.Setup(s => s.As<DefaultAIDeploymentSettings>())
+        _siteMock.Setup(s => s.GetOrCreate<DefaultAIDeploymentSettings>())
             .Returns(_settings);
 
         _siteServiceMock.Setup(s => s.GetSiteSettingsAsync())
             .ReturnsAsync(_siteMock.Object);
 
-        _manager = new DefaultAIDeploymentManager(
+        _manager = new SiteSettingsAIDeploymentManager(
             _storeMock.Object,
             [],
             _siteServiceMock.Object,
-            NullLogger<DefaultAIDeploymentManager>.Instance);
+            NullLogger<SiteSettingsAIDeploymentManager>.Instance);
     }
 
     [Fact]
@@ -93,7 +94,26 @@ public sealed class DefaultAIDeploymentManagerTests
 
         Assert.NotNull(result);
         Assert.Equal("dep-2", result.ItemId);
-        Assert.True(result.IsDefault);
+        Assert.True(result.GetIsDefault());
+    }
+
+    [Fact]
+    public async Task GetDefaultAsync_WithMultiTypeDefault_ReturnsDeployment()
+    {
+        var deployments = new[]
+        {
+            CreateDeployment("dep-multi", "gpt-4.1-mini", AIDeploymentType.Chat | AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1"),
+        };
+
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync(deployments);
+
+        var result = await _manager.GetDefaultAsync("openai", "conn-1", AIDeploymentType.Utility);
+
+        Assert.NotNull(result);
+        Assert.Equal("dep-multi", result.ItemId);
+        Assert.True(result.SupportsType(AIDeploymentType.Chat));
+        Assert.True(result.SupportsType(AIDeploymentType.Utility));
     }
 
     [Fact]
@@ -115,7 +135,7 @@ public sealed class DefaultAIDeploymentManagerTests
     [Fact]
     public async Task ResolveAsync_WithExplicitDeploymentId_ReturnsThatDeployment()
     {
-        var deployment = CreateDeployment("dep-explicit", "gpt-4", AIDeploymentType.Chat);
+        var deployment = CreateDeployment("dep-explicit", "openai-chat", AIDeploymentType.Chat, modelName: "gpt-4");
 
         _storeMock.Setup(m => m.FindByIdAsync("dep-explicit"))
             .ReturnsAsync(deployment);
@@ -128,10 +148,10 @@ public sealed class DefaultAIDeploymentManagerTests
         _storeMock.Setup(m => m.GetAllAsync())
             .ReturnsAsync(connectionDeployments);
 
-        var result = await _manager.ResolveAsync(
+        var result = await _manager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: "dep-explicit",
-            providerName: "openai",
+            deploymentName: "dep-explicit",
+            clientName: "openai",
             connectionName: "conn-1");
 
         Assert.NotNull(result);
@@ -139,65 +159,90 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoExplicit_FallsBackToConnectionDefault()
+    public async Task ResolveAsync_WithExplicitDeploymentName_ReturnsThatDeployment()
     {
-        var deployments = new[]
-        {
-            CreateDeployment("dep-conn-default", "gpt-4o", AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1"),
-        };
+        var deployment = CreateDeployment("dep-explicit", "azure-chat", AIDeploymentType.Chat, modelName: "gpt-4.1");
 
-        _storeMock.Setup(m => m.GetAllAsync())
-            .ReturnsAsync(deployments);
+        _storeMock.Setup(m => m.FindByIdAsync("azure-chat"))
+            .ReturnsAsync((AIDeployment)null);
+        _storeMock.Setup(m => m.FindByNameAsync("azure-chat"))
+            .ReturnsAsync(deployment);
 
-        var result = await _manager.ResolveAsync(
-            AIDeploymentType.Utility,
-            providerName: "openai",
-            connectionName: "conn-1");
+        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: "azure-chat");
 
         Assert.NotNull(result);
-        Assert.Equal("dep-conn-default", result.ItemId);
+        Assert.Equal("dep-explicit", result.ItemId);
+        Assert.Equal("azure-chat", result.Name);
     }
 
     [Fact]
-    public async Task ResolveAsync_WithNoConnectionDefault_FallsBackToGlobalDefault()
+    public async Task ResolveAsync_WithNoExplicit_FallsBackToGlobalDefaultBeforeScopedDeployments()
     {
-        _settings.DefaultUtilityDeploymentId = "dep-global";
+        _settings.DefaultUtilityDeploymentName = "global-utility";
 
-        var globalDeployment = CreateDeployment("dep-global", "gpt-4-turbo", AIDeploymentType.Utility);
+        var deployments = new[]
+        {
+            CreateDeployment("dep-scoped", "scoped-utility", AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1", modelName: "gpt-4o"),
+        };
 
-        _storeMock.Setup(m => m.FindByIdAsync("dep-global"))
-            .ReturnsAsync(globalDeployment);
+        var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentType.Utility, modelName: "gpt-4.1-mini");
 
         _storeMock.Setup(m => m.GetAllAsync())
-            .ReturnsAsync([]);
+            .ReturnsAsync(deployments);
+        _storeMock.Setup(m => m.FindByIdAsync("global-utility"))
+            .ReturnsAsync((AIDeployment)null);
+        _storeMock.Setup(m => m.FindByNameAsync("global-utility"))
+            .ReturnsAsync(globalDeployment);
 
-        var result = await _manager.ResolveAsync(AIDeploymentType.Utility);
+        var result = await _manager.ResolveOrDefaultAsync(
+            AIDeploymentType.Utility,
+            clientName: "openai",
+            connectionName: "conn-1");
 
         Assert.NotNull(result);
         Assert.Equal("dep-global", result.ItemId);
     }
 
     [Fact]
-    public async Task ResolveAsync_ChatWithNoConnectionDefault_FallsBackToGlobalChatDefault()
+    public async Task ResolveAsync_WithNoGlobalDefault_FallsBackToFirstMatchingScopedDeployment()
     {
-        _settings.DefaultChatDeploymentId = "dep-chat-global";
-
-        var globalDeployment = CreateDeployment("dep-chat-global", "gpt-4.1", AIDeploymentType.Chat);
-
-        _storeMock.Setup(m => m.FindByIdAsync("dep-chat-global"))
-            .ReturnsAsync(globalDeployment);
+        var scopedDeployment = CreateDeployment("dep-scoped", "gpt-4-turbo", AIDeploymentType.Utility, connectionName: "conn-1");
+        var otherDeployment = CreateDeployment("dep-other", "gpt-4o", AIDeploymentType.Utility, connectionName: "conn-2");
 
         _storeMock.Setup(m => m.GetAllAsync())
-            .ReturnsAsync([]);
+            .ReturnsAsync([otherDeployment, scopedDeployment]);
 
-        var result = await _manager.ResolveAsync(AIDeploymentType.Chat);
+        var result = await _manager.ResolveOrDefaultAsync(
+            AIDeploymentType.Utility,
+            clientName: "openai",
+            connectionName: "conn-1");
 
         Assert.NotNull(result);
-        Assert.Equal("dep-chat-global", result.ItemId);
+        Assert.Equal("dep-scoped", result.ItemId);
     }
 
     [Fact]
-    public async Task ResolveAsync_UtilityFallsBackToChat_WhenNoUtilityFound()
+    public async Task ResolveAsync_WithMissingGlobalDefault_FallsBackToFirstMatchingDeployment()
+    {
+        _settings.DefaultChatDeploymentName = "missing-chat";
+
+        var chatDeployment = CreateDeployment("dep-chat-first", "openai-chat", AIDeploymentType.Chat, modelName: "gpt-4.1");
+
+        _storeMock.Setup(m => m.FindByIdAsync("missing-chat"))
+            .ReturnsAsync((AIDeployment)null);
+        _storeMock.Setup(m => m.FindByNameAsync("missing-chat"))
+            .ReturnsAsync((AIDeployment)null);
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync([chatDeployment]);
+
+        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentType.Chat);
+
+        Assert.NotNull(result);
+        Assert.Equal("dep-chat-first", result.ItemId);
+    }
+
+    [Fact]
+    public async Task ResolveUtilityOrDefaultAsync_FallsBackToChat_WhenNoUtilityFound()
     {
         // No utility deployment exists, but a chat deployment does.
         var chatDeployment = CreateDeployment("dep-chat", "gpt-4o", AIDeploymentType.Chat, isDefault: true, connectionName: "conn-1");
@@ -208,9 +253,8 @@ public sealed class DefaultAIDeploymentManagerTests
         _storeMock.Setup(m => m.FindByIdAsync("dep-chat"))
             .ReturnsAsync(chatDeployment);
 
-        var result = await _manager.ResolveAsync(
-            AIDeploymentType.Utility,
-            providerName: "openai",
+        var result = await _manager.ResolveUtilityOrDefaultAsync(
+            clientName: "openai",
             connectionName: "conn-1");
 
         Assert.NotNull(result);
@@ -219,14 +263,36 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
+    public async Task ResolveOrDefaultAsync_UtilityWithoutFallbacks_ReturnsNull()
+    {
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync([]);
+
+        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentType.Utility);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public async Task ResolveAsync_WithNoFallbacks_ReturnsNull()
     {
         _storeMock.Setup(m => m.GetAllAsync())
             .ReturnsAsync([]);
 
-        var result = await _manager.ResolveAsync(AIDeploymentType.Chat);
+        var result = await _manager.ResolveOrDefaultAsync(AIDeploymentType.Chat);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WithNoFallbacks_ThrowsInvalidOperationException()
+    {
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync([]);
+
+        var manager = (IAIDeploymentManager)_manager;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await manager.ResolveAsync(AIDeploymentType.Chat));
     }
 
     [Fact]
@@ -234,10 +300,11 @@ public sealed class DefaultAIDeploymentManagerTests
     {
         var allDeployments = new[]
         {
-            CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentType.Chat, providerName: "openai"),
-            CreateDeployment("dep-chat-2", "gpt-4o", AIDeploymentType.Chat, providerName: "azure"),
-            CreateDeployment("dep-embed-1", "ada-002", AIDeploymentType.Embedding, providerName: "openai"),
-            CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentType.Image, providerName: "openai"),
+            CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentType.Chat, clientName: "openai"),
+            CreateDeployment("dep-chat-2", "gpt-4o", AIDeploymentType.Chat, clientName: "azure"),
+            CreateDeployment("dep-chat-utility", "gpt-4.1-mini", AIDeploymentType.Chat | AIDeploymentType.Utility, clientName: "openai"),
+            CreateDeployment("dep-embed-1", "ada-002", AIDeploymentType.Embedding, clientName: "openai"),
+            CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentType.Image, clientName: "openai"),
         };
 
         _storeMock.Setup(m => m.GetAllAsync())
@@ -245,10 +312,11 @@ public sealed class DefaultAIDeploymentManagerTests
 
         var result = (await _manager.GetAllByTypeAsync(AIDeploymentType.Chat)).ToList();
 
-        Assert.Equal(2, result.Count);
-        Assert.All(result, d => Assert.Equal(AIDeploymentType.Chat, d.Type));
+        Assert.Equal(3, result.Count);
+        Assert.All(result, d => Assert.True(d.SupportsType(AIDeploymentType.Chat)));
         Assert.Contains(result, d => d.ItemId == "dep-chat-1");
         Assert.Contains(result, d => d.ItemId == "dep-chat-2");
+        Assert.Contains(result, d => d.ItemId == "dep-chat-utility");
     }
 
     private static AIDeployment CreateDeployment(
@@ -256,16 +324,21 @@ public sealed class DefaultAIDeploymentManagerTests
         string name,
         AIDeploymentType type,
         bool isDefault = false,
-        string providerName = "openai",
-        string connectionName = "default")
+        string clientName = "openai",
+        string connectionName = "default",
+        string modelName = null)
     {
         return new AIDeployment
         {
             ItemId = itemId,
             Name = name,
+            ModelName = modelName,
             Type = type,
-            IsDefault = isDefault,
-            ProviderName = providerName,
+            Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["IsDefault"] = isDefault,
+            },
+            ClientName = clientName,
             ConnectionName = connectionName,
         };
     }

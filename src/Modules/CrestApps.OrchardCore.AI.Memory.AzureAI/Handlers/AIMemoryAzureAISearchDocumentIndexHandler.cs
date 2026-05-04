@@ -1,12 +1,20 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.AzureAI;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 
+/// <summary>
+/// Handles events for AI memory azure AI search document index.
+/// </summary>
 public sealed class AIMemoryAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
 {
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
         if (context.Record is not AIMemoryEntryIndexDocument memory)
@@ -16,7 +24,7 @@ public sealed class AIMemoryAzureAISearchDocumentIndexHandler : IDocumentIndexHa
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            !string.Equals(indexProfile.ProviderName, AzureAISearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(indexProfile.ProviderName, AzureAISearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
         {
             return Task.CompletedTask;
         }

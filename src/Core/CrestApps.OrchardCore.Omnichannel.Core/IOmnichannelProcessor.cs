@@ -1,7 +1,10 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
 
+/// <summary>
+/// Defines the contract for omnichannel processor.
+/// </summary>
 public interface IOmnichannelProcessor
 {
     /// <summary>
@@ -10,9 +13,9 @@ public interface IOmnichannelProcessor
     string Channel { get; }
 
     /// <summary>
-    /// Processes the given activity.
+    /// Starts processing the specified omnichannel activity.
     /// </summary>
-    /// <param name="activity"></param>
-    /// <returns></returns>
+    /// <param name="activity">The activity to process.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken);
 }

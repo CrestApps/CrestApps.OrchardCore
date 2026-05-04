@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+﻿using CrestApps.Core.AI.DataSources;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,12 +9,17 @@ namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 
 internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIDataSourceDeploymentStep>
 {
-    private readonly ICatalog<AIDataSource> _store;
+    private readonly IAIDataSourceStore _store;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceDeploymentStepDisplayDriver(
-        ICatalog<AIDataSource> store,
+        IAIDataSourceStore store,
         IStringLocalizer<AIDataSourceDeploymentStepDisplayDriver> stringLocalizer)
     {
         _store = store;
@@ -26,10 +29,10 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
     public override Task<IDisplayResult> DisplayAsync(AIDataSourceDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIDataSourceDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIDataSourceDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIDataSourceDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIDataSourceDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIDataSourceDeploymentStep step, BuildEditorContext context)
@@ -43,7 +46,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
                 DisplayText = x.DisplayText,
                 IsSelected = step.SourceIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
-            .ToArray();
+        .ToArray();
         }).Location("Content");
     }
 
@@ -52,8 +55,8 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
         var model = new AIDataSourceDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DataSources);
+        p => p.IncludeAll,
+        p => p.DataSources);
 
         if (model.IncludeAll)
         {

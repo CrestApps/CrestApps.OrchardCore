@@ -1,13 +1,12 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.A2A.Drivers;
 
@@ -17,6 +16,11 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateA2AConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<AIProfileTemplateA2AConnectionsDisplayDriver> stringLocalizer)
@@ -36,7 +40,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
 
         return Initialize<EditProfileA2AConnectionsViewModel>("EditProfileA2AConnection_Edit", model =>
         {
-            var a2aMetadata = template.As<AIProfileA2AMetadata>();
+            var a2aMetadata = template.GetOrCreate<AIProfileA2AMetadata>();
 
             model.Connections = connections
             .Select(entry => new ToolEntry
@@ -45,8 +49,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
                 DisplayText = entry.DisplayText,
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Content:4#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }

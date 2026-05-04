@@ -1,8 +1,9 @@
+﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -20,7 +21,10 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
-[Feature(AIConstants.Feature.Deployments)]
+/// <summary>
+/// Provides admin controller actions for managing AI deployments.
+/// </summary>
+[Feature(AIConstants.Feature.Area)]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -35,6 +39,17 @@ public sealed class DeploymentsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeploymentsController"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment catalog manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="aiOptions">The AI options.</param>
+    /// <param name="deploymentDisplayManager">The deployment display manager.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DeploymentsController(
         INamedSourceCatalogManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
@@ -55,6 +70,14 @@ public sealed class DeploymentsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI deployments.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view.</returns>
     [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -67,13 +90,26 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
+        var allEntries = await _deploymentManager.GetAllAsync();
+
+        IEnumerable<AIDeployment> filtered = allEntries;
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            filtered = filtered.Where(e => e.Name.Contains(options.Search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        filtered = filtered.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase);
+
+        var editableEntries = filtered.Where(e => !e.IsReadOnly);
+        var readOnlyEntries = filtered.Where(e => e.IsReadOnly);
+
+        var editableCount = editableEntries.Count();
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Sorted = true,
-            Name = options.Search,
-        });
+        var pagedEditable = editableEntries
+            .Skip((pager.Page - 1) * pager.PageSize)
+            .Take(pager.PageSize);
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -83,17 +119,27 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIDeployment>
+        var viewModel = new ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
         {
             Models = [],
+            ReadOnlyModels = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, editableCount, routeData),
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Entries)
+        foreach (var record in pagedEditable)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
+            {
+                Model = record,
+                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+            });
+        }
+
+        foreach (var record in readOnlyEntries)
+        {
+            viewModel.ReadOnlyModels.Add(new CatalogEntryViewModel<AIDeployment>
             {
                 Model = record,
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -108,6 +154,11 @@ public sealed class DeploymentsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the deployments index.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -125,6 +176,11 @@ public sealed class DeploymentsController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays the editor for creating a new AI deployment.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider.</param>
+    /// <returns>The create view.</returns>
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
@@ -158,6 +214,11 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI deployment.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider.</param>
+    /// <returns>A redirect to the index view on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
@@ -202,6 +263,11 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Displays the editor for editing an existing AI deployment.
+    /// </summary>
+    /// <param name="id">The unique identifier of the deployment.</param>
+    /// <returns>The edit view.</returns>
     [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -217,6 +283,13 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.Name,
@@ -226,6 +299,11 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for updating an existing AI deployment.
+    /// </summary>
+    /// <param name="id">The unique identifier of the deployment.</param>
+    /// <returns>A redirect to the index view on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
@@ -241,6 +319,13 @@ public sealed class DeploymentsController : Controller
         if (deployment == null)
         {
             return NotFound();
+        }
+
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
@@ -261,6 +346,11 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Deletes an AI deployment by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the deployment to delete.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [Admin("ai/deployment/delete/{id}", "AIDeploymentsDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -277,6 +367,13 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be deleted."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         await _deploymentManager.DeleteAsync(deployment);
 
         await _notifier.SuccessAsync(H["Deployment has been deleted successfully."]);
@@ -284,6 +381,12 @@ public sealed class DeploymentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the bulk action form submission for AI deployments.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the selected bulk action.</param>
+    /// <param name="itemIds">The identifiers of the selected deployments.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -307,7 +410,7 @@ public sealed class DeploymentsController : Controller
                     {
                         var deployment = await _deploymentManager.FindByIdAsync(id);
 
-                        if (deployment == null)
+                        if (deployment == null || deployment.IsReadOnly)
                         {
                             continue;
                         }

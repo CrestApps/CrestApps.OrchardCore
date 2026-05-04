@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.ViewModels;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
@@ -18,6 +18,11 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpPromptDeploymentStepDisplayDriver(
         INamedCatalog<McpPrompt> store,
         IStringLocalizer<McpPromptDeploymentStepDisplayDriver> stringLocalizer)
@@ -29,23 +34,23 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     public override Task<IDisplayResult> DisplayAsync(McpPromptDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                Initialize<DisplayMcpPromptDeploymentStepViewModel>("McpPromptDeploymentStep_Summary", async model =>
+        CombineAsync(
+            Initialize<DisplayMcpPromptDeploymentStepViewModel>("McpPromptDeploymentStep_Summary", async model =>
+            {
+                if (step.IncludeAll)
                 {
-                    if (step.IncludeAll)
-                    {
-                        model.IncludeAll = true;
-                        model.Names = [];
-                    }
-                    else
-                    {
-                        model.Names = (await _store.GetAllAsync())
+                    model.IncludeAll = true;
+                    model.Names = [];
+                }
+                else
+                {
+                    model.Names = (await _store.GetAllAsync())
                         .Where(x => step.PromptIds.Contains(x.ItemId))
                         .Select(x => x.Name);
-                    }
-                }).Location("Summary", "Content"),
-                View("McpPromptDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+                }
+            }).Location("Summary", "Content"),
+        View("McpPromptDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(McpPromptDeploymentStep step, BuildEditorContext context)
@@ -66,8 +71,8 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
         var model = new McpPromptStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.Prompts);
+        p => p.IncludeAll,
+        p => p.Prompts);
 
         if (model.IncludeAll)
         {

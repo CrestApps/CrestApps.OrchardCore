@@ -1,9 +1,15 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.Support;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -11,7 +17,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
@@ -29,11 +34,26 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIClientFactory _aiClientFactory;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="documentStore">The document store.</param>
+    /// <param name="chunkStore">The chunk store.</param>
+    /// <param name="documentProcessingService">The document processing service.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="extractorOptions">The extractor options.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDocumentsDisplayDriver(
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
@@ -42,6 +62,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<AIProfileTemplateDocumentsDisplayDriver> logger,
         IStringLocalizer<AIProfileTemplateDocumentsDisplayDriver> stringLocalizer)
@@ -53,6 +74,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         _chunkStore = chunkStore;
         _documentProcessingService = documentProcessingService;
         _deploymentManager = deploymentManager;
+        _aiClientFactory = aiClientFactory;
         _extractorOptions = extractorOptions;
         _logger = logger;
         S = stringLocalizer;
@@ -60,13 +82,21 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        return Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
+        var documentParametersResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocumentParameters_Edit", async model =>
         {
             model.ProfileId = template.ItemId;
 
-            var documentsMetadata = template.As<DocumentsMetadata>();
-            model.Documents = documentsMetadata.Documents ?? [];
+            var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
+        }).Location("Content:7#Knowledge;2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
+        {
+            model.ProfileId = template.ItemId;
+
+            var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
+            model.Documents = documentsMetadata.Documents ?? [];
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.IndexProfileName = settings.IndexProfileName;
@@ -81,8 +111,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Documents:5")
+        }).Location("Content:8#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        return Combine(documentParametersResult, documentsResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -95,7 +127,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         var model = new EditAIProfileDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var documentsMetadata = template.As<DocumentsMetadata>();
+        var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.Documents ??= [];
 
@@ -140,7 +172,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         _logger.LogDebug("Scheduling removal of {ChunkCount} chunk(s) from vector index for template '{TemplateId}'.",
-                            chunkIdsToRemove.Count, template.ItemId);
+                        chunkIdsToRemove.Count, template.ItemId);
                     }
 
                     ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
@@ -150,11 +182,14 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
-                var profileMetadata = template.As<ProfileTemplateMetadata>();
+                var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 var deployment = await ResolveDeploymentAsync(profileMetadata);
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(
-                    deployment?.ProviderName,
-                    deployment?.ConnectionName);
+                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
+                    AIDeploymentType.Embedding,
+                    clientName: deployment?.ClientName);
+                var embeddingGenerator = embeddingDeployment == null
+                    ? null
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -170,7 +205,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     {
                         context.Updater.ModelState.AddModelError(
                             Prefix + "." + nameof(model.Files),
-                            S["File type '{0}' is not supported for AI Profile Template documents. Only text-based files are allowed.", extension]);
+                        S["File type '{0}' is not supported for AI Profile Template documents. Only text-based files are allowed.", extension]);
                         continue;
                     }
 
@@ -186,7 +221,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                         {
                             context.Updater.ModelState.AddModelError(
                                 Prefix + "." + nameof(model.Files),
-                                S["{0}: {1}", file.FileName, result.Error]);
+                            S["{0}: {1}", file.FileName, result.Error]);
                             continue;
                         }
 
@@ -205,7 +240,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                         _logger.LogError(ex, "Failed to process file {FileName}", file.FileName.SanitizeLogValue());
                         context.Updater.ModelState.AddModelError(
                             Prefix + "." + nameof(model.Files),
-                            S["Failed to process file '{0}'.", file.FileName]);
+                        S["Failed to process file '{0}'.", file.FileName]);
                     }
                 }
 
@@ -214,11 +249,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         _logger.LogDebug("Scheduling vector indexing for {DocCount} document(s) for template '{TemplateId}'.",
-                            processedDocuments.Count, template.ItemId);
+                        processedDocuments.Count, template.ItemId);
                     }
 
-                    var docs = processedDocuments.ToList();
-                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, docs));
+                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, processedDocuments));
                 }
             }
         }
@@ -230,12 +264,12 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {
-        return await _deploymentManager.ResolveAsync(
+        return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profileMetadata.ChatDeploymentId)
-            ?? await _deploymentManager.ResolveAsync(
-                AIDeploymentType.Utility,
-                deploymentId: profileMetadata.UtilityDeploymentId);
+            deploymentName: profileMetadata.ChatDeploymentName)
+        ?? await _deploymentManager.ResolveOrDefaultAsync(
+            AIDeploymentType.Utility,
+            deploymentName: profileMetadata.UtilityDeploymentName);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

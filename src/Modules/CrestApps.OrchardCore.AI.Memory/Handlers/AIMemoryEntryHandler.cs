@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Scope;
 
@@ -11,9 +11,12 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
 {
     private readonly Dictionary<string, AIMemoryEntry> _memories = [];
     private readonly HashSet<string> _removedMemoryIds = [];
+
     private bool _taskAdded;
 
-    public override Task CreatedAsync(CreatedContext<AIMemoryEntry> context)
+    public override Task CreatedAsync(
+        CreatedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         AddDeferredTask();
         _removedMemoryIds.Remove(context.Model.ItemId);
@@ -22,7 +25,9 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         return Task.CompletedTask;
     }
 
-    public override Task UpdatedAsync(UpdatedContext<AIMemoryEntry> context)
+    public override Task UpdatedAsync(
+        UpdatedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         AddDeferredTask();
         _removedMemoryIds.Remove(context.Model.ItemId);
@@ -31,7 +36,9 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         return Task.CompletedTask;
     }
 
-    public override Task DeletedAsync(DeletedContext<AIMemoryEntry> context)
+    public override Task DeletedAsync(
+        DeletedContext<AIMemoryEntry> context,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.ItemId))
         {

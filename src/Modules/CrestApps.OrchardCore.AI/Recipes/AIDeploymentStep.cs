@@ -1,7 +1,8 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -11,6 +12,9 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIDeployment";
 
     private readonly IAIDeploymentManager _manager;
@@ -18,11 +22,17 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI deployment manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIDeploymentStep(
         IAIDeploymentManager manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
@@ -47,7 +57,10 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 deployment = await _manager.FindByIdAsync(id);
             }
 
-            var sourceName = token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+#pragma warning disable CS0618 // Type or member is obsolete
+            var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>()
+            ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+#pragma warning restore CS0618 // Type or member is obsolete
             var hasSource = !string.IsNullOrEmpty(sourceName);
 
             if (deployment is null)
@@ -96,15 +109,13 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
                 deployment = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     deployment.ItemId = id;
                 }
             }
 
-            var typeValue = token[nameof(AIDeployment.Type)]?.GetValue<string>();
-
-            if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var deploymentType))
+            if (TryGetDeploymentType(token[nameof(AIDeployment.Type)], out var deploymentType))
             {
                 deployment.Type = deploymentType;
             }
@@ -114,8 +125,6 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 // that do not include the Type property.
                 deployment.Type = AIDeploymentType.Chat;
             }
-
-            deployment.IsDefault = token[nameof(AIDeployment.IsDefault)]?.GetValue<bool>() ?? false;
 
             var validationResult = await _manager.ValidateAsync(deployment);
 
@@ -135,6 +144,43 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
     private sealed class AIModelDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI deployment definitions to import.
+        /// </summary>
         public JsonArray Deployments { get; set; }
+    }
+
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeNode is null)
+        {
+            return false;
+        }
+
+        if (typeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                        parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        var typeValue = typeNode.GetValue<string>();
+
+        return !string.IsNullOrEmpty(typeValue) &&
+            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
+                type.IsValidSelection();
     }
 }

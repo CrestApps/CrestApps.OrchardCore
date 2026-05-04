@@ -1,18 +1,25 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template data extraction shape.
+/// </summary>
 public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDataExtractionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDataExtractionDisplayDriver(
         IStringLocalizer<AIProfileTemplateDataExtractionDisplayDriver> stringLocalizer)
     {
@@ -23,19 +30,19 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
     {
         return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
-            var settings = template.As<AIProfileDataExtractionSettings>();
+            var settings = template.GetOrCreate<AIProfileDataExtractionSettings>();
 
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
-                .Select(e => new DataExtractionEntryViewModel
-                {
-                    Name = e.Name,
-                    Description = e.Description,
-                    AllowMultipleValues = e.AllowMultipleValues,
-                    IsUpdatable = e.IsUpdatable,
-                })
-                .ToList();
+            .Select(e => new DataExtractionEntryViewModel
+            {
+                Name = e.Name,
+                Description = e.Description,
+                AllowMultipleValues = e.AllowMultipleValues,
+                IsUpdatable = e.IsUpdatable,
+            })
+        .ToList();
         }).Location("Content:5#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -85,7 +92,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
             model.ExtractionCheckInterval = 1;
         }
 
-        var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
+        var dataExtractionSettings = template.GetOrCreate<AIProfileDataExtractionSettings>();
         dataExtractionSettings.EnableDataExtraction = model.EnableDataExtraction;
         dataExtractionSettings.ExtractionCheckInterval = model.ExtractionCheckInterval;
         dataExtractionSettings.DataExtractionEntries = entries.Select(e => new DataExtractionEntry

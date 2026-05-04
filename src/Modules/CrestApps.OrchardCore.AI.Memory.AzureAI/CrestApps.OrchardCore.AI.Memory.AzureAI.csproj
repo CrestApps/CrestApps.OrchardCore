@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -16,12 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Search.Documents" />
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="OrchardCore.AzureAI.Core" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
   </ItemGroup>
 

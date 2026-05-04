@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
-using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
@@ -16,16 +15,17 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 /// </summary>
 internal sealed class AIProfileDefaultContextMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProfile>>();
-            var defaultOptions = scope.ServiceProvider.GetRequiredService<DefaultAIOptions>();
+            var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
+            var defaultOptions = scope.ServiceProvider.GetRequiredService<IOptions<DefaultAIOptions>>().Value;
 
-            var profiles = await profileCatalog.GetAllAsync();
+            var profiles = await profileStore.GetAllAsync();
 
             foreach (var profile in profiles)
             {
@@ -64,7 +64,7 @@ internal sealed class AIProfileDefaultContextMigrations : DataMigration
                     }
                 });
 
-                await profileCatalog.UpdateAsync(profile);
+                await profileStore.UpdateAsync(profile);
             }
         });
 

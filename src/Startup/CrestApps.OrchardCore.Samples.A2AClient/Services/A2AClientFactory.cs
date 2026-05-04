@@ -1,8 +1,12 @@
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using A2A;
 
 namespace CrestApps.OrchardCore.Samples.A2AClient.Services;
 
+/// <summary>
+/// Represents the a2 a client factory.
+/// </summary>
 public sealed class A2AClientFactory
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -14,6 +18,11 @@ public sealed class A2AClientFactory
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AClientFactory"/> class.
+    /// </summary>
+    /// <param name="configuration">The configuration.</param>
+    /// <param name="httpClientFactory">The http client factory.</param>
     public A2AClientFactory(
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory)
@@ -22,18 +31,28 @@ public sealed class A2AClientFactory
         _httpClientFactory = httpClientFactory;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="agentUrl">The agent url.</param>
     public A2A.A2AClient Create(string agentUrl = null)
     {
         var url = agentUrl ?? GetEndpoint() + "/a2a";
         var httpClient = _httpClientFactory.CreateClient();
+        ApplyAuthentication(httpClient);
 
         return new A2A.A2AClient(new Uri(url), httpClient);
     }
 
+    /// <summary>
+    /// Retrieves the agent cards async.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<List<AgentCard>> GetAgentCardsAsync(CancellationToken cancellationToken)
     {
         var endpoint = GetEndpoint();
         var httpClient = _httpClientFactory.CreateClient();
+        ApplyAuthentication(httpClient);
 
         var cardUrl = $"{endpoint.TrimEnd('/')}/.well-known/agent-card.json";
         var response = await httpClient.GetAsync(cardUrl, cancellationToken);
@@ -71,5 +90,17 @@ public sealed class A2AClientFactory
         }
 
         return endpoint;
+    }
+
+    private void ApplyAuthentication(HttpClient httpClient)
+    {
+        var apiKey = _configuration["A2A:ApiKey"];
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return;
+        }
+
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
     }
 }

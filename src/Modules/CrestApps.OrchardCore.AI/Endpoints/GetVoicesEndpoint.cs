@@ -1,21 +1,28 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class GetVoicesEndpoint
 {
+    /// <summary>
+    /// Adds the get voices endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetVoicesEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/api/voices", HandleAsync)
-            .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetVoices)
             .DisableAntiforgery();
 
@@ -23,24 +30,31 @@ internal static class GetVoicesEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        string deploymentId,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIDeploymentManager deploymentManager,
-        ISpeechVoiceResolver speechVoiceResolver,
-        ILocalizationService localizationService)
+        [FromQuery] string deploymentName,
+        [FromQuery] string deploymentId,
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ISpeechVoiceResolver speechVoiceResolver,
+        [FromServices] ILocalizationService localizationService,
+        [FromServices] ILogger<Startup> logger)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
             return TypedResults.Forbid();
         }
 
-        if (string.IsNullOrWhiteSpace(deploymentId))
+        var deploymentSelector = string.IsNullOrWhiteSpace(deploymentName) ? deploymentId : deploymentName;
+
+        if (string.IsNullOrWhiteSpace(deploymentSelector))
         {
             return TypedResults.Ok(new { voices = Array.Empty<object>() });
         }
 
-        var deployment = await deploymentManager.FindByIdAsync(deploymentId);
+        var deployment = !string.IsNullOrWhiteSpace(deploymentName)
+        ? await deploymentManager.FindByNameAsync(deploymentSelector)
+        : await deploymentManager.FindByIdAsync(deploymentSelector)
+        ?? await deploymentManager.FindByNameAsync(deploymentSelector);
 
         if (deployment is null)
         {
@@ -72,8 +86,10 @@ internal static class GetVoicesEndpoint
 
             return TypedResults.Json(new { voices }, JOptions.CamelCase);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to retrieve speech voices for deployment '{DeploymentName}'.", deploymentSelector);
+
             return TypedResults.Ok(new { voices = Array.Empty<object>() });
         }
     }

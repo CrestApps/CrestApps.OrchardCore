@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
@@ -9,14 +9,22 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class ContentRecipeStep : IRecipeStep
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+
     private JsonSchema _cached;
     public string Name => "content";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentRecipeStep"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
     public ContentRecipeStep(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -33,10 +41,10 @@ public sealed class ContentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("content")),
-                ("data", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(contentItemSchema)
-                    .MinItems(1)))
+        ("data", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(contentItemSchema)
+            .MinItems(1)))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();

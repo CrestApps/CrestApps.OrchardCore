@@ -1,21 +1,35 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
-using OrchardCore;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
+/// <summary>
+/// Document-backed implementation of <see cref="ICatalog{T}"/> that stores catalog entries
+/// in an OrchardCore <see cref="DictionaryDocument{T}"/>.
+/// </summary>
+/// <typeparam name="T">The type of catalog item managed by this catalog.</typeparam>
 public class Catalog<T> : ICatalog<T>
     where T : CatalogItem
 {
+    /// <summary>
+    /// The document manager used to read and write the backing document.
+    /// </summary>
     protected readonly IDocumentManager<DictionaryDocument<T>> DocumentManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Catalog{T}"/> class.
+    /// </summary>
+    /// <param name="documentManager">The document manager for accessing the backing document.</param>
     public Catalog(IDocumentManager<DictionaryDocument<T>> documentManager)
     {
         DocumentManager = documentManager;
     }
 
-    public async ValueTask<bool> DeleteAsync(T entry)
+    /// <inheritdoc />
+    public async ValueTask<bool> DeleteAsync(T entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -38,7 +52,8 @@ public class Catalog<T> : ICatalog<T>
         return removed;
     }
 
-    public async ValueTask<T> FindByIdAsync(string id)
+    /// <inheritdoc />
+    public async ValueTask<T> FindByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
@@ -52,21 +67,27 @@ public class Catalog<T> : ICatalog<T>
         return null;
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids)
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return ids.Where(document.Records.ContainsKey)
-                .Select(id => Clone(document.Records[id]))
-                .ToArray();
+            .Select(id => Clone(document.Records[id]))
+            .ToArray();
     }
 
-    public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-            where TQuery : QueryContext
+    /// <inheritdoc />
+    public async ValueTask<PageResult<T>> PageAsync<TQuery>(
+        int page,
+        int pageSize,
+        TQuery context,
+        CancellationToken cancellationToken = default)
+        where TQuery : QueryContext
     {
-        var records = await LocateInstancesAsync(context);
+        var records = await LocateInstancesAsync(context, cancellationToken);
 
         var skip = (page - 1) * pageSize;
 
@@ -77,14 +98,16 @@ public class Catalog<T> : ICatalog<T>
         };
     }
 
-    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Select(Clone).ToArray();
     }
 
-    public async ValueTask CreateAsync(T record)
+    /// <inheritdoc />
+    public async ValueTask CreateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -92,7 +115,11 @@ public class Catalog<T> : ICatalog<T>
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
+        }
+        else if (document.Records.ContainsKey(record.ItemId))
+        {
+            throw new InvalidOperationException($"A record with the ItemId '{record.ItemId}' already exists. Use {nameof(UpdateAsync)} to modify existing records.");
         }
 
         Saving(record, document);
@@ -102,15 +129,16 @@ public class Catalog<T> : ICatalog<T>
         await DocumentManager.UpdateAsync(document);
     }
 
-    public async ValueTask UpdateAsync(T record)
+    /// <inheritdoc />
+    public async ValueTask UpdateAsync(T record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.ItemId))
+        if (string.IsNullOrEmpty(record.ItemId) || !document.Records.ContainsKey(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            throw new InvalidOperationException($"Cannot update a record that does not exist. Use {nameof(CreateAsync)} to create new records.");
         }
 
         Saving(record, document);
@@ -118,18 +146,15 @@ public class Catalog<T> : ICatalog<T>
         document.Records[record.ItemId] = record;
 
         await DocumentManager.UpdateAsync(document);
-    }
-
-    public ValueTask SaveChangesAsync()
-    {
-        return ValueTask.CompletedTask;
     }
 
     protected virtual void Deleting(T model, DictionaryDocument<T> document)
     {
     }
 
-    protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(QueryContext context)
+    protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(
+        QueryContext context,
+        CancellationToken cancellationToken = default)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
@@ -148,8 +173,8 @@ public class Catalog<T> : ICatalog<T>
         if (!string.IsNullOrEmpty(context.Name))
         {
             records = records.Where(x => (x is INameAwareModel named && named.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
-             (x is IDisplayTextAwareModel displayModel && displayModel.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
-             (x is not INameAwareModel && x is not IDisplayTextAwareModel));
+                (x is IDisplayTextAwareModel displayModel && displayModel.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
+                    (x is not INameAwareModel && x is not IDisplayTextAwareModel));
         }
 
         if (context.Sorted)

@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
@@ -12,6 +12,10 @@ public sealed class RolesRecipeStep : IRecipeStep
 
     private readonly IPermissionService _permissionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RolesRecipeStep"/> class.
+    /// </summary>
+    /// <param name="permissionService">The permission service.</param>
     public RolesRecipeStep(IPermissionService permissionService)
     {
         _permissionService = permissionService;
@@ -19,6 +23,9 @@ public sealed class RolesRecipeStep : IRecipeStep
 
     public string Name => "Roles";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= await CreateSchemaAsync();
@@ -34,24 +41,24 @@ public sealed class RolesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Roles")),
-                ("Roles", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Permissions", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                                .Enum(permission.Select(x => x.Name))),
-                            ("PermissionBehavior", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.String)
-                                .Enum("Add", "Replace", "Remove")
-                                .Description("How permissions are merged: Add (default), Replace, or Remove.")))
-                        .Required("Name")
-                        .AdditionalProperties(true))
-                    .MinItems(1)))
+        ("Roles", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Permissions", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Enum(permission.Select(x => x.Name))),
+        ("PermissionBehavior", new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum("Add", "Replace", "Remove")
+            .Description("How permissions are merged: Add (default), Replace, or Remove.")))
+            .Required("Name")
+            .AdditionalProperties(true))
+            .MinItems(1)))
             .Required("name", "Roles")
             .AdditionalProperties(true);
 

@@ -1,13 +1,13 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
@@ -18,6 +18,11 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAIProviderConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OpenAIProviderConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<OpenAIProviderConnectionDisplayDriver> stringLocalizer)
@@ -28,14 +33,14 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
 
         return Initialize<OpenAIConnectionViewModel>("OpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<OpenAIConnectionMetadata>();
+            var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
@@ -44,7 +49,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
@@ -53,7 +58,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<OpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (string.IsNullOrEmpty(model.Endpoint))
         {

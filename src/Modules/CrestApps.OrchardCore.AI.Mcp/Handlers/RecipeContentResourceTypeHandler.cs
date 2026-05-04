@@ -1,6 +1,6 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using System.Text.Json;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Environment.Extensions.Features;
@@ -22,11 +22,17 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipeContentResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="recipeHarvesters">The recipe harvesters.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
+    /// <param name="logger">The logger.</param>
     public RecipeContentResourceTypeHandler(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager,
         ILogger<RecipeContentResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _recipeHarvesters = recipeHarvesters;
         _shellFeaturesManager = shellFeaturesManager;
@@ -72,6 +78,7 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
                     MimeType = "application/json",
                     Text = json,
                 }
+
             ]
         };
     }
@@ -83,8 +90,8 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
         return recipeCollections
             .SelectMany(x => x)
             .Where(r => features.Any(f =>
-                r.BasePath != null &&
-                f.Extension?.SubPath != null &&
+        r.BasePath != null &&
+            f.Extension?.SubPath != null &&
                 r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)))
             .FirstOrDefault(r => string.Equals(r.Name, recipeName, StringComparison.OrdinalIgnoreCase));
     }

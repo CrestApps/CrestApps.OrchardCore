@@ -1,8 +1,10 @@
-using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
@@ -19,12 +21,18 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationContextBuilderHandler
 {
     private readonly IAIProfileManager _profileManager;
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentOrchestrationContextBuilderHandler"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager for retrieving agent profiles.</param>
+    /// <param name="templateService">The template service for rendering agent availability prompts.</param>
+    /// <param name="logger">The logger instance.</param>
     public AgentOrchestrationContextBuilderHandler(
         IAIProfileManager profileManager,
-        IAITemplateService templateService,
+        ITemplateService templateService,
         ILogger<AgentOrchestrationContextBuilderHandler> logger)
     {
         _profileManager = profileManager;
@@ -32,10 +40,12 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
         _logger = logger;
     }
 
-    public Task BuildingAsync(OrchestrationContextBuildingContext context)
+    /// <inheritdoc />
+    public Task BuildingAsync(OrchestrationContextBuildingContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
-    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
+    /// <inheritdoc />
+    public async Task BuiltAsync(OrchestrationContextBuiltContext context, CancellationToken cancellationToken = default)
     {
         var completionContext = context.OrchestrationContext.CompletionContext;
 
@@ -45,7 +55,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
         }
 
         var requestedAgentNames = completionContext.AgentNames;
-        var agents = await _profileManager.GetAsync(AIProfileType.Agent);
+        var agents = await _profileManager.GetAsync(AIProfileType.Agent, cancellationToken);
 
         if (!agents.Any())
         {
@@ -61,12 +71,12 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
                 continue;
             }
 
-            var agentMetadata = agent.As<AgentMetadata>();
+            var agentMetadata = agent.GetOrCreate<AgentMetadata>();
             var isAlwaysAvailable = agentMetadata?.Availability == AgentAvailability.AlwaysAvailable;
 
             if (isAlwaysAvailable ||
                 (requestedAgentNames is { Length: > 0 } &&
-                 requestedAgentNames.Contains(agent.Name, StringComparer.OrdinalIgnoreCase)))
+                    requestedAgentNames.Contains(agent.Name, StringComparer.OrdinalIgnoreCase)))
             {
                 availableAgents.Add(new AgentInfo
                 {
@@ -91,7 +101,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
             ["agents"] = availableAgents,
         };
 
-        var header = await _templateService.RenderAsync(AITemplateIds.AgentAvailability, arguments);
+        var header = await _templateService.RenderAsync(AITemplateIds.AgentAvailability, arguments, cancellationToken);
 
         if (!string.IsNullOrEmpty(header))
         {
@@ -102,8 +112,14 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
 
     private sealed class AgentInfo
     {
+        /// <summary>
+        /// Gets or sets the name of the agent.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets the description of the agent.
+        /// </summary>
         public string Description { get; set; }
     }
 }

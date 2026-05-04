@@ -1,9 +1,8 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -11,21 +10,26 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIProfileStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIProfile";
 
     private readonly IAIProfileManager _profileManager;
-    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileStep"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProfileStep(
         IAIProfileManager profileManager,
-        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _profileManager = profileManager;
-        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -63,25 +67,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
             }
             else
             {
-                var sourceName = token[nameof(AIProfile.Source)]?.GetValue<string>();
+                profile = await _profileManager.NewAsync(token);
 
-                if (string.IsNullOrEmpty(sourceName))
-                {
-                    context.Errors.Add(S["Could not find profile-source value. The profile will not be imported"]);
-
-                    continue;
-                }
-
-                if (!_aiOptions.ProfileSources.TryGetValue(sourceName, out var entry))
-                {
-                    context.Errors.Add(S["Unable to find a profile-source that can handle the source '{0}'.", sourceName]);
-
-                    return;
-                }
-
-                profile = await _profileManager.NewAsync(sourceName, token);
-
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     profile.ItemId = id;
                 }
@@ -105,6 +93,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
     private sealed class AIProfileStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI profile definitions to import.
+        /// </summary>
         public JsonArray Profiles { get; set; }
     }
 }

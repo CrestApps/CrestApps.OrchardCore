@@ -1,15 +1,16 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 using OrchardCore.Users;
 
@@ -24,6 +25,14 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionCopilotDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="oauthService">The oauth service.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
@@ -42,23 +51,33 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
     {
         return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = interaction.As<CopilotSessionMetadata>();
+            var copilotSettings = interaction.GetOrCreate<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
+            model.CopilotReasoningEffort = copilotSettings.ReasoningEffort;
 
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
+            model.IsCopilotConfigured = siteSettings.IsConfigured();
+
+            if (!model.IsCopilotConfigured)
+            {
+                model.AvailableModels = [];
+
+                return;
+            }
 
             if (siteSettings.AuthenticationType == CopilotAuthenticationType.ApiKey)
             {
                 // BYOK mode — no GitHub auth needed.
                 model.AvailableModels = [];
             }
-            else
+            else if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
             {
                 // GitHub OAuth mode — only fetch auth/models when the orchestrator is Copilot.
+
                 if (string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase) &&
                     _httpContextAccessor.HttpContext?.User is not null)
                 {
@@ -68,16 +87,18 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                     {
                         var userId = await _userManager.GetUserIdAsync(user);
                         model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+
                         if (model.IsAuthenticated)
                         {
                             var credential = await _oauthService.GetCredentialAsync(userId);
                             model.GitHubUsername = credential?.GitHubUsername;
 
                             var models = await _oauthService.ListModelsAsync(userId);
+
                             if (models.Count > 0)
                             {
                                 model.AvailableModels = models
-                                    .Select(m => new SelectListItem(m.Name, m.Id))
+                                    .Select(m => new SelectListItem(CopilotModelDisplayTextFormatter.Format(m), m.Id))
                                     .ToList();
                             }
                         }
@@ -85,6 +106,10 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                 }
 
                 model.AvailableModels ??= [];
+            }
+            else
+            {
+                model.AvailableModels = [];
             }
         }).Location("Parameters:4#Settings;1");
     }

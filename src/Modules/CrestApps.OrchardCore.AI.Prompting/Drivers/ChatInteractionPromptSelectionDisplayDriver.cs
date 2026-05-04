@@ -1,41 +1,45 @@
-using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction prompt selection shape.
+/// </summary>
 public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
-    public ChatInteractionPromptSelectionDisplayDriver(IAITemplateService aiTemplateService)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionPromptSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
+    public ChatInteractionPromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
-        _aiTemplateService = aiTemplateService;
+        _promptTemplateSelectionService = promptTemplateSelectionService;
     }
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
-        var templates = await _aiTemplateService.ListAsync();
-        var listableTemplates = templates.Where(t => t.Metadata.IsListable).ToList();
+        var promptMetadata = interaction.GetOrCreate<PromptTemplateMetadata>();
+        var model = new AITemplateSelectionViewModel();
 
-        if (listableTemplates.Count == 0)
+        await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);
+
+        if (model.AvailablePrompts.Count == 0)
         {
             return null;
         }
 
-        return Initialize<AITemplateSelectionViewModel>("ChatInteractionPromptSelection_Edit", model =>
+        return Initialize<AITemplateSelectionViewModel>("PromptTemplateSelection_Edit", promptSelectionModel =>
         {
-            var promptMetadata = interaction.As<PromptTemplateMetadata>();
-
-            model.SelectedPromptId = promptMetadata.TemplateId;
-            model.PromptParameters = AIProfilePromptSelectionDisplayDriver.SerializeParameters(promptMetadata.Parameters);
-
-            AIProfilePromptSelectionDisplayDriver.PopulateViewModel(model, listableTemplates);
-        }).Location("Parameters:7#Settings;1");
+            promptSelectionModel.PromptTemplates = model.PromptTemplates;
+            promptSelectionModel.AvailablePrompts = model.AvailablePrompts;
+        }).Location("Parameters:9#Settings;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -43,40 +47,11 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
         var model = new AITemplateSelectionViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var promptMetadata = new PromptTemplateMetadata();
-
-        if (!string.IsNullOrEmpty(model.SelectedPromptId))
-        {
-            promptMetadata.TemplateId = model.SelectedPromptId;
-
-            if (!string.IsNullOrEmpty(model.PromptParameters))
-            {
-                var parameters = AIProfilePromptSelectionDisplayDriver.ParseAndValidateParameters(model.PromptParameters);
-
-                if (parameters != null)
-                {
-                    var template = await _aiTemplateService.GetAsync(model.SelectedPromptId);
-                    var invalidKeys = AIProfilePromptSelectionDisplayDriver.GetInvalidParameterKeys(parameters, template);
-
-                    if (invalidKeys.Count > 0)
-                    {
-                        context.Updater.ModelState.AddModelError(
-                            Prefix + '.' + nameof(model.PromptParameters),
-                            $"The following parameter keys are not supported by this template: {string.Join(", ", invalidKeys)}");
-                    }
-                    else
-                    {
-                        promptMetadata.Parameters = parameters;
-                    }
-                }
-                else
-                {
-                    context.Updater.ModelState.AddModelError(
-                        Prefix + '.' + nameof(model.PromptParameters),
-                        "The parameters must be valid JSON with string key-value pairs. Example: {\"key1\": \"value1\"}");
-                }
-            }
-        }
+        var promptMetadata = await PromptTemplateSelectionEditorHelper.BuildMetadataAsync(
+            model,
+            _promptTemplateSelectionService,
+            context.Updater.ModelState,
+            Prefix);
 
         interaction.Put(promptMetadata);
 

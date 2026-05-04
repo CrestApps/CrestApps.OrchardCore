@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -17,6 +17,12 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityBatchHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -27,13 +33,13 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context)
+    public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context)
+    public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context)
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -43,7 +49,7 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context)
+    public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -71,8 +77,12 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
 
         if (properties != null)
         {
-            enabpoint.Properties ??= [];
-            enabpoint.Properties.Merge(properties);
+            enabpoint.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties)
+            {
+                enabpoint.Properties[key] = value;
+            }
         }
 
         return Task.CompletedTask;

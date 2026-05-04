@@ -1,28 +1,36 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile chat mode shape.
+/// </summary>
 public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly ISiteService _siteService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileChatModeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileChatModeDisplayDriver(
-        ISiteService siteService,
+        IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         IStringLocalizer<AIProfileChatModeDisplayDriver> stringLocalizer)
     {
-        _siteService = siteService;
+        _deploymentManager = deploymentManager;
         _speechVoiceMenuService = speechVoiceMenuService;
         S = stringLocalizer;
     }
@@ -35,12 +43,13 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.ChatMode = settings.ChatMode;
                 model.VoiceName = settings.VoiceName;
+                model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             }
 
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:10%Interactions;3")
+        }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
             if (profile.Type != AIProfileType.Chat)
@@ -48,10 +57,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
                 return false;
             }
 
-            var site = await _siteService.GetSiteSettingsAsync();
-            var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-            return !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
         });
     }
 
@@ -72,6 +78,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             settings.VoiceName = model.ChatMode == ChatMode.Conversation
                 ? model.VoiceName?.Trim()
                 : null;
+            settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
         return Edit(profile, context);
@@ -90,10 +97,5 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        return await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-    }
+        => await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentName: null);
 }

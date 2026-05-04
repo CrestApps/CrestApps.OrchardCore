@@ -1,8 +1,8 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -15,24 +15,35 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat profile part shape.
+/// </summary>
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly PagerOptions _pagerOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatProfilePartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="chatSessionManager">The chat session manager.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         IAIChatSessionManager chatSessionManager,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<AIChatProfilePartDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         _chatSessionManager = chatSessionManager;
         _pagerOptions = pagerOptions.Value;
         S = stringLocalizer;
@@ -48,12 +59,13 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         var user = _httpContextAccessor?.HttpContext.User;
 
         // When displaying history, we should only target session that belong to authenticated users.
+
         if (user is null || !user.Identity.IsAuthenticated)
         {
             return null;
         }
 
-        var profile = await _profilesCatalog.FindByIdAsync(part.ProfileId);
+        var profile = await _profileStore.FindByIdAsync(part.ProfileId);
 
         if (profile == null)
         {
@@ -86,10 +98,9 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
             model.MaxHistoryAllowed = _pagerOptions.MaxPageSize;
 
-            var profiles = await _profilesCatalog.GetProfilesAsync(AIProfileType.Chat);
+            var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
 
             model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
-
         }).Location("Content:5");
     }
 
@@ -103,7 +114,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is required."]);
         }
-        else if (await _profilesCatalog.FindByIdAsync(model.ProfileId) == null)
+        else if (await _profileStore.FindByIdAsync(model.ProfileId) == null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is invalid."]);
         }

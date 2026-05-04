@@ -125,59 +125,59 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 
     // EXPORTS
     __webpack_require__.d(__webpack_exports__, {
-      "AbortError": function AbortError() {
+      AbortError: function AbortError() {
         return /* reexport */_AbortError;
       },
-      "DefaultHttpClient": function DefaultHttpClient() {
+      DefaultHttpClient: function DefaultHttpClient() {
         return /* reexport */_DefaultHttpClient;
       },
-      "HttpClient": function HttpClient() {
+      HttpClient: function HttpClient() {
         return /* reexport */_HttpClient;
       },
-      "HttpError": function HttpError() {
+      HttpError: function HttpError() {
         return /* reexport */_HttpError;
       },
-      "HttpResponse": function HttpResponse() {
+      HttpResponse: function HttpResponse() {
         return /* reexport */_HttpResponse;
       },
-      "HttpTransportType": function HttpTransportType() {
+      HttpTransportType: function HttpTransportType() {
         return /* reexport */_HttpTransportType;
       },
-      "HubConnection": function HubConnection() {
+      HubConnection: function HubConnection() {
         return /* reexport */_HubConnection;
       },
-      "HubConnectionBuilder": function HubConnectionBuilder() {
+      HubConnectionBuilder: function HubConnectionBuilder() {
         return /* reexport */_HubConnectionBuilder;
       },
-      "HubConnectionState": function HubConnectionState() {
+      HubConnectionState: function HubConnectionState() {
         return /* reexport */_HubConnectionState;
       },
-      "JsonHubProtocol": function JsonHubProtocol() {
+      JsonHubProtocol: function JsonHubProtocol() {
         return /* reexport */_JsonHubProtocol;
       },
-      "LogLevel": function LogLevel() {
+      LogLevel: function LogLevel() {
         return /* reexport */_LogLevel;
       },
-      "MessageType": function MessageType() {
+      MessageType: function MessageType() {
         return /* reexport */_MessageType;
       },
-      "NullLogger": function NullLogger() {
+      NullLogger: function NullLogger() {
         return /* reexport */_NullLogger;
       },
-      "Subject": function Subject() {
+      Subject: function Subject() {
         return /* reexport */_Subject;
       },
-      "TimeoutError": function TimeoutError() {
+      TimeoutError: function TimeoutError() {
         return /* reexport */_TimeoutError;
       },
-      "TransferFormat": function TransferFormat() {
+      TransferFormat: function TransferFormat() {
         return /* reexport */_TransferFormat;
       },
-      "VERSION": function VERSION() {
+      VERSION: function VERSION() {
         return /* reexport */_VERSION;
       }
     });
-    ; // CONCATENATED MODULE: ./src/Errors.ts
+    ; // ./src/Errors.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     /** Error thrown when an HTTP request fails. */
@@ -353,7 +353,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       _inherits(AggregateErrors, _Error8);
       return _createClass(AggregateErrors);
     }(/*#__PURE__*/_wrapNativeSuper(Error));
-    ; // CONCATENATED MODULE: ./src/HttpClient.ts
+    ; // ./src/HttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     /** Represents an HTTP response. */
@@ -408,7 +408,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/ILogger.ts
+    ; // ./src/ILogger.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // These values are designed to match the ASP.NET Log Levels since that's the pattern we're emulating here.
@@ -433,7 +433,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       /** The highest possible log level. Used when configuring logging to indicate that no log messages should be emitted. */
       LogLevel[LogLevel["None"] = 6] = "None";
     })(_LogLevel || (_LogLevel = {}));
-    ; // CONCATENATED MODULE: ./src/Loggers.ts
+    ; // ./src/Loggers.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     /** A logger that does nothing when log messages are sent to it. */
@@ -450,13 +450,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     }();
     /** The singleton instance of the {@link @microsoft/signalr.NullLogger}. */
     _NullLogger.instance = new _NullLogger();
-    ; // CONCATENATED MODULE: ./src/Utils.ts
+    ; // ./src/pkg-version.ts
+    var _VERSION = '10.0.0';
+    ; // ./src/Utils.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
     // Version token that will be replaced by the prepack command
     /** The version of the SignalR client. */
-    var _VERSION = "8.0.7";
+
     /** @private */
     var Arg = /*#__PURE__*/function () {
       function Arg() {
@@ -545,7 +547,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         str += "0x".concat(pad).concat(num.toString(16), " ");
       });
       // Trim of trailing space.
-      return str.substr(0, str.length - 1);
+      return str.substring(0, str.length - 1);
     }
     // Also in signalr-protocol-msgpack/Utils.ts
     /** @private */
@@ -560,17 +562,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     }
     /** @private */
     function _sendMessage() {
-      _sendMessage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee26(logger, transportName, httpClient, url, content, options) {
+      _sendMessage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee27(logger, transportName, httpClient, url, content, options) {
         var headers, _getUserAgentHeader1, _getUserAgentHeader10, name, value, responseType, response;
-        return _regenerator().w(function (_context27) {
-          while (1) switch (_context27.n) {
+        return _regenerator().w(function (_context28) {
+          while (1) switch (_context28.n) {
             case 0:
               headers = {};
               _getUserAgentHeader1 = getUserAgentHeader(), _getUserAgentHeader10 = _slicedToArray(_getUserAgentHeader1, 2), name = _getUserAgentHeader10[0], value = _getUserAgentHeader10[1];
               headers[name] = value;
               logger.log(_LogLevel.Trace, "(".concat(transportName, " transport) sending data. ").concat(getDataDetail(content, options.logMessageContent), "."));
               responseType = isArrayBuffer(content) ? "arraybuffer" : "text";
-              _context27.n = 1;
+              _context28.n = 1;
               return httpClient.post(url, {
                 content: content,
                 headers: _objectSpread(_objectSpread({}, headers), options.headers),
@@ -579,12 +581,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                 withCredentials: options.withCredentials
               });
             case 1:
-              response = _context27.v;
+              response = _context28.v;
               logger.log(_LogLevel.Trace, "(".concat(transportName, " transport) request complete. Response status: ").concat(response.statusCode, "."));
             case 2:
-              return _context27.a(2);
+              return _context28.a(2);
           }
-        }, _callee26);
+        }, _callee27);
       }));
       return _sendMessage.apply(this, arguments);
     }
@@ -740,7 +742,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       throw new Error("could not find global");
     }
-    ; // CONCATENATED MODULE: ./src/FetchHttpClient.ts
+    ; // ./src/FetchHttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     var FetchHttpClient = /*#__PURE__*/function (_HttpClient2) {
@@ -936,7 +938,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       return content;
     }
-    ; // CONCATENATED MODULE: ./src/XhrHttpClient.ts
+    ; // ./src/XhrHttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     var XhrHttpClient = /*#__PURE__*/function (_HttpClient3) {
@@ -1020,7 +1022,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }(_HttpClient);
-    ; // CONCATENATED MODULE: ./src/DefaultHttpClient.ts
+    ; // ./src/DefaultHttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -1064,7 +1066,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }(_HttpClient);
-    ; // CONCATENATED MODULE: ./src/TextMessageFormat.ts
+    ; // ./src/TextMessageFormat.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // Not exported from index
@@ -1092,7 +1094,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     }();
     TextMessageFormat.RecordSeparatorCode = 0x1e;
     TextMessageFormat.RecordSeparator = String.fromCharCode(TextMessageFormat.RecordSeparatorCode);
-    ; // CONCATENATED MODULE: ./src/HandshakeProtocol.ts
+    ; // ./src/HandshakeProtocol.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -1150,7 +1152,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/IHubProtocol.ts
+    ; // ./src/IHubProtocol.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     /** Defines the type of a Hub Message. */
@@ -1173,7 +1175,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       MessageType[MessageType["Ack"] = 8] = "Ack";
       MessageType[MessageType["Sequence"] = 9] = "Sequence";
     })(_MessageType || (_MessageType = {}));
-    ; // CONCATENATED MODULE: ./src/Subject.ts
+    ; // ./src/Subject.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -1243,7 +1245,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/MessageBuffer.ts
+    ; // ./src/MessageBuffer.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -1535,7 +1537,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       this._resolver = resolver;
       this._rejector = rejector;
     });
-    ; // CONCATENATED MODULE: ./src/HubConnection.ts
+    ; // ./src/HubConnection.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -2226,38 +2228,35 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             this._timeoutHandle = setTimeout(function () {
               return _this18.serverTimeout();
             }, this.serverTimeoutInMilliseconds);
+            // Immediately fire Keep-Alive ping if nextPing is overdue to avoid dependency on JS timers
+            var nextPing = this._nextKeepAlive - new Date().getTime();
+            if (nextPing < 0) {
+              if (this._connectionState === _HubConnectionState.Connected) {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                this._trySendPingMessage();
+              }
+              return;
+            }
             // Set keepAlive timer if there isn't one
             if (this._pingServerHandle === undefined) {
-              var nextPing = this._nextKeepAlive - new Date().getTime();
               if (nextPing < 0) {
                 nextPing = 0;
               }
               // The timer needs to be set from a networking callback to avoid Chrome timer throttling from causing timers to run once a minute
               this._pingServerHandle = setTimeout(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
-                var _t9;
                 return _regenerator().w(function (_context9) {
-                  while (1) switch (_context9.p = _context9.n) {
+                  while (1) switch (_context9.n) {
                     case 0:
                       if (!(_this18._connectionState === _HubConnectionState.Connected)) {
-                        _context9.n = 4;
+                        _context9.n = 1;
                         break;
                       }
-                      _context9.p = 1;
-                      _context9.n = 2;
-                      return _this18._sendMessage(_this18._cachedPingMessage);
-                    case 2:
-                      _context9.n = 4;
-                      break;
-                    case 3:
-                      _context9.p = 3;
-                      _t9 = _context9.v;
-                      // We don't care about the error. It should be seen elsewhere in the client.
-                      // The connection is probably in a bad or closed state now, cleanup the timer so it stops triggering
-                      _this18._cleanupPingTimer();
-                    case 4:
+                      _context9.n = 1;
+                      return _this18._trySendPingMessage();
+                    case 1:
                       return _context9.a(2);
                   }
-                }, _callee9, null, [[1, 3]]);
+                }, _callee9);
               })), nextPing);
             }
           }
@@ -2275,7 +2274,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         key: "_invokeClientMethod",
         value: function () {
           var _invokeClientMethod2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(invocationMessage) {
-            var methodName, methods, methodsCopy, expectsResponse, res, exception, completionMessage, _iterator7, _step7, m, prevRes, _t0, _t1;
+            var methodName, methods, methodsCopy, expectsResponse, res, exception, completionMessage, _iterator7, _step7, m, prevRes, _t9, _t0;
             return _regenerator().w(function (_context0) {
               while (1) switch (_context0.p = _context0.n) {
                 case 0:
@@ -2325,9 +2324,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   break;
                 case 7:
                   _context0.p = 7;
-                  _t0 = _context0.v;
-                  exception = _t0;
-                  this._logger.log(_LogLevel.Error, "A callback for the method '".concat(methodName, "' threw error '").concat(_t0, "'."));
+                  _t9 = _context0.v;
+                  exception = _t9;
+                  this._logger.log(_LogLevel.Error, "A callback for the method '".concat(methodName, "' threw error '").concat(_t9, "'."));
                 case 8:
                   _context0.n = 4;
                   break;
@@ -2336,8 +2335,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   break;
                 case 10:
                   _context0.p = 10;
-                  _t1 = _context0.v;
-                  _iterator7.e(_t1);
+                  _t0 = _context0.v;
+                  _iterator7.e(_t0);
                 case 11:
                   _context0.p = 11;
                   _iterator7.f();
@@ -2442,14 +2441,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         value: function () {
           var _reconnect2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(error) {
             var _this20 = this;
-            var reconnectStartTime, previousReconnectAttempts, retryError, nextRetryDelay, _t10;
+            var reconnectStartTime, previousReconnectAttempts, retryError, nextRetryDelay, _t1;
             return _regenerator().w(function (_context1) {
               while (1) switch (_context1.p = _context1.n) {
                 case 0:
                   reconnectStartTime = Date.now();
                   previousReconnectAttempts = 0;
                   retryError = error !== undefined ? error : new Error("Attempting to reconnect due to a unknown error.");
-                  nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts++, 0, retryError);
+                  nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts, 0, retryError);
                   if (!(nextRetryDelay === null)) {
                     _context1.n = 1;
                     break;
@@ -2487,7 +2486,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     _context1.n = 8;
                     break;
                   }
-                  this._logger.log(_LogLevel.Information, "Reconnect attempt number ".concat(previousReconnectAttempts, " will start in ").concat(nextRetryDelay, " ms."));
+                  this._logger.log(_LogLevel.Information, "Reconnect attempt number ".concat(previousReconnectAttempts + 1, " will start in ").concat(nextRetryDelay, " ms."));
                   _context1.n = 3;
                   return new Promise(function (resolve) {
                     _this20._reconnectDelayHandle = setTimeout(resolve, nextRetryDelay);
@@ -2519,8 +2518,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   return _context1.a(2);
                 case 6:
                   _context1.p = 6;
-                  _t10 = _context1.v;
-                  this._logger.log(_LogLevel.Information, "Reconnect attempt failed because of error '".concat(_t10, "'."));
+                  _t1 = _context1.v;
+                  this._logger.log(_LogLevel.Information, "Reconnect attempt failed because of error '".concat(_t1, "'."));
                   if (!(this._connectionState !== _HubConnectionState.Reconnecting)) {
                     _context1.n = 7;
                     break;
@@ -2532,8 +2531,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   }
                   return _context1.a(2);
                 case 7:
-                  retryError = _t10 instanceof Error ? _t10 : new Error(_t10.toString());
-                  nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts++, Date.now() - reconnectStartTime, retryError);
+                  previousReconnectAttempts++;
+                  retryError = _t1 instanceof Error ? _t1 : new Error(_t1.toString());
+                  nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts, Date.now() - reconnectStartTime, retryError);
                   _context1.n = 2;
                   break;
                 case 8:
@@ -2599,15 +2599,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           if (nonblocking) {
             if (streamIds.length !== 0) {
               return {
+                target: methodName,
                 arguments: args,
                 streamIds: streamIds,
-                target: methodName,
                 type: _MessageType.Invocation
               };
             } else {
               return {
-                arguments: args,
                 target: methodName,
+                arguments: args,
                 type: _MessageType.Invocation
               };
             }
@@ -2616,17 +2616,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             this._invocationId++;
             if (streamIds.length !== 0) {
               return {
+                target: methodName,
                 arguments: args,
                 invocationId: invocationId.toString(),
                 streamIds: streamIds,
-                target: methodName,
                 type: _MessageType.Invocation
               };
             } else {
               return {
+                target: methodName,
                 arguments: args,
                 invocationId: invocationId.toString(),
-                target: methodName,
                 type: _MessageType.Invocation
               };
             }
@@ -2708,17 +2708,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           this._invocationId++;
           if (streamIds.length !== 0) {
             return {
+              target: methodName,
               arguments: args,
               invocationId: invocationId.toString(),
               streamIds: streamIds,
-              target: methodName,
               type: _MessageType.StreamInvocation
             };
           } else {
             return {
+              target: methodName,
               arguments: args,
               invocationId: invocationId.toString(),
-              target: methodName,
               type: _MessageType.StreamInvocation
             };
           }
@@ -2763,6 +2763,36 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             type: _MessageType.Close
           };
         }
+      }, {
+        key: "_trySendPingMessage",
+        value: function () {
+          var _trySendPingMessage2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
+            var _t10;
+            return _regenerator().w(function (_context10) {
+              while (1) switch (_context10.p = _context10.n) {
+                case 0:
+                  _context10.p = 0;
+                  _context10.n = 1;
+                  return this._sendMessage(this._cachedPingMessage);
+                case 1:
+                  _context10.n = 3;
+                  break;
+                case 2:
+                  _context10.p = 2;
+                  _t10 = _context10.v;
+                  // We don't care about the error. It should be seen elsewhere in the client.
+                  // The connection is probably in a bad or closed state now, cleanup the timer so it stops triggering
+                  this._cleanupPingTimer();
+                case 3:
+                  return _context10.a(2);
+              }
+            }, _callee10, this, [[0, 2]]);
+          }));
+          function _trySendPingMessage() {
+            return _trySendPingMessage2.apply(this, arguments);
+          }
+          return _trySendPingMessage;
+        }()
       }], [{
         key: "create",
         value: /** @internal */
@@ -2775,7 +2805,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/DefaultReconnectPolicy.ts
+    ; // ./src/DefaultReconnectPolicy.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // 0, 2, 10, 30 second delays before reconnect attempts.
@@ -2793,7 +2823,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/HeaderNames.ts
+    ; // ./src/HeaderNames.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     var HeaderNames = /*#__PURE__*/_createClass(function HeaderNames() {
@@ -2801,7 +2831,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     });
     HeaderNames.Authorization = "Authorization";
     HeaderNames.Cookie = "Cookie";
-    ; // CONCATENATED MODULE: ./src/AccessTokenHttpClient.ts
+    ; // ./src/AccessTokenHttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -2819,45 +2849,45 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(AccessTokenHttpClient, [{
         key: "send",
         value: function () {
-          var _send3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(request) {
+          var _send3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(request) {
             var allowRetry, response;
-            return _regenerator().w(function (_context10) {
-              while (1) switch (_context10.n) {
+            return _regenerator().w(function (_context11) {
+              while (1) switch (_context11.n) {
                 case 0:
                   allowRetry = true;
                   if (!(this._accessTokenFactory && (!this._accessToken || request.url && request.url.indexOf("/negotiate?") > 0))) {
-                    _context10.n = 2;
+                    _context11.n = 2;
                     break;
                   }
                   // don't retry if the request is a negotiate or if we just got a potentially new token from the access token factory
                   allowRetry = false;
-                  _context10.n = 1;
+                  _context11.n = 1;
                   return this._accessTokenFactory();
                 case 1:
-                  this._accessToken = _context10.v;
+                  this._accessToken = _context11.v;
                 case 2:
                   this._setAuthorizationHeader(request);
-                  _context10.n = 3;
+                  _context11.n = 3;
                   return this._innerClient.send(request);
                 case 3:
-                  response = _context10.v;
+                  response = _context11.v;
                   if (!(allowRetry && response.statusCode === 401 && this._accessTokenFactory)) {
-                    _context10.n = 6;
+                    _context11.n = 6;
                     break;
                   }
-                  _context10.n = 4;
+                  _context11.n = 4;
                   return this._accessTokenFactory();
                 case 4:
-                  this._accessToken = _context10.v;
+                  this._accessToken = _context11.v;
                   this._setAuthorizationHeader(request);
-                  _context10.n = 5;
+                  _context11.n = 5;
                   return this._innerClient.send(request);
                 case 5:
-                  return _context10.a(2, _context10.v);
+                  return _context11.a(2, _context11.v);
                 case 6:
-                  return _context10.a(2, response);
+                  return _context11.a(2, response);
               }
-            }, _callee10, this);
+            }, _callee11, this);
           }));
           function send(_x1) {
             return _send3.apply(this, arguments);
@@ -2887,7 +2917,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }(_HttpClient);
-    ; // CONCATENATED MODULE: ./src/ITransport.ts
+    ; // ./src/ITransport.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // This will be treated as a bit flag in the future, so we keep it using power-of-two values.
@@ -2911,7 +2941,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       /** Specifies that binary data will be transmitted over the connection. */
       TransferFormat[TransferFormat["Binary"] = 2] = "Binary";
     })(_TransferFormat || (_TransferFormat = {}));
-    ; // CONCATENATED MODULE: ./src/AbortController.ts
+    ; // ./src/AbortController.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // Rough polyfill of https://developer.mozilla.org/en-US/docs/Web/API/AbortController
@@ -2947,7 +2977,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/LongPollingTransport.ts
+    ; // ./src/LongPollingTransport.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -2974,10 +3004,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "connect",
         value: function () {
-          var _connect = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(url, transferFormat) {
+          var _connect = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(url, transferFormat) {
             var _getUserAgentHeader, _getUserAgentHeader2, name, value, headers, pollOptions, pollUrl, response;
-            return _regenerator().w(function (_context11) {
-              while (1) switch (_context11.n) {
+            return _regenerator().w(function (_context12) {
+              while (1) switch (_context12.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
@@ -2986,7 +3016,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Connecting.");
                   // Allow binary format on Node and Browsers that support binary content (indicated by the presence of responseType property)
                   if (!(transferFormat === _TransferFormat.Binary && typeof XMLHttpRequest !== "undefined" && typeof new XMLHttpRequest().responseType !== "string")) {
-                    _context11.n = 1;
+                    _context12.n = 1;
                     break;
                   }
                   throw new Error("Binary protocols over XmlHttpRequest not implementing advanced features are not supported.");
@@ -3006,10 +3036,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   // Server uses first long polling request to finish initializing connection and it returns without data
                   pollUrl = "".concat(url, "&_=").concat(Date.now());
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) polling: ".concat(pollUrl, "."));
-                  _context11.n = 2;
+                  _context12.n = 2;
                   return this._httpClient.get(pollUrl, pollOptions);
                 case 2:
-                  response = _context11.v;
+                  response = _context12.v;
                   if (response.statusCode !== 200) {
                     this._logger.log(_LogLevel.Error, "(LongPolling transport) Unexpected response code: ".concat(response.statusCode, "."));
                     // Mark running as false so that the poll immediately ends and runs the close logic
@@ -3020,9 +3050,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   }
                   this._receiving = this._poll(this._url, pollOptions);
                 case 3:
-                  return _context11.a(2);
+                  return _context12.a(2);
               }
-            }, _callee11, this);
+            }, _callee12, this);
           }));
           function connect(_x10, _x11) {
             return _connect.apply(this, arguments);
@@ -3032,24 +3062,24 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_poll",
         value: function () {
-          var _poll2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(url, pollOptions) {
+          var _poll2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(url, pollOptions) {
             var pollUrl, response, _t11;
-            return _regenerator().w(function (_context12) {
-              while (1) switch (_context12.p = _context12.n) {
+            return _regenerator().w(function (_context13) {
+              while (1) switch (_context13.p = _context13.n) {
                 case 0:
-                  _context12.p = 0;
+                  _context13.p = 0;
                 case 1:
                   if (!this._running) {
-                    _context12.n = 6;
+                    _context13.n = 6;
                     break;
                   }
-                  _context12.p = 2;
+                  _context13.p = 2;
                   pollUrl = "".concat(url, "&_=").concat(Date.now());
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) polling: ".concat(pollUrl, "."));
-                  _context12.n = 3;
+                  _context13.n = 3;
                   return this._httpClient.get(pollUrl, pollOptions);
                 case 3:
-                  response = _context12.v;
+                  response = _context13.v;
                   if (response.statusCode === 204) {
                     this._logger.log(_LogLevel.Information, "(LongPolling transport) Poll terminated by server.");
                     this._running = false;
@@ -3070,11 +3100,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll timed out, reissuing.");
                     }
                   }
-                  _context12.n = 5;
+                  _context13.n = 5;
                   break;
                 case 4:
-                  _context12.p = 4;
-                  _t11 = _context12.v;
+                  _context13.p = 4;
+                  _t11 = _context13.v;
                   if (!this._running) {
                     // Log but disregard errors that occur after stopping
                     this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll errored after shutdown: ".concat(_t11.message));
@@ -3089,21 +3119,21 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                   }
                 case 5:
-                  _context12.n = 1;
+                  _context13.n = 1;
                   break;
                 case 6:
-                  _context12.p = 6;
+                  _context13.p = 6;
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Polling complete.");
                   // We will reach here with pollAborted==false when the server returned a response causing the transport to stop.
                   // If pollAborted==true then client initiated the stop and the stop method will raise the close event after DELETE is sent.
                   if (!this.pollAborted) {
                     this._raiseOnClose();
                   }
-                  return _context12.f(6);
+                  return _context13.f(6);
                 case 7:
-                  return _context12.a(2);
+                  return _context13.a(2);
               }
-            }, _callee12, this, [[2, 4], [0,, 6, 7]]);
+            }, _callee13, this, [[2, 4], [0,, 6, 7]]);
           }));
           function _poll(_x12, _x13) {
             return _poll2.apply(this, arguments);
@@ -3113,19 +3143,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "send",
         value: function () {
-          var _send4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(data) {
-            return _regenerator().w(function (_context13) {
-              while (1) switch (_context13.n) {
+          var _send4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14(data) {
+            return _regenerator().w(function (_context14) {
+              while (1) switch (_context14.n) {
                 case 0:
                   if (this._running) {
-                    _context13.n = 1;
+                    _context14.n = 1;
                     break;
                   }
-                  return _context13.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
+                  return _context14.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
                 case 1:
-                  return _context13.a(2, sendMessage(this._logger, "LongPolling", this._httpClient, this._url, data, this._options));
+                  return _context14.a(2, sendMessage(this._logger, "LongPolling", this._httpClient, this._url, data, this._options));
               }
-            }, _callee13, this);
+            }, _callee14, this);
           }));
           function send(_x14) {
             return _send4.apply(this, arguments);
@@ -3135,17 +3165,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stop",
         value: function () {
-          var _stop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14() {
+          var _stop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15() {
             var headers, _getUserAgentHeader3, _getUserAgentHeader4, name, value, deleteOptions, error, _t12;
-            return _regenerator().w(function (_context14) {
-              while (1) switch (_context14.p = _context14.n) {
+            return _regenerator().w(function (_context15) {
+              while (1) switch (_context15.p = _context15.n) {
                 case 0:
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Stopping polling.");
                   // Tell receiving loop to stop, abort any current request, and then wait for it to finish
                   this._running = false;
                   this._pollAbort.abort();
-                  _context14.p = 1;
-                  _context14.n = 2;
+                  _context15.p = 1;
+                  _context15.n = 2;
                   return this._receiving;
                 case 2:
                   // Send DELETE to clean up long polling on the server
@@ -3158,15 +3188,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     timeout: this._options.timeout,
                     withCredentials: this._options.withCredentials
                   };
-                  _context14.p = 3;
-                  _context14.n = 4;
+                  _context15.p = 3;
+                  _context15.n = 4;
                   return this._httpClient["delete"](this._url, deleteOptions);
                 case 4:
-                  _context14.n = 6;
+                  _context15.n = 6;
                   break;
                 case 5:
-                  _context14.p = 5;
-                  _t12 = _context14.v;
+                  _context15.p = 5;
+                  _t12 = _context15.v;
                   error = _t12;
                 case 6:
                   if (error) {
@@ -3181,16 +3211,16 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     this._logger.log(_LogLevel.Trace, "(LongPolling transport) DELETE request accepted.");
                   }
                 case 7:
-                  _context14.p = 7;
+                  _context15.p = 7;
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Stop finished.");
                   // Raise close event here instead of in polling
                   // It needs to happen after the DELETE request is sent
                   this._raiseOnClose();
-                  return _context14.f(7);
+                  return _context15.f(7);
                 case 8:
-                  return _context14.a(2);
+                  return _context15.a(2);
               }
-            }, _callee14, this, [[3, 5], [1,, 7, 8]]);
+            }, _callee15, this, [[3, 5], [1,, 7, 8]]);
           }));
           function stop() {
             return _stop2.apply(this, arguments);
@@ -3211,7 +3241,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/ServerSentEventsTransport.ts
+    ; // ./src/ServerSentEventsTransport.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -3229,10 +3259,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(ServerSentEventsTransport, [{
         key: "connect",
         value: function () {
-          var _connect2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15(url, transferFormat) {
+          var _connect2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16(url, transferFormat) {
             var _this24 = this;
-            return _regenerator().w(function (_context15) {
-              while (1) switch (_context15.n) {
+            return _regenerator().w(function (_context16) {
+              while (1) switch (_context16.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
@@ -3243,7 +3273,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   if (this._accessToken) {
                     url += (url.indexOf("?") < 0 ? "?" : "&") + "access_token=".concat(encodeURIComponent(this._accessToken));
                   }
-                  return _context15.a(2, new Promise(function (resolve, reject) {
+                  return _context16.a(2, new Promise(function (resolve, reject) {
                     var opened = false;
                     if (transferFormat !== _TransferFormat.Text) {
                       reject(new Error("The Server-Sent Events transport only supports the 'Text' transfer format"));
@@ -3302,7 +3332,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                   }));
               }
-            }, _callee15, this);
+            }, _callee16, this);
           }));
           function connect(_x15, _x16) {
             return _connect2.apply(this, arguments);
@@ -3312,19 +3342,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "send",
         value: function () {
-          var _send5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16(data) {
-            return _regenerator().w(function (_context16) {
-              while (1) switch (_context16.n) {
+          var _send5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee17(data) {
+            return _regenerator().w(function (_context17) {
+              while (1) switch (_context17.n) {
                 case 0:
                   if (this._eventSource) {
-                    _context16.n = 1;
+                    _context17.n = 1;
                     break;
                   }
-                  return _context16.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
+                  return _context17.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
                 case 1:
-                  return _context16.a(2, sendMessage(this._logger, "SSE", this._httpClient, this._url, data, this._options));
+                  return _context17.a(2, sendMessage(this._logger, "SSE", this._httpClient, this._url, data, this._options));
               }
-            }, _callee16, this);
+            }, _callee17, this);
           }));
           function send(_x17) {
             return _send5.apply(this, arguments);
@@ -3350,7 +3380,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/WebSocketTransport.ts
+    ; // ./src/WebSocketTransport.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -3370,26 +3400,26 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(WebSocketTransport, [{
         key: "connect",
         value: function () {
-          var _connect3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee17(url, transferFormat) {
+          var _connect3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee18(url, transferFormat) {
             var _this25 = this;
             var token;
-            return _regenerator().w(function (_context17) {
-              while (1) switch (_context17.n) {
+            return _regenerator().w(function (_context18) {
+              while (1) switch (_context18.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
                   Arg.isIn(transferFormat, _TransferFormat, "transferFormat");
                   this._logger.log(_LogLevel.Trace, "(WebSockets transport) Connecting.");
                   if (!this._accessTokenFactory) {
-                    _context17.n = 2;
+                    _context18.n = 2;
                     break;
                   }
-                  _context17.n = 1;
+                  _context18.n = 1;
                   return this._accessTokenFactory();
                 case 1:
-                  token = _context17.v;
+                  token = _context18.v;
                 case 2:
-                  return _context17.a(2, new Promise(function (resolve, reject) {
+                  return _context18.a(2, new Promise(function (resolve, reject) {
                     url = url.replace(/^http/, "ws");
                     var webSocket;
                     var cookies = _this25._httpClient.getCookieString(url);
@@ -3468,7 +3498,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     };
                   }));
               }
-            }, _callee17, this);
+            }, _callee18, this);
           }));
           function connect(_x18, _x19) {
             return _connect3.apply(this, arguments);
@@ -3525,7 +3555,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/HttpConnection.ts
+    ; // ./src/HttpConnection.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -3582,52 +3612,52 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(HttpConnection, [{
         key: "start",
         value: function () {
-          var _start = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee18(transferFormat) {
+          var _start = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee19(transferFormat) {
             var message, _message3;
-            return _regenerator().w(function (_context18) {
-              while (1) switch (_context18.n) {
+            return _regenerator().w(function (_context19) {
+              while (1) switch (_context19.n) {
                 case 0:
                   transferFormat = transferFormat || _TransferFormat.Binary;
                   Arg.isIn(transferFormat, _TransferFormat, "transferFormat");
                   this._logger.log(_LogLevel.Debug, "Starting connection with transfer format '".concat(_TransferFormat[transferFormat], "'."));
                   if (!(this._connectionState !== "Disconnected" /* ConnectionState.Disconnected */)) {
-                    _context18.n = 1;
+                    _context19.n = 1;
                     break;
                   }
-                  return _context18.a(2, Promise.reject(new Error("Cannot start an HttpConnection that is not in the 'Disconnected' state.")));
+                  return _context19.a(2, Promise.reject(new Error("Cannot start an HttpConnection that is not in the 'Disconnected' state.")));
                 case 1:
                   this._connectionState = "Connecting" /* ConnectionState.Connecting */;
                   this._startInternalPromise = this._startInternal(transferFormat);
-                  _context18.n = 2;
+                  _context19.n = 2;
                   return this._startInternalPromise;
                 case 2:
                   if (!(this._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */)) {
-                    _context18.n = 4;
+                    _context19.n = 4;
                     break;
                   }
                   // stop() was called and transitioned the client into the Disconnecting state.
                   message = "Failed to start the HttpConnection before stop() was called.";
                   this._logger.log(_LogLevel.Error, message);
                   // We cannot await stopPromise inside startInternal since stopInternal awaits the startInternalPromise.
-                  _context18.n = 3;
+                  _context19.n = 3;
                   return this._stopPromise;
                 case 3:
-                  return _context18.a(2, Promise.reject(new _AbortError(message)));
+                  return _context19.a(2, Promise.reject(new _AbortError(message)));
                 case 4:
                   if (!(this._connectionState !== "Connected" /* ConnectionState.Connected */)) {
-                    _context18.n = 5;
+                    _context19.n = 5;
                     break;
                   }
                   // stop() was called and transitioned the client into the Disconnecting state.
                   _message3 = "HttpConnection.startInternal completed gracefully but didn't enter the connection into the connected state!";
                   this._logger.log(_LogLevel.Error, _message3);
-                  return _context18.a(2, Promise.reject(new _AbortError(_message3)));
+                  return _context19.a(2, Promise.reject(new _AbortError(_message3)));
                 case 5:
                   this._connectionStarted = true;
                 case 6:
-                  return _context18.a(2);
+                  return _context19.a(2);
               }
-            }, _callee18, this);
+            }, _callee19, this);
           }));
           function start(_x20) {
             return _start.apply(this, arguments);
@@ -3649,24 +3679,24 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stop",
         value: function () {
-          var _stop3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee19(error) {
+          var _stop3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee20(error) {
             var _this26 = this;
-            return _regenerator().w(function (_context19) {
-              while (1) switch (_context19.n) {
+            return _regenerator().w(function (_context20) {
+              while (1) switch (_context20.n) {
                 case 0:
                   if (!(this._connectionState === "Disconnected" /* ConnectionState.Disconnected */)) {
-                    _context19.n = 1;
+                    _context20.n = 1;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Call to HttpConnection.stop(".concat(error, ") ignored because the connection is already in the disconnected state."));
-                  return _context19.a(2, Promise.resolve());
+                  return _context20.a(2, Promise.resolve());
                 case 1:
                   if (!(this._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */)) {
-                    _context19.n = 2;
+                    _context20.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Call to HttpConnection.stop(".concat(error, ") ignored because the connection is already in the disconnecting state."));
-                  return _context19.a(2, this._stopPromise);
+                  return _context20.a(2, this._stopPromise);
                 case 2:
                   this._connectionState = "Disconnecting" /* ConnectionState.Disconnecting */;
                   this._stopPromise = new Promise(function (resolve) {
@@ -3674,15 +3704,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     _this26._stopPromiseResolver = resolve;
                   });
                   // stopInternal should never throw so just observe it.
-                  _context19.n = 3;
+                  _context20.n = 3;
                   return this._stopInternal(error);
                 case 3:
-                  _context19.n = 4;
+                  _context20.n = 4;
                   return this._stopPromise;
                 case 4:
-                  return _context19.a(2);
+                  return _context20.a(2);
               }
-            }, _callee19, this);
+            }, _callee20, this);
           }));
           function stop(_x21) {
             return _stop3.apply(this, arguments);
@@ -3692,50 +3722,50 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_stopInternal",
         value: function () {
-          var _stopInternal2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee20(error) {
+          var _stopInternal2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee21(error) {
             var _t13, _t14;
-            return _regenerator().w(function (_context20) {
-              while (1) switch (_context20.p = _context20.n) {
+            return _regenerator().w(function (_context21) {
+              while (1) switch (_context21.p = _context21.n) {
                 case 0:
                   // Set error as soon as possible otherwise there is a race between
                   // the transport closing and providing an error and the error from a close message
                   // We would prefer the close message error.
                   this._stopError = error;
-                  _context20.p = 1;
-                  _context20.n = 2;
+                  _context21.p = 1;
+                  _context21.n = 2;
                   return this._startInternalPromise;
                 case 2:
-                  _context20.n = 4;
+                  _context21.n = 4;
                   break;
                 case 3:
-                  _context20.p = 3;
-                  _t13 = _context20.v;
+                  _context21.p = 3;
+                  _t13 = _context21.v;
                 case 4:
                   if (!this.transport) {
-                    _context20.n = 9;
+                    _context21.n = 9;
                     break;
                   }
-                  _context20.p = 5;
-                  _context20.n = 6;
+                  _context21.p = 5;
+                  _context21.n = 6;
                   return this.transport.stop();
                 case 6:
-                  _context20.n = 8;
+                  _context21.n = 8;
                   break;
                 case 7:
-                  _context20.p = 7;
-                  _t14 = _context20.v;
+                  _context21.p = 7;
+                  _t14 = _context21.v;
                   this._logger.log(_LogLevel.Error, "HttpConnection.transport.stop() threw error '".concat(_t14, "'."));
                   this._stopConnection();
                 case 8:
                   this.transport = undefined;
-                  _context20.n = 10;
+                  _context21.n = 10;
                   break;
                 case 9:
                   this._logger.log(_LogLevel.Debug, "HttpConnection.transport is undefined in HttpConnection.stop() because start() failed.");
                 case 10:
-                  return _context20.a(2);
+                  return _context21.a(2);
               }
-            }, _callee20, this, [[5, 7], [1, 3]]);
+            }, _callee21, this, [[5, 7], [1, 3]]);
           }));
           function _stopInternal(_x22) {
             return _stopInternal2.apply(this, arguments);
@@ -3745,66 +3775,66 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_startInternal",
         value: function () {
-          var _startInternal3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee21(transferFormat) {
+          var _startInternal3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee22(transferFormat) {
             var _this27 = this;
             var url, negotiateResponse, redirects, _loop2, _t15;
-            return _regenerator().w(function (_context22) {
-              while (1) switch (_context22.p = _context22.n) {
+            return _regenerator().w(function (_context23) {
+              while (1) switch (_context23.p = _context23.n) {
                 case 0:
                   // Store the original base url and the access token factory since they may change
                   // as part of negotiating
                   url = this.baseUrl;
                   this._accessTokenFactory = this._options.accessTokenFactory;
                   this._httpClient._accessTokenFactory = this._accessTokenFactory;
-                  _context22.p = 1;
+                  _context23.p = 1;
                   if (!this._options.skipNegotiation) {
-                    _context22.n = 5;
+                    _context23.n = 5;
                     break;
                   }
                   if (!(this._options.transport === _HttpTransportType.WebSockets)) {
-                    _context22.n = 3;
+                    _context23.n = 3;
                     break;
                   }
                   // No need to add a connection ID in this case
                   this.transport = this._constructTransport(_HttpTransportType.WebSockets);
                   // We should just call connect directly in this case.
                   // No fallback or negotiate in this case.
-                  _context22.n = 2;
+                  _context23.n = 2;
                   return this._startTransport(url, transferFormat);
                 case 2:
-                  _context22.n = 4;
+                  _context23.n = 4;
                   break;
                 case 3:
                   throw new Error("Negotiation can only be skipped when using the WebSocket transport directly.");
                 case 4:
-                  _context22.n = 10;
+                  _context23.n = 10;
                   break;
                 case 5:
                   negotiateResponse = null;
                   redirects = 0;
                   _loop2 = /*#__PURE__*/_regenerator().m(function _loop2() {
                     var accessToken;
-                    return _regenerator().w(function (_context21) {
-                      while (1) switch (_context21.n) {
+                    return _regenerator().w(function (_context22) {
+                      while (1) switch (_context22.n) {
                         case 0:
-                          _context21.n = 1;
+                          _context22.n = 1;
                           return _this27._getNegotiationResponse(url);
                         case 1:
-                          negotiateResponse = _context21.v;
+                          negotiateResponse = _context22.v;
                           if (!(_this27._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */ || _this27._connectionState === "Disconnected" /* ConnectionState.Disconnected */)) {
-                            _context21.n = 2;
+                            _context22.n = 2;
                             break;
                           }
                           throw new _AbortError("The connection was stopped during negotiation.");
                         case 2:
                           if (!negotiateResponse.error) {
-                            _context21.n = 3;
+                            _context22.n = 3;
                             break;
                           }
                           throw new Error(negotiateResponse.error);
                         case 3:
                           if (!negotiateResponse.ProtocolVersion) {
-                            _context21.n = 4;
+                            _context22.n = 4;
                             break;
                           }
                           throw new Error("Detected a connection attempt to an ASP.NET SignalR Server. This client only supports connecting to an ASP.NET Core SignalR Server. See https://aka.ms/signalr-core-differences for details.");
@@ -3825,25 +3855,25 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                           }
                           redirects++;
                         case 5:
-                          return _context21.a(2);
+                          return _context22.a(2);
                       }
                     }, _loop2);
                   });
                 case 6:
-                  return _context22.d(_regeneratorValues(_loop2()), 7);
+                  return _context23.d(_regeneratorValues(_loop2()), 7);
                 case 7:
                   if (negotiateResponse.url && redirects < MAX_REDIRECTS) {
-                    _context22.n = 6;
+                    _context23.n = 6;
                     break;
                   }
                 case 8:
                   if (!(redirects === MAX_REDIRECTS && negotiateResponse.url)) {
-                    _context22.n = 9;
+                    _context23.n = 9;
                     break;
                   }
                   throw new Error("Negotiate redirection limit exceeded.");
                 case 9:
-                  _context22.n = 10;
+                  _context23.n = 10;
                   return this._createTransport(url, this._options.transport, negotiateResponse, transferFormat);
                 case 10:
                   if (this.transport instanceof LongPollingTransport) {
@@ -3858,21 +3888,21 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   // stop() is waiting on us via this.startInternalPromise so keep this.transport around so it can clean up.
                   // This is the only case startInternal can exit in neither the connected nor disconnected state because stopConnection()
                   // will transition to the disconnected state. start() will wait for the transition using the stopPromise.
-                  _context22.n = 12;
+                  _context23.n = 12;
                   break;
                 case 11:
-                  _context22.p = 11;
-                  _t15 = _context22.v;
+                  _context23.p = 11;
+                  _t15 = _context23.v;
                   this._logger.log(_LogLevel.Error, "Failed to start the connection: " + _t15);
                   this._connectionState = "Disconnected" /* ConnectionState.Disconnected */;
                   this.transport = undefined;
                   // if start fails, any active calls to stop assume that start will complete the stop promise
                   this._stopPromiseResolver();
-                  return _context22.a(2, Promise.reject(_t15));
+                  return _context23.a(2, Promise.reject(_t15));
                 case 12:
-                  return _context22.a(2);
+                  return _context23.a(2);
               }
-            }, _callee21, this, [[1, 11]]);
+            }, _callee22, this, [[1, 11]]);
           }));
           function _startInternal(_x23) {
             return _startInternal3.apply(this, arguments);
@@ -3882,18 +3912,18 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_getNegotiationResponse",
         value: function () {
-          var _getNegotiationResponse2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee22(url) {
+          var _getNegotiationResponse2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee23(url) {
             var headers, _getUserAgentHeader9, _getUserAgentHeader0, name, value, negotiateUrl, response, negotiateResponse, errorMessage, _t16;
-            return _regenerator().w(function (_context23) {
-              while (1) switch (_context23.p = _context23.n) {
+            return _regenerator().w(function (_context24) {
+              while (1) switch (_context24.p = _context24.n) {
                 case 0:
                   headers = {};
                   _getUserAgentHeader9 = getUserAgentHeader(), _getUserAgentHeader0 = _slicedToArray(_getUserAgentHeader9, 2), name = _getUserAgentHeader0[0], value = _getUserAgentHeader0[1];
                   headers[name] = value;
                   negotiateUrl = this._resolveNegotiateUrl(url);
                   this._logger.log(_LogLevel.Debug, "Sending negotiation request: ".concat(negotiateUrl, "."));
-                  _context23.p = 1;
-                  _context23.n = 2;
+                  _context24.p = 1;
+                  _context24.n = 2;
                   return this._httpClient.post(negotiateUrl, {
                     content: "",
                     headers: _objectSpread(_objectSpread({}, headers), this._options.headers),
@@ -3901,12 +3931,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     withCredentials: this._options.withCredentials
                   });
                 case 2:
-                  response = _context23.v;
+                  response = _context24.v;
                   if (!(response.statusCode !== 200)) {
-                    _context23.n = 3;
+                    _context24.n = 3;
                     break;
                   }
-                  return _context23.a(2, Promise.reject(new Error("Unexpected status code returned from negotiate '".concat(response.statusCode, "'"))));
+                  return _context24.a(2, Promise.reject(new Error("Unexpected status code returned from negotiate '".concat(response.statusCode, "'"))));
                 case 3:
                   negotiateResponse = JSON.parse(response.content);
                   if (!negotiateResponse.negotiateVersion || negotiateResponse.negotiateVersion < 1) {
@@ -3915,15 +3945,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     negotiateResponse.connectionToken = negotiateResponse.connectionId;
                   }
                   if (!(negotiateResponse.useStatefulReconnect && this._options._useStatefulReconnect !== true)) {
-                    _context23.n = 4;
+                    _context24.n = 4;
                     break;
                   }
-                  return _context23.a(2, Promise.reject(new FailedToNegotiateWithServerError("Client didn't negotiate Stateful Reconnect but the server did.")));
+                  return _context24.a(2, Promise.reject(new FailedToNegotiateWithServerError("Client didn't negotiate Stateful Reconnect but the server did.")));
                 case 4:
-                  return _context23.a(2, negotiateResponse);
+                  return _context24.a(2, negotiateResponse);
                 case 5:
-                  _context23.p = 5;
-                  _t16 = _context23.v;
+                  _context24.p = 5;
+                  _t16 = _context24.v;
                   errorMessage = "Failed to complete negotiation with the server: " + _t16;
                   if (_t16 instanceof _HttpError) {
                     if (_t16.statusCode === 404) {
@@ -3931,9 +3961,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                   }
                   this._logger.log(_LogLevel.Error, errorMessage);
-                  return _context23.a(2, Promise.reject(new FailedToNegotiateWithServerError(errorMessage)));
+                  return _context24.a(2, Promise.reject(new FailedToNegotiateWithServerError(errorMessage)));
               }
-            }, _callee22, this, [[1, 5]]);
+            }, _callee23, this, [[1, 5]]);
           }));
           function _getNegotiationResponse(_x24) {
             return _getNegotiationResponse2.apply(this, arguments);
@@ -3951,113 +3981,113 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_createTransport",
         value: function () {
-          var _createTransport2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee23(url, requestedTransport, negotiateResponse, requestedTransferFormat) {
+          var _createTransport2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee24(url, requestedTransport, negotiateResponse, requestedTransferFormat) {
             var connectUrl, transportExceptions, transports, negotiate, _iterator8, _step8, endpoint, transportOrError, message, _t17, _t18, _t19;
-            return _regenerator().w(function (_context24) {
-              while (1) switch (_context24.p = _context24.n) {
+            return _regenerator().w(function (_context25) {
+              while (1) switch (_context25.p = _context25.n) {
                 case 0:
                   connectUrl = this._createConnectUrl(url, negotiateResponse.connectionToken);
                   if (!this._isITransport(requestedTransport)) {
-                    _context24.n = 2;
+                    _context25.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection was provided an instance of ITransport, using that directly.");
                   this.transport = requestedTransport;
-                  _context24.n = 1;
+                  _context25.n = 1;
                   return this._startTransport(connectUrl, requestedTransferFormat);
                 case 1:
                   this.connectionId = negotiateResponse.connectionId;
-                  return _context24.a(2);
+                  return _context25.a(2);
                 case 2:
                   transportExceptions = [];
                   transports = negotiateResponse.availableTransports || [];
                   negotiate = negotiateResponse;
                   _iterator8 = _createForOfIteratorHelper(transports);
-                  _context24.p = 3;
+                  _context25.p = 3;
                   _iterator8.s();
                 case 4:
                   if ((_step8 = _iterator8.n()).done) {
-                    _context24.n = 14;
+                    _context25.n = 14;
                     break;
                   }
                   endpoint = _step8.value;
                   transportOrError = this._resolveTransportOrError(endpoint, requestedTransport, requestedTransferFormat, (negotiate === null || negotiate === void 0 ? void 0 : negotiate.useStatefulReconnect) === true);
                   if (!(transportOrError instanceof Error)) {
-                    _context24.n = 5;
+                    _context25.n = 5;
                     break;
                   }
                   // Store the error and continue, we don't want to cause a re-negotiate in these cases
                   transportExceptions.push("".concat(endpoint.transport, " failed:"));
                   transportExceptions.push(transportOrError);
-                  _context24.n = 13;
+                  _context25.n = 13;
                   break;
                 case 5:
                   if (!this._isITransport(transportOrError)) {
-                    _context24.n = 13;
+                    _context25.n = 13;
                     break;
                   }
                   this.transport = transportOrError;
                   if (negotiate) {
-                    _context24.n = 10;
+                    _context25.n = 10;
                     break;
                   }
-                  _context24.p = 6;
-                  _context24.n = 7;
+                  _context25.p = 6;
+                  _context25.n = 7;
                   return this._getNegotiationResponse(url);
                 case 7:
-                  negotiate = _context24.v;
-                  _context24.n = 9;
+                  negotiate = _context25.v;
+                  _context25.n = 9;
                   break;
                 case 8:
-                  _context24.p = 8;
-                  _t17 = _context24.v;
-                  return _context24.a(2, Promise.reject(_t17));
+                  _context25.p = 8;
+                  _t17 = _context25.v;
+                  return _context25.a(2, Promise.reject(_t17));
                 case 9:
                   connectUrl = this._createConnectUrl(url, negotiate.connectionToken);
                 case 10:
-                  _context24.p = 10;
-                  _context24.n = 11;
+                  _context25.p = 10;
+                  _context25.n = 11;
                   return this._startTransport(connectUrl, requestedTransferFormat);
                 case 11:
                   this.connectionId = negotiate.connectionId;
-                  return _context24.a(2);
+                  return _context25.a(2);
                 case 12:
-                  _context24.p = 12;
-                  _t18 = _context24.v;
+                  _context25.p = 12;
+                  _t18 = _context25.v;
                   this._logger.log(_LogLevel.Error, "Failed to start the transport '".concat(endpoint.transport, "': ").concat(_t18));
                   negotiate = undefined;
                   transportExceptions.push(new FailedToStartTransportError("".concat(endpoint.transport, " failed: ").concat(_t18), _HttpTransportType[endpoint.transport]));
                   if (!(this._connectionState !== "Connecting" /* ConnectionState.Connecting */)) {
-                    _context24.n = 13;
+                    _context25.n = 13;
                     break;
                   }
                   message = "Failed to select transport before stop() was called.";
                   this._logger.log(_LogLevel.Debug, message);
-                  return _context24.a(2, Promise.reject(new _AbortError(message)));
+                  return _context25.a(2, Promise.reject(new _AbortError(message)));
                 case 13:
-                  _context24.n = 4;
+                  _context25.n = 4;
                   break;
                 case 14:
-                  _context24.n = 16;
+                  _context25.n = 16;
                   break;
                 case 15:
-                  _context24.p = 15;
-                  _t19 = _context24.v;
+                  _context25.p = 15;
+                  _t19 = _context25.v;
                   _iterator8.e(_t19);
                 case 16:
-                  _context24.p = 16;
+                  _context25.p = 16;
                   _iterator8.f();
-                  return _context24.f(16);
+                  return _context25.f(16);
                 case 17:
                   if (!(transportExceptions.length > 0)) {
-                    _context24.n = 18;
+                    _context25.n = 18;
                     break;
                   }
-                  return _context24.a(2, Promise.reject(new AggregateErrors("Unable to connect to the server with any of the available transports. ".concat(transportExceptions.join(" ")), transportExceptions)));
+                  return _context25.a(2, Promise.reject(new AggregateErrors("Unable to connect to the server with any of the available transports. ".concat(transportExceptions.join(" ")), transportExceptions)));
                 case 18:
-                  return _context24.a(2, Promise.reject(new Error("None of the transports supported by the client are supported by the server.")));
+                  return _context25.a(2, Promise.reject(new Error("None of the transports supported by the client are supported by the server.")));
               }
-            }, _callee23, this, [[10, 12], [6, 8], [3, 15, 16, 17]]);
+            }, _callee24, this, [[10, 12], [6, 8], [3, 15, 16, 17]]);
           }));
           function _createTransport(_x25, _x26, _x27, _x28) {
             return _createTransport2.apply(this, arguments);
@@ -4091,44 +4121,44 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           this.transport.onreceive = this.onreceive;
           if (this.features.reconnect) {
             this.transport.onclose = /*#__PURE__*/function () {
-              var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee24(e) {
+              var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25(e) {
                 var callStop, _t20;
-                return _regenerator().w(function (_context25) {
-                  while (1) switch (_context25.p = _context25.n) {
+                return _regenerator().w(function (_context26) {
+                  while (1) switch (_context26.p = _context26.n) {
                     case 0:
                       callStop = false;
                       if (!_this28.features.reconnect) {
-                        _context25.n = 6;
+                        _context26.n = 6;
                         break;
                       }
-                      _context25.p = 1;
+                      _context26.p = 1;
                       _this28.features.disconnected();
-                      _context25.n = 2;
+                      _context26.n = 2;
                       return _this28.transport.connect(url, transferFormat);
                     case 2:
-                      _context25.n = 3;
+                      _context26.n = 3;
                       return _this28.features.resend();
                     case 3:
-                      _context25.n = 5;
+                      _context26.n = 5;
                       break;
                     case 4:
-                      _context25.p = 4;
-                      _t20 = _context25.v;
+                      _context26.p = 4;
+                      _t20 = _context26.v;
                       callStop = true;
                     case 5:
-                      _context25.n = 7;
+                      _context26.n = 7;
                       break;
                     case 6:
                       _this28._stopConnection(e);
-                      return _context25.a(2);
+                      return _context26.a(2);
                     case 7:
                       if (callStop) {
                         _this28._stopConnection(e);
                       }
                     case 8:
-                      return _context25.a(2);
+                      return _context26.a(2);
                   }
-                }, _callee24, null, [[1, 4]]);
+                }, _callee25, null, [[1, 4]]);
               }));
               return function (_x29) {
                 return _ref3.apply(this, arguments);
@@ -4314,50 +4344,50 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_sendLoop",
         value: function () {
-          var _sendLoop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25() {
+          var _sendLoop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee26() {
             var transportResult, data, _t21;
-            return _regenerator().w(function (_context26) {
-              while (1) switch (_context26.p = _context26.n) {
+            return _regenerator().w(function (_context27) {
+              while (1) switch (_context27.p = _context27.n) {
                 case 0:
                   if (!true) {
-                    _context26.n = 7;
+                    _context27.n = 7;
                     break;
                   }
-                  _context26.n = 1;
+                  _context27.n = 1;
                   return this._sendBufferedData.promise;
                 case 1:
                   if (this._executing) {
-                    _context26.n = 2;
+                    _context27.n = 2;
                     break;
                   }
                   if (this._transportResult) {
                     this._transportResult.reject("Connection stopped.");
                   }
-                  return _context26.a(3, 7);
+                  return _context27.a(3, 7);
                 case 2:
                   this._sendBufferedData = new PromiseSource();
                   transportResult = this._transportResult;
                   this._transportResult = undefined;
                   data = typeof this._buffer[0] === "string" ? this._buffer.join("") : TransportSendQueue._concatBuffers(this._buffer);
                   this._buffer.length = 0;
-                  _context26.p = 3;
-                  _context26.n = 4;
+                  _context27.p = 3;
+                  _context27.n = 4;
                   return this._transport.send(data);
                 case 4:
                   transportResult.resolve();
-                  _context26.n = 6;
+                  _context27.n = 6;
                   break;
                 case 5:
-                  _context26.p = 5;
-                  _t21 = _context26.v;
+                  _context27.p = 5;
+                  _t21 = _context27.v;
                   transportResult.reject(_t21);
                 case 6:
-                  _context26.n = 0;
+                  _context27.n = 0;
                   break;
                 case 7:
-                  return _context26.a(2);
+                  return _context27.a(2);
               }
-            }, _callee25, this, [[3, 5]]);
+            }, _callee26, this, [[3, 5]]);
           }));
           function _sendLoop() {
             return _sendLoop2.apply(this, arguments);
@@ -4412,7 +4442,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/JsonHubProtocol.ts
+    ; // ./src/JsonHubProtocol.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -4554,7 +4584,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         }
       }]);
     }();
-    ; // CONCATENATED MODULE: ./src/HubConnectionBuilder.ts
+    ; // ./src/HubConnectionBuilder.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -4705,11 +4735,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     function isLogger(logger) {
       return logger.log !== undefined;
     }
-    ; // CONCATENATED MODULE: ./src/index.ts
+    ; // ./src/index.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
 
-    ; // CONCATENATED MODULE: ./src/browser-index.ts
+    ; // ./src/browser-index.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
     // This is where we add any polyfills we'll need for the browser. It is the entry module for browser-specific builds.

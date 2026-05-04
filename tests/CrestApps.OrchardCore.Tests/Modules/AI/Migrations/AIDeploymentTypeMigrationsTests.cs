@@ -1,88 +1,359 @@
 using System.Reflection;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
 public sealed class AIDeploymentTypeMigrationsTests
 {
     [Fact]
-    public void FindDefaultChatDeploymentId_WhenDefaultDeploymentExists_ShouldReturnDefaultDeploymentId()
+    public void FindDefaultChatDeploymentName_WhenConnectionNameMatches_ShouldReturnFirstMatchingDeploymentName()
     {
-        var profile = CreateProfile("OpenAI", "legacy-connection");
-        var deployments = new[]
-        {
-            new AIDeployment
-            {
-                ItemId = "chat-secondary",
-                ProviderName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-            },
-            new AIDeployment
-            {
-                ItemId = "chat-default",
-                ProviderName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-                IsDefault = true,
-            },
-        };
-
-        var result = InvokeFindDefaultChatDeploymentId(profile, deployments);
-
-        Assert.Equal("chat-default", result);
-    }
-
-    [Fact]
-    public void FindDefaultChatDeploymentId_WhenConnectionAliasMatches_ShouldReturnFirstMatchingDeploymentId()
-    {
-        var profile = CreateProfile("OpenAI", "Friendly Connection");
+        var profile = CreateProfile("Friendly Connection");
         var deployments = new[]
         {
             new AIDeployment
             {
                 ItemId = "embedding-default",
-                ProviderName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                ConnectionNameAlias = "Friendly Connection",
+                Name = "embedding-default",
+                ClientName = "OpenAI",
+                ConnectionName = "Friendly Connection",
                 Type = AIDeploymentType.Embedding,
-                IsDefault = true,
             },
             new AIDeployment
             {
                 ItemId = "chat-first",
-                ProviderName = "OpenAI",
-                ConnectionName = "legacy-connection",
-                ConnectionNameAlias = "Friendly Connection",
+                Name = "chat-first",
+                ClientName = "OpenAI",
+                ConnectionName = "Friendly Connection",
                 Type = AIDeploymentType.Chat,
             },
         };
 
-        var result = InvokeFindDefaultChatDeploymentId(profile, deployments);
+        var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
 
         Assert.Equal("chat-first", result);
     }
 
-    private static string InvokeFindDefaultChatDeploymentId(AIProfile profile, IEnumerable<AIDeployment> deployments)
+    [Fact]
+    public void FindDefaultChatDeploymentName_WhenMultiTypeDeploymentMatches_ShouldReturnDeploymentName()
+    {
+        var profile = CreateProfile("legacy-connection");
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "chat-utility-default",
+                Name = "chat-utility-default",
+                ClientName = "OpenAI",
+                ConnectionName = "legacy-connection",
+                Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
+            },
+        };
+
+        var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
+
+        Assert.Equal("chat-utility-default", result);
+    }
+
+    [Fact]
+    public void TryPopulateDefaultDeploymentSettings_WhenSettingsAreNull_ShouldBackfillAvailableDeploymentTypes()
+    {
+        var settings = new DefaultAIDeploymentSettings();
+        var connections = new[]
+        {
+            CreateConnection(itemId: "secondary-connection", name: "Secondary", legacyChatDeploymentName: "gpt-4.1"),
+            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4o-mini", legacyUtilityDeploymentName: "gpt-4o-mini"),
+        };
+
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "secondary-chat",
+                Name = "secondary-chat",
+                ClientName = "OpenAI",
+                ConnectionName = "secondary-connection",
+                Type = AIDeploymentType.Chat,
+            },
+            new AIDeployment
+            {
+                ItemId = "default-chat",
+                Name = "default-chat",
+                ClientName = "OpenAI",
+                ConnectionName = "default-connection",
+                Type = AIDeploymentType.Chat,
+            },
+            new AIDeployment
+            {
+                ItemId = "default-utility",
+                Name = "default-utility",
+                ClientName = "OpenAI",
+                ConnectionName = "default-connection",
+                Type = AIDeploymentType.Utility,
+            },
+            new AIDeployment
+            {
+                ItemId = "default-stt",
+                Name = "default-stt",
+                ClientName = "OpenAI",
+                ConnectionName = "speech-connection",
+                Type = AIDeploymentType.SpeechToText,
+            },
+            new AIDeployment
+            {
+                ItemId = "default-tts",
+                Name = "default-tts",
+                ClientName = "OpenAI",
+                ConnectionName = "speech-connection",
+                Type = AIDeploymentType.TextToSpeech,
+            },
+        };
+
+        var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
+        Assert.True(result);
+        Assert.Equal("default-chat", settings.DefaultChatDeploymentName);
+        Assert.Equal("default-utility", settings.DefaultUtilityDeploymentName);
+        Assert.Equal("default-stt", settings.DefaultSpeechToTextDeploymentName);
+        Assert.Equal("default-tts", settings.DefaultTextToSpeechDeploymentName);
+    }
+
+    [Fact]
+    public void TryPopulateDefaultDeploymentSettings_WhenDeploymentSupportsMultipleTypes_ShouldReuseSameDeploymentName()
+    {
+        var settings = new DefaultAIDeploymentSettings();
+        var connections = new[]
+        {
+            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini"),
+        };
+
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "chat-utility-default",
+                Name = "chat-utility-default",
+                ClientName = "OpenAI",
+                ConnectionName = "default-connection",
+                Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
+            },
+        };
+
+        var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
+        Assert.True(result);
+        Assert.Equal("chat-utility-default", settings.DefaultChatDeploymentName);
+        Assert.Equal("chat-utility-default", settings.DefaultUtilityDeploymentName);
+    }
+
+    [Fact]
+    public void TryCreateDeployment_ShouldPersistConnectionNameInsteadOfItemId()
+    {
+        var deploymentDoc = new DictionaryDocument<AIDeployment>();
+        var connection = CreateConnection(
+            itemId: "default-connection-id",
+            name: "Default Connection",
+            legacyChatDeploymentName: "gpt-4.1-mini");
+
+        var created = InvokeTryCreateDeployment(
+            deploymentDoc,
+            connection,
+            "gpt-4.1-mini",
+            AIDeploymentType.Chat);
+
+        Assert.True(created);
+        var deployment = Assert.Single(deploymentDoc.Records.Values);
+        Assert.Equal("Default Connection", deployment.ConnectionName);
+    }
+
+    [Fact]
+    public void TryPopulateDefaultDeploymentSettings_WhenSettingsAlreadyExist_ShouldNotOverwriteThem()
+    {
+        var settings = new DefaultAIDeploymentSettings
+        {
+            DefaultChatDeploymentName = "existing-chat",
+            DefaultEmbeddingDeploymentName = "existing-embedding",
+        };
+
+        var connections = new[]
+        {
+            CreateConnection(itemId: "legacy-connection", name: "Legacy", legacyChatDeploymentName: "gpt-4o-mini", legacyEmbeddingDeploymentName: "text-embedding-3-small"),
+        };
+
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "global-default-chat",
+                Name = "global-default-chat",
+                ClientName = "OpenAI",
+                ConnectionName = "legacy-connection",
+                Type = AIDeploymentType.Chat,
+            },
+            new AIDeployment
+            {
+                ItemId = "global-default-embedding",
+                Name = "global-default-embedding",
+                ClientName = "OpenAI",
+                ConnectionName = "legacy-connection",
+                Type = AIDeploymentType.Embedding,
+            },
+            new AIDeployment
+            {
+                ItemId = "global-default-image",
+                Name = "global-default-image",
+                ClientName = "OpenAI",
+                ConnectionName = "legacy-connection",
+                Type = AIDeploymentType.Image,
+            },
+        };
+
+        var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
+        Assert.True(result);
+        Assert.Equal("existing-chat", settings.DefaultChatDeploymentName);
+        Assert.Equal("existing-embedding", settings.DefaultEmbeddingDeploymentName);
+        Assert.Equal("global-default-image", settings.DefaultImageDeploymentName);
+    }
+
+    [Fact]
+    public void TryConvertDeploymentSelectorToName_WhenDefaultSettingsContainDeploymentIds_ShouldConvertToNames()
+    {
+        var settings = new DefaultAIDeploymentSettings
+        {
+            DefaultChatDeploymentName = "chat-id",
+            DefaultUtilityDeploymentName = "utility-id",
+            DefaultEmbeddingDeploymentName = "embedding-name",
+        };
+
+        var deploymentNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["chat-id"] = "chat-name",
+            ["utility-id"] = "utility-name",
+        };
+
+        var chatUpdated = InvokeTryConvertDeploymentSelectorToName(
+            deploymentNameMap,
+            settings.DefaultChatDeploymentName,
+            value => settings.DefaultChatDeploymentName = value);
+        var utilityUpdated = InvokeTryConvertDeploymentSelectorToName(
+            deploymentNameMap,
+            settings.DefaultUtilityDeploymentName,
+            value => settings.DefaultUtilityDeploymentName = value);
+        var embeddingUpdated = InvokeTryConvertDeploymentSelectorToName(
+            deploymentNameMap,
+            settings.DefaultEmbeddingDeploymentName,
+            value => settings.DefaultEmbeddingDeploymentName = value);
+
+        Assert.True(chatUpdated);
+        Assert.True(utilityUpdated);
+        Assert.False(embeddingUpdated);
+        Assert.Equal("chat-name", settings.DefaultChatDeploymentName);
+        Assert.Equal("utility-name", settings.DefaultUtilityDeploymentName);
+        Assert.Equal("embedding-name", settings.DefaultEmbeddingDeploymentName);
+    }
+
+    private static string InvokeFindDefaultChatDeploymentName(AIProfile profile, IEnumerable<AIDeployment> deployments)
     {
         var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
         var type = assembly.GetType(
             "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
             throwOnError: true)!;
-        var method = type.GetMethod("FindDefaultChatDeploymentId", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var method = type.GetMethod("FindDefaultChatDeploymentName", BindingFlags.NonPublic | BindingFlags.Static)!;
 
         return (string)method.Invoke(null, [profile, deployments])!;
     }
 
-    private static AIProfile CreateProfile(string source, string connectionName)
+    private static bool InvokeTryPopulateDefaultDeploymentSettings(
+    DefaultAIDeploymentSettings settings,
+    IEnumerable<AIProviderConnection> connections,
+    IEnumerable<AIDeployment> deployments)
+    {
+        var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
+        var type = assembly.GetType(
+            "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
+            throwOnError: true);
+        var method = type.GetMethod(
+            "TryPopulateDefaultDeploymentSettings",
+            BindingFlags.NonPublic | BindingFlags.Static,
+            binder: null,
+            [typeof(DefaultAIDeploymentSettings), typeof(IEnumerable<AIProviderConnection>), typeof(IEnumerable<AIDeployment>)],
+            modifiers: null);
+
+        return (bool)method.Invoke(null, [settings, connections, deployments])!;
+    }
+
+    private static bool InvokeTryCreateDeployment(
+        DictionaryDocument<AIDeployment> deploymentDoc,
+        AIProviderConnection connection,
+        string deploymentName,
+        AIDeploymentType type)
+    {
+        var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
+        var migrationType = assembly.GetType(
+            "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
+            throwOnError: true);
+        var method = migrationType.GetMethod(
+            "TryCreateDeployment",
+            BindingFlags.NonPublic | BindingFlags.Static,
+            binder: null,
+            [typeof(DictionaryDocument<AIDeployment>), typeof(AIProviderConnection), typeof(string), typeof(AIDeploymentType)],
+            modifiers: null);
+
+        return (bool)method.Invoke(null, [deploymentDoc, connection, deploymentName, type])!;
+    }
+
+    private static bool InvokeTryConvertDeploymentSelectorToName(
+        IReadOnlyDictionary<string, string> deploymentNameMap,
+        string currentValue,
+        Action<string> assign)
+    {
+        var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
+        var type = assembly.GetType(
+            "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
+            throwOnError: true);
+        var method = type.GetMethod(
+            "TryConvertDeploymentSelectorToName",
+            BindingFlags.NonPublic | BindingFlags.Static,
+            binder: null,
+            [typeof(IReadOnlyDictionary<string, string>), typeof(string), typeof(Action<string>)],
+            modifiers: null);
+
+        return (bool)method.Invoke(null, [deploymentNameMap, currentValue, assign])!;
+    }
+
+    private static AIProfile CreateProfile(string connectionName)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
+
         return new AIProfile
         {
-            Source = source,
             ConnectionName = connectionName,
         };
+
 #pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    private static AIProviderConnection CreateConnection(
+        string itemId,
+        string name,
+        string legacyChatDeploymentName,
+        string legacyUtilityDeploymentName = null,
+        string legacyEmbeddingDeploymentName = null)
+    {
+        var connection = new AIProviderConnection
+        {
+            ItemId = itemId,
+            Name = name,
+            ClientName = "OpenAI",
+        };
+
+        connection.SetLegacyChatDeploymentName(legacyChatDeploymentName);
+        connection.SetLegacyUtilityDeploymentName(legacyUtilityDeploymentName);
+        connection.SetLegacyEmbeddingDeploymentName(legacyEmbeddingDeploymentName);
+
+        return connection;
     }
 }

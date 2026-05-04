@@ -1,14 +1,14 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI;
+using CrestApps.Core.AI.OpenAI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Handlers;
 
@@ -18,6 +18,11 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAIProviderConnectionSettingsHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OpenAIProviderConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<OpenAIProviderConnectionHandler> stringLocalizer)
@@ -26,20 +31,20 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
+    public override Task InitializingAsync(InitializingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context, CancellationToken cancellationToken = default)
     {
-        if (!string.Equals(context.Model.Source, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<OpenAIConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (metadata.Endpoint is null)
         {
@@ -56,7 +61,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
@@ -68,7 +73,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<OpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 
@@ -79,7 +84,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
-        if (!string.IsNullOrWhiteSpace(endpoint))
+        if (!string.IsNullOrWhiteSpace(apiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 

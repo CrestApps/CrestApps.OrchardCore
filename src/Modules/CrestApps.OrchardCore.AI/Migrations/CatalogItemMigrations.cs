@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,9 +14,10 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 [Obsolete("This class will be removed before the v1 is released.")]
 internal sealed class CatalogItemMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
@@ -96,7 +97,7 @@ internal sealed class CatalogItemMigrations : DataMigration
                                     content,
                                     id = document.Id,
                                 }
-                            );
+                                );
                         }
                     }
                 }

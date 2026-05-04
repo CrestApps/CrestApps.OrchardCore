@@ -1,21 +1,29 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardFtpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models.FtpConnectionMetadata;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
 
+/// <summary>
+/// Display driver for the ftp resource shape.
+/// </summary>
 public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FtpResourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public FtpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer)
@@ -33,7 +41,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
 
         return Initialize<FtpConnectionViewModel>("FtpResourceConnection_Edit", model =>
         {
-            var metadata = resource.As<FtpConnectionMetadata>();
+            var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
 
             model.Host = metadata?.Host;
             model.Port = metadata?.Port;
@@ -64,7 +72,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["The FTP host is required."]);
         }
 
-        var metadata = resource.As<FtpConnectionMetadata>();
+        var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
 
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
 
@@ -77,11 +85,11 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
         {
             var protector = _dataProtectionProvider.CreateProtector(FtpResourceConstants.DataProtectionPurpose);
 
-            metadata ??= new FtpConnectionMetadata();
+            metadata ??= new OrchardFtpConnectionMetadata();
             metadata.Password = protector.Protect(model.Password);
         }
 
-        resource.Alter<FtpConnectionMetadata>(m =>
+        resource.Alter<OrchardFtpConnectionMetadata>(m =>
         {
             m.Host = model.Host;
             m.Port = model.Port;

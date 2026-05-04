@@ -1,29 +1,33 @@
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
 
-    public AIProfileDeploymentSource(INamedCatalog<AIProfile> profilesCatalog)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
+    public AIProfileDeploymentSource(IAIProfileStore profileStore)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
     }
 
     protected override async Task ProcessAsync(AIProfileDeploymentStep step, DeploymentPlanResult result)
     {
-        var profiles = await _profilesCatalog.GetAllAsync();
+        var profiles = await _profileStore.GetAllAsync();
 
         var profilesData = new JsonArray();
 
         var profileNames = step.IncludeAll
-            ? []
-            : step.ProfileNames ?? [];
+        ? []
+        : step.ProfileNames ?? [];
 
         foreach (var profile in profiles)
         {
@@ -35,18 +39,18 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
             var profileInfo = new JsonObject()
             {
                 { "ItemId" , profile.ItemId },
-                { "Source", profile.Source },
                 { "Name", profile.Name },
                 { "DisplayText", profile.DisplayText },
                 { "WelcomeMessage", profile.WelcomeMessage },
                 { "Type", profile.Type.ToString() },
                 { "PromptTemplate", profile.PromptTemplate },
-                { "ChatDeploymentId", profile.ChatDeploymentId },
+                { "ChatDeploymentName", profile.ChatDeploymentName },
+                { "UtilityDeploymentName", profile.UtilityDeploymentName },
                 { "CreatedUtc", profile.CreatedUtc },
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },
-                { "Settings", profile.Settings?.DeepClone() },
-                { "Properties", profile.Properties?.DeepClone() },
+                { "Settings", JsonSerializer.SerializeToNode(profile.Settings) },
+                { "Properties", JsonSerializer.SerializeToNode(profile.Properties) },
             };
 
             if (profile.TitleType.HasValue)

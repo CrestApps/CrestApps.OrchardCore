@@ -1,28 +1,37 @@
-using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
+/// <summary>
+/// Represents the view model for edit deployment.
+/// </summary>
 public class EditDeploymentViewModel
 {
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
     public string Name { get; set; }
 
-    public string ConnectionName { get; set; }
+    /// <summary>
+    /// Gets or sets the model name.
+    /// </summary>
+    public string ModelName { get; set; }
 
-    public AIDeploymentType Type { get; set; }
+    /// <summary>
+    /// Gets or sets the selected types.
+    /// </summary>
+    public string[] SelectedTypes { get; set; }
 
-    public bool IsDefault { get; set; }
-
+    /// <summary>
+    /// Gets or sets a value indicating whether is new.
+    /// </summary>
     [BindNever]
     public bool IsNew { get; set; }
 
-    [BindNever]
-    public bool HasContainedConnection { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> Connections { get; set; }
-
+    /// <summary>
+    /// Gets or sets the types.
+    /// </summary>
     [BindNever]
     public IList<SelectListItem> Types { get; set; }
 }

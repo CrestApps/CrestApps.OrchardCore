@@ -1,8 +1,8 @@
+﻿using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -14,24 +14,35 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction chat mode settings shape.
+/// </summary>
 public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDriver<ChatInteractionChatModeSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISiteService _siteService;
-    private readonly IStringLocalizer S;
+    private readonly IAIDeploymentManager _deploymentManager;
+
+    internal readonly IStringLocalizer S;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionChatModeSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionChatModeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        ISiteService siteService,
+        IAIDeploymentManager deploymentManager,
         IStringLocalizer<ChatInteractionChatModeSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _siteService = siteService;
+        _deploymentManager = deploymentManager;
         S = stringLocalizer;
     }
 
@@ -40,6 +51,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         return Initialize<ChatInteractionChatModeSettingsViewModel>("ChatInteractionChatModeSettings_Edit", async model =>
         {
             model.ChatMode = settings.ChatMode;
+            model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             model.AvailableModes = await GetAvailableModesAsync();
         }).Location("Content:4.5%Chat Interactions;1")
         .OnGroup(SettingsGroupId)
@@ -58,29 +70,27 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.ChatMode = model.ChatMode;
+        settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
 
         return Edit(site, settings, context);
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableModesAsync()
     {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        var hasSTT = !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
-        var hasTTS = !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
+        var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
+        var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech) != null;
 
         var modes = new List<SelectListItem>
         {
             new(S["Text input"], nameof(ChatMode.TextInput)),
         };
 
-        if (hasSTT)
+        if (hasSpeechToText)
         {
             modes.Add(new SelectListItem(S["Audio input"], nameof(ChatMode.AudioInput)));
         }
 
-        if (hasSTT && hasTTS)
+        if (hasSpeechToText && hasTextToSpeech)
         {
             modes.Add(new SelectListItem(S["Conversation"], nameof(ChatMode.Conversation)));
         }

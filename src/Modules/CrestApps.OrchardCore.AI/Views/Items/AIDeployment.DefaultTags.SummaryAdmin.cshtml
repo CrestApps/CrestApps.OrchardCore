@@ -1,4 +1,5 @@
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Core
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIDeployment>
@@ -7,26 +8,19 @@
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Type
 </span>
 
-@if (Model.Value.IsDefault)
-{
-    <span class="badge ta-badge bg-success-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Default"]">
-        <i class="text-secondary" aria-hidden="true"></i>@T["Default"]
-    </span>
-}
-
-<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
-    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ClientName
 </span>
 
 @if (!string.IsNullOrEmpty(Model.Value.ConnectionName))
 {
-    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
-        <i class="text-secondary" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
+    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection name"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ConnectionName
     </span>
 }
 else
 {
-    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Contained Connection"]">
-        <i class="text-secondary" aria-hidden="true"></i>@T["Contained Connection"]
+    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Contained connection"]">
+        <i class="text-secondary" aria-hidden="true"></i>@T["Contained connection"]
     </span>
 }

@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -11,77 +14,97 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles catalog lifecycle events for <see cref="AIDeployment"/> entries, including initialization, validation, and population from JSON data.
+/// </summary>
 public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIProviderOptions _providerOptions;
+    private readonly IAIProviderConnectionStore _connectionStore;
+    private readonly AIOptions _aiOptions;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="connectionsCatalog">The catalog of provider connections used for validation.</param>
+    /// <param name="aiOptions">The AI options containing deployment configuration.</param>
+    /// <param name="clock">The clock service for obtaining the current UTC time.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
-        IOptions<AIProviderOptions> providerOptions,
+        IAIProviderConnectionStore connectionsCatalog,
+        IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _providerOptions = providerOptions.Value;
+        _connectionStore = connectionsCatalog;
+        _aiOptions = aiOptions.Value;
         _clock = clock;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<AIDeployment> context)
+    public override Task InitializingAsync(InitializingContext<AIDeployment> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<AIDeployment> context)
+    public override Task UpdatingAsync(UpdatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingContext<AIDeployment> context)
+    public override async Task ValidatingAsync(ValidatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
-        if (!Enum.IsDefined(context.Model.Type))
+        if (string.IsNullOrWhiteSpace(context.Model.ModelName))
+        {
+            context.Result.Fail(new ValidationResult(S["Model name is required."], [nameof(AIDeployment.ModelName)]));
+        }
+
+        if (!context.Model.Type.IsValidSelection())
         {
             context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
         }
 
+        var requiresConnection = !HasContainedConnection(context.Model.ClientName);
         var hasConnectionName = true;
 
-        if (string.IsNullOrWhiteSpace(context.Model.ConnectionName))
+        if (requiresConnection && string.IsNullOrWhiteSpace(context.Model.ConnectionName))
         {
             hasConnectionName = false;
             context.Result.Fail(new ValidationResult(S["Connection name is required."], [nameof(AIDeployment.ConnectionName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Model.ProviderName))
+        if (string.IsNullOrWhiteSpace(context.Model.ClientName))
         {
-            context.Result.Fail(new ValidationResult(S["Provider is required."], [nameof(AIDeployment.ProviderName)]));
+            context.Result.Fail(new ValidationResult(S["Provider is required."], [nameof(AIDeployment.ClientName)]));
         }
         else
         {
             if (hasConnectionName)
             {
-                if (!_providerOptions.Providers.TryGetValue(context.Model.ProviderName, out var provider))
+                var connections = await _connectionStore.GetAsync(context.Model.ClientName, cancellationToken);
+
+                if (connections.Count == 0)
                 {
-                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ProviderName], [nameof(AIDeployment.ProviderName)]));
+                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ClientName], [nameof(AIDeployment.ClientName)]));
                 }
-                else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _) &&
-                    !provider.Connections.Any(x => x.Value.TryGetValue("ConnectionNameAlias", out var r) &&
-                    string.Equals(r.ToString(), context.Model.ConnectionName, StringComparison.OrdinalIgnoreCase)))
+                else if (await _connectionStore.FindByConnectionNameAsync(context.Model.ClientName, context.Model.ConnectionName) is null)
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }
             }
         }
 
-        return Task.CompletedTask;
+        return;
     }
 
-    public override Task InitializedAsync(InitializedContext<AIDeployment> context)
+    public override Task InitializedAsync(InitializedContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
@@ -96,7 +119,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         return Task.CompletedTask;
     }
 
-    private Task PopulateAsync(AIDeployment deployment, JsonNode data)
+    private static Task PopulateAsync(AIDeployment deployment, JsonNode data)
     {
         var name = data[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
@@ -105,11 +128,23 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Name = name;
         }
 
-        var providerName = data[nameof(AIDeployment.ProviderName)]?.GetValue<string>()?.Trim();
+        var modelName = data[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
 
-        if (!string.IsNullOrEmpty(providerName))
+        if (!string.IsNullOrEmpty(modelName))
         {
-            deployment.Source = providerName;
+            deployment.ModelName = modelName;
+        }
+        else if (!string.IsNullOrWhiteSpace(deployment.Name) && string.IsNullOrWhiteSpace(deployment.ModelName))
+        {
+            deployment.ModelName = deployment.Name;
+        }
+
+        var clientName = data[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
+            ?? data["ProviderName"]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(clientName))
+        {
+            deployment.ClientName = clientName;
         }
 
         var connectionName = data[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
@@ -118,33 +153,62 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         {
             deployment.ConnectionName = connectionName;
         }
-        else if (!string.IsNullOrEmpty(providerName) && _providerOptions.Providers.TryGetValue(providerName, out var provider))
-        {
-            deployment.ConnectionName = provider.DefaultConnectionName;
-        }
 
-        var typeValue = data[nameof(AIDeployment.Type)]?.GetValue<string>();
-
-        if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var type))
+        if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
         {
             deployment.Type = type;
-        }
-
-        var isDefault = data[nameof(AIDeployment.IsDefault)]?.GetValue<bool>();
-
-        if (isDefault.HasValue)
-        {
-            deployment.IsDefault = isDefault.Value;
         }
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
 
         if (properties != null)
         {
-            deployment.Properties ??= [];
-            deployment.Properties.Merge(properties);
+            deployment.Properties ??= new Dictionary<string, object>();
+
+            var currentJson = JsonSerializer.SerializeToNode(deployment.Properties)?.AsObject() ?? [];
+            currentJson.Merge(properties);
+            deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         return Task.CompletedTask;
     }
+
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeNode is null)
+        {
+            return false;
+        }
+
+        if (typeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                        parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        var typeValue = typeNode.GetValue<string>();
+
+        return !string.IsNullOrEmpty(typeValue) &&
+            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
+                type.IsValidSelection();
+    }
+
+    private bool HasContainedConnection(string clientName)
+        => !string.IsNullOrWhiteSpace(clientName) &&
+            _aiOptions.Deployments.TryGetValue(clientName, out var entry) &&
+                entry.UseContainedConnection;
 }

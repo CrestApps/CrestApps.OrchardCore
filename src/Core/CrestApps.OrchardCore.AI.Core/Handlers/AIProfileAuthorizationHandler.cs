@@ -1,16 +1,23 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
+/// <summary>
+/// Handles events for AI profile authorization.
+/// </summary>
 public sealed class AIProfileAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public AIProfileAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -21,6 +28,7 @@ public sealed class AIProfileAuthorizationHandler : AuthorizationHandler<Permiss
         if (context.HasSucceeded)
         {
             // This handler is not revoking any pre-existing grants.
+
             return;
         }
 

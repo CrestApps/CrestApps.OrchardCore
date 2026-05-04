@@ -1,8 +1,8 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -12,6 +12,9 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIProviderConnections";
 
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
@@ -19,11 +22,17 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionsStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI provider connection manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProviderConnectionsStep(
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
@@ -90,7 +99,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     connection.ItemId = id;
                 }
@@ -114,6 +123,9 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
     private sealed class AIProviderConnectionStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI provider connection definitions to import.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

@@ -4,10 +4,17 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
+/// <summary>
+/// Represents the AI profile admin menu.
+/// </summary>
 public sealed class AIProfileAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileAdminMenu(IStringLocalizer<AIProfileAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -25,8 +32,8 @@ public sealed class AIProfileAdminMenu : AdminNavigationProvider
                     .Action("Index", "Profiles", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIProfiles)
                     .LocalNav()
-                )
-            , priority: 1);
+                ),
+                priority: 1);
 
         return ValueTask.CompletedTask;
     }

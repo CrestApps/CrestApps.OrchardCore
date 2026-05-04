@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -7,7 +7,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -16,8 +15,14 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
     private readonly IPhoneFormatValidator _phoneFormatValidator;
     private readonly IEmailAddressValidator _emailAddressValidator;
 
-    private readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="phoneFormatValidator">The phone format validator.</param>
+    /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointDisplayDriver(
         IPhoneFormatValidator phoneFormatValidator,
         IEmailAddressValidator emailAddressValidator,
@@ -33,10 +38,10 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         return CombineAsync(
             View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 

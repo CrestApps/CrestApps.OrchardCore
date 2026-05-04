@@ -1,53 +1,65 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Agent.Analytics;
 
+/// <summary>
+/// AI tool that performs query chat session metrics operations.
+/// </summary>
 public sealed class QueryChatSessionMetricsTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "queryChatSessionMetrics";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "profileId": {
-              "type": "string",
-              "description": "Optional. Filter metrics to a specific AI profile by its ID."
-            },
-            "startDateUtc": {
-              "type": "string",
-              "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
-            },
-            "endDateUtc": {
-              "type": "string",
-              "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "Optional. Filter metrics to a specific AI profile by its ID."
+        },
+        "startDateUtc": {
+          "type": "string",
+          "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
+        },
+        "endDateUtc": {
+          "type": "string",
+          "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
     public override string Description =>
-        "Queries aggregated chat session metrics from the analytics index. " +
-        "Returns statistics like total sessions, average messages per session, " +
-        "resolution rate, average handle time, token usage, rating distribution, " +
-        "and breakdowns by hour-of-day and day-of-week. " +
-        "Useful for generating charts and reports about chat performance.";
+        """
+        Queries aggregated chat session metrics from the analytics index.
+        Returns statistics like total sessions, average messages per session,
+        resolution rate, average handle time, token usage, rating distribution,
+        and breakdowns by hour-of-day and day-of-week.
+        Useful for generating charts and reports about chat performance.
+        """;
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -59,14 +71,16 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<QueryChatSessionMetricsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var session = arguments.Services.GetRequiredService<ISession>();
+        var yesSqlStoreOptions = arguments.Services.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
 
-        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
+        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: yesSqlStoreOptions.AICollectionName);
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
         {

@@ -1,54 +1,75 @@
+﻿using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
+using Microsoft.Extensions.Options;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Services;
 
 internal sealed class AIMemoryIndexingService
 {
     private readonly IAIMemoryStore _memoryStore;
-    private readonly ISiteService _siteService;
+    private readonly AIMemoryOptions _memoryOptions;
     private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryIndexingService"/> class.
+    /// </summary>
+    /// <param name="memoryStore">The memory store.</param>
+    /// <param name="memoryOptions">The memory options.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="documentIndexHandlers">The document index handlers.</param>
+    /// <param name="logger">The logger.</param>
     public AIMemoryIndexingService(
         IAIMemoryStore memoryStore,
-        ISiteService siteService,
+        IOptions<AIMemoryOptions> memoryOptions,
         IIndexProfileStore indexProfileStore,
+        IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         IServiceProvider serviceProvider,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         ILogger<AIMemoryIndexingService> logger)
     {
         _memoryStore = memoryStore;
-        _siteService = siteService;
+        _memoryOptions = memoryOptions.Value;
         _indexProfileStore = indexProfileStore;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
         _serviceProvider = serviceProvider;
         _documentIndexHandlers = documentIndexHandlers;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Indexes the .
+    /// </summary>
+    /// <param name="memory">The memory.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task IndexAsync(AIMemoryEntry memory, CancellationToken cancellationToken = default)
     {
-        var settings = await _siteService.GetSettingsAsync<AIMemorySettings>();
-
-        if (string.IsNullOrEmpty(settings.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {
@@ -58,6 +79,11 @@ internal sealed class AIMemoryIndexingService
         await IndexAsync(memory, indexProfile, cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the sync by index profile ids operation.
+    /// </summary>
+    /// <param name="indexProfileIds">The index profile ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task SyncByIndexProfileIdsAsync(IEnumerable<string> indexProfileIds, CancellationToken cancellationToken = default)
     {
         var ids = indexProfileIds?.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -76,7 +102,7 @@ internal sealed class AIMemoryIndexingService
             return;
         }
 
-        var memories = await _memoryStore.GetAllAsync();
+        var memories = await _memoryStore.GetAllAsync(cancellationToken);
 
         foreach (var indexProfile in profiles)
         {
@@ -108,6 +134,11 @@ internal sealed class AIMemoryIndexingService
         }
     }
 
+    /// <summary>
+    /// Removes the async.
+    /// </summary>
+    /// <param name="memoryIds">The memory ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task DeleteAsync(IEnumerable<string> memoryIds, CancellationToken cancellationToken = default)
     {
         var ids = memoryIds?
@@ -120,14 +151,12 @@ internal sealed class AIMemoryIndexingService
             return;
         }
 
-        var settings = await _siteService.GetSettingsAsync<AIMemorySettings>();
-
-        if (string.IsNullOrEmpty(settings.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {
@@ -219,18 +248,22 @@ internal sealed class AIMemoryIndexingService
 
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(IndexProfile indexProfile)
     {
-        var metadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
-        if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
+        var embeddingDeploymentName = metadata.GetEmbeddingDeploymentName();
+
+        if (string.IsNullOrWhiteSpace(embeddingDeploymentName))
         {
             return null;
         }
 
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            metadata.EmbeddingProviderName,
-            metadata.EmbeddingConnectionName,
-            metadata.EmbeddingDeploymentName);
+        var deployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
+
+        if (deployment == null)
+        {
+            return null;
+        }
+
+        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
     }
 }

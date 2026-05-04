@@ -1,8 +1,9 @@
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Contents.Indexing;
@@ -13,6 +14,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Endpoints;
 
 internal static class GetDataSourceFieldsEndpoint
 {
+    /// <summary>
+    /// Adds the get data source fields endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetDataSourceFieldsEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapGet("ai/data-sources/fields/{indexProfileName}", HandleAsync)
@@ -23,10 +28,10 @@ internal static class GetDataSourceFieldsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        string indexProfileName,
-        IAuthorizationService authorizationService,
-        IIndexProfileStore indexProfileStore,
-        IOptions<AIDataSourceOptions> dataSourceOptions,
+        [FromRoute] string indexProfileName,
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IIndexProfileStore indexProfileStore,
+        [FromServices] IOptions<AIDataSourceOptions> dataSourceOptions,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIDataSources))

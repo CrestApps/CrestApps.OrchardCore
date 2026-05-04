@@ -1,27 +1,42 @@
+﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction connection shape.
+/// </summary>
 public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISiteService _siteService;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="aiOptions">The ai options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        ISiteService siteService,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<ChatInteractionConnectionDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _siteService = siteService;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
@@ -30,20 +45,17 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     {
         var connectionResult = Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConnection_Edit", async model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(interaction.Source, out var profileSource))
-            {
-                return;
-            }
-
-            model.ChatDeploymentId = interaction.ChatDeploymentId;
-            model.UtilityDeploymentId = interaction.UtilityDeploymentId;
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            model.ChatDeploymentName = interaction.ChatDeploymentName;
+            model.UtilityDeploymentName = interaction.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-
         }).Location("Parameters:3#Settings;1");
 
         return connectionResult;
@@ -51,17 +63,12 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(interaction.Source, out _))
-        {
-            return null;
-        }
-
         var model = new EditChatInteractionConnectionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        interaction.ChatDeploymentId = model.ChatDeploymentId;
-        interaction.UtilityDeploymentId = model.UtilityDeploymentId;
+        interaction.ChatDeploymentName = model.ChatDeploymentName;
+        interaction.UtilityDeploymentName = model.UtilityDeploymentName;
 
         return Edit(interaction, context);
     }
@@ -71,19 +78,25 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                var groupKey = d.ConnectionName;
+                SelectListGroup group = null;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
     }
 }

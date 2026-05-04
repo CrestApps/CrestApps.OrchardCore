@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
@@ -14,11 +14,18 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceMetadataMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public DataSourceMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())

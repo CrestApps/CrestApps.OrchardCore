@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
@@ -11,6 +11,10 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIProfileManager _profileManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileAgentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
     public AIProfileAgentsDisplayDriver(IAIProfileManager profileManager)
     {
         _profileManager = profileManager;
@@ -18,19 +22,18 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
-        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
-
-        var alwaysAvailableCount = allAgents
-            .Count(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase)
-                && a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
-
-        var onDemandAgents = allAgents
-            .Where(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase))
-            .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
-
-        return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
+        return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", async model =>
         {
+            var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
+            var alwaysAvailableCount = allAgents
+                .Count(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase)
+                    && a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+
+            var onDemandAgents = allAgents
+                .Where(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase))
+                .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
+
             var selectedNames = GetSelectedAgentNames(profile);
 
             model.AlwaysAvailableAgentCount = alwaysAvailableCount;
@@ -41,7 +44,6 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
                 Description = agent.Description,
                 IsSelected = selectedNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
         }).Location("Content:5#Capabilities;8");
     }
 
@@ -57,8 +59,7 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 
         var validAgentNames = allAgents
             .Where(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase))
-            .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -82,7 +83,7 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 
     private static string[] GetSelectedAgentNames(AIProfile profile)
     {
-        var metadata = profile.As<AgentInvocationMetadata>();
+        var metadata = profile.GetOrCreate<AgentInvocationMetadata>();
 
         return metadata?.Names;
     }

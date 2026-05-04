@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Models;
@@ -16,6 +16,11 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipesRecipeStep"/> class.
+    /// </summary>
+    /// <param name="recipeHarvesters">The recipe harvesters.</param>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
     public RecipesRecipeStep(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager)
@@ -26,6 +31,9 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
     public string Name => "recipes";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -54,15 +62,15 @@ public sealed class RecipesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("recipes")),
-                ("Values", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
-                        .Required("executionid", "name")
-                        .AdditionalProperties(true))))
+        ("Values", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
+            .Required("executionid", "name")
+            .AdditionalProperties(true))))
             .Required("name", "Values")
             .AdditionalProperties(true)
             .Build();
@@ -78,6 +86,6 @@ public sealed class RecipesRecipeStep : IRecipeStep
             .Where(r => !r.IsSetupRecipe
                 && features.Any(f => r.BasePath != null
                     && f.Extension?.SubPath != null
-                    && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                        && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
     }
 }

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -21,7 +20,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
         AIConstants.Feature.ChatCore,
-        SignalRConstants.Feature.Area,
+        "CrestApps.OrchardCore.SignalR",
         AIConstants.Feature.Area,
     ]
 )]

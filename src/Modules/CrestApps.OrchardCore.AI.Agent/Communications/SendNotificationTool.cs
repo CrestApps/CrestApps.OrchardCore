@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,47 +10,59 @@ using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
 
+/// <summary>
+/// AI tool that performs send notification operations.
+/// </summary>
 public sealed class SendNotificationTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "sendNotification";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "userId": {
-              "type": "string",
-              "description": "The unique identifier of the user to notify. This should be a valid user ID from your system."
-            },
-            "subject": {
-              "type": "string",
-              "description": "The subject line of the notification. This appears as the title or headline of the message."
-            },
-            "summary": {
-              "type": "string",
-              "description": "A short summary of the notification content. May include limited HTML for styling in the UI. Keep it concise and informative."
-            },
-            "textBody": {
-              "type": "string",
-              "description": "The plain text version of the notification body. Should contain no HTML and be suitable for text-only clients."
-            },
-            "htmlBody": {
-              "type": "string",
-              "description": "The HTML version of the notification body. This can include formatting, links, and other HTML content for rich display."
-            }
-          },
-          "required": ["userId", "subject", "summary"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique identifier of the user to notify. This should be a valid user ID from your system."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject line of the notification. This appears as the title or headline of the message."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A short summary of the notification content. May include limited HTML for styling in the UI. Keep it concise and informative."
+        },
+        "textBody": {
+          "type": "string",
+          "description": "The plain text version of the notification body. Should contain no HTML and be suitable for text-only clients."
+        },
+        "htmlBody": {
+          "type": "string",
+          "description": "The HTML version of the notification body. This can include formatting, links, and other HTML content for rich display."
         }
-        """);
-
+      },
+      "required": [
+        "userId",
+        "subject",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
 
     public override string Description => "Sends an notification to a user.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -62,6 +74,7 @@ public sealed class SendNotificationTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SendNotificationTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

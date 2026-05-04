@@ -1,9 +1,16 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
+/// <summary>
+/// Handles events for list omnichannel activity filter.
+/// </summary>
 public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActivityFilterHandler
 {
+    /// <summary>
+    /// Asynchronously performs the filtering operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task FilteringAsync(ListOmnichannelActivityFilterContext context)
     {
         var filter = context.Filter;
@@ -28,6 +35,7 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             if (filter.AttemptFilter.EndsWith('+'))
             {
                 // Handle "1+", "2+", etc. - minimum attempts
+
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('+'), out var minAttempts))
                 {
                     context.Query = context.Query.Where(index => index.Attempts >= minAttempts);
@@ -36,6 +44,7 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             else if (filter.AttemptFilter.EndsWith('-'))
             {
                 // Handle "2-", "3-", etc. - maximum attempts
+
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('-'), out var maxAttempts))
                 {
                     context.Query = context.Query.Where(index => index.Attempts <= maxAttempts);

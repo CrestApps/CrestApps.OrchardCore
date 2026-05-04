@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -17,6 +18,11 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileResponseHandlerDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="handlerResolver">The handler resolver.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileResponseHandlerDisplayDriver(
         IChatResponseHandlerResolver handlerResolver,
         IStringLocalizer<AIProfileResponseHandlerDisplayDriver> stringLocalizer)
@@ -27,10 +33,11 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        var handlers = _handlerResolver.GetAll().ToList();
+        var handlers = _handlerResolver.GetAll();
 
         // Only show the handler selector when there is at least one non-AI handler registered.
-        if (handlers.Count <= 1)
+
+        if (!handlers.Any())
         {
             return null;
         }
@@ -42,10 +49,10 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
             model.InitialResponseHandlerName = settings.InitialResponseHandlerName;
 
             model.ResponseHandlers = handlers
-                .Select(h => new SelectListItem(h.Name, h.Name))
-                .OrderBy(x => x.Text)
-                .ToList();
-        }).Location("Content:1#Response Handling;15");
+            .Select(h => new SelectListItem(h.Name, h.Name))
+            .OrderBy(x => x.Text)
+            .ToList();
+        }).Location("Content:9%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

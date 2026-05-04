@@ -1,12 +1,11 @@
 using System.Security.Claims;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -30,9 +29,13 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing activity batches resources.
+/// </summary>
 [Admin]
 public sealed class ActivityBatchesController : Controller
 {
@@ -50,6 +53,17 @@ public sealed class ActivityBatchesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityBatchesController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="batchDisplayManager">The batch display manager.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
         ICatalogManager<OmnichannelActivityBatch> manager,
         IAuthorizationService authorizationService,
@@ -70,6 +84,13 @@ public sealed class ActivityBatchesController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -118,6 +139,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -135,6 +160,9 @@ public sealed class ActivityBatchesController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
     public async Task<ActionResult> Create()
     {
@@ -154,6 +182,9 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
@@ -184,6 +215,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -210,6 +245,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
@@ -261,6 +300,10 @@ public sealed class ActivityBatchesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("omnichannel/activity/batches/delete/{id}", "OmnichannelActivityBatchesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -303,6 +346,10 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Loads the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("omnichannel/activity/batches/load/{id}", "OmnichannelActivityBatchesLoad")]
     public async Task<ActionResult> Load(string id)
@@ -355,8 +402,6 @@ public sealed class ActivityBatchesController : Controller
                 batch.Status = OmnichannelActivityBatchStatus.Loading;
                 batch.TotalLoaded = 0;
 
-                var batchCounter = 0;
-
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
 
@@ -379,28 +424,45 @@ public sealed class ActivityBatchesController : Controller
 
                 var campaign = await campaignCatalog.FindByIdAsync(batch.CampaignId);
 
-                var activityCounter = 0;
-
                 var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
 
-                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value) : null;
-                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value) : null;
+                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue
+                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value)
+                    : null;
+
+                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue
+                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value)
+                    : null;
+
+                var activityCounter = 0;
 
                 while (true)
                 {
-                    var contactQuery = readonlySession.Query<ContentItem>();
+                    var contactQuery = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
+                            index.ContentType == batch.ContactContentType &&
+                            index.DocumentId > documentId);
 
-                    contactQuery = contactQuery.With<ContentItemIndex>(index =>
-                        index.ContentType == batch.ContactContentType &&
-                        (batch.OnlyPublishedLeads ? index.Published : index.Latest) &&
-                        index.DocumentId > documentId &&
-                        (leadCreatedFrom == null || index.CreatedUtc >= leadCreatedFrom) &&
-                        (leadCreatedTo == null || index.CreatedUtc <= leadCreatedTo))
-                        .OrderBy(x => x.DocumentId);
+                    if (leadCreatedFrom.HasValue)
+                    {
+                        contactQuery = contactQuery.Where(index => index.CreatedUtc >= leadCreatedFrom);
+                    }
 
-                    // Apply the filters logic
+                    if (leadCreatedTo.HasValue)
+                    {
+                        contactQuery = contactQuery.Where(index => index.CreatedUtc <= leadCreatedTo);
+                    }
+
+                    if (batch.OnlyPublishedLeads)
+                    {
+                        contactQuery = contactQuery.Where(contact => contact.Published);
+                    }
+                    else
+                    {
+                        contactQuery = contactQuery.Where(contact => contact.Latest);
+                    }
+
                     var contacts = await contactQuery
-                        .Skip(batchCounter * _batchSize)
+                        .OrderBy(x => x.DocumentId)
                         .Take(_batchSize)
                         .ListAsync();
 
@@ -411,7 +473,8 @@ public sealed class ActivityBatchesController : Controller
                         await catalog.UpdateAsync(batch);
                         break;
                     }
-                    var preventDuplicates = true;
+
+                    var preventDuplicates = batch.PreventDuplicates;
 
                     HashSet<string> inQueueActivities = null;
 
@@ -424,26 +487,25 @@ public sealed class ActivityBatchesController : Controller
                             index.ContactContentItemId.IsIn(contentItemsIds) &&
                             index.Status != ActivityStatus.Completed &&
                             index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
-                            .ListAsync())
-                            .Select(x => x.ContactContentItemId)
-                            .ToHashSet();
+                        .ListAsync())
+                        .Select(x => x.ContactContentItemId)
+                        .ToHashSet();
                     }
 
-                    batchCounter++;
                     var now = _clock.UtcNow;
 
                     var scheduledUtc = await localClock.ConvertToUtcAsync(batch.ScheduleAt);
 
                     foreach (var contact in contacts)
                     {
+                        documentId = Math.Max(documentId, contact.Id);
+
                         if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
                         {
                             continue;
                         }
 
                         var user = users[activityCounter++ % users.Length];
-
-                        documentId = Math.Min(documentId, contact.Id);
 
                         var activity = await activityManager.NewAsync();
 
@@ -490,6 +552,11 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

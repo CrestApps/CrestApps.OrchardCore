@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +16,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the display name settings shape.
+/// </summary>
 public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<DisplayNameSettings>
 {
     public const string GroupId = "userDisplayName";
@@ -28,6 +31,15 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisplayNameSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="liquidTemplateManager">The liquid template manager.</param>
+    /// <param name="tagCache">The tag cache.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DisplayNameSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -65,7 +77,6 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
                 new SelectListItem(S["First Middle Last name"], nameof(DisplayNameType.FirstThenLast)),
                 new SelectListItem(S["Last, First Middle name"], nameof(DisplayNameType.LastThenFirst)),
                 new SelectListItem(S["Custom format"], nameof(DisplayNameType.Other)),
-
             ];
             model.PropertyTypes =
             [

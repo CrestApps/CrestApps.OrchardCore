@@ -13,6 +13,6 @@ using OrchardCore.Modules.Manifest;
     [
         AIConstants.Feature.DataSources,
         "OrchardCore.Indexing",
-        "OrchardCore.Search.AzureAI",
+        "OrchardCore.AzureAI",
     ]
 )]

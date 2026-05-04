@@ -1,21 +1,30 @@
+﻿using CrestApps.Core.AI.Copilot;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -23,22 +32,25 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddOrchestrator<CopilotOrchestrator>(CopilotOrchestrator.OrchestratorName)
-            .WithTitle(S["GitHub Copilot Orchestrator"]);
+        // Register framework-level Copilot services (orchestrator, OAuth, handlers).
+        services.AddCoreAICopilotOrchestrator();
 
-        // Register HTTP client for GitHub API calls
-        services.AddHttpClient()
-            .AddScoped<GitHubOAuthService>();
+        // Bridge OrchardCore site settings → CopilotOptions.
+        services.ConfigureOptions<CopilotOptionsConfiguration>();
 
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CopilotOrchestrationContextHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, CopilotChatInteractionSettingsHandler>());
+        // Bridge OrchardCore User model → ICopilotCredentialStore.
+        services.AddScoped<ICopilotCredentialStore, OrchardCoreCopilotCredentialStore>();
+        services.AddScoped<CopilotCallbackUrlProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestratorAvailabilityProvider, CopilotOrchestratorAvailabilityProvider>());
 
+        // OrchardCore-specific display drivers.
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
-
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateCopilotDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
 
-        services.AddSiteDisplayDriver<CopilotSettingsDisplayDriver>();
+        services
+            .AddSiteDisplayDriver<CopilotSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.AddPermissionProvider<CopilotPermissionProvider>();
     }

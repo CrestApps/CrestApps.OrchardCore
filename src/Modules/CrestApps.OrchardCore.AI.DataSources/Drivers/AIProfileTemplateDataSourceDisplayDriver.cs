@@ -1,12 +1,12 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -16,14 +16,21 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 {
     private readonly ISiteService _siteService;
     private readonly IODataValidator _oDataValidator;
-    private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IAIDataSourceStore _dataSourceStore;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDataSourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="oDataValidator">The o data validator.</param>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDataSourceDisplayDriver(
         ISiteService siteService,
         IODataValidator oDataValidator,
-        ICatalog<AIDataSource> dataSourceStore,
+        IAIDataSourceStore dataSourceStore,
         IStringLocalizer<AIProfileTemplateDataSourceDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
@@ -37,16 +44,22 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         var dataSourceResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:7%General;1")
+        }).Location("Content:4#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:10%Parameters;5")
+        }).Location("Content:5#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-        return Combine(dataSourceResult, parametersResult);
+        var retrievalParametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceRetrieval_Edit", async model =>
+        {
+            await PopulateViewModelAsync(template, model);
+        }).Location("Content:6#Knowledge;2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        return Combine(dataSourceResult, parametersResult, retrievalParametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -58,7 +71,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
         var model = new EditProfileDataSourcesViewModel();
 
-        var metadata = template.As<DataSourceMetadata>();
+        var metadata = template.GetOrCreate<DataSourceMetadata>();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -86,13 +99,13 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         if (strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
-                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+            S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
         if (topN != model.TopNDocuments)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
-                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+            S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
         }
 
         if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))
@@ -115,7 +128,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
     private async Task PopulateViewModelAsync(AIProfileTemplate template, EditProfileDataSourcesViewModel model)
     {
-        var ragMetadata = template.As<AIDataSourceRagMetadata>();
+        var ragMetadata = template.GetOrCreate<AIDataSourceRagMetadata>();
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
@@ -124,7 +137,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         model.IsInScope = ragMetadata.IsInScope;
         model.Filter = ragMetadata.Filter;
 
-        var metadata = template.As<DataSourceMetadata>();
+        var metadata = template.GetOrCreate<DataSourceMetadata>();
         model.DataSourceId = metadata.DataSourceId;
         model.DataSources = await _dataSourceStore.GetAllAsync();
     }

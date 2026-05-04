@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,29 +15,35 @@ using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Users;
 
+/// <summary>
+/// Represents the search for users tool.
+/// </summary>
 public sealed class SearchForUsersTool : AIFunction
 {
     public const string TheName = "searchForUsers";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "term": {
-              "type": "string",
-              "description": "The query string to search for."
-            },
-            "pageNumber": {
-              "type": "integer",
-              "description": "The page number of results to return.",
-              "default": 1
-            }
-          },
-          "required": ["term"],
-          "additionalProperties": false
-        }     
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -56,6 +62,7 @@ public sealed class SearchForUsersTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SearchForUsersTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -63,12 +70,14 @@ public sealed class SearchForUsersTool : AIFunction
 
         var usersAdminListQueryService = arguments.Services.GetRequiredService<IUsersAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
+
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("term", out var term))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "term");
+
             return "Unable to find a term argument in the function arguments.";
         }
 
@@ -102,12 +111,12 @@ public sealed class SearchForUsersTool : AIFunction
 
         return
         $$"""
-            {
-                "users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "usersCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}}
-            }
-            """;
+{
+"users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"usersCount": {{contentItemsCount}},
+"totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

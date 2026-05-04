@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
-@using CrestApps.OrchardCore.AI.Core.Orchestration
+@using CrestApps.Core.AI.Orchestration
 
 @model OrchestratorViewModel
 
@@ -12,7 +12,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
+        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select setting-input" data-setting="orchestratorName">
         </select>
         <span asp-validation-for="OrchestratorName" class="text-danger"></span>
     </div>
@@ -24,14 +24,12 @@ else
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-
         const orchestratorSelector = document.getElementById('@Html.IdFor(m => m.OrchestratorName)');
         const defaultOrchestrator = '@(DefaultOrchestrator.OrchestratorName)';
 
         if (!orchestratorSelector) return;
 
         function updateFieldVisibility() {
-
             const selectedOrchestrator =
                 orchestratorSelector.value || defaultOrchestrator;
 
@@ -59,8 +57,8 @@ else
 
             // Dispatch custom event so dependent views (e.g., Copilot) can react.
             document.dispatchEvent(new CustomEvent('orchestrator-changed', {
-                detail: { 
-                    orchestrator: orchestratorSelector.value || defaultOrchestrator 
+                detail: {
+                    orchestrator: orchestratorSelector.value || defaultOrchestrator
                 }
             }));
         });

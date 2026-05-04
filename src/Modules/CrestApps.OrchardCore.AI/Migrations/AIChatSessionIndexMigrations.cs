@@ -1,5 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -7,93 +10,75 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIChatSessionIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+    private readonly ILogger<AIChatSessionIndexMigrations> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionIndexMigrations"/> class.
+    /// </summary>
+    /// <param name="option">The option.</param>
+    /// <param name="logger">The logger.</param>
+    public AIChatSessionIndexMigrations(
+        IOptions<YesSqlStoreOptions> option,
+        ILogger<AIChatSessionIndexMigrations> logger)
+    {
+        _option = option.Value;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AIChatSessionIndex>(table => table
-                .Column<string>("ProfileId", column => column.WithLength(26))
-                .Column<string>("SessionId", column => column.WithLength(26))
-                .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("ClientId", column => column.WithLength(64))
-                .Column<string>("Status", column => column.WithDefault("Active"))
-                .Column<string>("PostSessionProcessingStatus", column => column.WithDefault("None"))
-                .Column<DateTime>("LastActivityUtc")
-                .Column<DateTime>("CreatedUtc")
-                .Column<string>("Title", column => column.WithLength(255)),
-            collection: AIConstants.AICollectionName
-        );
+        await SchemaBuilder.CreateAIChatSessionIndexSchemaAsync(_option);
 
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_DocumentId",
-                "DocumentId",
-                "SessionId",
-                "ProfileId",
-                "UserId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_UserId",
-                "DocumentId",
-                "SessionId",
-                "UserId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ClientId",
-                "DocumentId",
-                "SessionId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        return 3;
+        return 4;
     }
 
+    /// <summary>
+    /// Updates the from1 async.
+    /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
-        {
-            table.AddColumn<string>("Status", column => column.WithDefault("Active"));
-            table.AddColumn<DateTime>("LastActivityUtc");
-        }, collection: AIConstants.AICollectionName);
+        await BackwardCompatibleMigrationStep();
 
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        return 3;
+        return 4;
     }
 
+    /// <summary>
+    /// Updates the from1 async.
+    /// </summary>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
-        {
-            table.AddColumn<string>("PostSessionProcessingStatus", column => column.WithDefault("None"));
-        }, collection: AIConstants.AICollectionName);
+        await BackwardCompatibleMigrationStep();
 
-        return 3;
+        return 4;
+    }
+
+    /// <summary>
+    /// Updates the from1 async.
+    /// </summary>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await BackwardCompatibleMigrationStep();
+
+        return 4;
+    }
+
+    private async Task BackwardCompatibleMigrationStep()
+    {
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
+            {
+                table.AddColumn<ChatSessionStatus>("Status");
+                table.AddColumn<DateTime>("LastActivityUtc");
+            }, collection: _option.AICollectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add the Status and LastActivityUtc columns to the AI chat session index table. It's probably that the columns exists. You can ignore it.");
+        }
     }
 }

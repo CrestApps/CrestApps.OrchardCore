@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+﻿using CrestApps.Core.AI.Mcp;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
@@ -9,6 +9,10 @@ namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 /// </summary>
 public sealed class SftpMcpResourceHandler : IMcpResourceHandler
 {
+    /// <summary>
+    /// Performs the exporting operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Exporting(ExportingMcpResourceContext context)
     {
         if (!string.Equals(context.Resource.Source, SftpResourceConstants.Type, StringComparison.Ordinal))

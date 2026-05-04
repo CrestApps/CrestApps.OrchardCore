@@ -6,18 +6,21 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the list content types definitions tool.
+/// </summary>
 public sealed class ListContentTypesDefinitionsTool : AIFunction
 {
     public const string TheName = "listContentTypesDefinitions";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -36,6 +39,7 @@ public sealed class ListContentTypesDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListContentTypesDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);

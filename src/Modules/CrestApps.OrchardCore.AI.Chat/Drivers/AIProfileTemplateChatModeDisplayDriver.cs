@@ -1,30 +1,38 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template chat mode shape.
+/// </summary>
 public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
-    private readonly ISiteService _siteService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateChatModeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateChatModeDisplayDriver(
-        ISiteService siteService,
+        IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer)
     {
-        _siteService = siteService;
+        _deploymentManager = deploymentManager;
         _speechVoiceMenuService = speechVoiceMenuService;
         S = stringLocalizer;
     }
@@ -35,7 +43,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         {
             if (template.Properties.ContainsKey(nameof(ChatModeProfileSettings)))
             {
-                var settings = template.As<ChatModeProfileSettings>();
+                var settings = template.GetOrCreate<ChatModeProfileSettings>();
                 model.ChatMode = settings.ChatMode;
                 model.VoiceName = settings.VoiceName;
             }
@@ -43,7 +51,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:10%Interactions;3")
+        }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
             if (template.Source != AITemplateSources.Profile)
@@ -51,10 +59,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 return false;
             }
 
-            var site = await _siteService.GetSiteSettingsAsync();
-            var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-            return !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
         });
     }
 
@@ -69,11 +74,11 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = template.As<ChatModeProfileSettings>();
+        var settings = template.GetOrCreate<ChatModeProfileSettings>();
         settings.ChatMode = model.ChatMode;
         settings.VoiceName = model.ChatMode == ChatMode.Conversation
-            ? model.VoiceName?.Trim()
-            : null;
+        ? model.VoiceName?.Trim()
+        : null;
         template.Put(settings);
 
         return Edit(template, context);
@@ -92,10 +97,5 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        return await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-    }
+        => await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentName: null);
 }

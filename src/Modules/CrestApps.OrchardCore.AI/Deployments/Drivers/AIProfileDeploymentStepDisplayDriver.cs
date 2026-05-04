@@ -1,7 +1,6 @@
+﻿using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,25 +11,30 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIProfileDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileDeploymentStepDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(AIProfileDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIProfileDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIProfileDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIProfileDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIProfileDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIProfileDeploymentStep step, BuildEditorContext context)
@@ -39,7 +43,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
         {
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;
-            model.AllProfileNames = (await _profilesCatalog.GetAllAsync()).Select(x => x.Name).Order().ToArray();
+            model.AllProfileNames = (await _profileStore.GetAllAsync()).Select(x => x.Name).Order().ToArray();
         }).Location("Content");
     }
 
@@ -48,8 +52,8 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
         var model = new AIProfileDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.ProfileNames);
+        p => p.IncludeAll,
+        p => p.ProfileNames);
 
         if (model.IncludeAll)
         {

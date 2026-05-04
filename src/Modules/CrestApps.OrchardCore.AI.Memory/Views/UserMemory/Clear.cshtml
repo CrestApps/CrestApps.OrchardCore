@@ -1,0 +1,36 @@
+@using CrestApps.OrchardCore.AI.Memory.ViewModels
+
+@model ClearUserMemoryViewModel
+
+<div class="mb-4">
+    <h1>@T["Clear AI memory"]</h1>
+    <p class="text-muted">
+        @T["Review this action carefully before continuing."]
+    </p>
+</div>
+
+<div class="alert alert-warning" role="alert">
+    <strong>@T["Danger zone"]</strong>
+    <div>@T["This will permanently remove {0} saved AI memories linked to your account.", Model.MemoryCount]</div>
+    <div>@T["Saved preferences and other remembered personal details will be deleted immediately and cannot be recovered."]</div>
+</div>
+
+<form
+    asp-controller="UserMemory"
+    asp-action="ConfirmClear"
+    asp-route-userId="@Model.UserId"
+    asp-route-returnUrl="@Model.ReturnUrl"
+    method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <a
+            class="btn btn-secondary"
+            href="@Model.ReturnUrl">
+            @T["Cancel"]
+        </a>
+        <button type="submit" class="btn btn-danger">
+            @T["Clear saved AI memory"]
+        </button>
+    </div>
+</form>

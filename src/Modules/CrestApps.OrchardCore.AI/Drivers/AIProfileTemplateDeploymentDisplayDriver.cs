@@ -1,40 +1,55 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDeploymentDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The manager for retrieving AI deployments.</param>
+    /// <param name="siteService">The site service for accessing site settings.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileTemplateDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        ISiteService siteService,
         IStringLocalizer<AIProfileTemplateDeploymentDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (template.Source != AITemplateSources.Profile)
-            {
-                return;
-            }
-
-            var metadata = template.As<ProfileTemplateMetadata>();
-            model.ChatDeploymentId = metadata.ChatDeploymentId;
-            model.UtilityDeploymentId = metadata.UtilityDeploymentId;
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            model.ChatDeploymentName = metadata.ChatDeploymentName;
+            model.UtilityDeploymentName = metadata.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
@@ -55,9 +70,9 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         var model = new EditProfileDeploymentViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
-        metadata.ChatDeploymentId = model.ChatDeploymentId;
-        metadata.UtilityDeploymentId = model.UtilityDeploymentId;
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
+        metadata.ChatDeploymentName = model.ChatDeploymentName;
+        metadata.UtilityDeploymentName = model.UtilityDeploymentName;
         template.Put(metadata);
 
         return Edit(template, context);
@@ -68,19 +83,25 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                var groupKey = d.GetConnectionDisplayName();
+                SelectListGroup group = null;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
     }
 }

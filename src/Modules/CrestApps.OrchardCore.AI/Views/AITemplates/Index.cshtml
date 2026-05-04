@@ -1,4 +1,5 @@
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
+@using CrestApps.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
@@ -108,7 +109,7 @@
             <div class="modal-body">
                 @if (!Model.Sources.Any())
                 {
-                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI template source."]</p>
+                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an template source."]</p>
                 }
                 else
                 {
@@ -136,6 +137,6 @@
 
 <script at="Foot" depends-on="list-management-ui">
     document.addEventListener('DOMContentLoaded', () => {
-        listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
+        window.listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
     });
 </script>

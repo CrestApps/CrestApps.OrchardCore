@@ -1,28 +1,29 @@
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using CrestApps.OrchardCore.AI.Core.Services;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing data sources resources.
+/// </summary>
 [Feature(AIConstants.Feature.DataSources)]
 public sealed class DataSourcesController : Controller
 {
@@ -32,16 +33,29 @@ public sealed class DataSourcesController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ICatalogManager<AIDataSource> _dataSourceManager;
     private readonly IDisplayManager<AIDataSource> _displayManager;
+    private readonly IAIDataSourceIndexingQueue _indexingQueue;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourcesController"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="dataSourceManager">The data source manager.</param>
+    /// <param name="displayManager">The display manager.</param>
+    /// <param name="indexingQueue">The indexing queue.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         ICatalogManager<AIDataSource> dataSourceManager,
         IDisplayManager<AIDataSource> displayManager,
+        IAIDataSourceIndexingQueue indexingQueue,
         INotifier notifier,
         IHtmlLocalizer<DataSourcesController> htmlLocalizer,
         IStringLocalizer<DataSourcesController> stringLocalizer)
@@ -50,11 +64,19 @@ public sealed class DataSourcesController : Controller
         _updateModelAccessor = updateModelAccessor;
         _dataSourceManager = dataSourceManager;
         _displayManager = displayManager;
+        _indexingQueue = indexingQueue;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -107,6 +129,10 @@ public sealed class DataSourcesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -124,6 +150,9 @@ public sealed class DataSourcesController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("ai/data-source/create", "AIDataSourceCreate")]
     public async Task<ActionResult> Create()
     {
@@ -143,6 +172,9 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/data-source/create", "AIDataSourceCreate")]
@@ -173,6 +205,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -197,6 +233,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
@@ -232,6 +272,10 @@ public sealed class DataSourcesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/data-source/delete/{id}", "AIDataSourceDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -255,6 +299,10 @@ public sealed class DataSourcesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the sync index operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/data-source/sync-index/{id}", "AIDataSourceSyncIndex")]
     public async Task<IActionResult> SyncIndex(string id)
@@ -271,18 +319,18 @@ public sealed class DataSourcesController : Controller
             return NotFound();
         }
 
-        await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("process-datasource-sync", dataSource, async (scope, ds) =>
-        {
-            var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
-
-            await indexingService.SyncDataSourceAsync(ds);
-        });
+        await _indexingQueue.QueueSyncDataSourceAsync(dataSource);
 
         await _notifier.SuccessAsync(H["The data source index synchronization has been triggered in the background."]);
 
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

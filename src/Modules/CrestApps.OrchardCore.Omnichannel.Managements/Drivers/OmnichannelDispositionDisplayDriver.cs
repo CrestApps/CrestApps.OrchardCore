@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -10,8 +10,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<OmnichannelDisposition>
 {
-    private readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelDispositionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelDispositionDisplayDriver(
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
@@ -23,10 +27,10 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
         return CombineAsync(
             View("OmnichannelDisposition_Fields_SummaryAdmin", disposition)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 

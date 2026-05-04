@@ -1,17 +1,23 @@
+using CrestApps.Core.AI.Connections;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class GetDeploymentsEndpoint
 {
+    /// <summary>
+    /// Adds the get deployments endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetDeploymentsEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("ai/deployments", HandleAsync)
-            .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName)
             .DisableAntiforgery();
 
@@ -19,11 +25,12 @@ internal static class GetDeploymentsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIDeploymentManager deploymentManager,
-        string providerName,
-        string connection)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIProviderConnectionStore connectionsCatalog,
+        [FromQuery] string providerName,
+        [FromQuery] string connection)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
@@ -40,13 +47,27 @@ internal static class GetDeploymentsEndpoint
             return TypedResults.BadRequest("Connection is required.");
         }
 
-        var deployments = await deploymentManager.GetAllAsync(providerName, connection);
+        var selectedConnection = await connectionsCatalog.FindByConnectionNameAsync(providerName, connection);
+
+        if (selectedConnection is null)
+        {
+            return TypedResults.BadRequest("Invalid connection.");
+        }
+
+        var deployments = (await deploymentManager.GetAllAsync(providerName))
+            .Where(x =>
+                string.Equals(x.ConnectionName, selectedConnection.ItemId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.ConnectionName, selectedConnection.Name, StringComparison.OrdinalIgnoreCase));
 
         return TypedResults.Ok(deployments.Select(x => new
         {
-            Id = x.ItemId,
+            Id = x.Name,
             x.ItemId,
             x.Name,
+            x.ModelName,
+            DisplayText = string.Equals(x.Name, x.ModelName, StringComparison.OrdinalIgnoreCase)
+            ? x.Name
+            : $"{x.Name} ({x.ModelName})",
             x.CreatedUtc,
         }));
     }

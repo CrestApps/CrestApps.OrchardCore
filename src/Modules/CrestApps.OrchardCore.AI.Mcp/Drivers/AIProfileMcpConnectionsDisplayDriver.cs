@@ -1,12 +1,11 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
@@ -16,6 +15,11 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileMcpConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileMcpConnectionsDisplayDriver> stringLocalizer)
@@ -35,7 +39,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
         return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
-            var mcpMetadata = profile.As<AIProfileMcpMetadata>();
+            var mcpMetadata = profile.GetOrCreate<AIProfileMcpMetadata>();
 
             model.Connections = connections
             .Select(entry => new ToolEntry
@@ -44,8 +48,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
                 DisplayText = entry.DisplayText,
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Content:3#Capabilities;8");
     }
 
@@ -82,4 +85,3 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         return Edit(profile, context);
     }
 }
-

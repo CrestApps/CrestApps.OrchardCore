@@ -1,7 +1,10 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the translations recipe step.
+/// </summary>
 public sealed class TranslationsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "Translations";
@@ -10,16 +13,16 @@ public sealed class TranslationsRecipeStep : RecipeStepSchemaBase
         => RecipeStepSchemaBuilders.BuildNamedStep(
             Name,
             [
-                ("translations", RecipeStepSchemaBuilders.Array(
-                    RecipeStepSchemaBuilders.Object(
-                        [
-                            ("culture", RecipeStepSchemaBuilders.String()),
-                            ("context", RecipeStepSchemaBuilders.String()),
-                            ("key", RecipeStepSchemaBuilders.String()),
-                            ("value", RecipeStepSchemaBuilders.String()),
-                        ],
-                        ["culture", "key"]),
-                    1)),
-            ],
-            ["translations"]);
+            ("translations", RecipeStepSchemaBuilders.Array(
+            RecipeStepSchemaBuilders.Object(
+            [
+            ("culture", RecipeStepSchemaBuilders.String()),
+    ("context", RecipeStepSchemaBuilders.String()),
+    ("key", RecipeStepSchemaBuilders.String()),
+    ("value", RecipeStepSchemaBuilders.String()),
+    ],
+    ["culture", "key"]),
+    1)),
+    ],
+    ["translations"]);
 }

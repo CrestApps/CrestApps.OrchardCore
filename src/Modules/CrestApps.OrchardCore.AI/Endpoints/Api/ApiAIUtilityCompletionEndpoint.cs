@@ -1,11 +1,13 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -14,6 +16,12 @@ namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
 internal static class ApiAIUtilityCompletionEndpoint
 {
+    /// <summary>
+    /// Maps the API endpoint for AI utility completion requests.
+    /// </summary>
+    /// <typeparam name="T">The type used for logger category resolution.</typeparam>
+    /// <param name="builder">The endpoint route builder to add the endpoint to.</param>
+    /// <returns>The <see cref="IEndpointRouteBuilder"/> for chaining.</returns>
     public static IEndpointRouteBuilder AddApiAIUtilityCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("api/ai/completion/utility", HandleAsync<T>)
@@ -24,13 +32,14 @@ internal static class ApiAIUtilityCompletionEndpoint
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       IAuthorizationService authorizationService,
-       INamedCatalogManager<AIProfile> chatProfileManager,
-       IHttpContextAccessor httpContextAccessor,
-       IAICompletionService completionService,
-       IAICompletionContextBuilder completionContextBuilder,
-       ILogger<T> logger,
-       AIUtilityCompletionRequest requestData)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAICompletionService completionService,
+        [FromServices] IAICompletionContextBuilder completionContextBuilder,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ILogger<T> logger,
+        [FromBody] AIUtilityCompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
@@ -62,7 +71,14 @@ internal static class ApiAIUtilityCompletionEndpoint
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
-        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName);
+
+        if (deployment is null)
+        {
+            return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
+        }
+
+        var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
         var result = new AIChatResponse
         {

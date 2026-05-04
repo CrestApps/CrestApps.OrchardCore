@@ -1,19 +1,32 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
+using OrchardCore.Elasticsearch;
+using OrchardCore.Elasticsearch.Core.Models;
+using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.Elasticsearch;
-using OrchardCore.Search.Elasticsearch.Core.Models;
-using OrchardCore.Search.Elasticsearch.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
+/// <summary>
+/// Handles events for AI memory elasticsearch index profile.
+/// </summary>
 public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
-    public AIMemoryElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryElasticsearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    public AIMemoryElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -36,14 +49,13 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchIndexMetadata>();
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= [];
 
-        var profileMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = MemoryConstants.ColumnNames.MemoryId;
         metadata.IndexMappings.Mapping.Properties[MemoryConstants.ColumnNames.MemoryId] = new KeywordProperty();
@@ -69,7 +81,7 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchDefaultQueryMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchDefaultQueryMetadata>();
 
         if (metadata.DefaultSearchFields is null || metadata.DefaultSearchFields.Length == 0)
         {

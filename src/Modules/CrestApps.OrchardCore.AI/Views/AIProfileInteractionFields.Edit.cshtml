@@ -1,3 +1,4 @@
+@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
 @using OrchardCore
 
@@ -40,7 +41,7 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="PromptSubject" class="form-control" />

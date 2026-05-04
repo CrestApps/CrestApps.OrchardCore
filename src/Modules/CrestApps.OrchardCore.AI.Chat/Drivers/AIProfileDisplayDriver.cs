@@ -1,5 +1,5 @@
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,6 +12,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
     public AIProfileDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor)
@@ -22,8 +27,15 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
     public override IDisplayResult Display(AIProfile profile, BuildDisplayContext context)
     {
-        return View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
-            .Location("ActionsMenu:5")
-            .RenderWhen(async () => profile.Type == AIProfileType.Chat && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile));
+        return Combine(
+            View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
+                .Location("ActionsMenu:5")
+                .RenderWhen(async () => profile.Type == AIProfileType.Chat &&
+                await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile)),
+            View("AIProfile_TestActionsMenu_SummaryAdmin", profile)
+                .Location("ActionsMenu:5")
+                .RenderWhen(async () => (profile.Type == AIProfileType.Utility || profile.Type == AIProfileType.Agent) &&
+                await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        );
     }
 }

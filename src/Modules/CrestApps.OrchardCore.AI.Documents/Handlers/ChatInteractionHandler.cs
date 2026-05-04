@@ -1,7 +1,8 @@
+﻿using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -11,22 +12,31 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
+/// <summary>
+/// Handles events for chat interaction.
+/// </summary>
 public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInteraction>
 {
     private readonly Dictionary<string, ChatInteraction> _interactions = [];
     private readonly Dictionary<string, ChatInteraction> _removedInteractions = [];
 
-    public override Task CreatedAsync(CreatedContext<ChatInteraction> context)
+    public override Task CreatedAsync(
+        CreatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         return AddTranscriptAsync(context.Model);
     }
 
-    public override Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
+    public override Task UpdatedAsync(
+        UpdatedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
     {
         return AddTranscriptAsync(context.Model);
     }
 
-    public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
+    public override Task DeletedAsync(
+        DeletedContext<ChatInteraction> context,
+        CancellationToken cancellationToken = default)
         => RemovedTranscriptAsync(context.Model);
 
     private Task AddTranscriptAsync(ChatInteraction interaction)

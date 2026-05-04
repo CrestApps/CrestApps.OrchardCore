@@ -1,14 +1,13 @@
-using CrestApps.Azure.Core.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
@@ -19,6 +18,11 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AzureOpenAIConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureOpenAIConnectionDisplayDriver> stringLocalizer)
@@ -29,24 +33,23 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
 
         return Initialize<AzureOpenAIConnectionViewModel>("AzureOpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+            var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
                 new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
-                new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
-                new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
-            ];
+                    new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
+                    new (S["API key"], nameof(AzureAuthenticationType.ApiKey)),
+                ];
 
-            model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
             model.IdentityId = metadata.IdentityId;
@@ -55,7 +58,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
@@ -64,7 +67,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
@@ -93,8 +96,6 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
-
-        metadata.EnableLogging = model.EnableLogging;
 
         connection.Put(metadata);
 

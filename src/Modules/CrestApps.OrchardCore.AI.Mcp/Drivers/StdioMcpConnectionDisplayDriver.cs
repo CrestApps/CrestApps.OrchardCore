@@ -1,11 +1,11 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using System.Text.Json;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
@@ -14,6 +14,10 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StdioMcpConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public StdioMcpConnectionDisplayDriver(IStringLocalizer<StdioMcpConnectionDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -28,7 +32,7 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 
         return Initialize<StdioConnectionFieldsViewModel>("StdioMcpConnectionFields_Edit", model =>
         {
-            var metadata = connection.As<StdioMcpConnectionMetadata>();
+            var metadata = connection.GetOrCreate<StdioMcpConnectionMetadata>();
             model.Command = metadata.Command;
             model.WorkingDirectory = metadata.WorkingDirectory;
 
@@ -71,7 +75,6 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
               }
             }
             """;
-
         }).Location("Content:1");
     }
 

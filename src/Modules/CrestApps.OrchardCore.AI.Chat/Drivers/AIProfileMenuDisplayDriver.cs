@@ -1,10 +1,14 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile menu shape.
+/// </summary>
 public sealed class AIProfileMenuDisplayDriver : DisplayDriver<AIProfile>
 {
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -19,8 +23,7 @@ public sealed class AIProfileMenuDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.IsOnAdminMenu = profile.Type == AIProfileType.Chat && context.IsNew;
             }
-
-        }).Location("Content:10%General;1");
+        }).Location("Content:7%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

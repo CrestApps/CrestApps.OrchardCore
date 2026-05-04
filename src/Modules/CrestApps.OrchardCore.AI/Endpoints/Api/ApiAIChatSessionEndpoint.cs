@@ -1,18 +1,24 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
 internal static class ApiAIChatSessionEndpoint
 {
+    /// <summary>
+    /// Adds the api AI chat session endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddApiAIChatSessionEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapGet("api/ai/chat/session", HandleAsync)
@@ -23,13 +29,13 @@ internal static class ApiAIChatSessionEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-       IAuthorizationService authorizationService,
-       INamedCatalogManager<AIProfile> profileManager,
-       IAIChatSessionManager sessionManager,
-       IAIChatSessionPromptStore promptStore,
-       ILiquidTemplateManager liquidTemplateManager,
-       IHttpContextAccessor httpContextAccessor,
-       string sessionId)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] INamedCatalogManager<AIProfile> profileManager,
+        [FromServices] IAIChatSessionManager sessionManager,
+        [FromServices] IAIChatSessionPromptStore promptStore,
+        [FromServices] ILiquidTemplateManager liquidTemplateManager,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromQuery] string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -68,7 +74,7 @@ internal static class ApiAIChatSessionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
-                Appearance = message.As<AssistantMessageAppearance>(),
+                Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
             })
         });
     }

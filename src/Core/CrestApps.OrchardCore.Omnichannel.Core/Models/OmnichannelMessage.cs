@@ -2,6 +2,9 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
+/// <summary>
+/// Represents a message exchanged through an omnichannel communication channel.
+/// </summary>
 public sealed class OmnichannelMessage : Entity
 {
     /// <summary>
@@ -24,16 +27,16 @@ public sealed class OmnichannelMessage : Entity
     public string CustomerAddress { get; set; }
 
     /// <summary>
-    /// The identity of your system, agent, or business endpoint.  
-    /// For SMS → your sending phone number; for Email → your support address;  
+    /// The identity of your system, agent, or business endpoint.
+    /// For SMS → your sending phone number; for Email → your support address;
     /// for Chat → bot or agent ID.
     /// Always represents your side regardless of direction.
     /// </summary>
     public string ServiceAddress { get; set; }
 
     /// <summary>
-    /// The text content of the message.  
-    /// For non-text channels (e.g., voice calls), this could store a transcription.  
+    /// The text content of the message.
+    /// For non-text channels (e.g., voice calls), this could store a transcription.
     /// </summary>
     public string Content { get; set; }
 

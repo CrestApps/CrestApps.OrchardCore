@@ -1,8 +1,9 @@
-using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Handlers;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
@@ -10,85 +11,55 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.AI.Handlers;
 
 /// <summary>
-/// An <see cref="IAIChatSessionHandler"/> that runs data extraction after each
-/// message exchange, triggers workflow events for newly extracted fields, and
-/// closes the session when a natural farewell is detected.
+/// Triggers Orchard workflow events from the shared data extraction results that
+/// the framework handler stored on <see cref="ChatMessageCompletedContext.Items"/>.
 /// </summary>
 public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 {
-    private readonly DataExtractionService _dataExtractionService;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly IWorkflowManager _workflowManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataExtractionChatSessionHandler"/> class.
+    /// </summary>
+    /// <param name="workflowManager">The workflow manager used to trigger workflow events.</param>
+    /// <param name="clock">The time provider for obtaining UTC timestamps.</param>
+    /// <param name="logger">The logger instance for this handler.</param>
     public DataExtractionChatSessionHandler(
-        DataExtractionService dataExtractionService,
-        IServiceProvider serviceProvider,
+        IWorkflowManager workflowManager,
         IClock clock,
         ILogger<DataExtractionChatSessionHandler> logger)
     {
-        _dataExtractionService = dataExtractionService;
-        _serviceProvider = serviceProvider;
+        _workflowManager = workflowManager;
         _clock = clock;
         _logger = logger;
     }
 
-    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context, CancellationToken cancellationToken = default)
     {
-        try
+        if (!context.Items.TryGetValue(AIChatSessionHandlerContextKeys.DataExtractionChangeSet, out var value)
+            || value is not ExtractionChangeSet changeSet)
         {
-            var changeSet = await _dataExtractionService.ProcessAsync(
-                context.Profile,
-                context.ChatSession,
-                context.Prompts);
-
-            if (changeSet is null)
-            {
-                return;
-            }
-
-            var now = _clock.UtcNow;
-            var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
-
-            // Trigger workflow events for each newly extracted field.
-            if (workflowManager is not null)
-            {
-                foreach (var field in changeSet.NewFields)
-                {
-                    await TriggerFieldExtractedEventAsync(workflowManager, context, field, now);
-                }
-
-                // Always trigger the aggregate event so workflows can evaluate whether all fields are collected.
-                await TriggerAllFieldsExtractedEventAsync(workflowManager, context, now);
-            }
-
-            // Close the session if the model detected a natural farewell.
-            if (changeSet.SessionEnded && context.ChatSession.Status != ChatSessionStatus.Closed)
-            {
-                context.ChatSession.Status = ChatSessionStatus.Closed;
-                context.ChatSession.ClosedAtUtc = now;
-
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Session '{SessionId}' closed due to natural conversation ending.",
-                        context.ChatSession.SessionId);
-                }
-
-                if (workflowManager is not null)
-                {
-                    await TriggerSessionClosedEventAsync(workflowManager, context, now);
-                }
-            }
+            return;
         }
-        catch (Exception ex)
+
+        var now = _clock.UtcNow;
+
+        foreach (var field in changeSet.NewFields)
         {
-            _logger.LogError(ex, "Data extraction failed for session '{SessionId}'.", context.ChatSession.SessionId);
+            await TriggerFieldExtractedEventAsync(context, field, now);
+        }
+
+        await TriggerAllFieldsExtractedEventAsync(context, now);
+
+        if (changeSet.SessionEnded && context.ChatSession.Status == ChatSessionStatus.Closed)
+        {
+            await TriggerSessionClosedEventAsync(context, context.ChatSession.ClosedAtUtc ?? now);
         }
     }
 
     private async Task TriggerFieldExtractedEventAsync(
-        IWorkflowManager workflowManager,
         ChatMessageCompletedContext context,
         ExtractedFieldChange field,
         DateTime now)
@@ -107,7 +78,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 { "Timestamp", now },
             };
 
-            await workflowManager.TriggerEventAsync(
+            await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionFieldExtractedEvent),
                 input,
                 correlationId: context.ChatSession.SessionId);
@@ -119,7 +90,6 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     }
 
     private async Task TriggerSessionClosedEventAsync(
-        IWorkflowManager workflowManager,
         ChatMessageCompletedContext context,
         DateTime now)
     {
@@ -134,7 +104,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 { "ClosedAtUtc", now },
             };
 
-            await workflowManager.TriggerEventAsync(
+            await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionClosedEvent),
                 input,
                 correlationId: context.ChatSession.SessionId);
@@ -146,7 +116,6 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     }
 
     private async Task TriggerAllFieldsExtractedEventAsync(
-        IWorkflowManager workflowManager,
         ChatMessageCompletedContext context,
         DateTime now)
     {
@@ -162,7 +131,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 { "Timestamp", now },
             };
 
-            await workflowManager.TriggerEventAsync(
+            await _workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionAllFieldsExtractedEvent),
                 input,
                 correlationId: context.ChatSession.SessionId);

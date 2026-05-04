@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Users.Core.Models;
-using CrestApps.Support;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Logging;
@@ -12,12 +12,22 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// Resolves a user's display name based on site-level <see cref="DisplayNameSettings"/>,
+/// supporting first/last name composition, explicit display name, and custom Liquid templates.
+/// </summary>
 public sealed class DisplayNameProvider : IDisplayNameProvider
 {
     private readonly ISiteService _siteService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisplayNameProvider"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service used to retrieve display-name settings.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager used for custom display-name templates.</param>
+    /// <param name="logger">The logger instance.</param>
     public DisplayNameProvider(
         ISiteService siteService,
         ILiquidTemplateManager liquidTemplateManager,
@@ -27,7 +37,8 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
         _liquidTemplateManager = liquidTemplateManager;
         _logger = logger;
     }
-
+
+    /// <inheritdoc />
     public async Task<string> GetAsync(IUser user)
     {
         if (user == null)
@@ -40,9 +51,7 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return user.UserName;
         }
 
-        var userPart = u.As<UserFullNamePart>();
-
-        if (userPart == null)
+        if (!u.TryGet<UserFullNamePart>(out var userPart))
         {
             if (_logger?.IsEnabled(LogLevel.Trace) == true)
             {
@@ -52,9 +61,9 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return user.UserName;
         }
 
-        var setting = (await _siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+        var settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
 
-        if (setting.Type == DisplayNameType.DisplayName)
+        if (settings.Type == DisplayNameType.DisplayName)
         {
             if (string.IsNullOrWhiteSpace(userPart.DisplayName))
             {
@@ -64,12 +73,12 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return userPart.DisplayName;
         }
 
-        if (setting.Type == DisplayNameType.Other)
+        if (settings.Type == DisplayNameType.Other)
         {
-            return await GetDisplayFromTemplate(user, userPart, setting);
+            return await GetDisplayFromTemplate(user, userPart, settings);
         }
 
-        var displayName = GetDisplayName(userPart, setting);
+        var displayName = GetDisplayName(userPart, settings);
 
         if (!string.IsNullOrWhiteSpace(displayName))
         {
@@ -82,15 +91,15 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
     private async Task<string> GetDisplayFromTemplate(IUser user, UserFullNamePart userPart, DisplayNameSettings setting)
     {
         var customName = await _liquidTemplateManager.RenderStringAsync(setting.Template, NullEncoder.Default,
-            new Dictionary<string, FluidValue>()
-            {
-                ["User"] = new ObjectValue(user),
-                [nameof(userPart.FirstName)] = new StringValue(userPart.FirstName),
-                [nameof(userPart.MiddleName)] = new StringValue(userPart.MiddleName),
-                [nameof(userPart.LastName)] = new StringValue(userPart.LastName),
-                [nameof(userPart.DisplayName)] = new StringValue(userPart.DisplayName),
-                [nameof(IUser.UserName)] = new StringValue(user.UserName),
-            });
+        new Dictionary<string, FluidValue>()
+        {
+            ["User"] = new ObjectValue(user),
+            [nameof(userPart.FirstName)] = new StringValue(userPart.FirstName),
+            [nameof(userPart.MiddleName)] = new StringValue(userPart.MiddleName),
+            [nameof(userPart.LastName)] = new StringValue(userPart.LastName),
+            [nameof(userPart.DisplayName)] = new StringValue(userPart.DisplayName),
+            [nameof(IUser.UserName)] = new StringValue(user.UserName),
+        });
 
         if (!string.IsNullOrWhiteSpace(customName))
         {

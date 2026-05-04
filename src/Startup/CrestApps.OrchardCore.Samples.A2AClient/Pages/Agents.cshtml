@@ -136,25 +136,25 @@ else if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
                 },
                 body: formData
             })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (data.error) {
-                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
-                    return;
-                }
-                if (!data.response) {
-                    resultDiv.innerHTML = '<p class="text-muted mb-0">No response returned.</p>';
-                    return;
-                }
-                resultDiv.innerHTML = '<pre class="bg-light p-3 rounded mb-2" style="max-height:400px;overflow:auto">' + escapeHtml(data.response) + '</pre>';
-            })
-            .catch(function (err) {
-                resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
-            })
-            .finally(function () {
-                btn.disabled = false;
-                btn.textContent = 'Send Message';
-            });
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
+                        return;
+                    }
+                    if (!data.response) {
+                        resultDiv.innerHTML = '<p class="text-muted mb-0">No response returned.</p>';
+                        return;
+                    }
+                    resultDiv.innerHTML = '<pre class="bg-light p-3 rounded mb-2" style="max-height:400px;overflow:auto">' + escapeHtml(data.response) + '</pre>';
+                })
+                .catch(function (err) {
+                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Send Message';
+                });
         }
 
         function handleStreamingRequest(formData, resultDiv, btn) {
@@ -168,71 +168,71 @@ else if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
                 },
                 body: formData
             })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('Server returned ' + response.status);
-                }
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Server returned ' + response.status);
+                    }
 
-                var contentType = response.headers.get('content-type') || '';
+                    var contentType = response.headers.get('content-type') || '';
 
-                // If the server returned JSON instead of SSE (e.g. error), handle it.
-                if (contentType.indexOf('application/json') !== -1) {
-                    return response.json().then(function (data) {
-                        if (data.error) {
-                            resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
-                        }
-                    });
-                }
-
-                // Process the SSE stream.
-                var reader = response.body.getReader();
-                var decoder = new TextDecoder();
-                var buffer = '';
-
-                function processChunk(result) {
-                    if (result.done) return;
-
-                    buffer += decoder.decode(result.value, { stream: true });
-
-                    // Parse SSE events from the buffer.
-                    var lines = buffer.split('\n');
-                    buffer = lines.pop(); // Keep incomplete last line in buffer.
-
-                    for (var i = 0; i < lines.length; i++) {
-                        var line = lines[i];
-
-                        if (line.indexOf('data: ') === 0) {
-                            var data = line.substring(6);
-
-                            if (data === '[DONE]') {
-                                return;
+                    // If the server returned JSON instead of SSE (e.g. error), handle it.
+                    if (contentType.indexOf('application/json') !== -1) {
+                        return response.json().then(function (data) {
+                            if (data.error) {
+                                resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
                             }
+                        });
+                    }
 
-                            if (data.indexOf('[ERROR]') === 0) {
-                                var errorMsg = data.substring(7) || 'An error occurred during streaming.';
-                                resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(errorMsg) + '</div>';
-                                return;
+                    // Process the SSE stream.
+                    var reader = response.body.getReader();
+                    var decoder = new TextDecoder();
+                    var buffer = '';
+
+                    function processChunk(result) {
+                        if (result.done) return;
+
+                        buffer += decoder.decode(result.value, { stream: true });
+
+                        // Parse SSE events from the buffer.
+                        var lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete last line in buffer.
+
+                        for (var i = 0; i < lines.length; i++) {
+                            var line = lines[i];
+
+                            if (line.indexOf('data: ') === 0) {
+                                var data = line.substring(6);
+
+                                if (data === '[DONE]') {
+                                    return;
+                                }
+
+                                if (data.indexOf('[ERROR]') === 0) {
+                                    var errorMsg = data.substring(7) || 'An error occurred during streaming.';
+                                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(errorMsg) + '</div>';
+                                    return;
+                                }
+
+                                pre.textContent += data;
+                                pre.scrollTop = pre.scrollHeight;
                             }
-
-                            pre.textContent += data;
-                            pre.scrollTop = pre.scrollHeight;
                         }
+
+                        return reader.read().then(processChunk);
                     }
 
                     return reader.read().then(processChunk);
-                }
-
-                return reader.read().then(processChunk);
-            })
-            .catch(function (err) {
-                if (!resultDiv.querySelector('.alert-danger')) {
-                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
-                }
-            })
-            .finally(function () {
-                btn.disabled = false;
-                btn.textContent = 'Send Message';
-            });
+                })
+                .catch(function (err) {
+                    if (!resultDiv.querySelector('.alert-danger')) {
+                        resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
+                    }
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Send Message';
+                });
         }
 
         // Client-side search.

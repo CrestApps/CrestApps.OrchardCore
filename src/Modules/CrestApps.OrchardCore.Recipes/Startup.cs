@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core;
+﻿using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +7,9 @@ using OrchardCore.Mvc.LocationExpander;
 
 namespace CrestApps.OrchardCore.Recipes;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -17,6 +20,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the SettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class SettingsRecipeStartup : StartupBase
 {
@@ -28,6 +34,9 @@ public sealed class SettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the FeatureRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Features", "OrchardCore.Recipes.Core")]
 public sealed class FeatureRecipeStartup : StartupBase
 {
@@ -38,6 +47,9 @@ public sealed class FeatureRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ThemesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Themes", "OrchardCore.Recipes.Core")]
 public sealed class ThemesRecipeStartup : StartupBase
 {
@@ -47,6 +59,9 @@ public sealed class ThemesRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the RecipesStep feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStepStartup : StartupBase
 {
@@ -56,6 +71,9 @@ public sealed class RecipesStepStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentTypes feature.
+/// </summary>
 [RequireFeatures("OrchardCore.ContentTypes")]
 public sealed class ContentTypesStartup : StartupBase
 {
@@ -65,6 +83,9 @@ public sealed class ContentTypesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentDefinitionRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
 public sealed class ContentDefinitionRecipeStartup : StartupBase
 {
@@ -76,6 +97,9 @@ public sealed class ContentDefinitionRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Contents", "OrchardCore.Recipes.Core")]
 public sealed class ContentRecipeStartup : StartupBase
 {
@@ -85,6 +109,9 @@ public sealed class ContentRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the UsersRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Users", "OrchardCore.Recipes.Core")]
 public sealed class UsersRecipeStartup : StartupBase
 {
@@ -94,6 +121,9 @@ public sealed class UsersRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the CustomUserSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Users.CustomUserSettings", "OrchardCore.Recipes.Core")]
 public sealed class CustomUserSettingsRecipeStartup : StartupBase
 {
@@ -103,6 +133,9 @@ public sealed class CustomUserSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the MediaRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Media", "OrchardCore.Recipes.Core")]
 public sealed class MediaRecipeStartup : StartupBase
 {
@@ -113,6 +146,9 @@ public sealed class MediaRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the RolesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Roles", "OrchardCore.Recipes.Core")]
 public sealed class RolesRecipeStartup : StartupBase
 {
@@ -122,6 +158,9 @@ public sealed class RolesRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the WorkflowRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
 public sealed class WorkflowRecipeStartup : StartupBase
 {
@@ -131,6 +170,9 @@ public sealed class WorkflowRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the LayersRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Layers", "OrchardCore.Recipes.Core")]
 public sealed class LayersRecipeStartup : StartupBase
 {
@@ -140,6 +182,9 @@ public sealed class LayersRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the QueriesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Queries", "OrchardCore.Recipes.Core")]
 public sealed class QueriesRecipeStartup : StartupBase
 {
@@ -149,6 +194,9 @@ public sealed class QueriesRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the TemplatesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Templates", "OrchardCore.Recipes.Core")]
 public sealed class TemplatesRecipeStartup : StartupBase
 {
@@ -159,6 +207,9 @@ public sealed class TemplatesRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ShortcodeTemplatesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Shortcodes.Templates", "OrchardCore.Recipes.Core")]
 public sealed class ShortcodeTemplatesRecipeStartup : StartupBase
 {
@@ -168,6 +219,9 @@ public sealed class ShortcodeTemplatesRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the PlacementsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Placements", "OrchardCore.Recipes.Core")]
 public sealed class PlacementsRecipeStartup : StartupBase
 {
@@ -177,6 +231,9 @@ public sealed class PlacementsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AdminMenuRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Recipes.Core")]
 public sealed class AdminMenuRecipeStartup : StartupBase
 {
@@ -186,6 +243,9 @@ public sealed class AdminMenuRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DeploymentRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Deployment", "OrchardCore.Recipes.Core")]
 public sealed class DeploymentRecipeStartup : StartupBase
 {
@@ -195,6 +255,9 @@ public sealed class DeploymentRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the SitemapsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Sitemaps", "OrchardCore.Recipes.Core")]
 public sealed class SitemapsRecipeStartup : StartupBase
 {
@@ -204,6 +267,9 @@ public sealed class SitemapsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the UrlRewritingRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.UrlRewriting", "OrchardCore.Recipes.Core")]
 public sealed class UrlRewritingRecipeStartup : StartupBase
 {
@@ -213,6 +279,9 @@ public sealed class UrlRewritingRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the TranslationsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.DataLocalization", "OrchardCore.Recipes.Core")]
 public sealed class TranslationsRecipeStartup : StartupBase
 {
@@ -223,6 +292,9 @@ public sealed class TranslationsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the FeatureProfilesRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Tenants.FeatureProfiles", "OrchardCore.Recipes.Core")]
 public sealed class FeatureProfilesRecipeStartup : StartupBase
 {
@@ -232,7 +304,10 @@ public sealed class FeatureProfilesRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.Lucene", "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the LuceneRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Lucene", "OrchardCore.Recipes.Core")]
 public sealed class LuceneRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -243,7 +318,10 @@ public sealed class LuceneRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.Elasticsearch", "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the ElasticRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Elasticsearch", "OrchardCore.Recipes.Core")]
 public sealed class ElasticRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -254,7 +332,10 @@ public sealed class ElasticRecipeStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Search.AzureAI", "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the AzureAISearchRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.AzureAI", "OrchardCore.Recipes.Core")]
 public sealed class AzureAISearchRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -265,6 +346,9 @@ public sealed class AzureAISearchRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the IndexProfileRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Indexing", "OrchardCore.Recipes.Core")]
 public sealed class IndexProfileRecipeStartup : StartupBase
 {
@@ -276,6 +360,9 @@ public sealed class IndexProfileRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AzureADSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Microsoft.Authentication.AzureAD", "OrchardCore.Recipes.Core")]
 public sealed class AzureADSettingsRecipeStartup : StartupBase
 {
@@ -285,6 +372,9 @@ public sealed class AzureADSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the MicrosoftAccountSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Microsoft.Authentication.MicrosoftAccount", "OrchardCore.Recipes.Core")]
 public sealed class MicrosoftAccountSettingsRecipeStartup : StartupBase
 {
@@ -294,6 +384,9 @@ public sealed class MicrosoftAccountSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the FacebookCoreSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Facebook", "OrchardCore.Recipes.Core")]
 public sealed class FacebookCoreSettingsRecipeStartup : StartupBase
 {
@@ -303,6 +396,9 @@ public sealed class FacebookCoreSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the FacebookLoginSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Facebook.Login", "OrchardCore.Recipes.Core")]
 public sealed class FacebookLoginSettingsRecipeStartup : StartupBase
 {
@@ -312,6 +408,9 @@ public sealed class FacebookLoginSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the GitHubAuthenticationSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.GitHub.Authentication", "OrchardCore.Recipes.Core")]
 public sealed class GitHubAuthenticationSettingsRecipeStartup : StartupBase
 {
@@ -321,6 +420,9 @@ public sealed class GitHubAuthenticationSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the TwitterSettingsRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Twitter.Signin", "OrchardCore.Recipes.Core")]
 public sealed class TwitterSettingsRecipeStartup : StartupBase
 {
@@ -330,6 +432,9 @@ public sealed class TwitterSettingsRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OpenIdManagementRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.OpenId.Management", "OrchardCore.Recipes.Core")]
 public sealed class OpenIdManagementRecipeStartup : StartupBase
 {
@@ -340,6 +445,9 @@ public sealed class OpenIdManagementRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OpenIdClientRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.OpenId.Client", "OrchardCore.Recipes.Core")]
 public sealed class OpenIdClientRecipeStartup : StartupBase
 {
@@ -349,6 +457,9 @@ public sealed class OpenIdClientRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OpenIdServerRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.OpenId.Server", "OrchardCore.Recipes.Core")]
 public sealed class OpenIdServerRecipeStartup : StartupBase
 {
@@ -358,6 +469,9 @@ public sealed class OpenIdServerRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the OpenIdValidationRecipe feature.
+/// </summary>
 [RequireFeatures("OrchardCore.OpenId.Validation", "OrchardCore.Recipes.Core")]
 public sealed class OpenIdValidationRecipeStartup : StartupBase
 {
@@ -367,6 +481,9 @@ public sealed class OpenIdValidationRecipeStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ContentsSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Contents")]
 public sealed class ContentsSchemaStartup : StartupBase
 {
@@ -376,6 +493,9 @@ public sealed class ContentsSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the TitleSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Title")]
 public sealed class TitleSchemaStartup : StartupBase
 {
@@ -385,6 +505,9 @@ public sealed class TitleSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AutorouteSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Autoroute")]
 public sealed class AutorouteSchemaStartup : StartupBase
 {
@@ -394,6 +517,9 @@ public sealed class AutorouteSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AliasSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Alias")]
 public sealed class AliasSchemaStartup : StartupBase
 {
@@ -403,6 +529,9 @@ public sealed class AliasSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the HtmlSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Html")]
 public sealed class HtmlSchemaStartup : StartupBase
 {
@@ -412,6 +541,9 @@ public sealed class HtmlSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the MarkdownSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Markdown")]
 public sealed class MarkdownSchemaStartup : StartupBase
 {
@@ -421,6 +553,9 @@ public sealed class MarkdownSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ListSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.List")]
 public sealed class ListSchemaStartup : StartupBase
 {
@@ -430,6 +565,9 @@ public sealed class ListSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the FlowsSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Flows")]
 public sealed class FlowsSchemaStartup : StartupBase
 {
@@ -440,6 +578,9 @@ public sealed class FlowsSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the WidgetsSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Widgets")]
 public sealed class WidgetsSchemaStartup : StartupBase
 {
@@ -449,6 +590,9 @@ public sealed class WidgetsSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the PreviewSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.ContentPreview")]
 public sealed class PreviewSchemaStartup : StartupBase
 {
@@ -458,6 +602,9 @@ public sealed class PreviewSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the SeoSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Seo")]
 public sealed class SeoSchemaStartup : StartupBase
 {
@@ -467,6 +614,9 @@ public sealed class SeoSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AuditTrailSchema feature.
+/// </summary>
 [RequireFeatures("OrchardCore.AuditTrail")]
 public sealed class AuditTrailSchemaStartup : StartupBase
 {
@@ -476,6 +626,9 @@ public sealed class AuditTrailSchemaStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AIRecipe feature.
+/// </summary>
 [RequireFeatures("CrestApps.OrchardCore.AI", "OrchardCore.Recipes.Core")]
 public sealed class AIRecipeStartup : StartupBase
 {

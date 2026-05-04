@@ -1,7 +1,7 @@
-using System.Text.Json;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,10 +9,13 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
+/// <summary>
+/// Display driver that presents the tool selection UI on AI profiles,
+/// allowing administrators to choose which AI tools are available for a profile.
+/// </summary>
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
@@ -21,6 +24,13 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileToolsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The options containing registered AI tool definitions.</param>
+    /// <param name="authorizationService">The authorization service for checking tool access permissions.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -78,7 +88,6 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 Description = entry.Value.Description,
                 IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
-
         }).Location("Content:7#Capabilities;8");
     }
 
@@ -121,7 +130,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
     /// </summary>
     private static string[] GetSelectedToolNames(AIProfile profile)
     {
-        var metadata = profile.As<FunctionInvocationMetadata>();
+        var metadata = profile.GetOrCreate<FunctionInvocationMetadata>();
 
         if (metadata.Names is { Length: > 0 })
         {
@@ -129,14 +138,11 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         }
 
         // Fall back to the legacy property key used in earlier versions.
-        if (profile.Properties.TryGetPropertyValue("AIProfileFunctionInvocationMetadata", out var legacyNode))
-        {
-            var legacyMetadata = legacyNode.Deserialize<FunctionInvocationMetadata>();
+        var legacyMetadata = profile.Get<FunctionInvocationMetadata>("AIProfileFunctionInvocationMetadata");
 
-            if (legacyMetadata?.Names is { Length: > 0 })
-            {
-                return legacyMetadata.Names;
-            }
+        if (legacyMetadata?.Names is { Length: > 0 })
+        {
+            return legacyMetadata.Names;
         }
 
         return null;

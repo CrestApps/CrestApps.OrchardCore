@@ -3,11 +3,7 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+var _excluded = ["placeholder"];
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
@@ -16,22 +12,29 @@ function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArra
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 window.chatInteractionManager = function () {
   // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
     // UI defaults for generated media
     generatedImageAltText: 'Generated Image',
     generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 900,
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <i class=\"fa-solid fa-xmark\"></i>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                Assistant\n            </div>\n        ",
+    assistantLabel: 'Assistant',
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"ai-chat-message-body lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                                <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                    <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                    <span v-else>{{ citation.label }}</span>\n                                </li>\n                            </ol>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                    <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                                </button>\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message)\" title=\"Click here to copy response to clipboard.\">\n                                    <span class=\"fa-solid fa-copy\"></span>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <span class=\"fa-solid fa-xmark\"></span>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><span class=\"fa fa-robot\" style=\"display: inline-block;\"></span></span>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
     clearHistoryTitle: 'Clear History',
@@ -55,6 +58,164 @@ window.chatInteractionManager = function () {
     var span = document.createElement('span');
     span.textContent = text;
     return span.innerHTML;
+  }
+  function normalizeReference(reference) {
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference;
+    if (!reference || _typeof(reference) !== 'object') {
+      return null;
+    }
+    var normalized = Object.assign({}, reference);
+    normalized.index = (_ref = (_normalized$index = normalized.index) !== null && _normalized$index !== void 0 ? _normalized$index : normalized.Index) !== null && _ref !== void 0 ? _ref : 0;
+    normalized.text = (_ref2 = (_normalized$text = normalized.text) !== null && _normalized$text !== void 0 ? _normalized$text : normalized.Text) !== null && _ref2 !== void 0 ? _ref2 : null;
+    normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
+    normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
+    return normalized;
+  }
+  function isDownloadCitationReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return false;
+    }
+    if (typeof reference.referenceType === 'string' && reference.referenceType.toLowerCase() === 'document') {
+      return true;
+    }
+    if (typeof reference.link === 'string' && /\/ai\/documents\/.+\/download(?:$|\?)/i.test(reference.link)) {
+      return true;
+    }
+    return false;
+  }
+  function normalizeReferences(references) {
+    if (!references || _typeof(references) !== 'object') {
+      return {};
+    }
+    var normalized = {};
+    for (var _i = 0, _Object$entries = Object.entries(references); _i < _Object$entries.length; _i++) {
+      var _normalizeReference;
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        key = _Object$entries$_i[0],
+        value = _Object$entries$_i[1];
+      normalized[key] = (_normalizeReference = normalizeReference(value)) !== null && _normalizeReference !== void 0 ? _normalizeReference : {};
+    }
+    return normalized;
+  }
+  function getCitationLabel(reference, key) {
+    return reference.title || reference.text || key;
+  }
+  function buildCitationDisplay(content, references) {
+    var processedContent = (content || '').trim();
+    var messageReferences = normalizeReferences(references);
+    if (!processedContent || !Object.keys(messageReferences).length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    var citedRefs = Object.entries(messageReferences).filter(function (_ref6) {
+      var _ref7 = _slicedToArray(_ref6, 1),
+        key = _ref7[0];
+      return processedContent.includes(key);
+    });
+    if (!citedRefs.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    citedRefs.sort(function (_ref8, _ref9) {
+      var _ref0 = _slicedToArray(_ref8, 2),
+        a = _ref0[1];
+      var _ref1 = _slicedToArray(_ref9, 2),
+        b = _ref1[1];
+      return a.index - b.index;
+    });
+    var citations = [];
+    var displayIndex = 1;
+    var _iterator = _createForOfIteratorHelper(citedRefs),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        processedContent = processedContent.replaceAll(key, placeholder);
+        citations.push({
+          referenceKey: key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(value, key),
+          link: value.link || null,
+          isDownload: isDownloadCitationReference(value),
+          placeholder: placeholder
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
+      var citation = _citations[_i2];
+      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    }
+    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+    return {
+      content: processedContent,
+      citations: citations.map(function (_ref10) {
+        var placeholder = _ref10.placeholder,
+          citation = _objectWithoutProperties(_ref10, _excluded);
+        return citation;
+      })
+    };
+  }
+  function buildCopyContent(content, citations) {
+    var copyContent = (content || '').trim();
+    if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
+      return copyContent;
+    }
+    var _iterator2 = _createForOfIteratorHelper(citations),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var citation = _step2.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator3 = _createForOfIteratorHelper(citations),
+      _step3;
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var _citation = _step3.value;
+        copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
+        if (_citation.link) {
+          copyContent += " - ".concat(_citation.link);
+        }
+        copyContent += '\n';
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    return copyContent.trimEnd();
+  }
+  function updateMessagePresentation(message, references) {
+    var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
+    var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
+    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    message.rawContent = rawContent;
+    message.content = rawContent;
+    message.displayContent = citationDisplay.content;
+    message.references = messageReferences;
+    message.citationReferences = citationDisplay.citations;
+    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
+    return message;
   }
   var renderer = new marked.Renderer();
 
@@ -86,7 +247,7 @@ window.chatInteractionManager = function () {
       highlighted = escapeHtmlEntities(code);
     }
     var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><span class=\"fa-solid fa-code\"></span> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><span class=\"fa-regular fa-copy\"></span></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -96,7 +257,7 @@ window.chatInteractionManager = function () {
     if (!src) return '';
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
+    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <span class=\"fa-solid fa-download\"></span>\n                </a>\n            </div>\n        </div>");
   };
 
   // Chart counter for unique IDs
@@ -104,9 +265,11 @@ window.chatInteractionManager = function () {
 
   // Collector for charts discovered during marked parsing.
   var _pendingCharts = [];
+
+  // Global chart config map shared with ai-chat.js
+  window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
-    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<span class=\"fa-solid fa-download\"></span> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -137,6 +300,7 @@ window.chatInteractionManager = function () {
           chartId: token.chartId,
           config: token.json
         });
+        window.__chartConfigs[token.chartId] = token.json;
         return createChartHtml(token.chartId);
       }
     }]
@@ -208,42 +372,56 @@ window.chatInteractionManager = function () {
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
-    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
-      _step;
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var c = _step.value;
-        var canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-          continue;
-        }
-        if (typeof Chart === 'undefined') {
-          console.error('Chart.js is not available on the page.');
-          continue;
-        }
-        try {
-          var _cfg$options;
-          // Destroy existing chart instance if re-rendering
-          if (canvas._chartInstance) {
-            canvas._chartInstance.destroy();
-          }
-          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
-          cfg.options.responsive = true;
-          cfg.options.maintainAspectRatio = false;
-          canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-          console.error('Error creating chart:', e);
-        }
-      }
 
-      // Prevent re-render work
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
     message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator4 = _createForOfIteratorHelper(charts),
+        _step4;
+      try {
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var c = _step4.value;
+          var canvas = document.getElementById(c.chartId);
+          if (!canvas) {
+            continue;
+          }
+          if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+            continue;
+          }
+
+          // When the canvas is inside a hidden container (e.g., display:none),
+          // it has zero dimensions. Keep the config for later rendering.
+          if (canvas.offsetParent === null) {
+            window.__chartConfigs[c.chartId] = c.config;
+            continue;
+          }
+          try {
+            var _cfg$options, _cfg$options2, _cfg$options2$aspectR;
+            // Destroy existing chart instance if re-rendering
+            if (canvas._chartInstance) {
+              canvas._chartInstance.destroy();
+            }
+            var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+            (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = true;
+            (_cfg$options2$aspectR = (_cfg$options2 = cfg.options).aspectRatio) !== null && _cfg$options2$aspectR !== void 0 ? _cfg$options2$aspectR : _cfg$options2.aspectRatio = 4 / 3;
+            canvas._chartInstance = new Chart(canvas, cfg);
+          } catch (e) {
+            console.error('Error creating chart:', e);
+          }
+        }
+      } catch (err) {
+        _iterator4.e(err);
+      } finally {
+        _iterator4.f();
+      }
+    });
   }
 
   // Parse markdown content via marked (which natively handles [chart:...] markers
@@ -256,6 +434,7 @@ window.chatInteractionManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['canvas'],
       ADD_ATTR: ['target']
     });
   }
@@ -301,21 +480,27 @@ window.chatInteractionManager = function () {
           initialFieldValues: new Map(),
           settingsDirty: false,
           saveSettingsTimeout: null,
+          saveIndicatorTimeout: null,
           isRecording: false,
           mediaRecorder: null,
           preRecordingPrompt: '',
           micButton: null,
           speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
-          textToSpeechEnabled: config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation' || !!config.textToSpeechEnabled,
           ttsVoiceName: config.ttsVoiceName || null,
           audioChunks: [],
           audioPlayQueue: [],
           isPlayingAudio: false,
           currentAudioElement: null,
+          currentAudioUrl: null,
+          ttsPlayingMessageIndex: -1,
+          ttsAudioCache: {},
+          ttsInstanceId: 'chat-interaction-' + Math.random().toString(36).slice(2),
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false,
-          notifications: []
+          notifications: [],
+          notificationDismissTimers: {}
         };
       },
       computed: {
@@ -349,7 +534,7 @@ window.chatInteractionManager = function () {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
                     _this.messages = []; // Update the title field if it exists
-                    var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
@@ -367,9 +552,15 @@ window.chatInteractionManager = function () {
                     if (historyItem) {
                       historyItem.textContent = title || config.untitledText;
                     }
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
+                    if (titleInput && title) {
+                      titleInput.value = title;
+                    }
+                    _this.showSaveIndicator('Saved', 'text-success');
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    _this.showSaveIndicator('Save failed', 'text-danger');
                     if (_this.isRecording) {
                       _this.stopRecording();
                     }
@@ -437,7 +628,7 @@ window.chatInteractionManager = function () {
                       _this.scrollToBottom();
                     }
                   });
-                  _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, appearance) {
+                  _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, references, appearance) {
                     if (!_this._conversationAssistantMessage) {
                       _this.stopAudio();
                       _this.hideTypingIndicator();
@@ -455,7 +646,8 @@ window.chatInteractionManager = function () {
                         content: "",
                         htmlContent: "",
                         isStreaming: true,
-                        appearance: _this.normalizeAssistantAppearance(appearance)
+                        appearance: _this.normalizeAssistantAppearance(appearance),
+                        references: {}
                       };
                       _this.messages.push(newMessage);
                       _this._conversationAssistantMessage = {
@@ -469,19 +661,22 @@ window.chatInteractionManager = function () {
                       if (!msg.appearance) {
                         msg.appearance = _this.normalizeAssistantAppearance(appearance);
                       }
-                      msg.content = _this._conversationAssistantMessage.content;
-                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      msg.rawContent = _this._conversationAssistantMessage.content;
+                      msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                      updateMessagePresentation(msg, msg.references);
                       _this.$nextTick(function () {
                         renderChartsInMessage(msg);
                         _this.scrollToBottom();
                       });
                     }
                   });
-                  _this.connection.on("ReceiveConversationAssistantComplete", function (itemId, messageId) {
+                  _this.connection.on("ReceiveConversationAssistantComplete", function (itemId, messageId, references) {
                     if (_this._conversationAssistantMessage) {
                       var msg = _this.messages[_this._conversationAssistantMessage.index];
                       if (msg) {
                         msg.isStreaming = false;
+                        msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                        updateMessagePresentation(msg, msg.references);
                       }
                       _this._conversationAssistantMessage = null;
                     }
@@ -575,79 +770,9 @@ window.chatInteractionManager = function () {
         addMessage: function addMessage(message) {
           var _this3 = this;
           if (message.content) {
-            var processedContent = message.content.trim();
-            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              // Only include references that were actually cited in the response.
-              var citedRefs = Object.entries(message.references).filter(function (_ref) {
-                var _ref2 = _slicedToArray(_ref, 1),
-                  key = _ref2[0];
-                return processedContent.includes(key);
-              });
-              if (citedRefs.length) {
-                // Sort by original index so display indices follow a natural order.
-                citedRefs.sort(function (_ref3, _ref4) {
-                  var _ref5 = _slicedToArray(_ref3, 2),
-                    a = _ref5[1];
-                  var _ref6 = _slicedToArray(_ref4, 2),
-                    b = _ref6[1];
-                  return a.index - b.index;
-                });
-
-                // Phase 1: Replace all markers with unique placeholders.
-                var displayIndex = 1;
-                var _iterator2 = _createForOfIteratorHelper(citedRefs),
-                  _step2;
-                try {
-                  for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                    var _step2$value = _slicedToArray(_step2.value, 2),
-                      key = _step2$value[0],
-                      value = _step2$value[1];
-                    var placeholder = "__CITE_".concat(value.index, "__");
-                    processedContent = processedContent.replaceAll(key, placeholder);
-                    value._displayIndex = displayIndex++;
-                    value._placeholder = placeholder;
-                  }
-
-                  // Phase 2: Replace placeholders with sequential display indices.
-                } catch (err) {
-                  _iterator2.e(err);
-                } finally {
-                  _iterator2.f();
-                }
-                var _iterator3 = _createForOfIteratorHelper(citedRefs),
-                  _step3;
-                try {
-                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-                    var _step3$value = _slicedToArray(_step3.value, 2),
-                      _value = _step3$value[1];
-                    processedContent = processedContent.replaceAll(_value._placeholder, "<sup><strong>".concat(_value._displayIndex, "</strong></sup>"));
-                  }
-                } catch (err) {
-                  _iterator3.e(err);
-                } finally {
-                  _iterator3.f();
-                }
-                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                processedContent += '<br><br>';
-                var _iterator4 = _createForOfIteratorHelper(citedRefs),
-                  _step4;
-                try {
-                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-                    var _step4$value = _slicedToArray(_step4.value, 2),
-                      _key = _step4$value[0],
-                      _value2 = _step4$value[1];
-                    var label = _value2.text || "[doc:".concat(_value2.index, "]");
-                    processedContent += _value2.link ? "**".concat(_value2._displayIndex, "**. [").concat(label, "](").concat(_value2.link, ")<br>") : "**".concat(_value2._displayIndex, "**. ").concat(label, "<br>");
-                  }
-                } catch (err) {
-                  _iterator4.e(err);
-                } finally {
-                  _iterator4.f();
-                }
-              }
-            }
-            message.content = processedContent;
-            message.htmlContent = parseMarkdownContent(processedContent, message);
+            var _message$rawContent;
+            message.rawContent = (_message$rawContent = message.rawContent) !== null && _message$rawContent !== void 0 ? _message$rawContent : message.content;
+            updateMessagePresentation(message, message.references);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
@@ -676,17 +801,23 @@ window.chatInteractionManager = function () {
           if (!appearance) {
             return null;
           }
+          var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
           var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
           var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
           var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
-          if (!icon && !cssClass && !disableStreamingAnimation) {
+          if (!label && !icon && !cssClass && !disableStreamingAnimation) {
             return null;
           }
           return {
+            label: label,
             icon: icon,
             cssClass: cssClass,
             disableStreamingAnimation: disableStreamingAnimation
           };
+        },
+        getAssistantLabel: function getAssistantLabel(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.label ? appearance.label : defaultConfig.assistantLabel;
         },
         getAssistantRoleClasses: function getAssistantRoleClasses(message) {
           var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
@@ -792,11 +923,12 @@ window.chatInteractionManager = function () {
                 message = newMessage;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i = 0, _Object$entries = Object.entries(chunk.references); _i < _Object$entries.length; _i++) {
-                  var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
-                    key = _Object$entries$_i[0],
-                    value = _Object$entries$_i[1];
-                  references[key] = value;
+                for (var _i3 = 0, _Object$entries2 = Object.entries(chunk.references); _i3 < _Object$entries2.length; _i3++) {
+                  var _normalizeReference2;
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
+                    key = _Object$entries2$_i[0],
+                    value = _Object$entries2$_i[1];
+                  references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
                 }
               }
               if (chunk.content) {
@@ -808,17 +940,10 @@ window.chatInteractionManager = function () {
                 if (chunk.responseId) {
                   lastResponseId = chunk.responseId;
                 }
-                var processedContent = chunk.content;
-                for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
-                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                    _key2 = _Object$entries2$_i[0],
-                    _value3 = _Object$entries2$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
-                }
-                content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                content += chunk.content;
               }
-              message.content = content;
-              message.htmlContent = parseMarkdownContent(content, message);
+              message.rawContent = content;
+              updateMessagePresentation(message, references);
               _this5.messages[messageIndex] = message;
               _this5.$nextTick(function () {
                 renderChartsInMessage(message);
@@ -871,88 +996,18 @@ window.chatInteractionManager = function () {
           };
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this6 = this;
+          references = normalizeReferences(references);
           if (Object.keys(references).length) {
+            var _ref11, _message$rawContent2;
             var message = this.messages[messageIndex];
-            var content = message.content || '';
-
-            // Only include references that were actually cited in the response.
-            // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
-            var citedRefs = Object.entries(references).filter(function (_ref7) {
-              var _ref8 = _slicedToArray(_ref7, 2),
-                key = _ref8[0],
-                value = _ref8[1];
-              return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
-            });
-            if (!citedRefs.length) {
-              return;
-            }
-
-            // Sort by original index so display indices follow a natural order.
-            citedRefs.sort(function (_ref9, _ref0) {
-              var _ref1 = _slicedToArray(_ref9, 2),
-                a = _ref1[1];
-              var _ref10 = _slicedToArray(_ref0, 2),
-                b = _ref10[1];
-              return a.index - b.index;
-            });
-
-            // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
-            var processed = content.trim();
-            var displayIndex = 1;
-            var _iterator5 = _createForOfIteratorHelper(citedRefs),
-              _step5;
-            try {
-              for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                var _step5$value = _slicedToArray(_step5.value, 2),
-                  key = _step5$value[0],
-                  value = _step5$value[1];
-                var placeholder = "__CITE_".concat(value.index, "__");
-                processed = processed.replaceAll(key, placeholder);
-                processed = processed.replaceAll("<sup><strong>".concat(value.index, "</strong></sup>"), placeholder);
-                value._displayIndex = displayIndex++;
-                value._placeholder = placeholder;
-              }
-
-              // Phase 2: Replace placeholders with sequential display indices.
-            } catch (err) {
-              _iterator5.e(err);
-            } finally {
-              _iterator5.f();
-            }
-            var _iterator6 = _createForOfIteratorHelper(citedRefs),
-              _step6;
-            try {
-              for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-                var _step6$value = _slicedToArray(_step6.value, 2),
-                  _value4 = _step6$value[1];
-                processed = processed.replaceAll(_value4._placeholder, "<sup><strong>".concat(_value4._displayIndex, "</strong></sup>"));
-              }
-            } catch (err) {
-              _iterator6.e(err);
-            } finally {
-              _iterator6.f();
-            }
-            processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-            processed += '<br><br>';
-            var _iterator7 = _createForOfIteratorHelper(citedRefs),
-              _step7;
-            try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _step7$value = _slicedToArray(_step7.value, 2),
-                  _key3 = _step7$value[0],
-                  _value5 = _step7$value[1];
-                var label = _value5.text || "[doc:".concat(_value5.index, "]");
-                processed += _value5.link ? "**".concat(_value5._displayIndex, "**. [").concat(label, "](").concat(_value5.link, ")<br>") : "**".concat(_value5._displayIndex, "**. ").concat(label, "<br>");
-              }
-            } catch (err) {
-              _iterator7.e(err);
-            } finally {
-              _iterator7.f();
-            }
-            message.content = processed;
-            message.htmlContent = parseMarkdownContent(processed, message);
+            message.rawContent = (_ref11 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref11 !== void 0 ? _ref11 : '';
+            updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this6.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
@@ -992,22 +1047,79 @@ window.chatInteractionManager = function () {
             this.debouncedSaveSettings();
           }
         },
-        synthesizeSpeech: function synthesizeSpeech(text) {
-          var _this6 = this;
+        handleExternalTtsStop: function handleExternalTtsStop(e) {
+          var _e$detail;
+          if ((e === null || e === void 0 || (_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.sourceId) === this.ttsInstanceId) {
+            return;
+          }
+          this.stopAudio(false);
+        },
+        updateTtsPlaybackButtons: function updateTtsPlaybackButtons() {
+          var _this7 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-tts-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
+            var isPlaying = buttonIndex === _this7.ttsPlayingMessageIndex;
+            var iconHtml = isPlaying ? '<span class="fa-solid fa-circle-pause"></span>' : '<span class="fa-solid fa-circle-play"></span>';
+            button.classList.toggle('tts-playing', isPlaying);
+            button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+            button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          });
+        },
+        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+          var _this8 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
           this.audioChunks = [];
           this.isPlayingAudio = true;
+          this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
           this.connection.invoke("SynthesizeSpeech", this.getItemId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this6.isPlayingAudio = false;
+            _this8.isPlayingAudio = false;
+            _this8.ttsPlayingMessageIndex = -1;
+            _this8._ttsCacheIndex = -1;
+            _this8.$nextTick(function () {
+              return _this8.updateTtsPlaybackButtons();
+            });
           });
         },
+        toggleMessageTts: function toggleMessageTts(message, index) {
+          var _this9 = this;
+          if (this.ttsPlayingMessageIndex === index) {
+            this.stopAudio();
+            return;
+          }
+          this.stopAudio(false);
+          window.dispatchEvent(new CustomEvent('crestapps-ai-chat-stop-tts', {
+            detail: {
+              sourceId: this.ttsInstanceId
+            }
+          }));
+          this.ttsPlayingMessageIndex = index;
+          this.$nextTick(function () {
+            return _this9.updateTtsPlaybackButtons();
+          });
+          if (this.ttsAudioCache[index]) {
+            this.playAudioBlob(this.ttsAudioCache[index]);
+            return;
+          }
+          this.synthesizeSpeech(message.content, index);
+        },
         playCollectedAudio: function playCollectedAudio() {
+          var _this0 = this;
           if (this.audioChunks.length === 0) {
             if (!this.isPlayingAudio && this.audioPlayQueue.length === 0) {
               this.isPlayingAudio = false;
+              this.ttsPlayingMessageIndex = -1;
+              this.$nextTick(function () {
+                return _this0.updateTtsPlaybackButtons();
+              });
             }
             return;
           }
@@ -1016,23 +1128,27 @@ window.chatInteractionManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator5 = _createForOfIteratorHelper(this.audioChunks),
+            _step5;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+              var chunk = _step5.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator5.e(err);
           } finally {
-            _iterator8.f();
+            _iterator5.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
             type: 'audio/mp3'
           });
+          if (this._ttsCacheIndex >= 0) {
+            this.ttsAudioCache[this._ttsCacheIndex] = blob;
+            this._ttsCacheIndex = -1;
+          }
 
           // If audio is currently playing, queue this blob for later.
           if (this.isPlayingAudio && this.currentAudioElement) {
@@ -1042,46 +1158,69 @@ window.chatInteractionManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this7 = this;
+          var _this1 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
+          this.currentAudioUrl = url;
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this1.playNextInQueue();
           });
           audio.addEventListener('error', function () {
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this1.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.isPlayingAudio = false;
+            _this1.audioPlayQueue = [];
+            _this1.isPlayingAudio = false;
+            _this1.ttsPlayingMessageIndex = -1;
+            _this1.$nextTick(function () {
+              return _this1.updateTtsPlaybackButtons();
+            });
           });
         },
         playNextInQueue: function playNextInQueue() {
+          var _this10 = this;
           if (this.audioPlayQueue.length > 0) {
             var nextBlob = this.audioPlayQueue.shift();
             this.playAudioBlob(nextBlob);
           } else {
             this.isPlayingAudio = false;
+            this.ttsPlayingMessageIndex = -1;
+            this.$nextTick(function () {
+              return _this10.updateTtsPlaybackButtons();
+            });
             this.conversationModeOnAudioEnded();
           }
         },
         stopAudio: function stopAudio() {
+          var _this11 = this;
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             this.currentAudioElement.currentTime = 0;
             this.currentAudioElement = null;
           }
+          if (this.currentAudioUrl) {
+            URL.revokeObjectURL(this.currentAudioUrl);
+            this.currentAudioUrl = null;
+          }
           this.audioChunks = [];
           this.audioPlayQueue = [];
           this.isPlayingAudio = false;
+          this.ttsPlayingMessageIndex = -1;
+          this.$nextTick(function () {
+            return _this11.updateTtsPlaybackButtons();
+          });
         },
         toggleConversationMode: function toggleConversationMode() {
           if (this.isConversationMode) {
@@ -1091,7 +1230,7 @@ window.chatInteractionManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this8 = this;
+          var _this12 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1111,30 +1250,30 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this8.mediaRecorder = new MediaRecorder(stream, {
+            _this12.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this8._conversationSubject = new signalR.Subject();
-            _this8._conversationStream = stream;
+            _this12._conversationSubject = new signalR.Subject();
+            _this12._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this8._conversationAudioCtx = new AudioCtx();
-              _this8._conversationAnalyser = _this8._conversationAudioCtx.createAnalyser();
-              _this8._conversationAnalyser.fftSize = 256;
-              var micSource = _this8._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this8._conversationAnalyser);
+              _this12._conversationAudioCtx = new AudioCtx();
+              _this12._conversationAnalyser = _this12._conversationAudioCtx.createAnalyser();
+              _this12._conversationAnalyser.fftSize = 256;
+              var micSource = _this12._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this12._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this8._conversationAnalyser;
+            var analyser = _this12._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this8.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this12.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this8.isPlayingAudio && analyser) {
+                if (_this12.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1144,7 +1283,7 @@ window.chatInteractionManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this8.stopAudio();
+                    _this12.stopAudio();
                   }
                 }
 
@@ -1166,7 +1305,7 @@ window.chatInteractionManager = function () {
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this8._conversationSubject.next(base64);
+                          _this12._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
@@ -1177,27 +1316,27 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this8.mediaRecorder.addEventListener('stop', function () {
+            _this12.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this8._conversationSubject.complete();
+                  _this12._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var itemId = _this8.getItemId();
-            var language = document.documentElement.lang || 'en-US';
-            _this8.connection.send("StartConversation", itemId, _this8._conversationSubject, mimeType, language);
-            _this8.mediaRecorder.start(1000);
-            _this8.isRecording = true;
+            var itemId = _this12.getItemId();
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this12.connection.send("StartConversation", itemId, _this12._conversationSubject, mimeType, language);
+            _this12.mediaRecorder.start(250);
+            _this12.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this8.isConversationMode = false;
-            _this8.updateConversationButton();
+            _this12.isConversationMode = false;
+            _this12.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -1247,7 +1386,8 @@ window.chatInteractionManager = function () {
             type: 'conversation-ended',
             content: 'Conversation ended.',
             icon: 'fa-solid fa-circle-check',
-            dismissible: true
+            dismissible: true,
+            autoDismissMs: 5000
           });
         },
         updateConversationButton: function updateConversationButton() {
@@ -1256,7 +1396,7 @@ window.chatInteractionManager = function () {
           }
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
-            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
             this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
             var endHtml = this.conversationButton.getAttribute('data-end-html');
             if (endHtml) {
@@ -1266,7 +1406,9 @@ window.chatInteractionManager = function () {
             }
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
-            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.add('btn-outline-dark');
+            this.conversationButton.blur();
             this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
             var startHtml = this.conversationButton.getAttribute('data-start-html');
             if (startHtml) {
@@ -1298,21 +1440,189 @@ window.chatInteractionManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this9 = this;
+          var _this13 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this9.chatContainer.scrollTop = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight;
+            _this13.chatContainer.scrollTop = _this13.chatContainer.scrollHeight - _this13.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
           this.prompt = event.target.value;
         },
         getItemId: function getItemId() {
-          return this.inputElement.getAttribute('data-interaction-id');
+          return this.inputElement.getAttribute('data-interaction-id') || this.inputElement.getAttribute('data-item-id');
+        },
+        getSaveIndicatorElement: function getSaveIndicatorElement() {
+          if (config.saveIndicatorElementSelector) {
+            return document.querySelector(config.saveIndicatorElementSelector);
+          }
+          return document.querySelector('[data-chat-interaction-save-indicator]');
+        },
+        showSaveIndicator: function showSaveIndicator(text, className) {
+          var _this14 = this;
+          var indicator = this.getSaveIndicatorElement();
+          if (!indicator) {
+            return;
+          }
+          indicator.textContent = text || '';
+          indicator.className = 'settings-save-indicator ' + (className || 'text-muted');
+          if (this.saveIndicatorTimeout) {
+            clearTimeout(this.saveIndicatorTimeout);
+            this.saveIndicatorTimeout = null;
+          }
+          if (!text) {
+            return;
+          }
+          this.saveIndicatorTimeout = setTimeout(function () {
+            indicator.textContent = '';
+            _this14.saveIndicatorTimeout = null;
+          }, 3000);
+        },
+        clearPendingSettingsSave: function clearPendingSettingsSave() {
+          if (this.saveSettingsTimeout) {
+            clearTimeout(this.saveSettingsTimeout);
+            this.saveSettingsTimeout = null;
+          }
+        },
+        getFieldLabel: function getFieldLabel(input) {
+          var _input$closest;
+          var label = (_input$closest = input.closest('.mb-3, .col-6, .col, .form-group, .form-floating')) === null || _input$closest === void 0 ? void 0 : _input$closest.querySelector('label');
+          if (!label) {
+            return input.dataset.setting || 'This field';
+          }
+          return (label.textContent || '').replace(/\s+/g, ' ').trim() || input.dataset.setting || 'This field';
+        },
+        getValidationFeedbackElement: function getValidationFeedbackElement(input) {
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            return feedback;
+          }
+          feedback = document.createElement('div');
+          feedback.className = 'invalid-feedback';
+          input.insertAdjacentElement('afterend', feedback);
+          return feedback;
+        },
+        clearSettingValidationError: function clearSettingValidationError(input) {
+          input.classList.remove('is-invalid');
+          input.removeAttribute('aria-invalid');
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.textContent = '';
+          }
+        },
+        setSettingValidationError: function setSettingValidationError(input, message) {
+          var feedback = this.getValidationFeedbackElement(input);
+          input.classList.add('is-invalid');
+          input.setAttribute('aria-invalid', 'true');
+          feedback.textContent = message;
+        },
+        getSettingValidationMessage: function getSettingValidationMessage(input) {
+          if (!input || input.disabled || input.type !== 'number') {
+            return null;
+          }
+          var value = (input.value || '').trim();
+          if (!value) {
+            return null;
+          }
+          var number = Number(value);
+          var fieldLabel = this.getFieldLabel(input);
+          if (Number.isNaN(number)) {
+            return "".concat(fieldLabel, " must be a valid number.");
+          }
+          var min = input.getAttribute('min');
+          if (min !== null && number < Number(min)) {
+            return "".concat(fieldLabel, " must be ").concat(min, " or greater.");
+          }
+          var max = input.getAttribute('max');
+          if (max !== null && number > Number(max)) {
+            return "".concat(fieldLabel, " must be ").concat(max, " or less.");
+          }
+          return null;
+        },
+        validateSettingInput: function validateSettingInput(input) {
+          var message = this.getSettingValidationMessage(input);
+          if (!message) {
+            this.clearSettingValidationError(input);
+            return true;
+          }
+          this.setSettingValidationError(input, message);
+          return false;
+        },
+        validateSettings: function validateSettings() {
+          var _this15 = this;
+          var isValid = true;
+          this.getSettingInputs().forEach(function (input) {
+            isValid = _this15.validateSettingInput(input) && isValid;
+          });
+          return isValid;
+        },
+        queueSettingsSave: function queueSettingsSave() {
+          if (!this.validateSettings()) {
+            this.clearPendingSettingsSave();
+            this.settingsDirty = false;
+            this.showSaveIndicator('Fix errors', 'text-danger');
+            return;
+          }
+          this.settingsDirty = true;
+          this.showSaveIndicator('Saving...', 'text-warning');
+          this.debouncedSaveSettings();
+        },
+        getSettingInputs: function getSettingInputs() {
+          var explicitInputs = document.querySelectorAll('.setting-input[data-setting]');
+          if (explicitInputs.length > 0) {
+            return explicitInputs;
+          }
+          return document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+        },
+        getSelectedGroupValues: function getSelectedGroupValues(groupName, fallbackSelector) {
+          var explicitSelections = document.querySelectorAll(".capability-checkbox[data-save-group=\"".concat(groupName, "\"]:checked, .capability-checkbox[data-group=\"").concat(groupName, "\"]:checked"));
+          if (explicitSelections.length > 0) {
+            var _values = [];
+            explicitSelections.forEach(function (checkbox) {
+              var value = checkbox.getAttribute('data-item-id') || checkbox.value;
+              if (value) {
+                _values.push(value);
+              }
+            });
+            return _values;
+          }
+          if (!fallbackSelector) {
+            return [];
+          }
+          var values = [];
+          var checkboxes = document.querySelectorAll(fallbackSelector);
+          checkboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              values.push(hiddenInput.value);
+            }
+          });
+          return values;
+        },
+        getPromptTemplateSelections: function getPromptTemplateSelections() {
+          var promptTemplates = [];
+          document.querySelectorAll('.prompt-template-card').forEach(function (card) {
+            var templateIdInput = card.querySelector('.prompt-template-id-input');
+            var promptParametersInput = card.querySelector('.prompt-template-parameters-input');
+            var templateId = templateIdInput ? templateIdInput.value : card.getAttribute('data-template-id');
+            if (!templateId) {
+              return;
+            }
+            promptTemplates.push({
+              templateId: templateId,
+              promptParameters: promptParametersInput ? (promptParametersInput.value || '').trim() : ''
+            });
+          });
+          return promptTemplates;
         },
         receiveNotification: function receiveNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           // Replace existing notification with same type, or add new one.
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
@@ -1322,18 +1632,42 @@ window.chatInteractionManager = function () {
           } else {
             this.notifications.push(notification);
           }
+          this.scheduleNotificationDismiss(notification);
           this.scrollToBottom();
         },
         updateNotification: function updateNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
           });
           if (idx >= 0) {
             this.notifications.splice(idx, 1, notification);
+            this.scheduleNotificationDismiss(notification);
             this.scrollToBottom();
           }
         },
+        scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
+          var _this16 = this;
+          if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+            return;
+          }
+          this.notificationDismissTimers[notification.type] = setTimeout(function () {
+            _this16.removeNotification(notification.type);
+          }, notification.autoDismissMs);
+        },
+        clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
+          var timerId = this.notificationDismissTimers[notificationType];
+          if (!timerId) {
+            return;
+          }
+          clearTimeout(timerId);
+          delete this.notificationDismissTimers[notificationType];
+        },
         removeNotification: function removeNotification(notificationType) {
+          this.clearNotificationDismiss(notificationType);
           this.notifications = this.notifications.filter(function (n) {
             return n.type !== notificationType;
           });
@@ -1352,6 +1686,7 @@ window.chatInteractionManager = function () {
         },
         setItemId: function setItemId(itemId) {
           this.inputElement.setAttribute('data-interaction-id', itemId || '');
+          this.inputElement.setAttribute('data-item-id', itemId || '');
         },
         resetInteraction: function resetInteraction() {
           this.setItemId('');
@@ -1360,7 +1695,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this0 = this;
+          var _this17 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1372,59 +1707,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this0.stream) {
+            if (!_this17.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight - _this0.chatContainer.scrollTop <= threshold;
-            _this0.autoScroll = atBottom;
+            var atBottom = _this17.chatContainer.scrollHeight - _this17.chatContainer.clientHeight - _this17.chatContainer.scrollTop <= threshold;
+            _this17.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this0.stream != null) {
+            if (_this17.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this0.buttonElement.click();
+              _this17.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this0.handleUserInput(e);
+            _this17.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this0.buttonElement.removeAttribute('disabled');
+              _this17.buttonElement.removeAttribute('disabled');
             } else {
-              _this0.buttonElement.setAttribute('disabled', true);
+              _this17.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this0.prompt = _this0.inputElement.value;
-              if (_this0.inputElement.value.trim()) {
-                _this0.buttonElement.removeAttribute('disabled');
+              _this17.prompt = _this17.inputElement.value;
+              if (_this17.inputElement.value.trim()) {
+                _this17.buttonElement.removeAttribute('disabled');
               } else {
-                _this0.buttonElement.setAttribute('disabled', true);
+                _this17.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this0.stream != null) {
-              _this0.stream.dispose();
-              _this0.stream = null;
-              _this0.streamingFinished();
-              _this0.hideTypingIndicator();
+            if (_this17.stream != null) {
+              _this17.stream.dispose();
+              _this17.stream = null;
+              _this17.streamingFinished();
+              _this17.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this0.messages.length > 0) {
-                var lastMsg = _this0.messages[_this0.messages.length - 1];
+              if (_this17.messages.length > 0) {
+                var lastMsg = _this17.messages[_this17.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this0.messages.pop();
+                  _this17.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this0.sendMessage();
+            _this17.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -1435,11 +1770,11 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this0.loadInteraction(itemId);
+              _this17.loadInteraction(itemId);
             });
           }
-          for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
-            this.addMessage(config.messages[_i3]);
+          for (var _i4 = 0; _i4 < config.messages.length; _i4++) {
+            this.addMessage(config.messages[_i4]);
           }
 
           // Delegate click for code block copy buttons.
@@ -1457,89 +1792,39 @@ window.chatInteractionManager = function () {
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
                 var copiedText = config.codeCopiedText || 'Copied!';
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                btn.innerHTML = '<span class="fa-solid fa-check"></span> ' + copiedText;
                 setTimeout(function () {
-                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                  btn.innerHTML = '<span class="fa-regular fa-copy"></span>';
                 }, 2000);
               }
             });
           }
-
-          // Add event listeners for all settings fields with "ChatInteraction." prefix
-          // Exclude tool and MCP connection inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
-          settingsInputs.forEach(function (input) {
-            var isCheckbox = input.type === 'checkbox';
-            var isSelect = input.tagName === 'SELECT';
-
-            // Checkboxes & selects save immediately
-            if (isCheckbox || isSelect) {
-              input.addEventListener('change', function () {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
-              });
+          document.addEventListener('input', function (event) {
+            if (event.target.matches('.setting-input[data-setting]')) {
+              _this17.validateSettingInput(event.target);
+              _this17.queueSettingsSave();
+            }
+          });
+          document.addEventListener('change', function (event) {
+            if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .capability-checkbox[data-group], .group-toggle, .ci-agent-global-toggle')) {
+              if (event.target.matches('.setting-input[data-setting]')) {
+                _this17.validateSettingInput(event.target);
+              }
+              _this17.queueSettingsSave();
               return;
             }
-
-            // Text / textarea / number inputs → save on blur if changed
-            input.addEventListener('focus', function () {
-              _this0.initialFieldValues.set(input, input.value);
-            });
-            input.addEventListener('blur', function () {
-              var initialValue = _this0.initialFieldValues.get(input);
-              var hasChanged = initialValue !== undefined && input.value !== initialValue;
-              if (hasChanged) {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
-              }
-              _this0.initialFieldValues["delete"](input);
-            });
+            if (event.target.closest('.prompt-template-parameters-input, .prompt-template-id-input')) {
+              _this17.queueSettingsSave();
+            }
           });
-
-          // Add event listeners for tool checkboxes with debouncing (850ms)
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
-          toolCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
+          document.addEventListener('click', function (event) {
+            if (!event.target.closest('.prompt-template-add-btn, .remove-prompt-template-btn')) {
+              return;
+            }
+            setTimeout(function () {
+              _this17.queueSettingsSave();
+            }, 0);
           });
-
-          // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
-          var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
-          groupToggleCheckboxes.forEach(function (toggle) {
-            toggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for MCP connection checkboxes with debouncing (850ms)
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
-          mcpCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for agent checkboxes with debouncing (850ms)
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
-          agentCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
-          var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
-          if (agentGlobalToggle) {
-            agentGlobalToggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          }
 
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -1547,7 +1832,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this0.clearHistory(itemId);
+                _this17.clearHistory(itemId);
               }
             });
           }
@@ -1558,7 +1843,7 @@ window.chatInteractionManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this0.toggleRecording();
+                _this17.toggleRecording();
               });
             }
           }
@@ -1568,7 +1853,7 @@ window.chatInteractionManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this0.toggleConversationMode();
+                _this17.toggleConversationMode();
               });
             }
           }
@@ -1586,33 +1871,40 @@ window.chatInteractionManager = function () {
         },
         clearHistory: function clearHistory(itemId) {
           var self = this;
-          confirmDialog({
-            title: config.clearHistoryTitle,
-            message: config.clearHistoryMessage,
-            okText: config.clearHistoryOkText,
-            cancelText: config.clearHistoryCancelText,
-            callback: function callback(confirmed) {
-              if (confirmed) {
-                // Cancel any active stream before clearing history.
-                if (self.stream) {
-                  self.stream.dispose();
-                  self.stream = null;
-                  self.hideTypingIndicator();
-                  self.streamingFinished();
-                }
-                self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
-                  return console.error('Error clearing history:', err);
-                });
-              }
+          var clearHistoryConfirmed = function clearHistoryConfirmed() {
+            // Cancel any active stream before clearing history.
+            if (self.stream) {
+              self.stream.dispose();
+              self.stream = null;
+              self.hideTypingIndicator();
+              self.streamingFinished();
             }
-          });
+            self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
+              return console.error('Error clearing history:', err);
+            });
+          };
+          if (typeof confirmDialog === 'function') {
+            confirmDialog({
+              title: config.clearHistoryTitle,
+              message: config.clearHistoryMessage,
+              okText: config.clearHistoryOkText,
+              cancelText: config.clearHistoryCancelText,
+              callback: function callback(confirmed) {
+                if (confirmed) {
+                  clearHistoryConfirmed();
+                }
+              }
+            });
+            return;
+          }
+          if (window.confirm(config.clearHistoryMessage || 'Clear all messages?')) {
+            clearHistoryConfirmed();
+          }
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this1 = this;
+          var _this18 = this;
           // Clear any existing timeout to reset the debounce timer
-          if (this.saveSettingsTimeout) {
-            clearTimeout(this.saveSettingsTimeout);
-          }
+          this.clearPendingSettingsSave();
 
           // Don't save while streaming — it will be saved when streaming completes.
           if (this.stream) {
@@ -1621,56 +1913,33 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this1.settingsDirty) {
-              _this1.saveSettings();
-              _this1.settingsDirty = false;
+            if (_this18.settingsDirty) {
+              _this18.saveSettings();
+              _this18.settingsDirty = false;
             }
-            _this1.saveSettingsTimeout = null;
+            _this18.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
-          // Find all checked tool checkboxes and get the corresponding ItemId values
-          var toolNames = [];
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
-          toolCheckboxes.forEach(function (checkbox) {
-            // Extract the base name pattern to find the corresponding hidden ItemId input
-            // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
-            // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              toolNames.push(hiddenInput.value);
-            }
-          });
-          return toolNames;
+          return this.getSelectedGroupValues('toolNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
         },
         getSelectedMcpConnectionIds: function getSelectedMcpConnectionIds() {
-          var connectionIds = [];
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
-          mcpCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              connectionIds.push(hiddenInput.value);
-            }
-          });
-          return connectionIds;
+          return this.getSelectedGroupValues('mcpConnectionIds', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+        },
+        getSelectedA2AConnectionIds: function getSelectedA2AConnectionIds() {
+          return this.getSelectedGroupValues('a2aConnectionIds');
         },
         getSelectedAgentNames: function getSelectedAgentNames() {
-          var agentNames = [];
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
-          agentCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              agentNames.push(hiddenInput.value);
-            }
-          });
-          return agentNames;
+          return this.getSelectedGroupValues('agentNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
         },
         saveSettings: function saveSettings() {
+          var _this19 = this;
           var itemId = this.getItemId();
           if (!itemId) {
+            return Promise.resolve();
+          }
+          if (!this.validateSettings()) {
+            this.showSaveIndicator('Fix errors', 'text-danger');
             return Promise.resolve();
           }
           var settings = {};
@@ -1678,11 +1947,14 @@ window.chatInteractionManager = function () {
           // Collect all form inputs with the "ChatInteraction." prefix generically.
           // This avoids coupling the JS to specific field names — new fields added by
           // any module are automatically included.
-          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])');
+          var inputs = this.getSettingInputs();
           inputs.forEach(function (input) {
-            // Extract field name: "ChatInteraction.Title" → "title"
-            var fieldName = input.name.replace('ChatInteraction.', '');
-            var key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+            var key = input.dataset.setting || (input.name || '').replace('ChatInteraction.', '').replace(/^[A-Z]/, function (match) {
+              return match.toLowerCase();
+            });
+            if (!key) {
+              return;
+            }
             if (input.type === 'checkbox') {
               settings[key] = input.checked;
             } else if (input.type === 'number') {
@@ -1695,9 +1967,18 @@ window.chatInteractionManager = function () {
           // Add tool, MCP connection, and agent collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          settings.a2aConnectionIds = this.getSelectedA2AConnectionIds();
           settings.agentNames = this.getSelectedAgentNames();
+          var promptTemplates = this.getPromptTemplateSelections();
+          if (promptTemplates.length > 0) {
+            settings.promptTemplates = promptTemplates;
+            settings.promptTemplateIds = promptTemplates.map(function (template) {
+              return template.templateId;
+            });
+          }
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
-            return console.error('Error saving settings:', err);
+            console.error('Error saving settings:', err);
+            _this19.showSaveIndicator('Save failed', 'text-danger');
           });
         },
         flushPendingSave: function flushPendingSave() {
@@ -1724,10 +2005,12 @@ window.chatInteractionManager = function () {
           this.isInteractionStarted = true;
         },
         copyResponse: function copyResponse(message) {
-          navigator.clipboard.writeText(message);
+          var _ref13, _message$copyContent;
+          var text = message && _typeof(message) === 'object' ? (_ref13 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref13 !== void 0 ? _ref13 : '' : message !== null && message !== void 0 ? message : '';
+          navigator.clipboard.writeText(text);
         },
         startRecording: function startRecording() {
-          var _this10 = this;
+          var _this20 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1739,16 +2022,16 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this10.mediaRecorder = new MediaRecorder(stream, {
+            _this20.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this10.preRecordingPrompt = _this10.prompt;
-            _this10._audioInputSent = false;
+            _this20.preRecordingPrompt = _this20.prompt;
+            _this20._audioInputSent = false;
             var subject = new signalR.Subject();
-            var itemId = _this10.getItemId();
+            var itemId = _this20.getItemId();
             var pendingChunk = Promise.resolve();
-            _this10.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this20.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                   var data, uint8Array, binaryString, base64;
@@ -1772,7 +2055,7 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this10.mediaRecorder.addEventListener('stop', function () {
+            _this20.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
@@ -1780,11 +2063,11 @@ window.chatInteractionManager = function () {
                 return subject.complete();
               });
             });
-            var language = document.documentElement.lang || 'en-US';
-            _this10.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-            _this10.mediaRecorder.start(1000);
-            _this10.isRecording = true;
-            _this10.updateMicButton();
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this20.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this20.mediaRecorder.start(250);
+            _this20.isRecording = true;
+            _this20.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
@@ -1810,10 +2093,10 @@ window.chatInteractionManager = function () {
           }
           if (this.isRecording) {
             this.micButton.classList.add('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-stop"></span>';
           } else {
             this.micButton.classList.remove('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-microphone"></span>';
           }
         }
       },
@@ -1838,24 +2121,27 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this11 = this;
+        var _this21 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
           return _regenerator().w(function (_context5) {
             while (1) switch (_context5.n) {
               case 0:
                 _context5.n = 1;
-                return _this11.startConnection();
+                return _this21.startConnection();
               case 1:
-                _this11.initializeApp();
+                _this21.initializeApp();
               case 2:
                 return _context5.a(2);
             }
           }, _callee5);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
       },
       beforeUnmount: function beforeUnmount() {
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        window.removeEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
+        this.stopAudio(false);
         if (this.stream) {
           this.stream.dispose();
           this.stream = null;
@@ -1872,21 +2158,553 @@ window.chatInteractionManager = function () {
     initialize: initialize
   };
 }();
+window.chatInteractionDocumentManager = function () {
+  var managerStateKey = '__chatInteractionDocumentManagerState';
+  function normalizeDocumentInfo(document) {
+    if (!document || _typeof(document) !== 'object') {
+      return null;
+    }
+    return {
+      documentId: document.documentId || document.DocumentId || '',
+      fileName: document.fileName || document.FileName || '',
+      fileSize: document.fileSize || document.FileSize || 0
+    };
+  }
+  function formatFileSize(bytes) {
+    if (!bytes || bytes < 1024) {
+      return (bytes || 0) + ' B';
+    }
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  function getDocumentKey(fileName, fileSize) {
+    return (fileName || '').trim().toLowerCase() + '::' + (fileSize || 0);
+  }
+  function isDuplicateFile(file, knownKeys) {
+    return knownKeys.has(getDocumentKey(file.name, file.size));
+  }
+  function getDocumentsFromDom(container) {
+    if (!container) {
+      return [];
+    }
+    return Array.from(container.querySelectorAll('[data-chat-document-id]')).map(function (element) {
+      return normalizeDocumentInfo({
+        documentId: element.dataset.chatDocumentId,
+        fileName: element.dataset.chatDocumentName,
+        fileSize: Number(element.dataset.chatDocumentSize || 0)
+      });
+    }).filter(function (document) {
+      return document && document.documentId;
+    });
+  }
+  function initialize(config) {
+    if (!config || !config.itemId) {
+      return;
+    }
+    var fileInput = document.getElementById('chat-doc-upload');
+    var documentsList = document.getElementById('chat-documents-list');
+    var status = document.getElementById('chat-doc-upload-status');
+    var progressContainer = document.getElementById('chat-doc-upload-progress');
+    var progressBar = document.getElementById('chat-doc-upload-progress-bar');
+    var uploadQueue = document.getElementById('chat-doc-upload-queue');
+    if (!fileInput || !documentsList || !status || !progressContainer || !progressBar || !uploadQueue) {
+      return;
+    }
+    var previousState = fileInput[managerStateKey];
+    if (previousState && typeof previousState.dispose === 'function') {
+      previousState.dispose();
+    }
+    var interactionDocuments = (Array.isArray(config.existingDocuments) ? config.existingDocuments : []).map(normalizeDocumentInfo).filter(function (document) {
+      return document && document.documentId;
+    });
+    if (interactionDocuments.length === 0) {
+      interactionDocuments = getDocumentsFromDom(documentsList);
+    }
+    var uploadItems = [];
+    var isUploadingDocuments = false;
+    function createTextElement(tagName, className, text) {
+      var element = document.createElement(tagName);
+      if (className) {
+        element.className = className;
+      }
+      element.textContent = text;
+      return element;
+    }
+    function renderDocuments() {
+      documentsList.innerHTML = '';
+      if (interactionDocuments.length === 0) {
+        documentsList.appendChild(createTextElement('div', 'text-muted small', 'No documents uploaded yet.'));
+        return;
+      }
+      interactionDocuments.forEach(function (documentInfo) {
+        var row = window.document.createElement('div');
+        row.className = 'd-flex justify-content-between align-items-start gap-2 border rounded px-2 py-2 bg-white chat-document-row';
+        row.dataset.chatDocumentId = documentInfo.documentId;
+        row.dataset.chatDocumentName = documentInfo.fileName;
+        row.dataset.chatDocumentSize = documentInfo.fileSize;
+        var details = window.document.createElement('div');
+        details.className = 'me-2 min-w-0';
+        var name = createTextElement('div', 'fw-semibold small', documentInfo.fileName || 'Document');
+        var icon = window.document.createElement('i');
+        icon.className = 'bi bi-file-earmark-text me-1';
+        name.prepend(icon);
+        var size = createTextElement('div', 'text-muted small', formatFileSize(documentInfo.fileSize));
+        details.appendChild(name);
+        details.appendChild(size);
+        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', ' Remove');
+        removeButton.type = 'button';
+        removeButton.dataset.documentId = documentInfo.documentId;
+        var removeIcon = window.document.createElement('i');
+        removeIcon.className = 'bi bi-trash';
+        removeButton.prepend(removeIcon);
+        removeButton.addEventListener('click', function () {
+          return removeDocument(documentInfo.documentId);
+        });
+        row.appendChild(details);
+        row.appendChild(removeButton);
+        documentsList.appendChild(row);
+      });
+    }
+    function showUploadStatus(message, cssClass) {
+      if (!message) {
+        status.textContent = '';
+        status.className = 'small mt-2 d-none';
+        return;
+      }
+      status.textContent = message;
+      status.className = 'small mt-2 ' + (cssClass || 'text-muted');
+    }
+    function showUploadProgress(progress, message, cssClass) {
+      if (progress === null || progress === undefined) {
+        progressContainer.className = 'progress mt-2 d-none';
+        progressContainer.setAttribute('aria-valuenow', '0');
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        return;
+      }
+      var roundedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+      progressContainer.className = 'progress mt-2';
+      progressContainer.setAttribute('aria-valuenow', roundedProgress.toString());
+      progressBar.className = 'progress-bar ' + (cssClass || 'progress-bar-striped progress-bar-animated');
+      progressBar.style.width = roundedProgress + '%';
+      progressBar.textContent = message || roundedProgress + '%';
+    }
+    function getUploadStatePresentation(state) {
+      switch (state) {
+        case 'uploaded':
+          return {
+            label: 'Uploaded',
+            badgeClass: 'text-bg-success',
+            progressClass: 'bg-success'
+          };
+        case 'failed':
+          return {
+            label: 'Failed',
+            badgeClass: 'text-bg-danger',
+            progressClass: 'bg-danger'
+          };
+        case 'uploading':
+          return {
+            label: 'Uploading',
+            badgeClass: 'text-bg-warning',
+            progressClass: 'bg-warning progress-bar-striped progress-bar-animated'
+          };
+        default:
+          return {
+            label: 'Queued',
+            badgeClass: 'text-bg-secondary',
+            progressClass: 'bg-secondary progress-bar-striped progress-bar-animated'
+          };
+      }
+    }
+    function formatUploadMessage(item) {
+      if (item.status === 'failed' && item.error) {
+        return item.error;
+      }
+      if (item.status === 'uploaded') {
+        return 'Upload completed successfully.';
+      }
+      if (item.status === 'uploading') {
+        return item.progress + '% uploaded';
+      }
+      return 'Waiting to upload...';
+    }
+    function renderUploadQueue() {
+      uploadQueue.innerHTML = '';
+      uploadItems.forEach(function (item) {
+        var presentation = getUploadStatePresentation(item.status);
+        var card = document.createElement('div');
+        card.className = 'border rounded px-2 py-2 bg-white';
+        var header = document.createElement('div');
+        header.className = 'd-flex justify-content-between align-items-start gap-2';
+        var fileDetails = document.createElement('div');
+        fileDetails.className = 'flex-grow-1 min-w-0';
+        fileDetails.appendChild(createTextElement('div', 'fw-semibold small', item.fileName));
+        fileDetails.appendChild(createTextElement('div', 'text-muted small', formatFileSize(item.fileSize)));
+        var badge = createTextElement('span', 'badge ' + presentation.badgeClass, presentation.label);
+        header.appendChild(fileDetails);
+        header.appendChild(badge);
+        var progress = document.createElement('div');
+        progress.className = 'progress mt-2';
+        progress.setAttribute('role', 'progressbar');
+        progress.setAttribute('aria-valuemin', '0');
+        progress.setAttribute('aria-valuemax', '100');
+        progress.setAttribute('aria-valuenow', item.progress.toString());
+        var progressState = document.createElement('div');
+        progressState.className = 'progress-bar ' + presentation.progressClass;
+        progressState.style.width = item.progress + '%';
+        progressState.textContent = item.progress + '%';
+        progress.appendChild(progressState);
+        var message = createTextElement('div', item.status === 'failed' ? 'small text-danger mt-2' : 'small text-muted mt-2', formatUploadMessage(item));
+        card.appendChild(header);
+        card.appendChild(progress);
+        card.appendChild(message);
+        uploadQueue.appendChild(card);
+      });
+    }
+    function createUploadItem(file, index) {
+      return {
+        id: file.name + '::' + file.size + '::' + file.lastModified + '::' + index + '::' + Date.now(),
+        fileName: file.name,
+        fileSize: file.size,
+        status: 'queued',
+        progress: 0,
+        error: null
+      };
+    }
+    function updateUploadItem(itemId, updates) {
+      uploadItems = uploadItems.map(function (item) {
+        return item.id === itemId ? Object.assign({}, item, updates) : item;
+      });
+      renderUploadQueue();
+    }
+    function removeUploadItems(predicate) {
+      uploadItems = uploadItems.filter(function (item) {
+        return !predicate(item);
+      });
+      renderUploadQueue();
+    }
+    function uploadSingleDocument(file, itemIdToUpdate, fileIndex, totalFiles) {
+      return new Promise(function (resolve, reject) {
+        var formData = new FormData();
+        formData.append('chatInteractionId', config.itemId);
+        formData.append('files', file);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', config.uploadDocumentUrl, true);
+        xhr.upload.addEventListener('progress', function (event) {
+          if (!event.lengthComputable) {
+            return;
+          }
+          var fileProgress = Math.round(event.loaded / event.total * 100);
+          updateUploadItem(itemIdToUpdate, {
+            status: 'uploading',
+            progress: fileProgress
+          });
+          var overallProgress = (fileIndex + event.loaded / event.total) / totalFiles * 100;
+          showUploadProgress(overallProgress, 'Uploading ' + (fileIndex + 1) + ' of ' + totalFiles, 'progress-bar-striped progress-bar-animated');
+        });
+        xhr.addEventListener('load', function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (error) {
+              reject(new Error('Upload failed: invalid server response.'));
+            }
+            return;
+          }
+          reject(new Error((xhr.responseText || 'Upload failed.').trim()));
+        });
+        xhr.addEventListener('error', function () {
+          reject(new Error('Upload failed. Please check your connection and try again.'));
+        });
+        xhr.send(formData);
+      });
+    }
+    function uploadDocuments(_x) {
+      return _uploadDocuments.apply(this, arguments);
+    }
+    function _uploadDocuments() {
+      _uploadDocuments = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(files) {
+        var filesToUpload, duplicateItems, knownDocumentKeys, pendingItems, uploadedCount, failedUploads, i, file, pendingItem, result, uploaded, failed, missingUploadMessage, failedMessage, errorMessage, _t2, _t3;
+        return _regenerator().w(function (_context6) {
+          while (1) switch (_context6.p = _context6.n) {
+            case 0:
+              if (!(!config.uploadDocumentUrl || !files || files.length === 0)) {
+                _context6.n = 1;
+                break;
+              }
+              return _context6.a(2);
+            case 1:
+              if (!isUploadingDocuments) {
+                _context6.n = 2;
+                break;
+              }
+              showUploadStatus('A document upload is already in progress.', 'text-warning');
+              return _context6.a(2);
+            case 2:
+              isUploadingDocuments = true;
+              filesToUpload = [];
+              duplicateItems = [];
+              knownDocumentKeys = new Set(interactionDocuments.map(function (document) {
+                return getDocumentKey(document.fileName, document.fileSize);
+              }));
+              Array.from(files).forEach(function (file) {
+                if (isDuplicateFile(file, knownDocumentKeys)) {
+                  duplicateItems.push(file);
+                  return;
+                }
+                knownDocumentKeys.add(getDocumentKey(file.name, file.size));
+                filesToUpload.push(file);
+              });
+              if (duplicateItems.length > 0) {
+                uploadItems = uploadItems.concat(duplicateItems.map(function (file, index) {
+                  return Object.assign(createUploadItem(file, index), {
+                    status: 'failed',
+                    progress: 100,
+                    error: 'This document is already attached.'
+                  });
+                }));
+                renderUploadQueue();
+              }
+              if (!(filesToUpload.length === 0)) {
+                _context6.n = 3;
+                break;
+              }
+              isUploadingDocuments = false;
+              showUploadStatus(duplicateItems.map(function (file) {
+                return file.name + ': This document is already attached.';
+              }).join(' | '), 'text-warning');
+              showUploadProgress(null);
+              return _context6.a(2);
+            case 3:
+              pendingItems = filesToUpload.map(createUploadItem);
+              uploadItems = uploadItems.concat(pendingItems);
+              renderUploadQueue();
+              showUploadProgress(0, 'Preparing upload...', 'progress-bar-striped progress-bar-animated');
+              fileInput.disabled = true;
+              _context6.p = 4;
+              uploadedCount = 0;
+              failedUploads = duplicateItems.map(function (file) {
+                return file.name + ': This document is already attached.';
+              });
+              i = 0;
+            case 5:
+              if (!(i < filesToUpload.length)) {
+                _context6.n = 10;
+                break;
+              }
+              file = filesToUpload[i];
+              pendingItem = pendingItems[i];
+              updateUploadItem(pendingItem.id, {
+                status: 'uploading',
+                progress: 0,
+                error: null
+              });
+              showUploadStatus('Uploading ' + (i + 1) + ' of ' + filesToUpload.length + ' document(s)...', 'text-warning');
+              _context6.p = 6;
+              _context6.n = 7;
+              return uploadSingleDocument(file, pendingItem.id, i, filesToUpload.length);
+            case 7:
+              result = _context6.v;
+              uploaded = (Array.isArray(result.uploaded) ? result.uploaded : []).map(normalizeDocumentInfo).filter(function (document) {
+                return document && document.documentId;
+              });
+              failed = Array.isArray(result.failed) ? result.failed : [];
+              if (uploaded.length > 0) {
+                uploadedCount += uploaded.length;
+                interactionDocuments = interactionDocuments.concat(uploaded);
+                updateUploadItem(pendingItem.id, {
+                  status: 'uploaded',
+                  progress: 100,
+                  error: null
+                });
+              } else {
+                missingUploadMessage = failed.length > 0 ? failed.map(function (entry) {
+                  return entry.fileName + ': ' + entry.error;
+                }).join(' | ') : 'The server did not confirm that the file was uploaded.';
+                if (failed.length === 0) {
+                  failedUploads.push(missingUploadMessage);
+                }
+                updateUploadItem(pendingItem.id, {
+                  status: 'failed',
+                  progress: 100,
+                  error: missingUploadMessage
+                });
+              }
+              if (failed.length > 0) {
+                failedMessage = failed.map(function (entry) {
+                  return entry.fileName + ': ' + entry.error;
+                }).join(' | ');
+                failedUploads.push(failedMessage);
+                updateUploadItem(pendingItem.id, {
+                  status: 'failed',
+                  progress: 100,
+                  error: failedMessage
+                });
+              }
+              _context6.n = 9;
+              break;
+            case 8:
+              _context6.p = 8;
+              _t2 = _context6.v;
+              errorMessage = _t2 && _t2.message ? _t2.message : 'Upload failed. Please try again.';
+              console.error('Upload failed:', _t2);
+              failedUploads.push(file.name + ': ' + errorMessage);
+              updateUploadItem(pendingItem.id, {
+                status: 'failed',
+                progress: pendingItem.progress || 0,
+                error: errorMessage
+              });
+            case 9:
+              i++;
+              _context6.n = 5;
+              break;
+            case 10:
+              renderDocuments();
+              if (!(failedUploads.length > 0)) {
+                _context6.n = 11;
+                break;
+              }
+              removeUploadItems(function (item) {
+                return item.status === 'uploaded';
+              });
+              showUploadStatus((uploadedCount > 0 ? 'Uploaded ' + uploadedCount + ' document(s). ' : '') + failedUploads.join(' | '), uploadedCount > 0 ? 'text-warning' : 'text-danger');
+              showUploadProgress(null);
+              return _context6.a(2);
+            case 11:
+              removeUploadItems(function () {
+                return true;
+              });
+              showUploadStatus('Uploaded ' + uploadedCount + ' document(s).', 'text-success');
+              showUploadProgress(null);
+              _context6.n = 13;
+              break;
+            case 12:
+              _context6.p = 12;
+              _t3 = _context6.v;
+              console.error('Upload failed:', _t3);
+              showUploadStatus('Upload failed. Please try again.', 'text-danger');
+              showUploadProgress(null);
+            case 13:
+              _context6.p = 13;
+              isUploadingDocuments = false;
+              fileInput.disabled = false;
+              fileInput.value = '';
+              return _context6.f(13);
+            case 14:
+              return _context6.a(2);
+          }
+        }, _callee6, null, [[6, 8], [4, 12, 13, 14]]);
+      }));
+      return _uploadDocuments.apply(this, arguments);
+    }
+    function removeDocument(_x2) {
+      return _removeDocument.apply(this, arguments);
+    }
+    function _removeDocument() {
+      _removeDocument = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(documentId) {
+        var response, result, serverDocuments, _t4, _t5;
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.p = _context7.n) {
+            case 0:
+              if (!(!config.removeDocumentUrl || !documentId || !window.confirm('Remove this document?'))) {
+                _context7.n = 1;
+                break;
+              }
+              return _context7.a(2);
+            case 1:
+              _context7.p = 1;
+              _context7.n = 2;
+              return fetch(config.removeDocumentUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  itemId: config.itemId,
+                  documentId: documentId
+                })
+              });
+            case 2:
+              response = _context7.v;
+              if (response.ok) {
+                _context7.n = 4;
+                break;
+              }
+              _t4 = console;
+              _context7.n = 3;
+              return response.text();
+            case 3:
+              _t4.error.call(_t4, 'Failed to remove document:', _context7.v);
+              showUploadStatus('Failed to remove document.', 'text-danger');
+              return _context7.a(2);
+            case 4:
+              _context7.n = 5;
+              return response.json();
+            case 5:
+              result = _context7.v;
+              serverDocuments = (Array.isArray(result.documents) ? result.documents : []).map(normalizeDocumentInfo).filter(function (document) {
+                return document && document.documentId;
+              });
+              interactionDocuments = serverDocuments.length > 0 ? serverDocuments : interactionDocuments.filter(function (document) {
+                return document.documentId !== documentId;
+              });
+              renderDocuments();
+              showUploadStatus('Document removed.', 'text-success');
+              _context7.n = 7;
+              break;
+            case 6:
+              _context7.p = 6;
+              _t5 = _context7.v;
+              console.error('Remove failed:', _t5);
+              showUploadStatus('Failed to remove document.', 'text-danger');
+            case 7:
+              return _context7.a(2);
+          }
+        }, _callee7, null, [[1, 6]]);
+      }));
+      return _removeDocument.apply(this, arguments);
+    }
+    var onFileInputChange = function onFileInputChange(event) {
+      var selectedFiles = event.target.files ? Array.from(event.target.files) : [];
+      uploadDocuments(selectedFiles);
+    };
+    fileInput.addEventListener('change', onFileInputChange);
+    fileInput[managerStateKey] = {
+      dispose: function dispose() {
+        fileInput.removeEventListener('change', onFileInputChange);
+      }
+    };
+    renderDocuments();
+    renderUploadQueue();
+    showUploadStatus(null);
+    showUploadProgress(null);
+  }
+  return {
+    initialize: initialize
+  };
+}();
 
-// Global function for downloading charts as images
-window.downloadChart = function (chartId) {
-  var canvas = document.getElementById(chartId);
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
   if (!canvas) {
     console.error('Chart canvas not found:', chartId);
     return;
   }
-
-  // Create a temporary link element
   var link = document.createElement('a');
   link.download = 'chart-' + chartId + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
 // Intercept download clicks for data-URI images and convert to blob downloads.
 document.addEventListener('click', function (e) {
@@ -1921,3 +2739,4 @@ document.addEventListener('click', function (e) {
     console.error('Failed to download image:', err);
   });
 });
+//# sourceMappingURL=chat-interaction.js.map

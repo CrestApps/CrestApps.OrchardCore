@@ -3,11 +3,7 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+var _excluded = ["placeholder"];
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
@@ -16,16 +12,22 @@ function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArra
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 window.openAIChatManager = function () {
   // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
     // UI defaults for generated media
     generatedImageAltText: 'Generated Image',
     generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 900,
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
@@ -35,8 +37,26 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
-    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
+    widget: {
+      chatWidgetContainer: null,
+      chatWidgetStateName: null,
+      chatHistorySection: null,
+      showHistoryButton: null,
+      closeHistoryButton: null,
+      newChatButton: null,
+      toggleButtonSelector: null,
+      resetSizeButtonSelector: null,
+      dragHandleSelector: '.ai-chat-widget-header',
+      enableDragging: true,
+      enableResizing: true,
+      persistLayout: true,
+      defaultWidth: null,
+      defaultHeight: null,
+      minWidth: 320,
+      minHeight: 420
+    },
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                        {{ getAssistantLabel(message) }}\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                            <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                <span v-else>{{ citation.label }}</span>\n                            </li>\n                        </ol>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <span class=\"fa-regular fa-thumbs-up\"></span>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <span class=\"fa-regular fa-thumbs-down\"></span>\n                                    </button>\n                                </span>\n                            </template>\n                            <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message)\" :title=\"copyTitle\">\n                                <span class=\"fa-solid fa-copy\"></span>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <span class=\"fa-solid fa-xmark\"></span>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><span class=\"fa fa-robot\" style=\"display: inline-block;\"></span></span>\n            Assistant\n        </div>\n    "
   };
 
   // Sanitize URLs to prevent javascript: protocol injection.
@@ -54,6 +74,177 @@ window.openAIChatManager = function () {
     var span = document.createElement('span');
     span.textContent = text;
     return span.innerHTML;
+  }
+  function parsePixelValue(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value !== 'string') {
+      return null;
+    }
+    var parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  function normalizeReference(reference) {
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference;
+    if (!reference || _typeof(reference) !== 'object') {
+      return null;
+    }
+    var normalized = Object.assign({}, reference);
+    normalized.index = (_ref = (_normalized$index = normalized.index) !== null && _normalized$index !== void 0 ? _normalized$index : normalized.Index) !== null && _ref !== void 0 ? _ref : 0;
+    normalized.text = (_ref2 = (_normalized$text = normalized.text) !== null && _normalized$text !== void 0 ? _normalized$text : normalized.Text) !== null && _ref2 !== void 0 ? _ref2 : null;
+    normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
+    normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
+    return normalized;
+  }
+  function isDownloadCitationReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return false;
+    }
+    if (typeof reference.referenceType === 'string' && reference.referenceType.toLowerCase() === 'document') {
+      return true;
+    }
+    if (typeof reference.link === 'string' && /\/ai\/documents\/.+\/download(?:$|\?)/i.test(reference.link)) {
+      return true;
+    }
+    return false;
+  }
+  function normalizeReferences(references) {
+    if (!references || _typeof(references) !== 'object') {
+      return {};
+    }
+    var normalized = {};
+    for (var _i = 0, _Object$entries = Object.entries(references); _i < _Object$entries.length; _i++) {
+      var _normalizeReference;
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        key = _Object$entries$_i[0],
+        value = _Object$entries$_i[1];
+      normalized[key] = (_normalizeReference = normalizeReference(value)) !== null && _normalizeReference !== void 0 ? _normalizeReference : {};
+    }
+    return normalized;
+  }
+  function getCitationLabel(reference, key) {
+    return reference.title || reference.text || key;
+  }
+  function buildCitationDisplay(content, references) {
+    var processedContent = (content || '').trim();
+    var messageReferences = normalizeReferences(references);
+    if (!processedContent || !Object.keys(messageReferences).length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    var citedRefs = Object.entries(messageReferences).filter(function (_ref6) {
+      var _ref7 = _slicedToArray(_ref6, 1),
+        key = _ref7[0];
+      return processedContent.includes(key);
+    });
+    if (!citedRefs.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    citedRefs.sort(function (_ref8, _ref9) {
+      var _ref0 = _slicedToArray(_ref8, 2),
+        a = _ref0[1];
+      var _ref1 = _slicedToArray(_ref9, 2),
+        b = _ref1[1];
+      return a.index - b.index;
+    });
+    var citations = [];
+    var displayIndex = 1;
+    var _iterator = _createForOfIteratorHelper(citedRefs),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        processedContent = processedContent.replaceAll(key, placeholder);
+        citations.push({
+          referenceKey: key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(value, key),
+          link: value.link || null,
+          isDownload: isDownloadCitationReference(value),
+          placeholder: placeholder
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
+      var citation = _citations[_i2];
+      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    }
+    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+    return {
+      content: processedContent,
+      citations: citations.map(function (_ref10) {
+        var placeholder = _ref10.placeholder,
+          citation = _objectWithoutProperties(_ref10, _excluded);
+        return citation;
+      })
+    };
+  }
+  function buildCopyContent(content, citations) {
+    var copyContent = (content || '').trim();
+    if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
+      return copyContent;
+    }
+    var _iterator2 = _createForOfIteratorHelper(citations),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var citation = _step2.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator3 = _createForOfIteratorHelper(citations),
+      _step3;
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var _citation = _step3.value;
+        copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
+        if (_citation.link) {
+          copyContent += " - ".concat(_citation.link);
+        }
+        copyContent += '\n';
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    return copyContent.trimEnd();
+  }
+  function updateMessagePresentation(message, references) {
+    var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
+    var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
+    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    message.rawContent = rawContent;
+    message.content = rawContent;
+    message.displayContent = citationDisplay.content;
+    message.references = messageReferences;
+    message.citationReferences = citationDisplay.citations;
+    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
+    return message;
   }
   var renderer = new marked.Renderer();
 
@@ -85,7 +276,7 @@ window.openAIChatManager = function () {
       highlighted = escapeHtmlEntities(code);
     }
     var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><span class=\"fa-solid fa-code\"></span> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><span class=\"fa-regular fa-copy\"></span></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -95,7 +286,7 @@ window.openAIChatManager = function () {
     if (!src) return '';
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </div>\n    </div>");
+    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <span class=\"fa-solid fa-download\"></span>\n            </a>\n        </div>\n    </div>");
   };
 
   // Chart counter for unique IDs
@@ -103,9 +294,13 @@ window.openAIChatManager = function () {
 
   // Collector for charts discovered during marked parsing.
   var _pendingCharts = [];
+
+  // Global chart config map: any page (e.g., Chat Interactions) that uses
+  // the shared marked instance can call window.renderPendingCharts() after
+  // its DOM update to render charts it didn't create itself.
+  window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
-    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<span class=\"fa-solid fa-download\"></span> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -136,6 +331,7 @@ window.openAIChatManager = function () {
           chartId: token.chartId,
           config: token.json
         });
+        window.__chartConfigs[token.chartId] = token.json;
         return createChartHtml(token.chartId);
       }
     }]
@@ -207,43 +403,83 @@ window.openAIChatManager = function () {
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
-    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
-      _step;
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var c = _step.value;
-        var canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-          continue;
-        }
-        if (typeof Chart === 'undefined') {
-          console.error('Chart.js is not available on the page.');
-          continue;
-        }
-        try {
-          var _cfg$options;
-          // Destroy existing chart instance if re-rendering
-          if (canvas._chartInstance) {
-            canvas._chartInstance.destroy();
-          }
-          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
-          cfg.options.responsive = true;
-          cfg.options.maintainAspectRatio = false;
-          canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-          console.error('Error creating chart:', e);
-        }
-      }
 
-      // Prevent re-render work
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
     message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator4 = _createForOfIteratorHelper(charts),
+        _step4;
+      try {
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var c = _step4.value;
+          renderChartOnCanvas(c.chartId, c.config);
+        }
+      } catch (err) {
+        _iterator4.e(err);
+      } finally {
+        _iterator4.f();
+      }
+    });
   }
+  function renderChartOnCanvas(chartId, config) {
+    var canvas = document.getElementById(chartId);
+    if (!canvas) {
+      return false;
+    }
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+      return false;
+    }
+
+    // When the canvas is inside a hidden container (e.g., a widget panel with
+    // display:none), it has zero dimensions and Chart.js cannot render correctly.
+    // Keep the config in __chartConfigs so renderPendingCharts() can retry later
+    // once the container becomes visible.
+    if (canvas.offsetParent === null) {
+      window.__chartConfigs[chartId] = config;
+      return false;
+    }
+    try {
+      var _cfg$options, _cfg$options2, _cfg$options2$aspectR;
+      if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+      }
+      var cfg = typeof config === 'string' ? JSON.parse(config) : config;
+      (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+      cfg.options.responsive = true;
+      cfg.options.maintainAspectRatio = true;
+      (_cfg$options2$aspectR = (_cfg$options2 = cfg.options).aspectRatio) !== null && _cfg$options2$aspectR !== void 0 ? _cfg$options2$aspectR : _cfg$options2.aspectRatio = 4 / 3;
+      canvas._chartInstance = new Chart(canvas, cfg);
+      delete window.__chartConfigs[chartId];
+      return true;
+    } catch (e) {
+      console.error('Error creating chart:', e);
+      return false;
+    }
+  }
+
+  // Global function: renders any chart canvases whose configs are in the
+  // global __chartConfigs map. Called by pages (e.g., Chat Interactions)
+  // that share the marked instance but have their own rendering pipeline.
+  window.renderPendingCharts = function () {
+    if (typeof Chart === 'undefined') {
+      return;
+    }
+    var configs = window.__chartConfigs;
+    if (!configs) {
+      return;
+    }
+    requestAnimationFrame(function () {
+      for (var _i3 = 0, _Object$keys = Object.keys(configs); _i3 < _Object$keys.length; _i3++) {
+        var chartId = _Object$keys[_i3];
+        renderChartOnCanvas(chartId, configs[chartId]);
+      }
+    });
+  };
 
   // Parse markdown content via marked (which natively handles [chart:...] markers
   // through the registered extension) and collect pending chart configs for later
@@ -255,11 +491,15 @@ window.openAIChatManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['canvas'],
       ADD_ATTR: ['target']
     });
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
+    config.widget = Object.assign({}, defaultConfig.widget || {}, instanceConfig && instanceConfig.widget ? instanceConfig.widget : {});
+    var hasWidgetConfig = !!(instanceConfig && instanceConfig.widget && instanceConfig.widget.chatWidgetContainer && instanceConfig.widget.chatWidgetStateName);
+    var widgetBehavior = window.openAIChatWidgetBehavior || null;
     // Keep defaultConfig in sync so renderers use overridden values
     defaultConfig = config;
     if (!config.signalRHubUrl) {
@@ -282,7 +522,7 @@ window.openAIChatManager = function () {
       console.error('The sendButtonElementSelector is required.');
       return;
     }
-    var app = Vue.createApp({
+    var appDefinition = {
       data: function data() {
         return {
           inputElement: null,
@@ -291,10 +531,6 @@ window.openAIChatManager = function () {
           placeholder: null,
           isSessionStarted: false,
           isPlaceholderVisible: true,
-          chatWidgetStateName: null,
-          chatWidgetStateSession: null,
-          chatHistorySection: null,
-          widgetIsInitialized: false,
           isStreaming: false,
           isNavigatingAway: false,
           autoScroll: true,
@@ -304,6 +540,8 @@ window.openAIChatManager = function () {
           prompt: '',
           documents: config.existingDocuments || [],
           isUploading: false,
+          isDocumentOperationPending: false,
+          documentOperationQueue: null,
           uploadErrors: [],
           isDragOver: false,
           documentBar: null,
@@ -318,18 +556,26 @@ window.openAIChatManager = function () {
           preRecordingPrompt: '',
           micButton: null,
           speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
-          textToSpeechEnabled: config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation' || !!config.textToSpeechEnabled,
           ttsVoiceName: config.ttsVoiceName || null,
           audioChunks: [],
           audioPlayQueue: [],
           isPlayingAudio: false,
           currentAudioElement: null,
+          currentAudioUrl: null,
           ttsButton: null,
+          ttsPlayingMessageIndex: -1,
+          ttsAudioCache: {},
+          ttsInstanceId: 'ai-chat-' + Math.random().toString(36).slice(2),
+          singleResponseMode: !!config.singleResponseMode,
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false,
-          selectedResponseHandler: '',
-          responseHandlers: config.responseHandlers || []
+          notificationDismissTimers: {},
+          pendingSessionPromise: null,
+          pendingSessionResolver: null,
+          pendingSessionRejector: null,
+          pendingSessionTimeoutId: null
         };
       },
       computed: {
@@ -370,210 +616,278 @@ window.openAIChatManager = function () {
           var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
           if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
           if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            this.uploadFiles(e.dataTransfer.files);
+            this.uploadFiles(Array.from(e.dataTransfer.files));
           }
         },
         triggerFileInput: function triggerFileInput() {
-          if (!config.sessionDocumentsEnabled) return;
+          if (!config.sessionDocumentsEnabled || this.isDocumentOperationPending) return;
           var fileInput = document.getElementById('ai-chat-doc-input');
           if (fileInput) fileInput.click();
         },
         handleFileInputChange: function handleFileInputChange(e) {
-          var files = e.target.files;
+          var files = e.target.files ? Array.from(e.target.files) : [];
           if (files && files.length > 0) {
             this.uploadFiles(files);
           }
           e.target.value = '';
         },
-        uploadFiles: function uploadFiles(files) {
-          var _this = this;
-          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-            var sessionId, profileId, formData, i, response, errorText, result, j, _t;
+        queueDocumentOperation: function queueDocumentOperation(operation) {
+          var self = this;
+          var previousOperation = this.documentOperationQueue || Promise.resolve();
+          var nextOperation = previousOperation["catch"](function () {}).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
             return _regenerator().w(function (_context) {
               while (1) switch (_context.p = _context.n) {
                 case 0:
-                  if (config.uploadDocumentUrl) {
-                    _context.n = 1;
-                    break;
-                  }
-                  return _context.a(2);
-                case 1:
-                  sessionId = _this.getSessionId();
-                  profileId = _this.getProfileId();
-                  if (!(!sessionId && !profileId)) {
-                    _context.n = 2;
-                    break;
-                  }
-                  console.warn('Cannot upload documents without a session or profile.');
-                  return _context.a(2);
+                  self.isDocumentOperationPending = true;
+                  _context.p = 1;
+                  _context.n = 2;
+                  return operation();
                 case 2:
-                  _this.isUploading = true;
-                  _this.uploadErrors = [];
-                  _this.renderDocumentBar();
+                  return _context.a(2, _context.v);
+                case 3:
                   _context.p = 3;
-                  formData = new FormData();
-                  if (sessionId) {
-                    formData.append('sessionId', sessionId);
-                  } else {
-                    formData.append('profileId', profileId);
-                  }
-                  for (i = 0; i < files.length; i++) {
-                    formData.append('files', files[i]);
-                  }
-                  _context.n = 4;
-                  return fetch(config.uploadDocumentUrl, {
-                    method: 'POST',
-                    body: formData
-                  });
+                  self.isDocumentOperationPending = false;
+                  return _context.f(3);
                 case 4:
-                  response = _context.v;
-                  if (response.ok) {
-                    _context.n = 6;
-                    break;
-                  }
-                  _context.n = 5;
-                  return response.text();
-                case 5:
-                  errorText = _context.v;
-                  console.error('Upload failed:', errorText);
-                  _this.uploadErrors = [{
-                    fileName: '',
-                    error: 'Upload failed. Please try again.'
-                  }];
-                  return _context.a(2);
-                case 6:
-                  _context.n = 7;
-                  return response.json();
-                case 7:
-                  result = _context.v;
-                  // If the server created a new session, initialize it.
-                  if (result.sessionId && !sessionId) {
-                    _this.initializeSession(result.sessionId);
-                  }
-                  if (result.uploaded && result.uploaded.length > 0) {
-                    for (j = 0; j < result.uploaded.length; j++) {
-                      _this.documents.push(result.uploaded[j]);
-                    }
-                  }
-                  if (result.failed && result.failed.length > 0) {
-                    _this.uploadErrors = result.failed;
-                  }
-                  _context.n = 9;
-                  break;
-                case 8:
-                  _context.p = 8;
-                  _t = _context.v;
-                  console.error('Upload error:', _t);
-                  _this.uploadErrors = [{
-                    fileName: '',
-                    error: 'Upload failed. Please try again.'
-                  }];
-                case 9:
-                  _context.p = 9;
-                  _this.isUploading = false;
-                  _this.renderDocumentBar();
-                  return _context.f(9);
-                case 10:
                   return _context.a(2);
               }
-            }, _callee, null, [[3, 8, 9, 10]]);
+            }, _callee, null, [[1,, 3, 4]]);
+          })));
+          this.documentOperationQueue = nextOperation["finally"](function () {
+            if (self.documentOperationQueue === nextOperation) {
+              self.documentOperationQueue = null;
+            }
+          });
+          return this.documentOperationQueue;
+        },
+        uploadFiles: function uploadFiles(files) {
+          var _this = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+            var filesToUpload;
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.n) {
+                case 0:
+                  if (config.uploadDocumentUrl) {
+                    _context3.n = 1;
+                    break;
+                  }
+                  return _context3.a(2);
+                case 1:
+                  filesToUpload = Array.isArray(files) ? files.slice() : Array.from(files || []);
+                  if (!(filesToUpload.length === 0)) {
+                    _context3.n = 2;
+                    break;
+                  }
+                  return _context3.a(2);
+                case 2:
+                  return _context3.a(2, _this.queueDocumentOperation(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+                    var sessionId, profileId, formData, i, response, errorText, uploadError, result, _t, _t2;
+                    return _regenerator().w(function (_context2) {
+                      while (1) switch (_context2.p = _context2.n) {
+                        case 0:
+                          sessionId = _this.getSessionId();
+                          profileId = _this.getProfileId();
+                          if (sessionId) {
+                            _context2.n = 4;
+                            break;
+                          }
+                          _context2.p = 1;
+                          _context2.n = 2;
+                          return _this.ensureSessionForDocuments(profileId);
+                        case 2:
+                          sessionId = _context2.v;
+                          _context2.n = 4;
+                          break;
+                        case 3:
+                          _context2.p = 3;
+                          _t = _context2.v;
+                          console.error('Failed to create a chat session for document upload:', _t);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Could not create a chat session for the upload.'
+                          }];
+                          _this.renderDocumentBar();
+                          return _context2.a(2);
+                        case 4:
+                          if (sessionId) {
+                            _context2.n = 5;
+                            break;
+                          }
+                          console.warn('Cannot upload documents without a session or profile.');
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Could not create a chat session for the upload.'
+                          }];
+                          _this.renderDocumentBar();
+                          return _context2.a(2);
+                        case 5:
+                          _this.isUploading = true;
+                          _this.uploadErrors = [];
+                          _this.renderDocumentBar();
+                          _context2.p = 6;
+                          formData = new FormData();
+                          formData.append('sessionId', sessionId);
+                          for (i = 0; i < filesToUpload.length; i++) {
+                            formData.append('files', filesToUpload[i]);
+                          }
+                          _context2.n = 7;
+                          return fetch(config.uploadDocumentUrl, {
+                            method: 'POST',
+                            body: formData
+                          });
+                        case 7:
+                          response = _context2.v;
+                          if (response.ok) {
+                            _context2.n = 9;
+                            break;
+                          }
+                          _context2.n = 8;
+                          return response.text();
+                        case 8:
+                          errorText = _context2.v;
+                          uploadError = _this.extractReadableErrorMessage(errorText, 'Upload failed. Please try again.');
+                          console.error('Upload failed:', errorText);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: uploadError
+                          }];
+                          return _context2.a(2);
+                        case 9:
+                          _context2.n = 10;
+                          return response.json();
+                        case 10:
+                          result = _context2.v;
+                          if (result.sessionId && result.sessionId !== _this.getSessionId()) {
+                            _this.initializeSession(result.sessionId);
+                          }
+                          if (Array.isArray(result.documents)) {
+                            _this.documents = result.documents;
+                          } else if (result.uploaded && result.uploaded.length > 0) {
+                            _this.documents = _this.documents.concat(result.uploaded);
+                          }
+                          if (result.failed && result.failed.length > 0) {
+                            _this.uploadErrors = result.failed;
+                          }
+                          _context2.n = 12;
+                          break;
+                        case 11:
+                          _context2.p = 11;
+                          _t2 = _context2.v;
+                          console.error('Upload error:', _t2);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Upload failed. Please try again.'
+                          }];
+                          if (_this.getSessionId()) {
+                            _this.reloadCurrentSession();
+                          }
+                        case 12:
+                          _context2.p = 12;
+                          _this.isUploading = false;
+                          _this.renderDocumentBar();
+                          return _context2.f(12);
+                        case 13:
+                          return _context2.a(2);
+                      }
+                    }, _callee2, null, [[6, 11, 12, 13], [1, 3]]);
+                  }))));
+              }
+            }, _callee3);
           }))();
         },
         removeDocument: function removeDocument(doc) {
           var _this2 = this;
-          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-            var sessionId, response, idx, errorText, _t2;
-            return _regenerator().w(function (_context2) {
-              while (1) switch (_context2.p = _context2.n) {
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+            return _regenerator().w(function (_context5) {
+              while (1) switch (_context5.n) {
                 case 0:
                   if (config.removeDocumentUrl) {
-                    _context2.n = 1;
+                    _context5.n = 1;
                     break;
                   }
-                  return _context2.a(2);
+                  return _context5.a(2);
                 case 1:
-                  _context2.p = 1;
-                  sessionId = _this2.getSessionId();
-                  _context2.n = 2;
-                  return fetch(config.removeDocumentUrl, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                      itemId: sessionId,
-                      documentId: doc.documentId
-                    })
-                  });
-                case 2:
-                  response = _context2.v;
-                  if (!response.ok) {
-                    _context2.n = 3;
-                    break;
-                  }
-                  idx = _this2.documents.indexOf(doc);
-                  if (idx > -1) _this2.documents.splice(idx, 1);
-                  _context2.n = 5;
-                  break;
-                case 3:
-                  _context2.n = 4;
-                  return response.text();
-                case 4:
-                  errorText = _context2.v;
-                  console.error('Failed to remove document:', response.status, errorText);
-                case 5:
-                  _context2.n = 7;
-                  break;
-                case 6:
-                  _context2.p = 6;
-                  _t2 = _context2.v;
-                  console.error('Remove document error:', _t2);
-                case 7:
-                  return _context2.a(2);
+                  return _context5.a(2, _this2.queueDocumentOperation(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                    var sessionId, response, result, idx, errorText, removeError, _t3;
+                    return _regenerator().w(function (_context4) {
+                      while (1) switch (_context4.p = _context4.n) {
+                        case 0:
+                          _context4.p = 0;
+                          sessionId = _this2.getSessionId();
+                          _context4.n = 1;
+                          return fetch(config.removeDocumentUrl, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              itemId: sessionId,
+                              documentId: doc.documentId
+                            })
+                          });
+                        case 1:
+                          response = _context4.v;
+                          if (!response.ok) {
+                            _context4.n = 3;
+                            break;
+                          }
+                          _context4.n = 2;
+                          return response.json();
+                        case 2:
+                          result = _context4.v;
+                          if (Array.isArray(result.documents)) {
+                            _this2.documents = result.documents;
+                          } else {
+                            idx = _this2.documents.indexOf(doc);
+                            if (idx > -1) {
+                              _this2.documents.splice(idx, 1);
+                            }
+                          }
+                          _context4.n = 5;
+                          break;
+                        case 3:
+                          _context4.n = 4;
+                          return response.text();
+                        case 4:
+                          errorText = _context4.v;
+                          removeError = _this2.extractReadableErrorMessage(errorText, 'Failed to remove document. Please try again.');
+                          console.error('Failed to remove document:', response.status, errorText);
+                          _this2.uploadErrors = [{
+                            fileName: doc.fileName || '',
+                            error: removeError
+                          }];
+                          if (sessionId) {
+                            _this2.reloadCurrentSession();
+                          }
+                          _this2.renderDocumentBar();
+                        case 5:
+                          _context4.n = 7;
+                          break;
+                        case 6:
+                          _context4.p = 6;
+                          _t3 = _context4.v;
+                          console.error('Remove document error:', _t3);
+                          _this2.uploadErrors = [{
+                            fileName: doc.fileName || '',
+                            error: 'Failed to remove document. Please try again.'
+                          }];
+                          if (_this2.getSessionId()) {
+                            _this2.reloadCurrentSession();
+                          }
+                          _this2.renderDocumentBar();
+                        case 7:
+                          return _context4.a(2);
+                      }
+                    }, _callee4, null, [[0, 6]]);
+                  }))));
               }
-            }, _callee2, null, [[1, 6]]);
+            }, _callee5);
           }))();
         },
         formatFileSize: function formatFileSize(bytes) {
           if (bytes < 1024) return bytes + ' B';
           if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
           return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        },
-        renderHandlerSelector: function renderHandlerSelector() {
-          if (!this.placeholder || this.responseHandlers.length === 0) {
-            return;
-          }
-          var existing = this.placeholder.querySelector('.ai-chat-handler-selector');
-          if (existing) {
-            return;
-          }
-          var container = document.createElement('div');
-          container.className = 'ai-chat-handler-selector mt-2';
-          container.style.cssText = 'font-size: 0.85rem;';
-          var label = document.createElement('label');
-          label.className = 'form-label mb-1';
-          label.style.fontSize = '0.8rem';
-          label.textContent = 'Response Handler';
-          var select = document.createElement('select');
-          select.className = 'form-select form-select-sm';
-          var defaultOption = document.createElement('option');
-          defaultOption.value = '';
-          defaultOption.textContent = 'Default (AI)';
-          select.appendChild(defaultOption);
-          for (var i = 0; i < this.responseHandlers.length; i++) {
-            var handler = this.responseHandlers[i];
-            var option = document.createElement('option');
-            option.value = handler.name;
-            option.textContent = handler.name;
-            select.appendChild(option);
-          }
-          var self = this;
-          select.addEventListener('change', function () {
-            self.selectedResponseHandler = this.value;
-          });
-          container.appendChild(label);
-          container.appendChild(select);
-          this.placeholder.appendChild(container);
         },
         renderDocumentBar: function renderDocumentBar() {
           if (!this.documentBar) return;
@@ -582,15 +896,16 @@ window.openAIChatManager = function () {
             return;
           }
           this.documentBar.classList.remove('d-none');
-          var html = '<div class="ai-chat-doc-bar d-flex flex-wrap align-items-center gap-1 p-2">';
+          var html = '<div class="ai-chat-doc-bar p-2">';
+          html += '<div class="d-flex flex-wrap align-items-center gap-1">';
           for (var i = 0; i < this.documents.length; i++) {
             var doc = this.documents[i];
             var name = doc.fileName || 'Document';
             if (name.length > 20) name = name.substring(0, 17) + '...';
             html += '<span class="badge bg-secondary bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml(doc.fileName || '') + '">';
-            html += '<i class="fa-solid fa-file-lines" style="font-size: 0.7rem;"></i> ';
+            html += '<span class="fa-solid fa-file-lines" style="font-size: 0.7rem;"></span> ';
             html += this.escapeHtml(name);
-            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"></button>';
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"' + (this.isDocumentOperationPending ? ' disabled' : '') + '></button>';
             html += '</span>';
           }
           for (var m = 0; m < this.uploadErrors.length; m++) {
@@ -599,7 +914,7 @@ window.openAIChatManager = function () {
             var errorMsg = failedItem.error || 'Upload failed';
             if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
             html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
-            html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+            html += '<span class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></span> ';
             html += this.escapeHtml(failedName);
             html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
             html += '</span>';
@@ -609,12 +924,16 @@ window.openAIChatManager = function () {
             html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
             html += '</span>';
           }
-          html += '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ai-chat-doc-add-btn d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;" title="Attach documents">';
-          html += '<i class="fa-solid fa-paperclip"></i>';
+          html += '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ai-chat-doc-add-btn d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;" title="Attach documents"' + (this.isDocumentOperationPending ? ' disabled' : '') + '>';
+          html += '<span class="fa-solid fa-paperclip"></span>';
           if (this.documents.length === 0 && !this.isUploading) {
             html += ' <span>Attach files</span>';
           }
           html += '</button>';
+          html += '</div>';
+          if (config.supportedExtensionsText) {
+            html += '<div class="small text-muted mt-2">Supported formats: ' + this.escapeHtml(config.supportedExtensionsText) + '</div>';
+          }
           html += '</div>';
           this.documentBar.replaceChildren(DOMPurify.sanitize(html, {
             RETURN_DOM_FRAGMENT: true
@@ -628,6 +947,9 @@ window.openAIChatManager = function () {
               return function (e) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (self.isDocumentOperationPending) {
+                  return;
+                }
                 var docToRemove = self.documents[idx];
                 if (docToRemove) self.removeDocument(docToRemove);
               };
@@ -652,6 +974,9 @@ window.openAIChatManager = function () {
           if (addBtn) {
             addBtn.addEventListener('click', function (e) {
               e.preventDefault();
+              if (self.isDocumentOperationPending) {
+                return;
+              }
               self.triggerFileInput();
             });
           }
@@ -661,21 +986,49 @@ window.openAIChatManager = function () {
           div.textContent = text;
           return div.innerHTML;
         },
+        extractReadableErrorMessage: function extractReadableErrorMessage(errorText, fallbackMessage) {
+          if (!errorText || typeof errorText !== 'string') {
+            return fallbackMessage;
+          }
+          var trimmed = errorText.trim();
+          if (!trimmed) {
+            return fallbackMessage;
+          }
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+              var parsed = JSON.parse(trimmed);
+              var message = (parsed === null || parsed === void 0 ? void 0 : parsed.error) || (parsed === null || parsed === void 0 ? void 0 : parsed.message) || (parsed === null || parsed === void 0 ? void 0 : parsed.title) || (parsed === null || parsed === void 0 ? void 0 : parsed.detail);
+              return typeof message === 'string' && message.trim() ? message.trim() : fallbackMessage;
+            } catch (err) {
+              return fallbackMessage;
+            }
+          }
+          if (/<[^>]+>/.test(trimmed)) {
+            return fallbackMessage;
+          }
+          return trimmed;
+        },
         normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
           if (!appearance) {
             return null;
           }
+          var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
           var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
           var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
           var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
-          if (!icon && !cssClass && !disableStreamingAnimation) {
+          if (!label && !icon && !cssClass && !disableStreamingAnimation) {
             return null;
           }
           return {
+            label: label,
             icon: icon,
             cssClass: cssClass,
             disableStreamingAnimation: disableStreamingAnimation
           };
+        },
+        getAssistantLabel: function getAssistantLabel(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.label ? appearance.label : this.assistantLabel;
         },
         getAssistantRoleClasses: function getAssistantRoleClasses(message) {
           var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
@@ -701,10 +1054,10 @@ window.openAIChatManager = function () {
         },
         startConnection: function startConnection() {
           var _this3 = this;
-          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-            var _t3;
-            return _regenerator().w(function (_context3) {
-              while (1) switch (_context3.p = _context3.n) {
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+            var _t4;
+            return _regenerator().w(function (_context6) {
+              while (1) switch (_context6.p = _context6.n) {
                 case 0:
                   _this3.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
 
@@ -717,6 +1070,7 @@ window.openAIChatManager = function () {
                     _this3.initializeSession(data.sessionId, true);
                     _this3.messages = [];
                     _this3.documents = data.documents || [];
+                    _this3.uploadErrors = [];
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
                       _this3.addMessage(msg);
                       _this3.$nextTick(function () {
@@ -741,13 +1095,8 @@ window.openAIChatManager = function () {
                     if (_this3.isRecording) {
                       _this3.stopRecording();
                     }
-
-                    // If this is a widget with a stale cached session (e.g., profile was deleted),
-                    // clear the cached session and start fresh with the current profile.
-                    if (_this3.widgetIsInitialized && !_this3.isSessionStarted && !_this3._attemptedSessionRecovery) {
-                      _this3._attemptedSessionRecovery = true;
-                      localStorage.removeItem(_this3.chatWidgetStateSession);
-                      _this3.startNewSession();
+                    if (widgetBehavior && typeof widgetBehavior.handleReceiveError === 'function') {
+                      widgetBehavior.handleReceiveError(_this3, error, config);
                     }
                   });
                   _this3.connection.on("MessageRated", function (messageId, userRating) {
@@ -821,7 +1170,7 @@ window.openAIChatManager = function () {
                       _this3.scrollToBottom();
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, appearance) {
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, references, appearance) {
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
@@ -840,7 +1189,8 @@ window.openAIChatManager = function () {
                         htmlContent: "",
                         isStreaming: true,
                         userRating: null,
-                        appearance: _this3.normalizeAssistantAppearance(appearance)
+                        appearance: _this3.normalizeAssistantAppearance(appearance),
+                        references: {}
                       };
                       _this3.messages.push(newMessage);
                       _this3._conversationAssistantMessage = {
@@ -854,19 +1204,22 @@ window.openAIChatManager = function () {
                       if (!msg.appearance) {
                         msg.appearance = _this3.normalizeAssistantAppearance(appearance);
                       }
-                      msg.content = _this3._conversationAssistantMessage.content;
-                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      msg.rawContent = _this3._conversationAssistantMessage.content;
+                      msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                      updateMessagePresentation(msg, msg.references);
                       _this3.$nextTick(function () {
                         renderChartsInMessage(msg);
                         _this3.scrollToBottom();
                       });
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId) {
+                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId, references) {
                     if (_this3._conversationAssistantMessage) {
                       var msg = _this3.messages[_this3._conversationAssistantMessage.index];
                       if (msg) {
                         msg.isStreaming = false;
+                        msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                        updateMessagePresentation(msg, msg.references);
                       }
                       _this3._conversationAssistantMessage = null;
                     }
@@ -912,20 +1265,20 @@ window.openAIChatManager = function () {
                       console.warn("SignalR connection closed with error:", error.message || error);
                     }
                   });
-                  _context3.p = 1;
-                  _context3.n = 2;
+                  _context6.p = 1;
+                  _context6.n = 2;
                   return _this3.connection.start();
                 case 2:
-                  _context3.n = 4;
+                  _context6.n = 4;
                   break;
                 case 3:
-                  _context3.p = 3;
-                  _t3 = _context3.v;
-                  console.error("SignalR Connection Error: ", _t3);
+                  _context6.p = 3;
+                  _t4 = _context6.v;
+                  console.error("SignalR Connection Error: ", _t4);
                 case 4:
-                  return _context3.a(2);
+                  return _context6.a(2);
               }
-            }, _callee3, null, [[1, 3]]);
+            }, _callee6, null, [[1, 3]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
@@ -957,81 +1310,9 @@ window.openAIChatManager = function () {
             message.userRating = null;
           }
           if (message.content) {
-            var processedContent = message.content.trim();
-            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              // Only include references that were actually cited in the response.
-              var citedRefs = Object.entries(message.references).filter(function (_ref) {
-                var _ref2 = _slicedToArray(_ref, 1),
-                  key = _ref2[0];
-                return processedContent.includes(key);
-              });
-              if (citedRefs.length) {
-                // Sort by original index so display indices follow a natural order.
-                citedRefs.sort(function (_ref3, _ref4) {
-                  var _ref5 = _slicedToArray(_ref3, 2),
-                    a = _ref5[1];
-                  var _ref6 = _slicedToArray(_ref4, 2),
-                    b = _ref6[1];
-                  return a.index - b.index;
-                });
-
-                // Phase 1: Replace all markers with unique placeholders.
-                var displayIndex = 1;
-                var _iterator2 = _createForOfIteratorHelper(citedRefs),
-                  _step2;
-                try {
-                  for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                    var _step2$value = _slicedToArray(_step2.value, 2),
-                      key = _step2$value[0],
-                      value = _step2$value[1];
-                    var placeholder = "__CITE_".concat(value.index, "__");
-                    processedContent = processedContent.replaceAll(key, placeholder);
-                    value._displayIndex = displayIndex++;
-                    value._placeholder = placeholder;
-                  }
-
-                  // Phase 2: Replace placeholders with sequential display indices.
-                } catch (err) {
-                  _iterator2.e(err);
-                } finally {
-                  _iterator2.f();
-                }
-                var _iterator3 = _createForOfIteratorHelper(citedRefs),
-                  _step3;
-                try {
-                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-                    var _step3$value = _slicedToArray(_step3.value, 2),
-                      _value = _step3$value[1];
-                    processedContent = processedContent.replaceAll(_value._placeholder, "<sup><strong>".concat(_value._displayIndex, "</strong></sup>"));
-                  }
-
-                  // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                } catch (err) {
-                  _iterator3.e(err);
-                } finally {
-                  _iterator3.f();
-                }
-                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                processedContent += '<br><br>';
-                var _iterator4 = _createForOfIteratorHelper(citedRefs),
-                  _step4;
-                try {
-                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-                    var _step4$value = _slicedToArray(_step4.value, 2),
-                      _key = _step4$value[0],
-                      _value2 = _step4$value[1];
-                    var label = _value2.text || _key;
-                    processedContent += _value2.link ? "**".concat(_value2._displayIndex, "**. [").concat(label, "](").concat(_value2.link, ")<br>") : "**".concat(_value2._displayIndex, "**. ").concat(label, "<br>");
-                  }
-                } catch (err) {
-                  _iterator4.e(err);
-                } finally {
-                  _iterator4.f();
-                }
-              }
-            }
-            message.content = processedContent;
-            message.htmlContent = parseMarkdownContent(processedContent, message);
+            var _message$rawContent;
+            message.rawContent = (_message$rawContent = message.rawContent) !== null && _message$rawContent !== void 0 ? _message$rawContent : message.content;
+            updateMessagePresentation(message, message.references);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
@@ -1063,6 +1344,32 @@ window.openAIChatManager = function () {
           }
           this.isPlaceholderVisible = true;
         },
+        isOrchestratorAvailable: function isOrchestratorAvailable() {
+          return config.isOrchestratorAvailable !== false;
+        },
+        applyOrchestratorAvailability: function applyOrchestratorAvailability() {
+          if (this.isOrchestratorAvailable()) {
+            return true;
+          }
+          var unavailableMessage = config.orchestratorUnavailableMessage || "This orchestrator is not currently available.";
+          if (this.inputElement) {
+            this.inputElement.disabled = true;
+            this.inputElement.value = '';
+            this.inputElement.placeholder = unavailableMessage;
+          }
+          if (this.buttonElement) {
+            this.buttonElement.disabled = true;
+          }
+          if (this.micButtonElement) {
+            this.micButtonElement.disabled = true;
+            this.micButtonElement.style.display = 'none';
+          }
+          if (this.conversationButtonElement) {
+            this.conversationButtonElement.disabled = true;
+            this.conversationButtonElement.style.display = 'none';
+          }
+          return false;
+        },
         fireEvent: function fireEvent(event) {
           document.dispatchEvent(event);
         },
@@ -1070,6 +1377,9 @@ window.openAIChatManager = function () {
           return message.role === 'indicator';
         },
         sendMessage: function sendMessage() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
           var trimmedPrompt = this.prompt.trim();
           if (!trimmedPrompt) {
             return;
@@ -1082,6 +1392,11 @@ window.openAIChatManager = function () {
 
           // Prevent stale ReceiveTranscript events from repopulating the prompt.
           this._audioInputSent = true;
+
+          // In single-response mode, clear all previous messages.
+          if (this.singleResponseMode) {
+            this.messages.splice(0, this.messages.length);
+          }
           this.addMessage({
             role: 'user',
             content: trimmedPrompt
@@ -1115,15 +1430,15 @@ window.openAIChatManager = function () {
             var pendingChunk = Promise.resolve();
             _this7.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
-                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
                   var data, uint8Array, binaryString, base64;
-                  return _regenerator().w(function (_context4) {
-                    while (1) switch (_context4.n) {
+                  return _regenerator().w(function (_context7) {
+                    while (1) switch (_context7.n) {
                       case 0:
-                        _context4.n = 1;
+                        _context7.n = 1;
                         return e.data.arrayBuffer();
                       case 1:
-                        data = _context4.v;
+                        data = _context7.v;
                         uint8Array = new Uint8Array(data);
                         binaryString = uint8Array.reduce(function (str, _byte) {
                           return str + String.fromCharCode(_byte);
@@ -1131,9 +1446,9 @@ window.openAIChatManager = function () {
                         base64 = btoa(binaryString);
                         subject.next(base64);
                       case 2:
-                        return _context4.a(2);
+                        return _context7.a(2);
                     }
-                  }, _callee4);
+                  }, _callee7);
                 })));
               }
             });
@@ -1145,9 +1460,9 @@ window.openAIChatManager = function () {
                 return subject.complete();
               });
             });
-            var language = document.documentElement.lang || 'en-US';
+            var language = navigator.language || document.documentElement.lang || 'en-US';
             _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
-            _this7.mediaRecorder.start(1000);
+            _this7.mediaRecorder.start(250);
             _this7.isRecording = true;
             _this7.updateMicButton();
           })["catch"](function (err) {
@@ -1175,10 +1490,10 @@ window.openAIChatManager = function () {
           }
           if (this.isRecording) {
             this.micButton.classList.add('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-stop"></span>';
           } else {
             this.micButton.classList.remove('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-microphone"></span>';
           }
         },
         streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
@@ -1223,11 +1538,12 @@ window.openAIChatManager = function () {
                 message.title = chunk.title;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i = 0, _Object$entries = Object.entries(chunk.references); _i < _Object$entries.length; _i++) {
-                  var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
-                    key = _Object$entries$_i[0],
-                    value = _Object$entries$_i[1];
-                  references[key] = value;
+                for (var _i4 = 0, _Object$entries2 = Object.entries(chunk.references); _i4 < _Object$entries2.length; _i4++) {
+                  var _normalizeReference2;
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i4], 2),
+                    key = _Object$entries2$_i[0],
+                    value = _Object$entries2$_i[1];
+                  references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
                 }
               }
               if (chunk.content) {
@@ -1239,22 +1555,12 @@ window.openAIChatManager = function () {
                 if (chunk.responseId) {
                   lastResponseId = chunk.responseId;
                 }
-                var processedContent = chunk.content;
-                for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
-                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                    _key2 = _Object$entries2$_i[0],
-                    _value3 = _Object$entries2$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
-                }
-
-                // Append processed content to the message.
-                // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                content += chunk.content;
               }
 
               // Update the existing message
-              message.content = content;
-              message.htmlContent = parseMarkdownContent(content, message);
+              message.rawContent = content;
+              updateMessagePresentation(message, references);
               _this8.messages[messageIndex] = message;
               _this8.$nextTick(function () {
                 renderChartsInMessage(message);
@@ -1308,88 +1614,18 @@ window.openAIChatManager = function () {
           return newMessage;
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this9 = this;
+          references = normalizeReferences(references);
           if (Object.keys(references).length) {
+            var _ref15, _message$rawContent2;
             var message = this.messages[messageIndex];
-            var content = message.content || '';
-
-            // Only include references that were actually cited in the response.
-            // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
-            var citedRefs = Object.entries(references).filter(function (_ref8) {
-              var _ref9 = _slicedToArray(_ref8, 2),
-                key = _ref9[0],
-                value = _ref9[1];
-              return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
-            });
-            if (!citedRefs.length) {
-              return;
-            }
-
-            // Sort by original index so display indices follow a natural order.
-            citedRefs.sort(function (_ref0, _ref1) {
-              var _ref10 = _slicedToArray(_ref0, 2),
-                a = _ref10[1];
-              var _ref11 = _slicedToArray(_ref1, 2),
-                b = _ref11[1];
-              return a.index - b.index;
-            });
-
-            // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
-            var processed = content.trim();
-            var displayIndex = 1;
-            var _iterator5 = _createForOfIteratorHelper(citedRefs),
-              _step5;
-            try {
-              for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                var _step5$value = _slicedToArray(_step5.value, 2),
-                  key = _step5$value[0],
-                  value = _step5$value[1];
-                var placeholder = "__CITE_".concat(value.index, "__");
-                processed = processed.replaceAll(key, placeholder);
-                processed = processed.replaceAll("<sup><strong>".concat(value.index, "</strong></sup>"), placeholder);
-                value._displayIndex = displayIndex++;
-                value._placeholder = placeholder;
-              }
-
-              // Phase 2: Replace placeholders with sequential display indices.
-            } catch (err) {
-              _iterator5.e(err);
-            } finally {
-              _iterator5.f();
-            }
-            var _iterator6 = _createForOfIteratorHelper(citedRefs),
-              _step6;
-            try {
-              for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-                var _step6$value = _slicedToArray(_step6.value, 2),
-                  _value4 = _step6$value[1];
-                processed = processed.replaceAll(_value4._placeholder, "<sup><strong>".concat(_value4._displayIndex, "</strong></sup>"));
-              }
-            } catch (err) {
-              _iterator6.e(err);
-            } finally {
-              _iterator6.f();
-            }
-            processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-            processed += '<br><br>';
-            var _iterator7 = _createForOfIteratorHelper(citedRefs),
-              _step7;
-            try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _step7$value = _slicedToArray(_step7.value, 2),
-                  _key3 = _step7$value[0],
-                  _value5 = _step7$value[1];
-                var label = _value5.text || _key3;
-                processed += _value5.link ? "**".concat(_value5._displayIndex, "**. [").concat(label, "](").concat(_value5.link, ")<br>") : "**".concat(_value5._displayIndex, "**. ").concat(label, "<br>");
-              }
-            } catch (err) {
-              _iterator7.e(err);
-            } finally {
-              _iterator7.f();
-            }
-            message.content = processed;
-            message.htmlContent = parseMarkdownContent(processed, message);
+            message.rawContent = (_ref15 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref15 !== void 0 ? _ref15 : '';
+            updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this9.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
@@ -1431,22 +1667,79 @@ window.openAIChatManager = function () {
             }
           }
         },
-        synthesizeSpeech: function synthesizeSpeech(text) {
-          var _this9 = this;
+        handleExternalTtsStop: function handleExternalTtsStop(e) {
+          var _e$detail;
+          if ((e === null || e === void 0 || (_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.sourceId) === this.ttsInstanceId) {
+            return;
+          }
+          this.stopAudio(false);
+        },
+        updateTtsPlaybackButtons: function updateTtsPlaybackButtons() {
+          var _this0 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-tts-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
+            var isPlaying = buttonIndex === _this0.ttsPlayingMessageIndex;
+            var iconHtml = isPlaying ? '<span class="fa-solid fa-circle-pause"></span>' : '<span class="fa-solid fa-circle-play"></span>';
+            button.classList.toggle('tts-playing', isPlaying);
+            button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+            button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          });
+        },
+        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+          var _this1 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
           this.audioChunks = [];
           this.isPlayingAudio = true;
+          this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
           this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this9.isPlayingAudio = false;
+            _this1.isPlayingAudio = false;
+            _this1.ttsPlayingMessageIndex = -1;
+            _this1._ttsCacheIndex = -1;
+            _this1.$nextTick(function () {
+              return _this1.updateTtsPlaybackButtons();
+            });
           });
         },
+        toggleMessageTts: function toggleMessageTts(message, index) {
+          var _this10 = this;
+          if (this.ttsPlayingMessageIndex === index) {
+            this.stopAudio();
+            return;
+          }
+          this.stopAudio(false);
+          window.dispatchEvent(new CustomEvent('crestapps-ai-chat-stop-tts', {
+            detail: {
+              sourceId: this.ttsInstanceId
+            }
+          }));
+          this.ttsPlayingMessageIndex = index;
+          this.$nextTick(function () {
+            return _this10.updateTtsPlaybackButtons();
+          });
+          if (this.ttsAudioCache[index]) {
+            this.playAudioBlob(this.ttsAudioCache[index]);
+            return;
+          }
+          this.synthesizeSpeech(message.content, index);
+        },
         playCollectedAudio: function playCollectedAudio() {
+          var _this11 = this;
           if (this.audioChunks.length === 0) {
             if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
               this.isPlayingAudio = false;
+              this.ttsPlayingMessageIndex = -1;
+              this.$nextTick(function () {
+                return _this11.updateTtsPlaybackButtons();
+              });
             }
             return;
           }
@@ -1455,23 +1748,27 @@ window.openAIChatManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator5 = _createForOfIteratorHelper(this.audioChunks),
+            _step5;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+              var chunk = _step5.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator5.e(err);
           } finally {
-            _iterator8.f();
+            _iterator5.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
             type: 'audio/mp3'
           });
+          if (this._ttsCacheIndex >= 0) {
+            this.ttsAudioCache[this._ttsCacheIndex] = blob;
+            this._ttsCacheIndex = -1;
+          }
 
           // If audio is already playing, queue this blob for sequential playback.
           if (this.currentAudioElement) {
@@ -1481,46 +1778,69 @@ window.openAIChatManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this0 = this;
+          var _this12 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
+          this.currentAudioUrl = url;
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
+            _this12.currentAudioElement = null;
+            _this12.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.playNextInQueue();
+            _this12.playNextInQueue();
           });
           audio.addEventListener('error', function () {
+            _this12.currentAudioElement = null;
+            _this12.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.playNextInQueue();
+            _this12.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
+            _this12.currentAudioElement = null;
+            _this12.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.isPlayingAudio = false;
+            _this12.audioPlayQueue = [];
+            _this12.isPlayingAudio = false;
+            _this12.ttsPlayingMessageIndex = -1;
+            _this12.$nextTick(function () {
+              return _this12.updateTtsPlaybackButtons();
+            });
           });
         },
         playNextInQueue: function playNextInQueue() {
+          var _this13 = this;
           if (this.audioPlayQueue.length > 0) {
             var nextBlob = this.audioPlayQueue.shift();
             this.playAudioBlob(nextBlob);
           } else {
             this.isPlayingAudio = false;
+            this.ttsPlayingMessageIndex = -1;
+            this.$nextTick(function () {
+              return _this13.updateTtsPlaybackButtons();
+            });
             this.conversationModeOnAudioEnded();
           }
         },
         stopAudio: function stopAudio() {
+          var _this14 = this;
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             this.currentAudioElement.currentTime = 0;
             this.currentAudioElement = null;
           }
+          if (this.currentAudioUrl) {
+            URL.revokeObjectURL(this.currentAudioUrl);
+            this.currentAudioUrl = null;
+          }
           this.audioChunks = [];
           this.audioPlayQueue = [];
           this.isPlayingAudio = false;
+          this.ttsPlayingMessageIndex = -1;
+          this.$nextTick(function () {
+            return _this14.updateTtsPlaybackButtons();
+          });
         },
         toggleConversationMode: function toggleConversationMode() {
           if (this.isConversationMode) {
@@ -1530,7 +1850,7 @@ window.openAIChatManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this1 = this;
+          var _this15 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1550,12 +1870,12 @@ window.openAIChatManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this1.mediaRecorder = new MediaRecorder(stream, {
+            _this15.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this1._conversationSubject = new signalR.Subject();
-            _this1._conversationStream = stream;
+            _this15._conversationSubject = new signalR.Subject();
+            _this15._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             // During TTS playback, detect when the user speaks above
@@ -1564,20 +1884,20 @@ window.openAIChatManager = function () {
             // speaker echo so the STT stream has no gaps.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this1._conversationAudioCtx = new AudioCtx();
-              _this1._conversationAnalyser = _this1._conversationAudioCtx.createAnalyser();
-              _this1._conversationAnalyser.fftSize = 256;
-              var micSource = _this1._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this1._conversationAnalyser);
+              _this15._conversationAudioCtx = new AudioCtx();
+              _this15._conversationAnalyser = _this15._conversationAudioCtx.createAnalyser();
+              _this15._conversationAnalyser.fftSize = 256;
+              var micSource = _this15._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this15._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this1._conversationAnalyser;
+            var analyser = _this15._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this1.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this15.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this1.isPlayingAudio && analyser) {
+                if (_this15.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1587,61 +1907,61 @@ window.openAIChatManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this1.stopAudio();
+                    _this15.stopAudio();
                   }
                 }
 
                 // Always send audio to STT — browser echo cancellation
                 // handles speaker echo; continuous audio avoids gaps
                 // that increase recognition latency.
-                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
                   var data, uint8Array, binaryString, base64;
-                  return _regenerator().w(function (_context5) {
-                    while (1) switch (_context5.n) {
+                  return _regenerator().w(function (_context8) {
+                    while (1) switch (_context8.n) {
                       case 0:
-                        _context5.n = 1;
+                        _context8.n = 1;
                         return e.data.arrayBuffer();
                       case 1:
-                        data = _context5.v;
+                        data = _context8.v;
                         uint8Array = new Uint8Array(data);
                         binaryString = uint8Array.reduce(function (str, _byte2) {
                           return str + String.fromCharCode(_byte2);
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this1._conversationSubject.next(base64);
+                          _this15._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
                       case 2:
-                        return _context5.a(2);
+                        return _context8.a(2);
                     }
-                  }, _callee5);
+                  }, _callee8);
                 })));
               }
             });
-            _this1.mediaRecorder.addEventListener('stop', function () {
+            _this15.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this1._conversationSubject.complete();
+                  _this15._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var profileId = _this1.getProfileId();
-            var sessionId = _this1.getSessionId() || '';
-            var language = document.documentElement.lang || 'en-US';
-            _this1.connection.send("StartConversation", profileId, sessionId, _this1._conversationSubject, mimeType, language);
-            _this1.mediaRecorder.start(1000);
-            _this1.isRecording = true;
+            var profileId = _this15.getProfileId();
+            var sessionId = _this15.getSessionId() || '';
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this15.connection.send("StartConversation", profileId, sessionId, _this15._conversationSubject, mimeType, language);
+            _this15.mediaRecorder.start(250);
+            _this15.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this1.isConversationMode = false;
-            _this1.updateConversationButton();
+            _this15.isConversationMode = false;
+            _this15.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -1691,7 +2011,8 @@ window.openAIChatManager = function () {
             type: 'conversation-ended',
             content: 'Conversation ended.',
             icon: 'fa-solid fa-circle-check',
-            dismissible: true
+            dismissible: true,
+            autoDismissMs: 5000
           });
         },
         updateConversationButton: function updateConversationButton() {
@@ -1700,7 +2021,7 @@ window.openAIChatManager = function () {
           }
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
-            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
             this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
             var endHtml = this.conversationButton.getAttribute('data-end-html');
             if (endHtml) {
@@ -1710,7 +2031,9 @@ window.openAIChatManager = function () {
             }
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
-            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.add('btn-outline-dark');
+            this.conversationButton.blur();
             this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
             var startHtml = this.conversationButton.getAttribute('data-start-html');
             if (startHtml) {
@@ -1765,10 +2088,11 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         receiveNotification: function receiveNotification(notification) {
-          var _this10 = this;
+          var _this16 = this;
           if (!notification || !notification.type) {
             return;
           }
+          this.clearNotificationDismiss(notification.type);
           var existingIndex = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
           });
@@ -1777,22 +2101,43 @@ window.openAIChatManager = function () {
           } else {
             this.notifications.push(notification);
           }
+          this.scheduleNotificationDismiss(notification);
           this.$nextTick(function () {
-            _this10.scrollToBottom();
+            _this16.scrollToBottom();
           });
         },
         updateNotification: function updateNotification(notification) {
           if (!notification || !notification.type) {
             return;
           }
+          this.clearNotificationDismiss(notification.type);
           var existingIndex = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
           });
           if (existingIndex >= 0) {
             this.notifications.splice(existingIndex, 1, notification);
+            this.scheduleNotificationDismiss(notification);
           }
         },
+        scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
+          var _this17 = this;
+          if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+            return;
+          }
+          this.notificationDismissTimers[notification.type] = setTimeout(function () {
+            _this17.removeNotification(notification.type);
+          }, notification.autoDismissMs);
+        },
+        clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
+          var timerId = this.notificationDismissTimers[notificationType];
+          if (!timerId) {
+            return;
+          }
+          clearTimeout(timerId);
+          delete this.notificationDismissTimers[notificationType];
+        },
         removeNotification: function removeNotification(notificationType) {
+          this.clearNotificationDismiss(notificationType);
           this.notifications = this.notifications.filter(function (n) {
             return n.type !== notificationType;
           });
@@ -1810,31 +2155,32 @@ window.openAIChatManager = function () {
           });
         },
         scrollToBottom: function scrollToBottom() {
-          var _this11 = this;
+          var _this18 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this11.chatContainer.scrollTop = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight;
+            _this18.chatContainer.scrollTop = _this18.chatContainer.scrollHeight - _this18.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
           this.prompt = event.target.value;
         },
         getProfileId: function getProfileId() {
-          return this.inputElement.getAttribute('data-profile-id');
+          return this.inputElement ? this.inputElement.getAttribute('data-profile-id') : null;
         },
         setSessionId: function setSessionId(sessionId) {
+          if (!this.inputElement) {
+            return;
+          }
           this.inputElement.setAttribute('data-session-id', sessionId || '');
         },
         resetSession: function resetSession() {
           this.stopRecording();
+          this.rejectPendingSessionRequest('Session was reset.');
           this.setSessionId('');
           this.isSessionStarted = false;
           this.sessionRating = null;
-          if (this.widgetIsInitialized) {
-            localStorage.removeItem(this.chatWidgetStateSession);
-          }
           this.messages = [];
           this.documents = [];
           if (!config.autoCreateSession) {
@@ -1843,32 +2189,111 @@ window.openAIChatManager = function () {
           if (config.autoCreateSession) {
             this.startNewSession();
           }
+          if (widgetBehavior && typeof widgetBehavior.onSessionReset === 'function') {
+            widgetBehavior.onSessionReset(this, config);
+          }
         },
         startNewSession: function startNewSession() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
           var profileId = this.getProfileId();
           if (!profileId || !this.connection) {
             return;
           }
-          var handlerName = this.selectedResponseHandler || null;
-          this.connection.invoke("StartSession", profileId, handlerName)["catch"](function (err) {
+          this.requestNewSession(profileId)["catch"](function (err) {
             return console.error(err);
           });
         },
+        ensureSessionForDocuments: function ensureSessionForDocuments(profileId) {
+          var _this19 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+            var sessionId;
+            return _regenerator().w(function (_context9) {
+              while (1) switch (_context9.n) {
+                case 0:
+                  sessionId = _this19.getSessionId();
+                  if (!sessionId) {
+                    _context9.n = 1;
+                    break;
+                  }
+                  return _context9.a(2, sessionId);
+                case 1:
+                  if (!(!profileId || !_this19.connection)) {
+                    _context9.n = 2;
+                    break;
+                  }
+                  return _context9.a(2, null);
+                case 2:
+                  _context9.n = 3;
+                  return _this19.requestNewSession(profileId);
+                case 3:
+                  return _context9.a(2, _context9.v);
+              }
+            }, _callee9);
+          }))();
+        },
+        requestNewSession: function requestNewSession(profileId) {
+          var _this20 = this;
+          if (this.pendingSessionPromise) {
+            return this.pendingSessionPromise;
+          }
+          if (!profileId || !this.connection) {
+            return Promise.resolve(null);
+          }
+          this.pendingSessionPromise = new Promise(function (resolve, reject) {
+            _this20.pendingSessionResolver = resolve;
+            _this20.pendingSessionRejector = reject;
+            _this20.pendingSessionTimeoutId = window.setTimeout(function () {
+              _this20.rejectPendingSessionRequest('Timed out while creating a chat session.');
+            }, 15000);
+          });
+          this.connection.invoke("StartSession", profileId, null)["catch"](function (err) {
+            _this20.rejectPendingSessionRequest(err);
+          });
+          return this.pendingSessionPromise;
+        },
+        resolvePendingSessionRequest: function resolvePendingSessionRequest(sessionId) {
+          if (this.pendingSessionResolver) {
+            this.pendingSessionResolver(sessionId);
+          }
+          this.clearPendingSessionRequest();
+        },
+        rejectPendingSessionRequest: function rejectPendingSessionRequest(error) {
+          if (this.pendingSessionRejector) {
+            this.pendingSessionRejector(error);
+          }
+          this.clearPendingSessionRequest();
+        },
+        clearPendingSessionRequest: function clearPendingSessionRequest() {
+          if (this.pendingSessionTimeoutId) {
+            window.clearTimeout(this.pendingSessionTimeoutId);
+          }
+          this.pendingSessionPromise = null;
+          this.pendingSessionResolver = null;
+          this.pendingSessionRejector = null;
+          this.pendingSessionTimeoutId = null;
+        },
         initializeApp: function initializeApp() {
-          var _this12 = this;
+          var _this21 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
-
-          // Render the handler selector in the placeholder if multiple handlers are available.
-          if (this.placeholder && this.responseHandlers.length > 0) {
-            this.renderHandlerSelector();
+          if (!this.inputElement || !this.buttonElement || !this.chatContainer || !this.placeholder) {
+            console.error('AI chat app could not initialize because one or more required elements were not found.', {
+              inputElementSelector: config.inputElementSelector,
+              sendButtonElementSelector: config.sendButtonElementSelector,
+              chatContainerElementSelector: config.chatContainerElementSelector,
+              placeholderElementSelector: config.placeholderElementSelector
+            });
+            return false;
           }
+          this.applyOrchestratorAvailability();
           var sessionId = this.getSessionId();
-          if (!config.widget && sessionId) {
+          if (!hasWidgetConfig && sessionId) {
             this.loadSession(sessionId);
-          } else if (config.autoCreateSession && !config.widget && !sessionId) {
+          } else if (this.isOrchestratorAvailable() && config.autoCreateSession && !hasWidgetConfig && !sessionId) {
             this.startNewSession();
           }
 
@@ -1888,7 +2313,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this12.handleFileInputChange(e);
+                return _this21.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -1896,13 +2321,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this12.handleDragOver(e);
+                  return _this21.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this12.handleDragLeave(e);
+                  return _this21.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this12.handleDrop(e);
+                  return _this21.handleDrop(e);
                 });
               }
             }
@@ -1910,55 +2335,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this12.stream) {
+            if (!_this21.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this12.chatContainer.scrollHeight - _this12.chatContainer.clientHeight - _this12.chatContainer.scrollTop <= threshold;
-            _this12.autoScroll = atBottom;
+            var atBottom = _this21.chatContainer.scrollHeight - _this21.chatContainer.clientHeight - _this21.chatContainer.scrollTop <= threshold;
+            _this21.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this12.stream != null) {
+            if (_this21.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this12.buttonElement.click();
+              _this21.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this12.handleUserInput(e);
+            _this21.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this12.buttonElement.removeAttribute('disabled');
+              _this21.buttonElement.removeAttribute('disabled');
             } else {
-              _this12.buttonElement.setAttribute('disabled', true);
+              _this21.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this12.stream != null) {
-              _this12.stream.dispose();
-              _this12.stream = null;
-              _this12.streamingFinished();
-              _this12.hideTypingIndicator();
+            if (_this21.stream != null) {
+              _this21.stream.dispose();
+              _this21.stream = null;
+              _this21.streamingFinished();
+              _this21.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this12.messages.length > 0) {
-                var lastMsg = _this12.messages[_this12.messages.length - 1];
+              if (_this21.messages.length > 0) {
+                var lastMsg = _this21.messages[_this21.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this12.messages.pop();
+                  _this21.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this12.sendMessage();
+            _this21.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this12.generatePrompt(e.target);
+              _this21.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -1970,17 +2395,17 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this12.loadSession(sessionId);
-              _this12.showChatScreen();
+              _this21.loadSession(sessionId);
+              _this21.showChatScreen();
             });
           }
-          for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
-            this.addMessage(config.messages[_i3]);
+          for (var _i5 = 0; _i5 < config.messages.length; _i5++) {
+            this.addMessage(config.messages[_i5]);
           }
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this12.refreshAllFeedbackIcons();
+            _this21.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -1998,9 +2423,9 @@ window.openAIChatManager = function () {
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
                 var copiedText = config.codeCopiedText || 'Copied!';
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                btn.innerHTML = '<span class="fa-solid fa-check"></span> ' + copiedText;
                 setTimeout(function () {
-                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                  btn.innerHTML = '<span class="fa-regular fa-copy"></span>';
                 }, 2000);
               }
             });
@@ -2012,7 +2437,7 @@ window.openAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this12.toggleRecording();
+                _this21.toggleRecording();
               });
             }
           }
@@ -2022,10 +2447,11 @@ window.openAIChatManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this12.toggleConversationMode();
+                _this21.toggleConversationMode();
               });
             }
           }
+          return true;
         },
         loadSession: function loadSession(sessionId) {
           this.connection.invoke("LoadSession", sessionId)["catch"](function (err) {
@@ -2040,6 +2466,9 @@ window.openAIChatManager = function () {
         },
         initializeSession: function initializeSession(sessionId, force) {
           if (this.isSessionStarted && !force) {
+            if (sessionId && this.getSessionId() === sessionId) {
+              this.resolvePendingSessionRequest(sessionId);
+            }
             return;
           }
           this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", {
@@ -2049,77 +2478,22 @@ window.openAIChatManager = function () {
           }));
           this.setSessionId(sessionId);
           this.isSessionStarted = true;
-          if (this.widgetIsInitialized) {
-            localStorage.setItem(this.chatWidgetStateSession, sessionId);
+          this.resolvePendingSessionRequest(sessionId);
+          if (widgetBehavior && typeof widgetBehavior.onSessionInitialized === 'function') {
+            widgetBehavior.onSessionInitialized(this, sessionId, config);
           }
-        },
-        initializeWidget: function initializeWidget() {
-          var _this13 = this;
-          if (!config.widget.chatWidgetContainer) {
-            console.error('The widget chatWidgetContainer is required.');
-            return;
-          }
-          if (!config.widget.chatWidgetStateName) {
-            console.error('The widget chatWidgetStateName is required.');
-            return;
-          }
-          var chatWidgetContainer = document.querySelector(config.widget.chatWidgetContainer);
-          if (!chatWidgetContainer) {
-            return;
-          }
-          if (config.widget.chatHistorySection) {
-            this.chatHistorySection = document.querySelector(config.widget.chatHistorySection);
-          }
-          this.chatWidgetStateName = config.widget.chatWidgetStateName;
-          this.chatWidgetStateSession = config.widget.chatWidgetStateName + 'Session';
-          this.widgetIsInitialized = true;
-
-          // Auto-load the last session so the user always sees previous chat history.
-          this.reloadCurrentSession();
-          if (config.autoCreateSession && !this.getSessionId()) {
-            this.startNewSession();
-          }
-          if (config.widget.showHistoryButton && this.chatHistorySection) {
-            var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
-            if (showHistoryButton) {
-              showHistoryButton.addEventListener('click', function () {
-                _this13.chatHistorySection.classList.toggle('show');
-              });
-            }
-            if (config.widget.closeHistoryButton) {
-              var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
-              if (closeHistoryButton) {
-                closeHistoryButton.addEventListener('click', function () {
-                  _this13.showChatScreen();
-                });
-              }
-            }
-          }
-          if (config.widget.newChatButton) {
-            var newChatButton = document.querySelector(config.widget.newChatButton);
-            if (newChatButton) {
-              newChatButton.addEventListener('click', function () {
-                _this13.resetSession();
-                _this13.showChatScreen();
-              });
-            }
-          }
-        },
-        showChatScreen: function showChatScreen() {
-          if (!this.chatHistorySection) {
-            return;
-          }
-          this.chatHistorySection.classList.remove('show');
         },
         getSessionId: function getSessionId() {
-          var sessionId = this.inputElement.getAttribute('data-session-id');
-          if (!sessionId && this.widgetIsInitialized) {
-            sessionId = localStorage.getItem(this.chatWidgetStateSession);
+          var sessionId = this.inputElement ? this.inputElement.getAttribute('data-session-id') : null;
+          if (!sessionId && widgetBehavior && typeof widgetBehavior.resolveSessionId === 'function') {
+            sessionId = widgetBehavior.resolveSessionId(this, config);
           }
           return sessionId;
         },
         copyResponse: function copyResponse(message) {
-          navigator.clipboard.writeText(message);
+          var _ref17, _message$copyContent;
+          var text = message && _typeof(message) === 'object' ? (_ref17 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref17 !== void 0 ? _ref17 : '' : message !== null && message !== void 0 ? message : '';
+          navigator.clipboard.writeText(text);
         },
         updateFeedbackIcons: function updateFeedbackIcons(container, userRating) {
           if (!container) {
@@ -2128,11 +2502,11 @@ window.openAIChatManager = function () {
           var upBtn = container.querySelector('.rate-up-btn');
           var downBtn = container.querySelector('.rate-down-btn');
 
-          // Font Awesome SVG+JS replaces <i> with <svg>, so we must replace
-          // the entire button content and let Font Awesome re-process.
+          // Keep feedback icons as simple span-based Font Awesome markup so
+          // later state updates do not depend on i2svg replacement.
           if (upBtn) {
             var upClass = userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
-            var upIcon = document.createElement('i');
+            var upIcon = document.createElement('span');
             upIcon.className = upClass;
             upIcon.style.fontSize = '0.9rem';
             upBtn.textContent = '';
@@ -2140,18 +2514,11 @@ window.openAIChatManager = function () {
           }
           if (downBtn) {
             var downClass = userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
-            var downIcon = document.createElement('i');
+            var downIcon = document.createElement('span');
             downIcon.className = downClass;
             downIcon.style.fontSize = '0.9rem';
             downBtn.textContent = '';
             downBtn.appendChild(downIcon);
-          }
-
-          // Trigger Font Awesome SVG+JS to convert the new <i> elements.
-          if (window.FontAwesome && FontAwesome.dom && FontAwesome.dom.i2svg) {
-            FontAwesome.dom.i2svg({
-              node: container
-            });
           }
         },
         refreshAllFeedbackIcons: function refreshAllFeedbackIcons() {
@@ -2205,10 +2572,16 @@ window.openAIChatManager = function () {
         documents: {
           handler: function handler() {
             this.renderDocumentBar();
+            if (widgetBehavior && typeof widgetBehavior.onDocumentsChanged === 'function') {
+              widgetBehavior.onDocumentsChanged(this, this.documents, config);
+            }
           },
           deep: true
         },
         isUploading: function isUploading() {
+          this.renderDocumentBar();
+        },
+        isDocumentOperationPending: function isDocumentOperationPending() {
           this.renderDocumentBar();
         },
         isPlayingAudio: function isPlayingAudio() {
@@ -2236,27 +2609,31 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this14 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
-          return _regenerator().w(function (_context6) {
-            while (1) switch (_context6.n) {
+        var _this22 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
+          var isInitialized;
+          return _regenerator().w(function (_context0) {
+            while (1) switch (_context0.n) {
               case 0:
-                _context6.n = 1;
-                return _this14.startConnection();
+                _context0.n = 1;
+                return _this22.startConnection();
               case 1:
-                _this14.initializeApp();
-                if (config.widget) {
-                  _this14.initializeWidget();
+                isInitialized = _this22.initializeApp();
+                if (isInitialized && hasWidgetConfig && widgetBehavior && typeof widgetBehavior.onMounted === 'function') {
+                  widgetBehavior.onMounted(_this22, config);
                 }
               case 2:
-                return _context6.a(2);
+                return _context0.a(2);
             }
-          }, _callee6);
+          }, _callee0);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
       },
       beforeUnmount: function beforeUnmount() {
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        window.removeEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
+        this.stopAudio(false);
         if (this.stream) {
           this.stream.dispose();
           this.stream = null;
@@ -2264,9 +2641,16 @@ window.openAIChatManager = function () {
         if (this.connection) {
           this.connection.stop();
         }
+        if (widgetBehavior && typeof widgetBehavior.onBeforeUnmount === 'function') {
+          widgetBehavior.onBeforeUnmount(this, config);
+        }
       },
       template: config.messageTemplate
-    }).mount(config.appElementSelector);
+    };
+    var app = Vue.createApp(appDefinition).mount(config.appElementSelector);
+    if (widgetBehavior && typeof widgetBehavior.attach === 'function') {
+      widgetBehavior.attach(app, config);
+    }
     return app;
   };
   return {
@@ -2274,9 +2658,14 @@ window.openAIChatManager = function () {
   };
 }();
 
-// Global function for downloading charts as images
-window.downloadChart = function (chartId) {
-  var canvas = document.getElementById(chartId);
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
   if (!canvas) {
     console.error('Chart canvas not found:', chartId);
     return;
@@ -2285,7 +2674,7 @@ window.downloadChart = function (chartId) {
   link.download = 'chart-' + chartId + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
 // Intercept download clicks for data-URI images and convert to blob downloads.
 document.addEventListener('click', function (e) {
@@ -2320,3 +2709,4 @@ document.addEventListener('click', function (e) {
     console.error('Failed to download image:', err);
   });
 });
+//# sourceMappingURL=ai-chat.js.map

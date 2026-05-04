@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,23 +13,23 @@ internal sealed class GetRoleTool : AIFunction
     public const string TheName = "getRoleInfo";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "roleId": {
-              "type": "string",
-              "description": "The roleId to get role info for."
-            },
-            "roleName": {
-              "type": "string",
-              "description": "The roleName to get role info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": []
+    """
+    {
+      "type": "object",
+      "properties": {
+        "roleId": {
+          "type": "string",
+          "description": "The roleId to get role info for."
+        },
+        "roleName": {
+          "type": "string",
+          "description": "The roleName to get role info for."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": []
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -48,6 +48,7 @@ internal sealed class GetRoleTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetRoleTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

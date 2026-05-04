@@ -1,10 +1,11 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -21,28 +22,39 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing admin resources.
+/// </summary>
 [Admin("ai/chat/interactions/{action}/{itemId?}", "ChatInteractions{action}")]
 public sealed class AdminController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
+    private readonly ICatalogManager<ChatInteraction> _interactionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<ChatInteraction> _interactionDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
-    private readonly AIOptions _aiOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminController"/> class.
+    /// </summary>
+    /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="interactionDisplayManager">The interaction display manager.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
-        ISourceCatalogManager<ChatInteraction> interactionManager,
+        ICatalogManager<ChatInteraction> interactionManager,
         IAuthorizationService authorizationService,
         IDisplayManager<ChatInteraction> interactionDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
-        IOptions<AIOptions> aiOptions,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer)
     {
@@ -51,11 +63,17 @@ public sealed class AdminController : Controller
         _interactionDisplayManager = interactionDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
-        _aiOptions = aiOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/chat-interactions", "AIInteractionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -92,21 +110,20 @@ public sealed class AdminController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<ChatInteraction>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         // Build display shapes for each interaction
         viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
-            new CatalogEntryViewModel<ChatInteraction>
-            {
-                Model = model,
-                Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            }))).ToList();
+        new CatalogEntryViewModel<ChatInteraction>
+        {
+            Model = model,
+            Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+        }))).ToList();
 
         viewModel.Options.BulkActions =
         [
@@ -116,6 +133,10 @@ public sealed class AdminController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -133,6 +154,11 @@ public sealed class AdminController : Controller
         });
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -188,8 +214,12 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [Admin("ai/chat/interaction/chat/{source}/{itemId?}", "ChatInteractionsChat")]
-    public async Task<ActionResult> Chat(string source, string itemId)
+    /// <summary>
+    /// Performs the chat operation.
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
+    [Admin("ai/chat/interaction/chat/{itemId?}", "ChatInteractionsChat")]
+    public async Task<ActionResult> Chat(string itemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
         {
@@ -219,14 +249,7 @@ public sealed class AdminController : Controller
         else
         {
             // Creating new interaction.
-            if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-            {
-                await _notifier.ErrorAsync(H["Unable to find a source that can handle '{0}'.", source]);
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            interaction = await _interactionManager.NewAsync(source);
+            interaction = await _interactionManager.NewAsync();
 
             if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
             {
@@ -242,18 +265,24 @@ public sealed class AdminController : Controller
         var model = new EditChatInteractionEntryViewModel
         {
             ItemId = interaction.ItemId,
-            Source = interaction.Source,
-            DisplayName = isNew ? _aiOptions.ProfileSources[interaction.Source].DisplayName : (interaction.Title ?? "Untitled"),
+            DisplayName = isNew ? "New Chat" : (interaction.Title ?? "Untitled"),
             Editor = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: isNew),
         };
 
         return View(model);
     }
 
-    [Admin("ai/chat/interaction/new-chat/{source}", "NewInteractionsChat")]
-    public async Task<ActionResult> New(string source)
-        => RedirectToAction(nameof(Chat), new { source });
+    /// <summary>
+    /// Performs the new operation.
+    /// </summary>
+    [Admin("ai/chat/interaction/new-chat", "NewInteractionsChat")]
+    public ActionResult New()
+        => RedirectToAction(nameof(Chat));
 
+    /// <summary>
+    /// Performs the clone operation.
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
     [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
     public async Task<ActionResult> Clone(string itemId)
     {
@@ -269,9 +298,9 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(interaction.Source, interaction.Properties);
+        var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
         clonedInteraction.Title = GetNextTitle(interaction.Title);
-        clonedInteraction.ChatDeploymentId = interaction.ChatDeploymentId;
+        clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
         clonedInteraction.ConnectionName = interaction.ConnectionName;
         clonedInteraction.SystemMessage = interaction.SystemMessage;
         clonedInteraction.Temperature = interaction.Temperature;
@@ -280,7 +309,6 @@ public sealed class AdminController : Controller
         clonedInteraction.PresencePenalty = interaction.PresencePenalty;
         clonedInteraction.MaxTokens = interaction.MaxTokens;
         clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
-        clonedInteraction.DocumentTopN = interaction.DocumentTopN;
         clonedInteraction.ToolNames = interaction.ToolNames.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();
@@ -296,11 +324,14 @@ public sealed class AdminController : Controller
 
         return RedirectToAction(nameof(Chat), new
         {
-            source = clonedInteraction.Source,
             itemId = clonedInteraction.ItemId,
         });
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
     [HttpPost]
     public async Task<IActionResult> Delete(string itemId)
     {

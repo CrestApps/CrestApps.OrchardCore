@@ -3,8 +3,10 @@
         @if (Model.Parameters is not null)
         {
             <div class="chat-parameters-panel flex-shrink-0 bg-theme border rounded mb-3 mb-lg-0">
-                <div class="d-none d-lg-flex justify-content-end p-2 pb-0">
-                    <button type="button" class="btn btn-sm btn-link text-muted chat-panel-toggle" title="@T["Collapse panel"]">
+                <div class="d-flex justify-content-between align-items-center p-2 pb-0">
+                    <span id="settings-save-indicator" class="settings-save-indicator text-muted" data-chat-interaction-save-indicator></span>
+
+                    <button type="button" class="btn btn-sm btn-link text-muted chat-panel-toggle d-none d-lg-inline-flex" title="@T["Collapse panel"]">
                         <i class="fa-solid fa-angles-left"></i>
                     </button>
                 </div>
@@ -50,34 +52,28 @@
         min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
         height: auto;
     }
-
     .chat-parameters-panel {
         width: 100%;
         max-width: 100%;
         display: flex;
         flex-direction: column;
     }
-
     .chat-parameters-content {
         overflow-y: auto;
         flex: 1;
         min-height: 0;
     }
-
     .chat-content-area {
         min-height: 400px;
         flex: 1;
     }
-
     .chat-main-area {
         min-height: 300px;
         overflow: hidden;
     }
-
     .min-h-0 {
         min-height: 0;
     }
-
     .chat-panel-expand-btn {
         display: none !important;
     }
@@ -88,30 +84,24 @@
             height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
             min-height: 100%;
         }
-
         .chat-parameters-panel {
             max-width: 22rem;
             max-height: none;
             height: 100%;
         }
-
         .chat-content-area {
             min-height: 0;
         }
-
         .chat-main-area {
             min-height: 0;
         }
-
         .chat-interaction-container.panel-collapsed .chat-parameters-panel {
             display: none !important;
         }
-
         .chat-interaction-container.panel-collapsed .chat-panel-expand-btn {
             display: inline-block !important;
             align-self: flex-start;
         }
-
         .chat-interaction-container.panel-collapsed .chat-content-area {
             padding-left: 0 !important;
         }
