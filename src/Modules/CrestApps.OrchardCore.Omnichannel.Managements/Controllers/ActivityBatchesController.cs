@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -402,8 +402,6 @@ public sealed class ActivityBatchesController : Controller
                 batch.Status = OmnichannelActivityBatchStatus.Loading;
                 batch.TotalLoaded = 0;
 
-                var batchCounter = 0;
-
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
 
@@ -426,28 +424,45 @@ public sealed class ActivityBatchesController : Controller
 
                 var campaign = await campaignCatalog.FindByIdAsync(batch.CampaignId);
 
-                var activityCounter = 0;
-
                 var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
 
-                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value) : null;
-                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value) : null;
+                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue
+                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value)
+                    : null;
+
+                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue
+                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value)
+                    : null;
+
+                var activityCounter = 0;
 
                 while (true)
                 {
-                    var contactQuery = readonlySession.Query<ContentItem>();
+                    var contactQuery = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
+                            index.ContentType == batch.ContactContentType &&
+                            index.DocumentId > documentId);
 
-                    contactQuery = contactQuery.With<ContentItemIndex>(index =>
-                    index.ContentType == batch.ContactContentType &&
-                        (batch.OnlyPublishedLeads ? index.Published : index.Latest) &&
-                            index.DocumentId > documentId &&
-                                (leadCreatedFrom == null || index.CreatedUtc >= leadCreatedFrom) &&
-                                    (leadCreatedTo == null || index.CreatedUtc <= leadCreatedTo))
-                        .OrderBy(x => x.DocumentId);
+                    if (leadCreatedFrom.HasValue)
+                    {
+                        contactQuery = contactQuery.Where(index => index.CreatedUtc >= leadCreatedFrom);
+                    }
 
-                    // Apply the filters logic
+                    if (leadCreatedTo.HasValue)
+                    {
+                        contactQuery = contactQuery.Where(index => index.CreatedUtc <= leadCreatedTo);
+                    }
+
+                    if (batch.OnlyPublishedLeads)
+                    {
+                        contactQuery = contactQuery.Where(contact => contact.Published);
+                    }
+                    else
+                    {
+                        contactQuery = contactQuery.Where(contact => contact.Latest);
+                    }
+
                     var contacts = await contactQuery
-                        .Skip(batchCounter * _batchSize)
+                        .OrderBy(x => x.DocumentId)
                         .Take(_batchSize)
                         .ListAsync();
 
@@ -458,7 +473,8 @@ public sealed class ActivityBatchesController : Controller
                         await catalog.UpdateAsync(batch);
                         break;
                     }
-                    var preventDuplicates = true;
+
+                    var preventDuplicates = batch.PreventDuplicates;
 
                     HashSet<string> inQueueActivities = null;
 
@@ -467,30 +483,29 @@ public sealed class ActivityBatchesController : Controller
                         var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
 
                         inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
-                        index.ContactContentType == batch.ContactContentType &&
+                            index.ContactContentType == batch.ContactContentType &&
                             index.ContactContentItemId.IsIn(contentItemsIds) &&
-                                index.Status != ActivityStatus.Completed &&
-                                    index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
-                            .ListAsync())
-                            .Select(x => x.ContactContentItemId)
-                            .ToHashSet();
+                            index.Status != ActivityStatus.Completed &&
+                            index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                        .ListAsync())
+                        .Select(x => x.ContactContentItemId)
+                        .ToHashSet();
                     }
 
-                    batchCounter++;
                     var now = _clock.UtcNow;
 
                     var scheduledUtc = await localClock.ConvertToUtcAsync(batch.ScheduleAt);
 
                     foreach (var contact in contacts)
                     {
+                        documentId = Math.Max(documentId, contact.Id);
+
                         if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
                         {
                             continue;
                         }
 
                         var user = users[activityCounter++ % users.Length];
-
-                        documentId = Math.Min(documentId, contact.Id);
 
                         var activity = await activityManager.NewAsync();
 
