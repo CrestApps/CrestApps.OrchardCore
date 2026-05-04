@@ -1,85 +1,82 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.Core;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core.Extensions;
 
+/// <summary>
+/// Provides extension methods for AI function arguments.
+/// </summary>
 public static class AIFunctionArgumentsExtensions
 {
-    public static bool TryGetFirst(this AIFunctionArguments arguments, string key, out object value)
+    /// <summary>
+    /// Checks if the current request is authorized for the given permission,
+    /// automatically bypassing authorization for unauthenticated MCP requests
+    /// since the MCP server handles authentication via its own policy.
+    /// </summary>
+    public static Task<bool> IsAuthorizedAsync(this AIFunctionArguments arguments, Permission permission)
     {
-        return arguments.TryGetValue(key, out value) && value is not null;
-    }
+        var user = GetUser(arguments);
 
-    public static T GetFirstValueOrDefault<T>(this AIFunctionArguments arguments, string key, T fallbackValue = default)
-    {
-        if (arguments.TryGetFirst<T>(key, out var value))
+        if (IsMcpRequestWithUnauthenticatedUser(arguments, user))
         {
-            return value;
+            return Task.FromResult(true);
         }
 
-        return fallbackValue;
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+
+        return authorizationService.AuthorizeAsync(user, permission);
     }
 
-    public static bool TryGetFirstString(this AIFunctionArguments arguments, string key, out string value)
-        => arguments.TryGetFirstString(key, false, out value);
-
-    public static bool TryGetFirstString(this AIFunctionArguments arguments, string key, bool allowEmptyString, out string value)
+    /// <summary>
+    /// Checks if the current request is authorized for the given permission and resource,
+    /// automatically bypassing authorization for unauthenticated MCP requests
+    /// since the MCP server handles authentication via its own policy.
+    /// </summary>
+    public static Task<bool> IsAuthorizedAsync(this AIFunctionArguments arguments, Permission permission, object resource)
     {
-        if (arguments.TryGetFirst(key, out value))
+        var user = GetUser(arguments);
+
+        if (IsMcpRequestWithUnauthenticatedUser(arguments, user))
         {
-            if (!allowEmptyString && string.IsNullOrEmpty(value))
-            {
-                value = null;
+            return Task.FromResult(true);
+        }
 
-                return false;
-            }
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
+        return authorizationService.AuthorizeAsync(user, permission, resource);
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the current user is authenticated, or if the request
+    /// originates from the MCP server with no authenticated user (since MCP handles
+    /// authentication via its own policy).
+    /// </summary>
+    public static bool IsAuthenticatedOrMcpRequest(this AIFunctionArguments arguments)
+    {
+        var user = GetUser(arguments);
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
             return true;
         }
 
-        value = null;
+        // Allow unauthenticated MCP requests since MCP server handles auth via policy.
 
-        return false;
+        return arguments.Context?.ContainsKey("mcpRequest") == true;
     }
 
-    public static bool TryGetFirst<T>(this AIFunctionArguments arguments, string key, out T value)
+    private static ClaimsPrincipal GetUser(AIFunctionArguments arguments)
     {
-        value = default;
+        return arguments.Services.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
+    }
 
-        if (!arguments.TryGetValue(key, out var unsafeValue) || unsafeValue is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            if (unsafeValue is T alreadyTyped)
-            {
-                value = alreadyTyped;
-
-                return true;
-            }
-
-            if (unsafeValue is JsonElement je)
-            {
-                value = JsonSerializer.Deserialize<T>(je.GetRawText(), JSOptions.CaseInsensitive);
-
-                return true;
-            }
-
-            // Handle nullable types (e.g. int?, DateTime?).
-            var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-
-            var safeValue = Convert.ChangeType(unsafeValue, targetType);
-
-            value = (T)safeValue;
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+    private static bool IsMcpRequestWithUnauthenticatedUser(AIFunctionArguments arguments, ClaimsPrincipal user)
+    {
+        return arguments.Context?.ContainsKey("mcpRequest") == true
+            && user?.Identity?.IsAuthenticated != true;
     }
 }

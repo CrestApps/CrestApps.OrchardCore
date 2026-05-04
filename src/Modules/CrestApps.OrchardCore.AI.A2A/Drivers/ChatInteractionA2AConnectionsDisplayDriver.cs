@@ -1,8 +1,7 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
+﻿using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,6 +14,11 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionA2AConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<ChatInteractionA2AConnectionsDisplayDriver> stringLocalizer)
@@ -41,8 +45,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
                 DisplayText = entry.DisplayText,
                 IsSelected = interaction.A2AConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Parameters:4#Capabilities;5");
     }
 

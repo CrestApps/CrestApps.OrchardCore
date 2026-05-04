@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Drivers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -6,6 +6,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Represents the avatar admin menu.
+/// </summary>
 public sealed class AvatarAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
@@ -16,7 +19,11 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
-    public AvatarAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AvatarAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AvatarAdminMenu(IStringLocalizer<AvatarAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -48,9 +55,7 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
                     .Id("userAvatars")
                     .Action("Index", "Admin", _routeValues)
                     .Permission(UserPermissions.ManageAvatarSettings)
-                    .LocalNav()
-                )
-            );
+                    .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

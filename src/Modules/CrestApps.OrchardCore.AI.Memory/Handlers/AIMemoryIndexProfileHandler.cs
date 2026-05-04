@@ -1,3 +1,4 @@
+﻿using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
@@ -8,6 +9,10 @@ internal sealed class AIMemoryIndexProfileHandler : IndexProfileHandlerBase
 {
     private readonly AIMemoryIndexingService _indexingService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="indexingService">The indexing service.</param>
     public AIMemoryIndexProfileHandler(AIMemoryIndexingService indexingService)
     {
         _indexingService = indexingService;

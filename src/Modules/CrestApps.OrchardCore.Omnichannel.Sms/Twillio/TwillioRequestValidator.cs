@@ -1,5 +1,4 @@
-using System.Collections.Specialized;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Specialized;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -103,6 +102,12 @@ internal sealed class TwillioRequestValidator
         return false;
     }
 
+    /// <summary>
+    /// Validates the .
+    /// </summary>
+    /// <param name="url">The url.</param>
+    /// <param name="body">The body.</param>
+    /// <param name="expected">The expected.</param>
     public bool Validate(string url, string body, string expected)
     {
         ArgumentException.ThrowIfNullOrEmpty(url);
@@ -171,7 +176,6 @@ internal sealed class TwillioRequestValidator
         return Convert.ToBase64String(hash);
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     private static bool SecureCompare(string a, string b)
     {
         if (a == null || b == null)
@@ -179,19 +183,9 @@ internal sealed class TwillioRequestValidator
             return false;
         }
 
-        var n = a.Length;
-        if (n != b.Length)
-        {
-            return false;
-        }
-
-        var mismatch = 0;
-        for (var i = 0; i < n; i++)
-        {
-            mismatch |= a[i] ^ b[i];
-        }
-
-        return mismatch == 0;
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(a),
+            Encoding.UTF8.GetBytes(b));
     }
 
     /// <summary>

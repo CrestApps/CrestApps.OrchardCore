@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -12,6 +12,10 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpPromptDisplayDriver(IStringLocalizer<McpPromptDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -21,9 +25,9 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
     {
         return CombineAsync(
             View("McpPrompt_Fields_SummaryAdmin", entry).Location("Content:1"),
-            View("McpPrompt_Buttons_SummaryAdmin", entry).Location("Actions:5"),
-            View("McpPrompt_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
-            View("McpPrompt_Description_SummaryAdmin", entry).Location("Description:1")
+        View("McpPrompt_Buttons_SummaryAdmin", entry).Location("Actions:5"),
+        View("McpPrompt_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
+        View("McpPrompt_Description_SummaryAdmin", entry).Location("Description:1")
         );
     }
 
@@ -73,6 +77,7 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         {
             Name = name,
         };
+
         entry.Prompt.Name = name;
         entry.Prompt.Title = model.Title;
         entry.Prompt.Description = model.Description;

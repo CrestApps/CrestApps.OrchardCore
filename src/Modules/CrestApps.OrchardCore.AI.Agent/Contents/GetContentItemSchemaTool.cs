@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,24 +10,32 @@ using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that performs get content item schema operations.
+/// </summary>
 public sealed class GetContentItemSchemaTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "getSampleContentItemForContentType";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentType": {
-              "type": "string",
-              "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
-            }
-          },
-          "required": ["contentType"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
         }
-        """);
+      },
+      "required": [
+        "contentType"
+      ],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -35,6 +43,9 @@ public sealed class GetContentItemSchemaTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -43,6 +54,7 @@ public sealed class GetContentItemSchemaTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemSchemaTool>>();
@@ -53,6 +65,7 @@ public sealed class GetContentItemSchemaTool : AIFunction
         }
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 

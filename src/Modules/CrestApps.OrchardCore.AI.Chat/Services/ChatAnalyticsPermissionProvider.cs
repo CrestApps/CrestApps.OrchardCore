@@ -1,8 +1,11 @@
-using OrchardCore;
+﻿using OrchardCore;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
+/// <summary>
+/// Provides chat analytics permission functionality.
+/// </summary>
 public sealed class ChatAnalyticsPermissionProvider : IPermissionProvider
 {
     public static readonly Permission ViewChatAnalytics = new("ViewChatAnalytics", "View AI Chat Analytics", isSecurityCritical: false);
@@ -21,9 +24,15 @@ public sealed class ChatAnalyticsPermissionProvider : IPermissionProvider
         ExportChatAnalytics,
     ];
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

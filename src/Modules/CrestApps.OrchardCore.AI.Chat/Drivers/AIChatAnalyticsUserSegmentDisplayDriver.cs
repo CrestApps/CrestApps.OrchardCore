@@ -21,16 +21,16 @@ public sealed class AIChatAnalyticsUserSegmentDisplayDriver : DisplayDriver<AICh
             model.AnonymousSessions = events.Count(e => !e.IsAuthenticated);
 
             model.UniqueAuthenticatedUsers = events
-                .Where(e => e.IsAuthenticated && !string.IsNullOrEmpty(e.UserId))
-                .Select(e => e.UserId)
-                .Distinct()
-                .Count();
+            .Where(e => e.IsAuthenticated && !string.IsNullOrEmpty(e.UserId))
+            .Select(e => e.UserId)
+            .Distinct()
+            .Count();
 
             model.UniqueAnonymousVisitors = events
-                .Where(e => !e.IsAuthenticated && !string.IsNullOrEmpty(e.VisitorId))
-                .Select(e => e.VisitorId)
-                .Distinct()
-                .Count();
+            .Where(e => !e.IsAuthenticated && !string.IsNullOrEmpty(e.VisitorId))
+            .Select(e => e.VisitorId)
+            .Distinct()
+            .Count();
 
             if (events.Count > 0)
             {

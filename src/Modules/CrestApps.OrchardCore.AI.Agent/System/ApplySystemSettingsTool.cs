@@ -1,11 +1,14 @@
-﻿using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
+/// <summary>
+/// Represents the apply system settings tool.
+/// </summary>
 public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
 {
     public const string TheName = "applySiteSettings";
@@ -20,6 +23,7 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ApplySystemSettingsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

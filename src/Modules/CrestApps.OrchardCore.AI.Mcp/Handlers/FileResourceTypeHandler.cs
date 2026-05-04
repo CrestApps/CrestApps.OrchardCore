@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
@@ -21,10 +21,15 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
     private readonly IMcpFileProviderResolver _fileProviderResolver;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FileResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="fileProviderResolver">The file provider resolver.</param>
+    /// <param name="logger">The logger.</param>
     public FileResourceTypeHandler(
         IMcpFileProviderResolver fileProviderResolver,
         ILogger<FileResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _fileProviderResolver = fileProviderResolver;
         _logger = logger;

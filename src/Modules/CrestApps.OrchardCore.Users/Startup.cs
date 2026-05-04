@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Handlers;
 using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.Services;
@@ -35,6 +35,9 @@ using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -46,6 +49,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Liquid feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Liquid")]
 public sealed class LiquidStartup : StartupBase
 {
@@ -55,8 +61,11 @@ public sealed class LiquidStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Caching feature.
+/// </summary>
 [RequireFeatures("OrchardCore.DynamicCache")]
-public sealed class CashingStartup : StartupBase
+public sealed class CachingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -64,6 +73,9 @@ public sealed class CashingStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DisplayName feature.
+/// </summary>
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {
@@ -102,6 +114,9 @@ public sealed class DisplayNameStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Users feature.
+/// </summary>
 [RequireFeatures(UserConstants.Features.Users)]
 public sealed class UsersStartup : StartupBase
 {
@@ -111,6 +126,9 @@ public sealed class UsersStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the UserOverride feature.
+/// </summary>
 [Feature(UsersConstants.Feature.DisplayName)]
 [RequireFeatures(UserConstants.Features.Users)]
 public sealed class UserOverrideStartup : StartupBase
@@ -125,6 +143,9 @@ public sealed class UserOverrideStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Avatar feature.
+/// </summary>
 [Feature(UsersConstants.Feature.Avatars)]
 public sealed class AvatarStartup : StartupBase
 {
@@ -139,6 +160,7 @@ public sealed class AvatarStartup : StartupBase
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
+
         services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();

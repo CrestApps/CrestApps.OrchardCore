@@ -1,13 +1,17 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.Elasticsearch;
+using CrestApps.Core.Infrastructure;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 
 internal sealed class DataSourceElasticsearchDocumentIndexHandler : IDocumentIndexHandler
 {
+    /// <summary>
+    /// Builds the index async.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
         if (context.Record is not DataSourceEmbeddingDocument embeddingDocument)
@@ -17,7 +21,7 @@ internal sealed class DataSourceElasticsearchDocumentIndexHandler : IDocumentInd
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            indexProfile.ProviderName != ElasticsearchConstants.ProviderName)
+                indexProfile.ProviderName != ElasticsearchConstants.ProviderName)
         {
             return Task.CompletedTask;
         }

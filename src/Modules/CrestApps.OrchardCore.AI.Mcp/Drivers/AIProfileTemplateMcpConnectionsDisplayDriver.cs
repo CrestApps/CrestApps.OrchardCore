@@ -1,13 +1,12 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
@@ -17,6 +16,11 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateMcpConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileTemplateMcpConnectionsDisplayDriver> stringLocalizer)
@@ -36,7 +40,7 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
 
         return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
-            var mcpMetadata = template.As<AIProfileMcpMetadata>();
+            var mcpMetadata = template.GetOrCreate<AIProfileMcpMetadata>();
 
             model.Connections = connections
             .Select(entry => new ToolEntry
@@ -45,8 +49,7 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
                 DisplayText = entry.DisplayText,
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Content:3#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }

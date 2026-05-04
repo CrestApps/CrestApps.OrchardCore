@@ -1,6 +1,8 @@
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,6 +18,11 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IStringLocalizer<AIDataSourceDisplayDriver> stringLocalizer)
@@ -50,18 +57,22 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             // but allow editing if either is missing (e.g., migration failure).
             model.IsLocked = !string.IsNullOrEmpty(dataSource.SourceIndexProfileName) &&
                 !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
-                !string.IsNullOrEmpty(dataSource.ContentFieldName);
+                    !string.IsNullOrEmpty(dataSource.ContentFieldName);
 
-            // Show ALL source indexes from all providers, excluding master indexes.
+            // Show source indexes from all providers, excluding AI-managed index profiles.
             var allIndexes = await _indexProfileStore.GetAllAsync();
 
             model.SourceIndexProfileNames = allIndexes
-                .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
+                .Where(i =>
+                    !string.Equals(i.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(i.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
                 .GroupBy(i => i.ProviderName)
                 .OrderBy(g => g.Key)
                 .SelectMany(g =>
                 {
                     var group = new SelectListGroup { Name = g.Key };
+
                     return g.OrderBy(i => i.Name).Select(i => new SelectListItem(i.Name, i.Name) { Group = group });
                 });
 
@@ -73,6 +84,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
                 .SelectMany(g =>
                 {
                     var group = new SelectListGroup { Name = g.Key };
+
                     return g.OrderBy(i => i.Name).Select(i => new SelectListItem(i.Name, i.Name) { Group = group });
                 });
 
@@ -96,8 +108,8 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         // Allow updating index config if new OR if fields are missing (migration failure recovery).
         var canUpdateIndex = context.IsNew ||
             string.IsNullOrEmpty(dataSource.SourceIndexProfileName) ||
-            string.IsNullOrEmpty(dataSource.ContentFieldName) ||
-            string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName);
+                string.IsNullOrEmpty(dataSource.ContentFieldName) ||
+                    string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName);
 
         if (canUpdateIndex)
         {

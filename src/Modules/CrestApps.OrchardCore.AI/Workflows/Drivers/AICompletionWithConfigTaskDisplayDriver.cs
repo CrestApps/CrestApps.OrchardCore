@@ -1,5 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
@@ -10,19 +12,32 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
+
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the <see cref="AICompletionWithConfigTask"/> workflow activity.
+/// </summary>
 public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDriver<AICompletionWithConfigTask, AICompletionWithConfigTaskViewModel>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultAIOptions _defaultAIOptions;
+
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionWithConfigTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The AI tool definition options.</param>
+    /// <param name="deploymentManager">The AI deployment manager for resolving deployments.</param>
+    /// <param name="defaultAIOptions">The default AI options for initial configuration values.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for template validation.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AICompletionWithConfigTaskDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAIDeploymentManager deploymentManager,
@@ -43,6 +58,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         {
             model.PromptTemplate = activity.PromptTemplate;
             model.ResultPropertyName = activity.ResultPropertyName;
+
             model.DeploymentName = await NormalizeDeploymentSelectorAsync(activity.DeploymentName);
 
             model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : activity.MaxTokens;
@@ -53,7 +69,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             model.SystemMessage = activity.SystemMessage;
             model.DeploymentNames = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
-
         }).Location("Content");
 
         if (_toolDefinitions.Tools.Count == 0)
@@ -64,16 +79,16 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
             model.Tools = _toolDefinitions.Tools
-                .Where(tool => !tool.Value.IsSystemTool)
-                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
-                .OrderBy(group => group.Key)
-                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-                {
-                    ItemId = entry.Key,
-                    DisplayText = entry.Value.Title,
-                    Description = entry.Value.Description,
-                    IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
-                }).OrderBy(entry => entry.DisplayText).ToArray());
+            .Where(tool => !tool.Value.IsSystemTool)
+            .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+            {
+                ItemId = entry.Key,
+                DisplayText = entry.Value.Title,
+                Description = entry.Value.Description,
+                IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
+            }).OrderBy(entry => entry.DisplayText).ToArray());
         }).Location("Content:7#Capabilities;8");
 
         return Combine(contents, tools);
@@ -110,6 +125,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
         activity.PromptTemplate = model.PromptTemplate;
         activity.ResultPropertyName = model.ResultPropertyName?.Trim();
+
         activity.DeploymentName = model.DeploymentName?.Trim();
 
         activity.MaxTokens = model.MaxTokens;
@@ -117,6 +133,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         activity.TopP = model.TopP;
         activity.FrequencyPenalty = model.FrequencyPenalty;
         activity.PresencePenalty = model.PresencePenalty;
+
         activity.SystemMessage = model.SystemMessage;
 
         if (_toolDefinitions.Tools.Count > 0)
@@ -147,12 +164,13 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
                 SelectListGroup group = null;
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+
+                var groupKey = d.GetConnectionDisplayName();
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
@@ -161,8 +179,9 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
             });

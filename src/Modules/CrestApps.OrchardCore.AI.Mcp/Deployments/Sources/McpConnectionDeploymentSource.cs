@@ -1,8 +1,9 @@
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
@@ -11,6 +12,10 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
 {
     private readonly ISourceCatalog<McpConnection> _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
     public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
     {
         _store = store;
@@ -23,8 +28,8 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
         var connectionsData = new JsonArray();
 
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -42,12 +47,7 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
                 { "OwnerId" , connection.OwnerId },
             };
 
-            var properties = new JsonObject();
-
-            foreach (var property in connection.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
+            var properties = JsonSerializer.SerializeToNode(connection.Properties)?.AsObject() ?? new JsonObject();
 
             SanitizeSensitiveData(connection, properties);
 

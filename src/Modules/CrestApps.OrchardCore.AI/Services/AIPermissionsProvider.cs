@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -16,6 +17,11 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
     private readonly IAIProfileStore _profileStore;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIPermissionsProvider"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="logger">The logger.</param>
     public AIPermissionsProvider(
         IAIProfileStore profileStore,
         ILogger<AIPermissionsProvider> logger)
@@ -24,6 +30,9 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
@@ -43,6 +52,9 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         return permissions;
     }
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
     {
         return

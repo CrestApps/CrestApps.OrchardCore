@@ -1,0 +1,59 @@
+---
+sidebar_label: OpenXml Support
+sidebar_position: 3
+title: AI Documents (OpenXml) Support
+description: Microsoft Office document support (Word, Excel, PowerPoint) for the AI Documents feature.
+---
+
+| | |
+| --- | --- |
+| **Feature Name** | AI Documents (OpenXml) |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
+
+Extends the 'AI Documents' feature by allowing OpenXml file (i.e., .docx, .xlsx, .pptx).
+
+## Overview
+
+This module extends the AI Documents feature with Microsoft Office document support (Word, Excel, PowerPoint).
+
+## Features
+
+- **Word Document Extraction**: Extract text from .docx files
+- **Excel Spreadsheet Extraction**: Extract data from .xlsx files
+- **PowerPoint Presentation Extraction**: Extract text from .pptx files
+- **Full Content Parsing**: Extracts text from all paragraphs, cells, and slides
+
+## Getting Started
+
+1. Enable the `AI Documents (OpenXml)` feature in Orchard Core admin
+2. Upload Office documents in the Documents tab of your chat interactions
+3. Text content will be automatically extracted and used for RAG
+
+## Technical Details
+
+This module uses the [DocumentFormat.OpenXml](https://github.com/OfficeDev/Open-XML-SDK) library from Microsoft for Office document parsing. This is the official SDK for reading and writing Open XML documents.
+
+## Supported File Types
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Word | .docx | Microsoft Word documents (Office 2007+) |
+| Excel | .xlsx | Microsoft Excel spreadsheets (Office 2007+) |
+| PowerPoint | .pptx | Microsoft PowerPoint presentations (Office 2007+) |
+
+## Limitations
+
+### Binary Office Formats Not Supported
+
+The following binary Office formats are **not supported**:
+- `.doc` (Word 97-2003)
+- `.xls` (Excel 97-2003)
+- `.ppt` (PowerPoint 97-2003)
+
+To use these files, convert them to .docx, .xlsx, or .pptx first.
+
+### Content Extraction Notes
+
+- **Word**: Extracts text from all paragraphs in the main document body
+- **Excel**: Extracts data row-by-row, with cells separated by tabs. Supports shared strings, inline strings, numeric values, and boolean cells.
+- **PowerPoint**: Extracts text from all text elements across all slides

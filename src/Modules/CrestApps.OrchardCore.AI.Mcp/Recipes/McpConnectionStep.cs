@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+﻿using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -18,11 +18,17 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="mcpClientOptions">The mcp client options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _mcpClientOptions = mcpClientOptions.Value;
@@ -59,6 +65,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
+
                     continue;
                 }
 
@@ -71,7 +78,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     connection.ItemId = id;
                 }
@@ -95,6 +102,9 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
     private sealed class McpConnectionDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the connections.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

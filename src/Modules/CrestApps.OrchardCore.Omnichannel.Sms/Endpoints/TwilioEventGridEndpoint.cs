@@ -1,7 +1,7 @@
-using System.Text;
+﻿using System.Text;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -17,6 +17,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 
 internal static class TwilioEventGridEndpoint
 {
+    /// <summary>
+    /// Adds the twilio event grid endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddTwilioEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("Omnichannel/webhook/TwilioEventGrid", HandleAsync)
@@ -40,8 +44,8 @@ internal static class TwilioEventGridEndpoint
         var protector = dataProtectionProvider.CreateProtector(TwilioSmsProvider.ProtectorName);
 
         var authToken = string.IsNullOrEmpty(settings.AuthToken)
-            ? null
-            : protector.Unprotect(settings.AuthToken);
+        ? null
+        : protector.Unprotect(settings.AuthToken);
 
         if (!IsRequestValid(context, authToken, logger))
         {
@@ -59,8 +63,7 @@ internal static class TwilioEventGridEndpoint
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
-                from.SanitizeLogValue(), to.SanitizeLogValue(), messageSid.SanitizeLogValue());
+            logger.LogInformation("Twilio message received.");
         }
 
         // Map to OmnichannelMessage
@@ -106,8 +109,8 @@ internal static class TwilioEventGridEndpoint
         var requestUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.Path}";
 
         var form = context.Request.HasFormContentType
-            ? context.Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString())
-            : [];
+        ? context.Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString())
+        : [];
 
         // Build string to sign
         var sb = new StringBuilder();

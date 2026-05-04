@@ -5,10 +5,17 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
+/// <summary>
+/// Represents the AI chat session post processed event.
+/// </summary>
 public sealed class AIChatSessionPostProcessedEvent : EventActivity
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionPostProcessedEvent"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatSessionPostProcessedEvent(
         IStringLocalizer<AIChatSessionPostProcessedEvent> stringLocalizer)
     {
@@ -34,19 +41,19 @@ public sealed class AIChatSessionPostProcessedEvent : EventActivity
         return new ValueTask<IEnumerable<Outcome>>(
         [
             Outcome(S["Done"]),
-        ]);
+            ]);
     }
 
     public override ActivityExecutionResult Resume(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }
 
     public override ActivityExecutionResult Execute(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }

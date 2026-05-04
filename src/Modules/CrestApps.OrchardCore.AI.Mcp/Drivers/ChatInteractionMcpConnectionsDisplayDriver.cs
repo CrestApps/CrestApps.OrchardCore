@@ -1,8 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,6 +14,11 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionMcpConnectionsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<ChatInteractionMcpConnectionsDisplayDriver> stringLocalizer)
@@ -41,8 +45,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
                 DisplayText = entry.DisplayText,
                 IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Parameters:3#Capabilities;5");
     }
 

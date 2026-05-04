@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -11,6 +11,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction connection shape.
+/// </summary>
 public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIDeploymentManager _deploymentManager;
@@ -19,6 +22,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="aiOptions">The ai options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
@@ -46,7 +56,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-
         }).Location("Parameters:3#Settings;1");
 
         return connectionResult;
@@ -54,7 +63,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-
         var model = new EditChatInteractionConnectionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -70,22 +78,23 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                var groupKey = d.ConnectionName;
                 SelectListGroup group = null;
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
             });

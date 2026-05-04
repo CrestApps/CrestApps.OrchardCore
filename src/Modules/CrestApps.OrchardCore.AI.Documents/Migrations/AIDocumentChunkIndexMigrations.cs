@@ -1,39 +1,29 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+﻿using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.Indexing;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Documents.Migrations;
 
 internal sealed class AIDocumentChunkIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentChunkIndexMigrations"/> class.
+    /// </summary>
+    /// <param name="option">The option.</param>
+    public AIDocumentChunkIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AIDocumentChunkIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("AIDocumentId", column => column.WithLength(26))
-                .Column<string>("ReferenceId", column => column.WithLength(26))
-                .Column<string>("ReferenceType", column => column.WithLength(32))
-                .Column<int>("Index"),
-            collection: AIConstants.AIDocsCollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIDocumentChunkIndex>(table => table
-            .CreateIndex("IDX_AIDocumentChunkIndex_DocId",
-                "DocumentId",
-                "AIDocumentId",
-                "ReferenceId",
-                "ReferenceType"),
-            collection: AIConstants.AIDocsCollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIDocumentChunkIndex>(table => table
-            .CreateIndex("IDX_AIDocumentChunkIndex_RefId",
-                "AIDocumentId",
-                "ReferenceId",
-                "ReferenceType"),
-            collection: AIConstants.AIDocsCollectionName
-        );
+        await SchemaBuilder.CreateAIDocumentChunkIndexSchemaAsync(_option);
 
         return 1;
     }

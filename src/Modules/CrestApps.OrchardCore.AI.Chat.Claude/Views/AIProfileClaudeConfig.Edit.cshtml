@@ -1,0 +1,63 @@
+@using CrestApps.Core.AI.Claude.Models
+@using CrestApps.Core.AI.Claude.Services
+@using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels
+@using OrchardCore
+
+@model EditClaudeProfileViewModel
+
+<div class="d-none orchestrator-dependent orchestrator-dependent-@(ClaudeOrchestrator.OrchestratorName)">
+    <fieldset class="@Orchard.GetWrapperClasses()">
+        <legend class="@Orchard.GetLabelClasses()">@T["Claude configuration"]</legend>
+        <div class="@Orchard.GetEndClasses()">
+            @if (!Model.IsClaudeConfigured)
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @T["Claude is not configured and cannot be used until it has been configured in Settings → Artificial Intelligence → Claude."]
+                </div>
+            }
+            else if (Model.AvailableModels.Any())
+            {
+                <div class="mb-3">
+                    <label asp-for="ClaudeModel" class="form-label">@T["Claude model"]</label>
+                    <select asp-for="ClaudeModel" asp-items="Model.AvailableModels" class="form-select">
+                        <option value="">@T["Use default model"]</option>
+                    </select>
+                    <span asp-validation-for="ClaudeModel" class="text-danger"></span>
+                    <span class="hint">@T["Select a Claude model override for this profile, or leave it on the configured default."]</span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ClaudeEffortLevel" class="form-label">@T["Effort level"]</label>
+                    <select asp-for="ClaudeEffortLevel" class="form-select">
+                        <option value="@ClaudeEffortLevel.None">@T["Default"]</option>
+                        <option value="@ClaudeEffortLevel.Low">@T["Low"]</option>
+                        <option value="@ClaudeEffortLevel.Medium">@T["Medium"]</option>
+                        <option value="@ClaudeEffortLevel.High">@T["High"]</option>
+                    </select>
+                    <span class="hint">@T["Select the reasoning effort level. Higher effort produces more thorough responses but uses more tokens."]</span>
+                </div>
+            }
+            else if (Model.IsClaudeConfigured)
+            {
+                <div class="mb-3">
+                    <label asp-for="ClaudeModel" class="form-label">@T["Claude model"]</label>
+                    <input asp-for="ClaudeModel" class="form-control" placeholder="@T["Leave empty to use the default model from settings"]" />
+                    <span asp-validation-for="ClaudeModel" class="text-danger"></span>
+                    <span class="hint">@T["Optionally override the Claude model. Leave empty to use the default model configured in settings."]</span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ClaudeEffortLevel" class="form-label">@T["Effort level"]</label>
+                    <select asp-for="ClaudeEffortLevel" class="form-select">
+                        <option value="@ClaudeEffortLevel.None">@T["Default"]</option>
+                        <option value="@ClaudeEffortLevel.Low">@T["Low"]</option>
+                        <option value="@ClaudeEffortLevel.Medium">@T["Medium"]</option>
+                        <option value="@ClaudeEffortLevel.High">@T["High"]</option>
+                    </select>
+                    <span class="hint">@T["Select the reasoning effort level. Higher effort produces more thorough responses but uses more tokens."]</span>
+                </div>
+            }
+        </div>
+    </fieldset>
+</div>

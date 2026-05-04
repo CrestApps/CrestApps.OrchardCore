@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
+﻿using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
@@ -12,11 +13,20 @@ namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 /// </summary>
 public sealed class DataSourceIndexProfileHandler : IndexProfileHandlerBase
 {
-    private readonly DataSourceIndexingService _indexingService;
+    private readonly IAIDataSourceStore _dataSourceStore;
+    private readonly IAIDataSourceIndexingQueue _indexingQueue;
 
-    public DataSourceIndexProfileHandler(DataSourceIndexingService indexingService)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="dataSourceStore">The data source store.</param>
+    /// <param name="indexingQueue">The indexing queue.</param>
+    public DataSourceIndexProfileHandler(
+        IAIDataSourceStore dataSourceStore,
+        IAIDataSourceIndexingQueue indexingQueue)
     {
-        _indexingService = indexingService;
+        _dataSourceStore = dataSourceStore;
+        _indexingQueue = indexingQueue;
     }
 
     public override async Task SynchronizedAsync(IndexProfileSynchronizedContext context)
@@ -26,6 +36,14 @@ public sealed class DataSourceIndexProfileHandler : IndexProfileHandlerBase
             return;
         }
 
-        await _indexingService.SyncByIndexProfileIdsAsync([context.IndexProfile.Id]);
+        foreach (var dataSource in await _dataSourceStore.GetAllAsync())
+        {
+            if (!string.Equals(dataSource.AIKnowledgeBaseIndexProfileName, context.IndexProfile.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            await _indexingQueue.QueueSyncDataSourceAsync(dataSource);
+        }
     }
 }

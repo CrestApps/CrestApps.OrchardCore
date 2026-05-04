@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Extensions;
@@ -21,11 +20,18 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
 
     private readonly ShellSettings _shellSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureOpenAIFeatureMigrations"/> class.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public AzureOpenAIFeatureMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public int Create()
     {
         if (_shellSettings.IsInitializing())
@@ -65,9 +71,10 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
             }
 
             // If the old Standard feature was enabled, ensure the main Area feature is enabled.
-            if (enabledFeatureIds.Contains(OldStandardFeature) && !enabledFeatureIds.Contains(AzureOpenAIConstants.Feature.Area))
+
+            if (enabledFeatureIds.Contains(OldStandardFeature) && !enabledFeatureIds.Contains("CrestApps.OrchardCore.OpenAI.Azure"))
             {
-                var areaFeature = extensionManager.GetFeatures((IEnumerable<string>)[AzureOpenAIConstants.Feature.Area]).FirstOrDefault();
+                var areaFeature = extensionManager.GetFeatures((IEnumerable<string>)["CrestApps.OrchardCore.OpenAI.Azure"]).FirstOrDefault();
 
                 if (areaFeature != null)
                 {

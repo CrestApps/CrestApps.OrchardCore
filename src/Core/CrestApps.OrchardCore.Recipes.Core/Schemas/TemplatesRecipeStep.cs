@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -10,9 +10,13 @@ public sealed class TemplatesRecipeStep : IRecipeStep
     private JsonSchema _cached;
     public string Name => "Templates";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
+
         return ValueTask.FromResult(_cached);
     }
 
@@ -22,15 +26,15 @@ public sealed class TemplatesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Templates")),
-                ("Templates", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .AdditionalProperties(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                        .AdditionalProperties(true))
-                    .Description("A dictionary keyed by template name. Each value has a Content property with Liquid markup.")))
+        ("Templates", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+            .AdditionalProperties(true))
+            .Description("A dictionary keyed by template name. Each value has a Content property with Liquid markup.")))
             .Required("name", "Templates")
             .AdditionalProperties(true)
             .Build();

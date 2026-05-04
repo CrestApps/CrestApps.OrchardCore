@@ -1,21 +1,32 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI;
+using CrestApps.Core.AI.OpenAI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Handlers;
 
+/// <summary>
+/// Handles events for open AI provider connection.
+/// </summary>
 public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandler
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAIProviderConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     public OpenAIProviderConnectionHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
     }
 
+    /// <summary>
+    /// Performs the exporting operation.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Exporting(ExportingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
@@ -36,6 +47,10 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
         context.ExportData["Properties"][nameof(OpenAIConnectionMetadata)] = metadataNode;
     }
 
+    /// <summary>
+    /// Initializes the ializing.
+    /// </summary>
+    /// <param name="context">The context.</param>
     public void Initializing(InitializingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
@@ -43,7 +58,12 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
             return;
         }
 
-        var metadata = context.Connection.As<OpenAIConnectionMetadata>();
+        if (!context.Connection.Has<OpenAIConnectionMetadata>())
+        {
+            return;
+        }
+
+        var metadata = context.Connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {

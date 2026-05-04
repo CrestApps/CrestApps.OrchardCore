@@ -4,6 +4,13 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 internal static class RecipeStepSchemaBuilders
 {
+    /// <summary>
+    /// Builds a JSON schema for a named recipe step with the specified properties and constraints.
+    /// </summary>
+    /// <param name="stepName">The name of the recipe step, added as a constant "name" property.</param>
+    /// <param name="properties">The additional property definitions for the step schema.</param>
+    /// <param name="requiredProperties">The names of properties that are required, in addition to "name".</param>
+    /// <param name="additionalProperties">A value indicating whether the schema allows additional properties beyond those defined.</param>
     public static JsonSchema BuildNamedStep(
         string stepName,
         IEnumerable<(string Name, JsonSchemaBuilder Schema)> properties,
@@ -14,6 +21,7 @@ internal static class RecipeStepSchemaBuilders
         {
             ("name", String().Const(stepName)),
         };
+
         allProperties.AddRange(properties);
 
         var builder = new JsonSchemaBuilder()
@@ -28,6 +36,11 @@ internal static class RecipeStepSchemaBuilders
             .Build();
     }
 
+    /// <summary>
+    /// Creates a JSON schema builder for an array type with the specified item schema.
+    /// </summary>
+    /// <param name="items">The schema builder for items in the array.</param>
+    /// <param name="minItems">The optional minimum number of items in the array.</param>
     public static JsonSchemaBuilder Array(JsonSchemaBuilder items, int? minItems = null)
     {
         var builder = new JsonSchemaBuilder()
@@ -42,15 +55,30 @@ internal static class RecipeStepSchemaBuilders
         return builder;
     }
 
+    /// <summary>
+    /// Creates a JSON schema builder for a boolean type.
+    /// </summary>
     public static JsonSchemaBuilder Boolean()
         => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
 
+    /// <summary>
+    /// Creates a JSON schema builder for an integer type.
+    /// </summary>
     public static JsonSchemaBuilder Integer()
         => new JsonSchemaBuilder().Type(SchemaValueType.Integer);
 
+    /// <summary>
+    /// Creates a JSON schema builder for a number type.
+    /// </summary>
     public static JsonSchemaBuilder Number()
         => new JsonSchemaBuilder().Type(SchemaValueType.Number);
 
+    /// <summary>
+    /// Creates a JSON schema builder for an object type with optional properties and constraints.
+    /// </summary>
+    /// <param name="properties">The optional property definitions for the object schema.</param>
+    /// <param name="requiredProperties">The optional names of properties that are required.</param>
+    /// <param name="additionalProperties">A value indicating whether the schema allows additional properties beyond those defined.</param>
     public static JsonSchemaBuilder Object(
         IEnumerable<(string Name, JsonSchemaBuilder Schema)> properties = null,
         IEnumerable<string> requiredProperties = null,
@@ -72,9 +100,16 @@ internal static class RecipeStepSchemaBuilders
         return builder.AdditionalProperties(additionalProperties);
     }
 
+    /// <summary>
+    /// Creates a JSON schema builder for a string type.
+    /// </summary>
     public static JsonSchemaBuilder String()
         => new JsonSchemaBuilder().Type(SchemaValueType.String);
 
+    /// <summary>
+    /// Creates a JSON schema builder for an array of strings.
+    /// </summary>
+    /// <param name="minItems">The optional minimum number of items in the array.</param>
     public static JsonSchemaBuilder StringArray(int? minItems = null)
         => Array(String(), minItems);
 }

@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,6 +11,9 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the <see cref="AICompletionFromProfileTask"/> workflow activity.
+/// </summary>
 public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDriver<AICompletionFromProfileTask, AICompletionFromProfileTaskViewModel>
 {
     private readonly IAIProfileStore _profileStore;
@@ -17,6 +21,12 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AICompletionFromProfileTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The AI profile store used to retrieve profiles.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for template validation.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AICompletionFromProfileTaskDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,

@@ -1,5 +1,5 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,24 +7,30 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
+/// <summary>
+/// Represents the disable tenant tool.
+/// </summary>
 public sealed class DisableTenantTool : AIFunction
 {
     public const string TheName = "disableTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                }
-            },
-            "additionalProperties": false,
-            "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -40,6 +46,7 @@ public sealed class DisableTenantTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<DisableTenantTool>>();

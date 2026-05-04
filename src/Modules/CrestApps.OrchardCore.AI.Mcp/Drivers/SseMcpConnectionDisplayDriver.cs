@@ -1,13 +1,14 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using System.Text.Json;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
+using McpClientAuthenticationType = CrestApps.Core.AI.Models.ClientAuthenticationType;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
@@ -17,6 +18,11 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SseMcpConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SseMcpConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<SseMcpConnectionDisplayDriver> stringLocalizer)
@@ -34,11 +40,12 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
         return Initialize<SseConnectionFieldsViewModel>("SseMcpConnectionFields_Edit", model =>
         {
-            var metadata = connection.As<SseMcpConnectionMetadata>();
+            var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationType = metadata.AuthenticationType;
 
             // Backward compatibility: if no auth type is set but headers exist, show as CustomHeaders.
+
             if (metadata.AuthenticationType == McpClientAuthenticationType.Anonymous &&
                 metadata.AdditionalHeaders is { Count: > 0 })
             {
@@ -69,6 +76,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             model.HasOAuth2ClientCertificatePassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword);
 
             // Custom headers.
+
             if (metadata.AdditionalHeaders is not null)
             {
                 model.AdditionalHeaders = JsonSerializer.Serialize(metadata.AdditionalHeaders, McpJOptions.SchemaSerializerOptions);
@@ -76,15 +84,14 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
             model.Schema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
-
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
         }).Location("Content:1");
     }
 
@@ -110,7 +117,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Invalid Endpoint value."]);
         }
 
-        var metadata = connection.As<SseMcpConnectionMetadata>();
+        var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(McpConstants.DataProtectionPurpose);
 
         // Preserve existing encrypted values before clearing.

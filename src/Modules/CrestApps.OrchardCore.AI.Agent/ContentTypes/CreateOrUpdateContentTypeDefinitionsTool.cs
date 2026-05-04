@@ -1,11 +1,14 @@
-﻿using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the create or update content type definitions tool.
+/// </summary>
 public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseTool
 {
     public const string TheName = "applyContentTypeDefinitionFromRecipe";
@@ -20,6 +23,7 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTypeDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);

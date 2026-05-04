@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -7,6 +7,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 internal sealed class OmnichannelActivityIndexMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
@@ -30,39 +33,39 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("UrgencyLevel", column => column.WithLength(50))
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("InteractionType", column => column.WithLength(50)),
-            collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelConstants.CollectionName
         );
 
         // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityIndex_DocumentId",
-                "DocumentId",
-                "Channel",
-                "ChannelEndpointId",
-                "PreferredDestination",
-                "ScheduledUtc"),
-            collection: OmnichannelConstants.CollectionName
+        "DocumentId",
+        "Channel",
+        "ChannelEndpointId",
+        "PreferredDestination",
+        "ScheduledUtc"),
+        collection: OmnichannelConstants.CollectionName
         );
 
         // This SQL index is for locating activities assigned to a specific user (My Activities view).
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityMyActivities_DocumentId",
-                "DocumentId",
-                "AssignedToId",
-                "Status",
-                "InteractionType",
-                "ScheduledUtc"),
-            collection: OmnichannelConstants.CollectionName
+        "DocumentId",
+        "AssignedToId",
+        "Status",
+        "InteractionType",
+        "ScheduledUtc"),
+        collection: OmnichannelConstants.CollectionName
         );
 
         // This SQL index is for locating duplicate activities during batch loading.
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityMyActivities_BatchLoading",
-                "ContactContentType",
-                "ContactContentItemId",
-                "Status",
-                "DocumentId"),
-            collection: OmnichannelConstants.CollectionName
+        "ContactContentType",
+        "ContactContentItemId",
+        "Status",
+        "DocumentId"),
+        collection: OmnichannelConstants.CollectionName
         );
 
         return 1;

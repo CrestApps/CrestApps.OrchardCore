@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.Core.AI.A2A.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -12,6 +11,10 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AHostAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public A2AHostAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -30,15 +33,18 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
                 break;
 
             case A2AHostAuthenticationType.ApiKey:
+
                 if (context.User.Identity?.IsAuthenticated == true &&
                     context.User.Identity.AuthenticationType == A2AApiKeyAuthenticationDefaults.AuthenticationScheme)
                 {
                     context.Succeed(requirement);
                 }
+
                 break;
 
             case A2AHostAuthenticationType.OpenId:
             default:
+
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
                     if (!options.RequireAccessPermission)
@@ -49,12 +55,13 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
                     {
                         _authorizationService ??= _serviceProvider.GetRequiredService<IAuthorizationService>();
 
-                        if (await _authorizationService.AuthorizeAsync(context.User, A2AHostPermissionsProvider.AccessA2AHost))
+                        if (await _authorizationService.AuthorizeAsync(context.User, A2APermissions.AccessA2AHost))
                         {
                             context.Succeed(requirement);
                         }
                     }
                 }
+
                 break;
         }
     }

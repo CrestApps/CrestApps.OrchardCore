@@ -1,11 +1,10 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -16,6 +15,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 
+/// <summary>
+/// Represents the new activity task.
+/// </summary>
 public sealed class NewActivityTask : TaskActivity<NewActivityTask>
 {
     private readonly ISession _session;
@@ -25,6 +27,14 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NewActivityTask"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NewActivityTask(
         ISession session,
         IClock clock,
@@ -89,7 +99,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         var now = _clock.UtcNow;
         var newAttempt = new OmnichannelActivity()
         {
-            ItemId = IdGenerator.GenerateId(),
+            ItemId = UniqueId.GenerateId(),
             Channel = activity.Channel,
             ChannelEndpointId = activity.ChannelEndpointId,
             InteractionType = activity.InteractionType,

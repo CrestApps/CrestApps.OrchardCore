@@ -1,7 +1,8 @@
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,6 +16,10 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatAnalyticsProfileFilterDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatAnalyticsProfileFilterDisplayDriver(
         IAIProfileStore profileStore)
     {
@@ -27,7 +32,7 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
         {
             model.ProfileId = filter.ProfileId;
             model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
-                .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
+            .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
         }).Location("Content:2");
     }
 

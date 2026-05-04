@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Settings;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -13,6 +14,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat admin widget settings shape.
+/// </summary>
 public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<AIChatAdminWidgetSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -23,6 +27,13 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatAdminWidgetSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatAdminWidgetSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -44,9 +55,11 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
             model.PrimaryColor = settings.PrimaryColor;
 
             var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
-            model.Profiles = profiles.Select(p => new SelectListItem(p.DisplayText, p.ItemId));
+            model.Profiles = profiles
+                .OrderBy(p => p.DisplayText ?? p.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.ItemId));
         })
-        .Location("Content:9%Admin Widget;1")
+        .Location("Content:7%Admin Widget;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AIPermissions.ManageAIProfiles));
     }
@@ -62,12 +75,14 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.ProfileId = model.ProfileId;
+        settings.ProfileId = string.IsNullOrWhiteSpace(model.ProfileId) ? null : model.ProfileId;
         settings.MaxSessions = Math.Clamp(
             model.MaxSessions,
             AIChatAdminWidgetSettings.MinMaxSessions,
             AIChatAdminWidgetSettings.MaxMaxSessions);
-        settings.PrimaryColor = model.PrimaryColor?.Trim();
+        settings.PrimaryColor = string.IsNullOrWhiteSpace(model.PrimaryColor)
+            ? AIChatAdminWidgetSettings.DefaultPrimaryColor
+            : model.PrimaryColor.Trim();
 
         return Edit(site, settings, context);
     }

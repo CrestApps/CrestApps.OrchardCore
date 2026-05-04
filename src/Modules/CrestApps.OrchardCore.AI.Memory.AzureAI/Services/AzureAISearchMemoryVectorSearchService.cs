@@ -1,28 +1,44 @@
 using Azure;
 using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Models;
+using OrchardCore.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 
+/// <summary>
+/// Provides azure AI search memory vector search services.
+/// </summary>
 public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearchService
 {
-    private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureAISearchMemoryVectorSearchService"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
+    /// <param name="logger">The logger.</param>
     public AzureAISearchMemoryVectorSearchService(
-        SearchIndexClient searchIndexClient,
+        AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchMemoryVectorSearchService> logger)
     {
-        _searchIndexClient = searchIndexClient;
+        _clientFactory = clientFactory;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Searches for async.
+    /// </summary>
+    /// <param name="indexProfile">The index profile.</param>
+    /// <param name="userId">The user id.</param>
+    /// <param name="topN">The top n.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
-        IndexProfile indexProfile,
+        SearchIndexProfile indexProfile,
         float[] embedding,
         string userId,
         int topN,
@@ -35,7 +51,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 
         try
         {
-            var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+            var searchClient = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
             var vectorQuery = new VectorizedQuery(embedding)
             {
                 KNearestNeighborsCount = topN,
@@ -71,8 +87,8 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
                 var document = result.Document;
                 var updatedUtc = document.TryGetValue(MemoryConstants.ColumnNames.UpdatedUtc, out var updatedObj) &&
                     DateTime.TryParse(updatedObj?.ToString(), out var parsedUpdatedUtc)
-                    ? parsedUpdatedUtc
-                    : null as DateTime?;
+                ? parsedUpdatedUtc
+                : null as DateTime?;
 
                 results.Add(new AIMemorySearchResult
                 {
@@ -94,11 +110,13 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
         catch (RequestFailedException ex)
         {
             _logger.LogError(ex, "Azure AI Search request failed for AI memory index '{IndexName}'.", indexProfile.IndexFullName);
+
             return [];
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching AI memory index '{IndexName}'.", indexProfile.IndexFullName);
+
             return [];
         }
     }

@@ -13,26 +13,20 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
             .For<OmnichannelContactCommunicationPreferenceIndex>()
             .Map(contentItem =>
             {
-                var preference = contentItem.As<CommunicationPreferencePart>();
-
-                if (preference == null)
+                if (!contentItem.TryGet<CommunicationPreferencePart>(out var preference))
                 {
                     return null;
                 }
 
-                return new OmnichannelContactCommunicationPreferenceIndex()
+                return new OmnichannelContactCommunicationPreferenceIndex
                 {
                     ContentItemId = contentItem.ContentItemId,
-
                     DoNotCall = preference.DoNotCall,
                     DoNotCallUtc = preference.DoNotCallUtc,
-
                     DoNotSms = preference.DoNotSms,
                     DoNotSmsUtc = preference.DoNotSmsUtc,
-
                     DoNotEmail = preference.DoNotEmail,
                     DoNotEmailUtc = preference.DoNotEmailUtc,
-
                     DoNotChat = preference.DoNotChat,
                     DoNotChatUtc = preference.DoNotChatUtc,
                 };

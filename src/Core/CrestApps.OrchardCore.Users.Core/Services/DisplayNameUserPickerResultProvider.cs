@@ -9,6 +9,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// Provides user picker search results that include the resolved display name for each user.
+/// </summary>
 public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvider
 {
     private readonly RoleManager<IRole> _roleManager;
@@ -16,6 +19,13 @@ public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvi
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisplayNameUserPickerResultProvider"/> class.
+    /// </summary>
+    /// <param name="roleManager">The role manager used to normalize role names for filtering.</param>
+    /// <param name="userManager">The user manager used to normalize search terms.</param>
+    /// <param name="session">The YesSql session used to query users.</param>
+    /// <param name="displayNameProvider">The provider used to resolve each user's display name.</param>
     public DisplayNameUserPickerResultProvider(
         RoleManager<IRole> roleManager,
         UserManager<IUser> userManager,
@@ -28,8 +38,15 @@ public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvi
         _displayNameProvider = displayNameProvider;
     }
 
+    /// <summary>
+    /// Gets the name of this result provider.
+    /// </summary>
     public string Name => "Default";
 
+    /// <summary>
+    /// Searches for users matching the given context and returns results with resolved display names.
+    /// </summary>
+    /// <param name="searchContext">The search context containing the query, roles, and display options.</param>
     public async Task<IEnumerable<UserPickerResult>> Search(UserPickerSearchContext searchContext)
     {
         var query = _session.Query<User>();

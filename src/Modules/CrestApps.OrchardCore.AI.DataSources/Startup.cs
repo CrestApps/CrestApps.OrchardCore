@@ -1,3 +1,7 @@
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
@@ -8,18 +12,18 @@ using CrestApps.OrchardCore.AI.DataSources.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
-using CrestApps.OrchardCore.AI.DataSources.Tools;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
@@ -29,13 +33,21 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.DataSources;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreAIDataSourceRag()
+            .AddCoreAIDataSourceStoresYesSql();
+
         services.AddAIDataSourceServices();
+
+        services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
+        services.AddDataMigration<AIDataSourceIndexMigrations>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
-        services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
@@ -46,16 +58,17 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
+        services.RemoveAll<IAIDataSourceIndexingQueue>()
+            .AddScoped<IAIDataSourceIndexingQueue, OrchardAIDataSourceIndexingQueue>();
 
-        services.AddScoped<DataSourceIndexingService>();
-        services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
-        services.AddSingleton<IBackgroundTask, DataSourceSyncBackgroundTask>();
+        services.RemoveAll<IAIDataSourceIndexingService>()
+            .AddScoped<DataSourceIndexingService>()
+            .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
+
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
-        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
-
-        services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
-            .WithPurpose(AIToolPurposes.DataSourceSearch);
+        services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
+        services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
+        services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -64,6 +77,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesContents feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Contents")]
 public sealed class DataSourcesContentsStartup : StartupBase
 {
@@ -73,6 +89,9 @@ public sealed class DataSourcesContentsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesRecipes feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class DataSourcesRecipesStartup : StartupBase
 {
@@ -82,6 +101,9 @@ public sealed class DataSourcesRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DataSourcesOCDeployment feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class DataSourcesOCDeploymentStartup : StartupBase
 {

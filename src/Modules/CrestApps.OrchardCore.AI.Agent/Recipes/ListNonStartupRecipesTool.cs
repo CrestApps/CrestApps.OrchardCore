@@ -9,18 +9,21 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
+/// <summary>
+/// Represents the list non startup recipes tool.
+/// </summary>
 public sealed class ListNonStartupRecipesTool : AIFunction
 {
     public const string TheName = "listNonStartupRecipes";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -39,6 +42,7 @@ public sealed class ListNonStartupRecipesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListNonStartupRecipesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -64,7 +68,7 @@ public sealed class ListNonStartupRecipesTool : AIFunction
         var recipes = recipeCollections.SelectMany(x => x)
             .Where(r => !r.IsSetupRecipe &&
                 (r.Tags == null || !r.Tags.Contains("hidden", StringComparer.InvariantCultureIgnoreCase)) &&
-                features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                    features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
 
         return recipes;
     }

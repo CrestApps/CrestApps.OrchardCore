@@ -1,3 +1,4 @@
+﻿using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
@@ -12,6 +13,10 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
 {
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CommunicationPreferencePartContentHandler"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
     public CommunicationPreferencePartContentHandler(IClock clock)
     {
         _clock = clock;
@@ -26,7 +31,7 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
     {
         return Initialize<CommunicationPreferenceViewModel>("CommunicationPreference_Edit", model =>
         {
-            var part = contentItem.As<CommunicationPreferencePart>();
+            var part = contentItem.GetOrCreate<CommunicationPreferencePart>();
 
             model.DoNotChat = part.DoNotChat;
             model.DoNotChatUtc = part.DoNotChatUtc;
@@ -48,7 +53,7 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var part = contentItem.As<CommunicationPreferencePart>();
+        var part = contentItem.GetOrCreate<CommunicationPreferencePart>();
 
         if (!part.DoNotCall && model.DoNotCall)
         {

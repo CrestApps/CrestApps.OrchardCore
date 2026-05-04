@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,56 +8,61 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
+/// <summary>
+/// Represents the create tenant tool.
+/// </summary>
 public sealed class CreateTenantTool : AIFunction
 {
     public const string TheName = "createTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                },
-                "databaseProvider": {
-                    "type": "string",
-                    "description": "The database provider to use.",
-                    "enum": [
-                        "SqlConnection",
-                        "MySql",
-                        "Sqlite",
-                        "Postgres"
-                    ]
-                },
-                "requestUrlPrefix": {
-                    "type": "string",
-                    "description": "A URI prefix to use."
-                },
-                "requestUrlHost": {
-                    "type": "string",
-                    "description": "One or more qualified domain to use with this tenant."
-                },
-                "connectionString": {
-                    "type": "string",
-                    "description": "The connection string to use when setting up the tenant."
-                },
-                "tablePrefix": {
-                    "type": "string",
-                    "description": "A SQL table prefix to use for every table."
-                },
-                "recipeName": {
-                    "type": "string",
-                    "description": "The name of the startup recipe to use during setup."
-                }
-            },
-            "additionalProperties": false,
-            "required": [
-                "name",
-                "recipeName"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
+        },
+        "databaseProvider": {
+          "type": "string",
+          "description": "The database provider to use.",
+          "enum": [
+            "SqlConnection",
+            "MySql",
+            "Sqlite",
+            "Postgres"
+          ]
+        },
+        "requestUrlPrefix": {
+          "type": "string",
+          "description": "A URI prefix to use."
+        },
+        "requestUrlHost": {
+          "type": "string",
+          "description": "One or more qualified domain to use with this tenant."
+        },
+        "connectionString": {
+          "type": "string",
+          "description": "The connection string to use when setting up the tenant."
+        },
+        "tablePrefix": {
+          "type": "string",
+          "description": "A SQL table prefix to use for every table."
+        },
+        "recipeName": {
+          "type": "string",
+          "description": "The name of the startup recipe to use during setup."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "recipeName"
+      ]
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -73,6 +78,7 @@ public sealed class CreateTenantTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateTenantTool>>();
@@ -85,6 +91,7 @@ public sealed class CreateTenantTool : AIFunction
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellSettingsManager = arguments.Services.GetRequiredService<IShellSettingsManager>();
+
         var databaseProviders = arguments.Services.GetRequiredService<IEnumerable<DatabaseProvider>>();
 
         if (!shellSettings.IsDefaultShell())
@@ -122,12 +129,13 @@ public sealed class CreateTenantTool : AIFunction
         }
 
         using var newShellSettings = shellSettingsManager
-                .CreateDefaultSettings()
-                .AsUninitialized()
-                .AsDisposable();
+            .CreateDefaultSettings()
+            .AsUninitialized()
+            .AsDisposable();
 
         newShellSettings.Name = name;
         newShellSettings["DatabaseProvider"] = databaseProvider;
+
         newShellSettings["RecipeName"] = recipeName;
 
         if (arguments.TryGetFirstString("requestUrlHost", out var requestUrlHost))

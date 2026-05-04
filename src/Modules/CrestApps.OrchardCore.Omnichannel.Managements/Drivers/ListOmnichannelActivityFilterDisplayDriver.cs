@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -16,6 +16,11 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ListOmnichannelActivityFilterDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
@@ -120,6 +125,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         }
 
         // Populate route values so other modules can extend filtering and pagination preserves filter state.
+
         if (filter.UrgencyLevel.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".UrgencyLevel", filter.UrgencyLevel.Value.ToString());

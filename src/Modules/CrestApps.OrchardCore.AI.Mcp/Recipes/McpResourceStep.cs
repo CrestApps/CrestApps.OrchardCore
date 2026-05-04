@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+﻿using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Recipes.Models;
@@ -17,10 +17,15 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourceStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourceStep(
         ISourceCatalogManager<McpResource> manager,
         IStringLocalizer<McpResourceStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         S = stringLocalizer;
@@ -59,7 +64,7 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
                 entry = await _manager.NewAsync(source, token);
                 PopulateEntry(entry, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     entry.ItemId = id;
                 }
@@ -135,6 +140,9 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
 
     private sealed class McpResourceDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the resources.
+        /// </summary>
         public JsonArray Resources { get; set; }
     }
 }

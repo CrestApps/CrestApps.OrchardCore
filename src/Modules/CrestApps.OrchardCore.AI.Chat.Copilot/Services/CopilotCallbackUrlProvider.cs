@@ -1,17 +1,27 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
+/// <summary>
+/// Provides copilot callback url functionality.
+/// </summary>
 public sealed class CopilotCallbackUrlProvider
 {
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
-    private readonly ILogger<CopilotCallbackUrlProvider> _logger;
+    private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CopilotCallbackUrlProvider"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="linkGenerator">The link generator.</param>
+    /// <param name="logger">The logger.</param>
     public CopilotCallbackUrlProvider(
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
@@ -24,10 +34,14 @@ public sealed class CopilotCallbackUrlProvider
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves the callback url async.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<string> GetCallbackUrlAsync(CancellationToken cancellationToken = default)
     {
         var httpContext = _httpContextAccessor.HttpContext
-            ?? throw new InvalidOperationException("An active HttpContext is required to build the Copilot OAuth callback URL.");
+        ?? throw new InvalidOperationException("An active HttpContext is required to build the Copilot OAuth callback URL.");
 
         var requestCallbackUrl = _linkGenerator.GetUriByAction(httpContext, "OAuthCallback", "CopilotAuth", new
         {
@@ -40,6 +54,7 @@ public sealed class CopilotCallbackUrlProvider
         }
 
         var site = await _siteService.GetSiteSettingsAsync();
+
         if (string.IsNullOrWhiteSpace(site.BaseUrl))
         {
             return requestCallbackUrl;
@@ -62,6 +77,12 @@ public sealed class CopilotCallbackUrlProvider
         return BuildSiteAbsoluteUrl(siteBaseUri, requestCallbackUri, httpContext.Request.PathBase).AbsoluteUri;
     }
 
+    /// <summary>
+    /// Builds the site absolute url.
+    /// </summary>
+    /// <param name="siteBaseUri">The site base uri.</param>
+    /// <param name="requestUri">The request uri.</param>
+    /// <param name="requestPathBase">The request path base.</param>
     public static Uri BuildSiteAbsoluteUrl(Uri siteBaseUri, Uri requestUri, PathString requestPathBase)
     {
         ArgumentNullException.ThrowIfNull(siteBaseUri);
@@ -80,7 +101,7 @@ public sealed class CopilotCallbackUrlProvider
 
         if (!string.IsNullOrEmpty(siteBasePath) &&
             siteBasePath != "/" &&
-            relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
+                relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
         {
             relativePath = relativePath[siteBasePath.Length..];
         }

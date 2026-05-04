@@ -1,7 +1,10 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -15,15 +18,20 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIDeploymentTypeMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
             var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
 
             var connectionDoc = await connectionDocManager.GetOrCreateMutableAsync();
+
             var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
 
             var needsSave = false;
@@ -50,18 +58,24 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 1;
     }
 
+    /// <summary>
+    /// Updates the from1.
+    /// </summary>
     public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
             var profileCatalog = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
 
             var deployments = (await deploymentManager.GetAllByTypeAsync(AIDeploymentType.Chat)).ToList();
+
             var profiles = await profileCatalog.GetAllAsync();
 
             var updatedCount = 0;
+
             var skippedCount = 0;
 
             foreach (var profile in profiles)
@@ -101,15 +115,20 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Updates the from2.
+    /// </summary>
     public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
             var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
 
             var connectionDoc = await connectionDocManager.GetOrCreateImmutableAsync();
+
             var deploymentDoc = await deploymentDocManager.GetOrCreateImmutableAsync();
 
             await TryBackfillDefaultDeploymentSettingsAsync(
@@ -121,15 +140,20 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Updates the from3.
+    /// </summary>
     public static int UpdateFrom3()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
 
             var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
+
             var deploymentsUpdated = false;
 
             foreach (var deployment in deploymentDoc.Records.Values)
@@ -159,22 +183,73 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 4;
     }
 
+    /// <summary>
+    /// Updates the from4.
+    /// </summary>
     public static int UpdateFrom4()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
 
             var deploymentNameMap = (await deploymentManager.GetAllAsync())
-                .Where(static deployment => !string.IsNullOrWhiteSpace(deployment.ItemId) && !string.IsNullOrWhiteSpace(deployment.Name))
-                .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
+            .Where(static deployment => !string.IsNullOrWhiteSpace(deployment.ItemId) && !string.IsNullOrWhiteSpace(deployment.Name))
+            .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
             await TryConvertStoredDeploymentSelectorsAsync(scope.ServiceProvider, siteService, deploymentNameMap);
         });
 
         return 5;
+    }
+
+    /// <summary>
+    /// Updates the from5.
+    /// </summary>
+    public static int UpdateFrom5()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var connectionDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIProviderConnection>>>();
+            var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+
+            var connectionDoc = await connectionDocManager.GetOrCreateImmutableAsync();
+            var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
+            var connectionsById = connectionDoc.Records.Values
+                .Where(static connection => !string.IsNullOrWhiteSpace(connection.ItemId))
+                .ToDictionary(static connection => connection.ItemId, StringComparer.OrdinalIgnoreCase);
+            var needsSave = false;
+
+            foreach (var deployment in deploymentDoc.Records.Values)
+            {
+                if (string.IsNullOrWhiteSpace(deployment.ConnectionName) ||
+                    !connectionsById.TryGetValue(deployment.ConnectionName, out var connection))
+                {
+                    continue;
+                }
+
+                var normalizedConnectionName = string.IsNullOrWhiteSpace(connection.Name)
+                    ? connection.ItemId
+                    : connection.Name;
+
+                if (string.Equals(deployment.ConnectionName, normalizedConnectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                deployment.ConnectionName = normalizedConnectionName;
+                needsSave = true;
+            }
+
+            if (needsSave)
+            {
+                await deploymentDocManager.UpdateAsync(deploymentDoc);
+            }
+        });
+
+        return 6;
     }
 
     private static bool TryCreateDeployment(
@@ -189,9 +264,11 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         }
 
         var exists = deploymentDoc.Records.Values.Any(d =>
-            d.ClientName == connection.ClientName &&
-            string.Equals(d.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(d.Name, deploymentName, StringComparison.OrdinalIgnoreCase));
+        d.ClientName == connection.ClientName &&
+            (string.Equals(d.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)) &&
+
+                string.Equals(d.Name, deploymentName, StringComparison.OrdinalIgnoreCase));
 
         if (exists)
         {
@@ -204,10 +281,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             Name = deploymentName,
             ModelName = deploymentName,
             ClientName = connection.ClientName,
-            ConnectionName = connection.ItemId,
-            ConnectionNameAlias = connection.Name,
+            ConnectionName = string.IsNullOrWhiteSpace(connection.Name)
+                ? connection.ItemId
+                : connection.Name,
             Type = type,
-            IsDefault = true,
             CreatedUtc = connection.CreatedUtc,
             Author = connection.Author,
             OwnerId = connection.OwnerId,
@@ -223,10 +300,12 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         IEnumerable<AIDeployment> deployments)
     {
         var site = await siteService.LoadSiteSettingsAsync();
+
         var updated = false;
 
         site.Alter<DefaultAIDeploymentSettings>(settings =>
-            updated = TryPopulateDefaultDeploymentSettings(settings, connections, deployments));
+
+        updated = TryPopulateDefaultDeploymentSettings(settings, connections, deployments));
 
         if (!updated)
         {
@@ -241,6 +320,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         IReadOnlyDictionary<string, string> deploymentNameMap)
     {
         var site = await siteService.LoadSiteSettingsAsync();
+
         var updated = false;
 
         site.Alter<DefaultAIDeploymentSettings>(settings =>
@@ -270,12 +350,14 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         var profileCatalog = serviceProvider.GetRequiredService<IAIProfileStore>();
         var templateCatalog = serviceProvider.GetRequiredService<INamedSourceCatalog<AIProfileTemplate>>();
+
         var interactionCatalog = serviceProvider.GetRequiredService<ICatalog<ChatInteraction>>();
 
         foreach (var profile in await profileCatalog.GetAllAsync())
         {
             var updated = false;
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.ChatDeploymentName, value => profile.ChatDeploymentName = value);
+
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.UtilityDeploymentName, value => profile.UtilityDeploymentName = value);
 
             if (!updated)
@@ -288,10 +370,11 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         foreach (var template in await templateCatalog.GetAllAsync())
         {
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
             var updated = false;
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.ChatDeploymentName, value => metadata.ChatDeploymentName = value);
+
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.UtilityDeploymentName, value => metadata.UtilityDeploymentName = value);
 
             if (!updated)
@@ -307,6 +390,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         {
             var updated = false;
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.ChatDeploymentName, value => interaction.ChatDeploymentName = value);
+
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.UtilityDeploymentName, value => interaction.UtilityDeploymentName = value);
 
             if (!updated)
@@ -329,37 +413,37 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             settings.DefaultChatDeploymentName,
             value => settings.DefaultChatDeploymentName = value,
             FindDefaultDeploymentId(
-                connections,
-                deployments,
-                AIDeploymentType.Chat,
-                static connection => connection.GetLegacyChatDeploymentName()));
+            connections,
+            deployments,
+            AIDeploymentType.Chat,
+            static connection => connection.GetLegacyChatDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultUtilityDeploymentName,
             value => settings.DefaultUtilityDeploymentName = value,
             FindDefaultDeploymentId(
-                connections,
-                deployments,
-                AIDeploymentType.Utility,
-                static connection => connection.GetLegacyUtilityDeploymentName()));
+            connections,
+            deployments,
+            AIDeploymentType.Utility,
+            static connection => connection.GetLegacyUtilityDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultEmbeddingDeploymentName,
             value => settings.DefaultEmbeddingDeploymentName = value,
             FindDefaultDeploymentId(
-                connections,
-                deployments,
-                AIDeploymentType.Embedding,
-                static connection => connection.GetLegacyEmbeddingDeploymentName()));
+            connections,
+            deployments,
+            AIDeploymentType.Embedding,
+            static connection => connection.GetLegacyEmbeddingDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultImageDeploymentName,
             value => settings.DefaultImageDeploymentName = value,
             FindDefaultDeploymentId(
-                connections,
-                deployments,
-                AIDeploymentType.Image,
-                static connection => connection.GetLegacyImageDeploymentName()));
+            connections,
+            deployments,
+            AIDeploymentType.Image,
+            static connection => connection.GetLegacyImageDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultSpeechToTextDeploymentName,
@@ -395,7 +479,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     {
         if (string.IsNullOrWhiteSpace(currentValue) ||
             !deploymentNameMap.TryGetValue(currentValue, out var deploymentName) ||
-            string.Equals(currentValue, deploymentName, StringComparison.OrdinalIgnoreCase))
+                string.Equals(currentValue, deploymentName, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -429,8 +513,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         return deployments
             .Where(deployment => deployment.SupportsType(type))
-            .OrderByDescending(deployment => deployment.IsDefault)
-            .ThenBy(deployment => deployment.ConnectionNameAlias ?? deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(deployment => deployment.Name)
             .FirstOrDefault();
@@ -438,7 +521,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
     private static string FindDefaultChatDeploymentName(AIProfile profile, IEnumerable<AIDeployment> deployments)
     {
-        return FindDefaultDeploymentId(AIDeploymentType.Chat, profile.GetLegacyConnectionName(), null, deployments);
+        var legacyConnectionName = profile.GetLegacyConnectionName();
+
+        return FindDefaultDeploymentId(AIDeploymentType.Chat, legacyConnectionName, legacyConnectionName, deployments);
     }
 
     private static string FindDefaultDeploymentId(
@@ -456,12 +541,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             .Where(deployment =>
                 deployment.SupportsType(type) &&
                 (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionId, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionAlias, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        return candidates.FirstOrDefault(deployment => deployment.IsDefault)?.Name
-            ?? candidates.FirstOrDefault()?.Name;
+        return candidates.FirstOrDefault()?.Name;
     }
 }

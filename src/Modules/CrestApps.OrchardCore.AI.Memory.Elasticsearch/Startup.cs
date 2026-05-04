@@ -1,18 +1,27 @@
+﻿using CrestApps.Core.AI.Memory;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -20,6 +29,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(ElasticsearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIMemoryElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIMemoryElasticsearchDocumentIndexHandler>();
         services.AddKeyedScoped<IMemoryVectorSearchService, ElasticsearchMemoryVectorSearchService>(ElasticsearchConstants.ProviderName);

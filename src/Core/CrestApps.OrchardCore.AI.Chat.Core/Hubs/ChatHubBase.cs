@@ -1,6 +1,7 @@
-using System.Threading.Channels;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+﻿using System.Threading.Channels;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,9 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the stop conversation operation.
+    /// </summary>
     public Task StopConversation()
     {
         if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)

@@ -1,19 +1,31 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
+using Microsoft.Extensions.Logging;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 
 internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
-    public DataSourceAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataSourceAzureAISearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
+    public DataSourceAzureAISearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
+        ILogger<DataSourceAzureAISearchIndexProfileHandler> logger)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 
@@ -33,9 +45,8 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
             return;
         }
 
-        var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
-        var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+        var metadata = indexProfile.GetOrCreate<AzureAISearchIndexMetadata>();
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {

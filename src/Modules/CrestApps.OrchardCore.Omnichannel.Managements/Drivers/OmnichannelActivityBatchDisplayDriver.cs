@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -27,6 +27,15 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityBatchDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="localClock">The local clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         ICatalog<OmnichannelCampaign> campaignCatalog,
         UserManager<IUser> userManager,

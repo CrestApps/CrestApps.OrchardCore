@@ -1,18 +1,24 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile template prompt selection shape.
+/// </summary>
 public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplatePromptSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
     public AIProfileTemplatePromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
@@ -25,7 +31,7 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
             return null;
         }
 
-        var promptMetadata = template.As<PromptTemplateMetadata>();
+        var promptMetadata = template.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

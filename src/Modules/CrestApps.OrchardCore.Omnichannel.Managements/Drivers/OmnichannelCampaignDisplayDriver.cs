@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -20,26 +19,36 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly AIProviderOptions _aiProviderOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelCampaignDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
+    /// <param name="connectionsCatalog">The connections catalog.</param>
+    /// <param name="toolDefinitions">The tool definitions.</param>
+    /// <param name="defaultAIOptions">The default AI options.</param>
+    /// <param name="liquidTemplateManager">The liquid template manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelCampaignDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IOptions<AIProviderOptions> aiProviderOptions,
         DefaultAIOptions defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
+        _connectionsCatalog = connectionsCatalog;
         _toolDefinitions = toolDefinitions.Value;
-        _aiProviderOptions = aiProviderOptions.Value;
         _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
@@ -50,10 +59,10 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         return CombineAsync(
             View("OmnichannelCampaign_Fields_SummaryAdmin", campaign)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelCampaign_Buttons_SummaryAdmin", campaign)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelCampaign_DefaultMeta_SummaryAdmin", campaign)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelCampaign_Buttons_SummaryAdmin", campaign)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelCampaign_DefaultMeta_SummaryAdmin", campaign)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 
@@ -90,9 +99,15 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
                 Value = d.ItemId,
                 Selected = campaign.DispositionIds is not null && campaign.DispositionIds.Contains(d.ItemId)
             }).OrderBy(x => x.Text)
-            .ToArray();
+        .ToArray();
 
-            model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+            model.Providers = (await _connectionsCatalog.GetAllAsync())
+                .Select(connection => connection.ClientName)
+                .Where(providerName => !string.IsNullOrWhiteSpace(providerName))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(providerName => providerName)
+                .Select(providerName => new SelectListItem(providerName, providerName))
+                .ToArray();
 
             model.Channels =
             [
@@ -111,16 +126,16 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             if (_toolDefinitions.Tools.Count > 0)
             {
                 model.Tools = _toolDefinitions.Tools
-                .Where(tool => !tool.Value.IsSystemTool)
-                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
-                .OrderBy(group => group.Key)
-                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-                {
-                    ItemId = entry.Key,
-                    DisplayText = entry.Value.Title,
-                    Description = entry.Value.Description,
-                    IsSelected = campaign.ToolNames?.Contains(entry.Key) ?? false,
-                }).OrderBy(entry => entry.DisplayText).ToArray());
+                    .Where(tool => !tool.Value.IsSystemTool)
+                    .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+                    .OrderBy(group => group.Key)
+                    .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+                    {
+                        ItemId = entry.Key,
+                        DisplayText = entry.Value.Title,
+                        Description = entry.Value.Description,
+                        IsSelected = campaign.ToolNames?.Contains(entry.Key) ?? false,
+                    }).OrderBy(entry => entry.DisplayText).ToArray());
             }
         }).Location("Content:1");
     }
@@ -165,17 +180,19 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             }
 
             // Campaign goal is required for automated type
+
             if (string.IsNullOrWhiteSpace(model.CampaignGoal))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignGoal), S["Campaign goal is required for automated activities."]);
             }
 
             // Provider validation
+
             if (string.IsNullOrEmpty(model.ProviderName))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is required."]);
             }
-            else if (!_aiProviderOptions.Providers.TryGetValue(model.ProviderName, out _))
+            else if ((await _connectionsCatalog.GetAsync(model.ProviderName)).Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is invalid."]);
             }
@@ -221,10 +238,10 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             var selectedToolKeys = toolsModel.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
             campaign.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
-                ? []
-                : _toolDefinitions.Tools.Keys
-                    .Intersect(selectedToolKeys)
-                    .ToArray();
+            ? []
+            : _toolDefinitions.Tools.Keys
+                .Intersect(selectedToolKeys)
+                .ToArray();
         }
 
         return Edit(campaign, context);

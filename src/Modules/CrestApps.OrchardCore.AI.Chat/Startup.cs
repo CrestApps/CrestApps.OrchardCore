@@ -1,21 +1,22 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
+using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
+using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -26,19 +27,28 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Chat notification services and hub options.
+        // Action handlers and sender are registered by the framework (AddChatNotificationServices).
+        // Only the OC-specific transport is registered here.
+        services.AddCoreAIChatNotifications();
+
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMenuDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
-            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
@@ -46,34 +56,22 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
 
-        // Chat notification services.
-        services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
-        services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
-        services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
-
-        services.Configure<HubOptions<AIChatHub>>(options =>
-        {
-            // Allow long-running operations (e.g., multi-step MCP tool calls)
-            // without the server dropping the connection prematurely.
-            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
-            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-
-            // Allow larger messages for audio transcription payloads.
-            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-        });
+        services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-
-        hubRouteManager.MapHub<AIChatHub>(routes);
+        HubRouteManager.MapHub<AIChatHub>(routes);
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Widgets feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Widgets")]
 public sealed class WidgetsStartup : StartupBase
 {
@@ -87,6 +85,9 @@ public sealed class WidgetsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AdminWidget feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatAdminWidget)]
 public sealed class AdminWidgetStartup : StartupBase
 {
@@ -103,6 +104,9 @@ public sealed class AdminWidgetStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatAnalyticsUI feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsUIStartup : StartupBase
 {
@@ -111,6 +115,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
         services
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
+            .AddDataMigration<AIChatSessionExtractedDataMigrations>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()

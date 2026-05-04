@@ -1,21 +1,35 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Elasticsearch;
+using OrchardCore.Elasticsearch.Core.Models;
+using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.Elasticsearch;
-using OrchardCore.Search.Elasticsearch.Core.Models;
-using OrchardCore.Search.Elasticsearch.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 
-
+/// <summary>
+/// Handles events for AI document elasticsearch index profile.
+/// </summary>
 public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
-    public AIDocumentElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDocumentElasticsearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    /// <param name="logger">The logger.</param>
+    public AIDocumentElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
+        ILogger<AIDocumentElasticsearchIndexProfileHandler> logger)
+        : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 
@@ -38,14 +52,13 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchIndexMetadata>();
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= [];
+        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
-        var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = AIConstants.ColumnNames.ChunkId;
         metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkId] = new KeywordProperty();
@@ -72,7 +85,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchDefaultQueryMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchDefaultQueryMetadata>();
 
         if (metadata.DefaultSearchFields is null || metadata.DefaultSearchFields.Length == 0)
         {

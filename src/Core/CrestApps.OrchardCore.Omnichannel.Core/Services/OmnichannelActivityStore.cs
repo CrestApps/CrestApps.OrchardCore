@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -6,30 +6,39 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
+/// <summary>
+/// Provides a YesSql-based implementation of <see cref="IOmnichannelActivityStore"/> for persisting and querying omnichannel activities.
+/// </summary>
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="handlers">The filter handlers applied when listing activities.</param>
     public OmnichannelActivityStore(
         ISession session,
         IEnumerable<IListOmnichannelActivityFilterHandler> handlers)
-        : base(session)
+    : base(session)
     {
         CollectionName = OmnichannelConstants.CollectionName;
         _handlers = handlers;
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
 
         var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
-                                index.ContactContentItemId == contentContentItemId &&
-                                index.Status == ActivityStatus.NotStated &&
-                                index.InteractionType == ActivityInteractionType.Manual
-                                , collection: OmnichannelConstants.CollectionName)
-                            .OrderBy(x => x.ScheduledUtc)
-                            .ThenBy(x => x.Id);
+        index.ContactContentItemId == contentContentItemId &&
+            index.Status == ActivityStatus.NotStated &&
+                index.InteractionType == ActivityInteractionType.Manual
+        , collection: OmnichannelConstants.CollectionName)
+            .OrderBy(x => x.ScheduledUtc)
+            .ThenBy(x => x.Id);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
@@ -40,15 +49,16 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
         ArgumentNullException.ThrowIfNull(filter);
 
         var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
-                        index.AssignedToId == userId &&
-                        index.Status == ActivityStatus.NotStated &&
-                        index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName);
+        index.AssignedToId == userId &&
+            index.Status == ActivityStatus.NotStated &&
+                index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName);
 
         var context = new ListOmnichannelActivityFilterContext(filter, query);
 
@@ -68,16 +78,17 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
 
         var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
-                                index.ContactContentItemId == contentContentItemId &&
-                                index.Status == ActivityStatus.Completed
-                                , collection: OmnichannelConstants.CollectionName)
-                            .OrderByDescending(x => x.CompletedUtc)
-                            .ThenBy(x => x.Id);
+        index.ContactContentItemId == contentContentItemId &&
+            index.Status == ActivityStatus.Completed
+        , collection: OmnichannelConstants.CollectionName)
+            .OrderByDescending(x => x.CompletedUtc)
+            .ThenBy(x => x.Id);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
@@ -88,6 +99,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    /// <inheritdoc/>
     public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);
@@ -95,10 +107,10 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         ArgumentException.ThrowIfNullOrEmpty(preferredDestination);
 
         return await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
-            index.Channel == channel &&
+        index.Channel == channel &&
             index.ChannelEndpointId == channelEndpointId &&
-            index.PreferredDestination == preferredDestination &&
-            index.InteractionType == interactionType, collection: OmnichannelConstants.CollectionName)
+                index.PreferredDestination == preferredDestination &&
+                    index.InteractionType == interactionType, collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.ScheduledUtc)
             .ThenByDescending(x => x.CreatedUtc)
             .FirstOrDefaultAsync();

@@ -6,18 +6,21 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
+/// <summary>
+/// Represents the list time zone tool.
+/// </summary>
 public sealed class ListTimeZoneTool : AIFunction
 {
     public const string TheName = "listTimeZones";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -36,6 +39,7 @@ public sealed class ListTimeZoneTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListTimeZoneTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

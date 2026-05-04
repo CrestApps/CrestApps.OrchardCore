@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Users.Indexes;
@@ -7,6 +7,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Users.Recipes;
 
+/// <summary>
+/// Handles events for update user recipe step.
+/// </summary>
 public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
 {
     private const int DefaultBatchSize = 250;
@@ -15,8 +18,12 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
 
     private readonly ISession _session;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateUserRecipeStepHandler"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
     public UpdateUserRecipeStepHandler(ISession session)
-        : base("IndexUsers")
+    : base("IndexUsers")
     {
         _session = session;
     }
@@ -87,8 +94,14 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
 
     private sealed class UpdateUserRecipeStepModel
     {
+        /// <summary>
+        /// Gets or sets the include disabled users.
+        /// </summary>
         public bool IncludeDisabledUsers { get; set; }
 
+        /// <summary>
+        /// Gets or sets the batch size.
+        /// </summary>
         public int? BatchSize { get; set; }
     }
 }

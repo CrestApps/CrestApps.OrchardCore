@@ -1,5 +1,5 @@
+﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +14,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Endpoints;
 
 internal static class GetDataSourceFieldsEndpoint
 {
+    /// <summary>
+    /// Adds the get data source fields endpoint.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddGetDataSourceFieldsEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapGet("ai/data-sources/fields/{indexProfileName}", HandleAsync)

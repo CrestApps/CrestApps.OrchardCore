@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -7,6 +7,9 @@ using OrchardCore.ContentManagement.Utilities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Services;
 
+/// <summary>
+/// Provides content metadata services.
+/// </summary>
 public sealed class ContentMetadataService
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -14,6 +17,13 @@ public sealed class ContentMetadataService
     private readonly IEnumerable<Type> _contentPartTypes;
     private readonly IEnumerable<Type> _contentFieldTypes;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentMetadataService"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="contentParts">The content parts.</param>
+    /// <param name="contentFields">The content fields.</param>
+    /// <param name="contentOptions">The content options.</param>
     public ContentMetadataService(
         IContentDefinitionManager contentDefinitionManager,
         IEnumerable<ContentPart> contentParts,
@@ -29,11 +39,14 @@ public sealed class ContentMetadataService
             .Union(contentOptions.Value.ContentFieldOptions.Select(cfo => cfo.Type));
     }
 
+    /// <summary>
+    /// Retrieves the parts async.
+    /// </summary>
     public async Task<IEnumerable<ContentPartMetadata>> GetPartsAsync()
     {
         var typeNames = new HashSet<string>(
             (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Select(ctd => ctd.Name)
+                .Select(ctd => ctd.Name)
         );
 
         // User-defined parts
@@ -44,28 +57,41 @@ public sealed class ContentMetadataService
 
         // Code-defined parts
         var codeDefinedParts = _contentPartTypes
-                .Where(cpd => !userContentParts.ContainsKey(cpd.Name))
-                .Select(cpi => new ContentPartMetadata
-                {
-                    Name = cpi.Name,
-                    DisplayName = cpi.Name
-                });
+            .Where(cpd => !userContentParts.ContainsKey(cpd.Name))
+            .Select(cpi => new ContentPartMetadata
+            {
+                Name = cpi.Name,
+                DisplayName = cpi.Name
+            });
 
         return codeDefinedParts
             .Union(userContentParts.Values)
             .OrderBy(m => m.DisplayName);
     }
 
+    /// <summary>
+    /// Retrieves the fields async.
+    /// </summary>
     public Task<IEnumerable<Type>> GetFieldsAsync()
         => Task.FromResult(_contentFieldTypes);
 }
 
+/// <summary>
+/// Represents the content part metadata.
+/// </summary>
 public sealed class ContentPartMetadata
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentPartMetadata"/> class.
+    /// </summary>
     public ContentPartMetadata()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentPartMetadata"/> class.
+    /// </summary>
+    /// <param name="contentPartDefinition">The content part definition.</param>
     public ContentPartMetadata(ContentPartDefinition contentPartDefinition)
     {
         Name = contentPartDefinition.Name;
@@ -73,6 +99,9 @@ public sealed class ContentPartMetadata
         _displayName = contentPartDefinition.DisplayName();
     }
 
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
     public string Name { get; set; }
 
     private string _displayName;
@@ -89,5 +118,8 @@ public sealed class ContentPartMetadata
         set { PartDefinition.GetSettings<ContentPartSettings>().Description = value; }
     }
 
+    /// <summary>
+    /// Gets or sets the part definition.
+    /// </summary>
     public ContentPartDefinition PartDefinition { get; private set; }
 }

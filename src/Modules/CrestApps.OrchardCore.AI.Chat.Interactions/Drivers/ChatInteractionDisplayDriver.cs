@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,6 +12,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
+/// <summary>
+/// Display driver for the chat interaction shape.
+/// </summary>
 public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAuthorizationService _authorizationService;
@@ -19,6 +22,13 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly OrchestratorOptions _orchestratorOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="promptStore">The prompt store.</param>
+    /// <param name="orchestratorOptions">The orchestrator options.</param>
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
@@ -35,12 +45,12 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     {
         return Combine(
             View("ChatInteraction_Fields_SummaryAdmin", interaction).Location("Content:1"),
-            View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
-            View("ChatInteraction_DefaultTags_SummaryAdmin", interaction).Location("Tags:5"),
-            View("ChatInteraction_DefaultMeta_SummaryAdmin", interaction).Location("Meta:5"),
-            View("ChatInteraction_ActionsMenu_SummaryAdmin", interaction)
-                .Location("ActionsMenu:10")
-                .RenderWhen(async () => await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.DeleteChatInteraction, interaction))
+        View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
+        View("ChatInteraction_DefaultTags_SummaryAdmin", interaction).Location("Tags:5"),
+        View("ChatInteraction_DefaultMeta_SummaryAdmin", interaction).Location("Meta:5"),
+        View("ChatInteraction_ActionsMenu_SummaryAdmin", interaction)
+            .Location("ActionsMenu:10")
+            .RenderWhen(async () => await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.DeleteChatInteraction, interaction))
         );
     }
 
@@ -75,12 +85,13 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         {
             // Populate orchestrator selection when multiple orchestrators are registered.
             var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+
             if (orchestrators.Count > 1)
             {
                 model.OrchestratorName = interaction.OrchestratorName;
                 model.Orchestrators = orchestrators
-                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
-                    .ToArray();
+                .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                .ToArray();
             }
         }).Location("Parameters:2#Settings;1");
 

@@ -1,40 +1,29 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+﻿using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.ChatInteractions;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 
 internal sealed class ChatInteractionMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionMigrations"/> class.
+    /// </summary>
+    /// <param name="option">The option.</param>
+    public ChatInteractionMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<ChatInteractionIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("Source", column => column.WithLength(255))
-                .Column<string>("Title", column => column.WithLength(255))
-                .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ChatInteractionIndex>(table => table
-            .CreateIndex("IDX_ChatInteractionIndex_DocumentId",
-                "DocumentId",
-                "ItemId",
-                "UserId",
-                "Source",
-                "Title",
-                "CreatedUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ChatInteractionIndex>(table => table
-            .CreateIndex("IDX_ChatInteractionIndex_UserId",
-                "DocumentId",
-                "UserId"),
-            collection: AIConstants.AICollectionName
-        );
+        await SchemaBuilder.CreateChatInteractionIndexSchemaAsync(_option);
 
         return 1;
     }

@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
 
 @model AIProfilePostSessionViewModel
 
@@ -19,7 +19,7 @@
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" />
-        <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable Post-Session Processing"]</label>
+        <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable post-session processing"]</label>
         <span class="hint dashed">@T["When enabled, the system will run AI-powered analysis on the complete conversation after the session is closed."]</span>
     </div>
 </div>
@@ -50,7 +50,7 @@
         <!-- Tasks Tab -->
         <div class="tab-pane fade show active" id="@tasksPaneId" role="tabpanel" aria-labelledby="@tasksTabId">
             <div class="mb-3">
-                <label class="form-label">@T["Post-Session Tasks"]</label>
+                <label class="form-label">@T["Post-session tasks"]</label>
                 <span class="hint dashed d-block mb-2">@T["Define the tasks to run when a session closes. Each task produces a structured result stored on the session."]</span>
 
                 <div id="@tasksContainerId">
@@ -90,7 +90,7 @@
                                     <div class="task-options-group @(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "d-none")">
                                         <div class="form-check mb-3">
                                             <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].AllowMultipleValues)" value="true" @(task.AllowMultipleValues ? "checked" : "") />
-                                            <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                                            <label class="form-check-label">@T["Allow multiple values"]</label>
                                             <span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span>
                                         </div>
                                         <div class="mb-3">
@@ -302,14 +302,14 @@
             var card = document.createElement('div');
             card.className = 'card mb-2 task-option-card';
             card.innerHTML =
-                '<div class="card-header d-flex justify-content-between align-items-center py-1">' +
-                    '<span class="option-value-display fw-semibold small">@T["New Option"]</span>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
-                '</div>' +
-                '<div class="card-body py-2">' +
-                    '<div class="mb-2"><label class="form-label small">@T["Value"]</label><input type="text" class="form-control form-control-sm option-value-input" name="' + optionPrefix + '[' + optionIndex + '].Value" required placeholder="@T["e.g., Resolved"]" /></div>' +
-                    '<div class="mb-1"><label class="form-label small">@T["Description"]</label><input type="text" class="form-control form-control-sm" name="' + optionPrefix + '[' + optionIndex + '].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" /></div>' +
-                '</div>';
+            '<div class="card-header d-flex justify-content-between align-items-center py-1">' +
+            '<span class="option-value-display fw-semibold small">@T["New Option"]</span>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+            '</div>' +
+            '<div class="card-body py-2">' +
+            '<div class="mb-2"><label class="form-label small">@T["Value"]</label><input type="text" class="form-control form-control-sm option-value-input" name="' + optionPrefix + '[' + optionIndex + '].Value" required placeholder="@T["e.g., Resolved"]" /></div>' +
+            '<div class="mb-1"><label class="form-label small">@T["Description"]</label><input type="text" class="form-control form-control-sm" name="' + optionPrefix + '[' + optionIndex + '].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" /></div>' +
+            '</div>';
             return card;
         }
 
@@ -320,24 +320,24 @@
                 var card = document.createElement('div');
                 card.className = 'card mb-2 post-session-task-card';
                 card.innerHTML =
-                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
-                        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
-                            '<i class="fa-solid fa-chevron-down me-1"></i>' +
-                            '<span class="task-name-display fw-semibold">@T["New Task"]</span>' +
-                        '</a>' +
-                        '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
-                    '</div>' +
-                    '<div id="' + collapseId + '" class="collapse show">' +
-                        '<div class="card-body">' +
-                            '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control task-name-input" name="' + tasksPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" /><span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span></div>' +
-                            '<div class="mb-3"><label class="form-label">@T["Type"]</label><select class="form-select task-type-select" name="' + tasksPrefix + '[' + index + '].Type"><option value="Semantic">@T["Semantic"]</option><option value="PredefinedOptions">@T["Predefined Options"]</option></select><span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span></div>' +
-                            '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control post-session-instructions-editor" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
-                            '<div class="task-options-group d-none">' +
-                                '<div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="' + tasksPrefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">@T["Allow Multiple Values"]</label><span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span></div>' +
-                                '<div class="mb-3"><label class="form-label">@T["Options"]</label><span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from."]</span><div class="task-options-container"></div><button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button></div>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>';
+                '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                '<span class="task-name-display fw-semibold">@T["New Task"]</span>' +
+                '</a>' +
+                '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                '</div>' +
+                '<div id="' + collapseId + '" class="collapse show">' +
+                '<div class="card-body">' +
+                '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control task-name-input" name="' + tasksPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" /><span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span></div>' +
+                '<div class="mb-3"><label class="form-label">@T["Type"]</label><select class="form-select task-type-select" name="' + tasksPrefix + '[' + index + '].Type"><option value="Semantic">@T["Semantic"]</option><option value="PredefinedOptions">@T["Predefined Options"]</option></select><span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span></div>' +
+                '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control post-session-instructions-editor" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
+                '<div class="task-options-group d-none">' +
+                '<div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="' + tasksPrefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">@T["Allow Multiple Values"]</label><span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span></div>' +
+                '<div class="mb-3"><label class="form-label">@T["Options"]</label><span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from."]</span><div class="task-options-container"></div><button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button></div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
                 container.appendChild(card);
                 initializeInstructionEditors(card);
             });

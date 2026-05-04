@@ -1,19 +1,29 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
+/// <summary>
+/// Represents the content definition recipe step base.
+/// </summary>
 public abstract class ContentDefinitionRecipeStepBase(
     IEnumerable<IContentDefinitionSchemaDefinition> schemaDefinitions,
     IContentSchemaProvider contentSchemaProvider) : IRecipeStep
 {
     private readonly IEnumerable<IContentDefinitionSchemaDefinition> _schemaDefinitions = schemaDefinitions;
     private readonly IContentSchemaProvider _contentSchemaProvider = contentSchemaProvider;
+
     private JsonSchema _cached;
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public abstract string Name { get; }
 
     protected virtual IReadOnlyList<string> RequiredProperties => ["name"];
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -31,8 +41,8 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(Name)),
-                ("ContentTypes", BuildContentTypesArray(partsItem)),
-                ("ContentParts", BuildContentPartsArray(fieldsItem)))
+        ("ContentTypes", BuildContentTypesArray(partsItem)),
+        ("ContentParts", BuildContentPartsArray(fieldsItem)))
             .Required(RequiredProperties.ToArray())
             .AdditionalProperties(true)
             .Build();
@@ -48,40 +58,40 @@ public abstract class ContentDefinitionRecipeStepBase(
                 + "Fields must be attached through a content part whose PartName matches the content type's Name. "
                 + "Those parts must also appear in the ContentPartFieldDefinitionRecords inside ContentParts. "
                 + "Fields cannot be used directly in PartName.")
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Settings", TypeSettingsSchema()),
+        ("ContentTypePartDefinitionRecords", new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("Settings", TypeSettingsSchema()),
-                    ("ContentTypePartDefinitionRecords", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Array)
-                        .Items(partsItem)))
-                .Required("Name", "DisplayName", "Settings", "ContentTypePartDefinitionRecords")
-                .AdditionalProperties(true));
+            .Items(partsItem)))
+            .Required("Name", "DisplayName", "Settings", "ContentTypePartDefinitionRecords")
+            .AdditionalProperties(true));
     }
 
     private static JsonSchemaBuilder TypeSettingsSchema()
     {
         return new JsonSchemaBuilder().AnyOf(
             new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("ContentTypeSettings", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Creatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Listable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Draftable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Versionable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Securable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
-                        .Required("Creatable", "Listable", "Draftable", "Versionable", "Securable")
-                        .AdditionalProperties(false)))
-                .AdditionalProperties(true),
-            new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .AdditionalProperties(true));
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("ContentTypeSettings", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("Creatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+        ("Listable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+        ("Draftable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+        ("Versionable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+        ("Securable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+            .Required("Creatable", "Listable", "Draftable", "Versionable", "Securable")
+            .AdditionalProperties(false)))
+            .AdditionalProperties(true),
+        new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(true));
     }
 
     private static JsonSchemaBuilder BuildContentPartsArray(JsonSchemaBuilder fieldsItem)
@@ -89,15 +99,15 @@ public abstract class ContentDefinitionRecipeStepBase(
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)),
-                    ("ContentPartFieldDefinitionRecords", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Array)
-                        .Items(fieldsItem)))
-                .Required("Name", "Settings", "ContentPartFieldDefinitionRecords")
-                .AdditionalProperties(true));
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)),
+        ("ContentPartFieldDefinitionRecords", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(fieldsItem)))
+            .Required("Name", "Settings", "ContentPartFieldDefinitionRecords")
+            .AdditionalProperties(true));
     }
 
     private async ValueTask<JsonSchemaBuilder> CreatePartsItemAsync(IEnumerable<string> knownPartNames)
@@ -109,13 +119,14 @@ public abstract class ContentDefinitionRecipeStepBase(
                     .Type(SchemaValueType.String)
                     .AnyOf(
                         new JsonSchemaBuilder().Enum(knownPartNames),
-                        new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern(@"^(?!.*Field$).+"))),
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Settings", GenericSubSettings("ContentTypePartSettings")))
+        new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern(@"^(?!.*Field$).+"))),
+        ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Settings", GenericSubSettings("ContentTypePartSettings")))
             .Required("PartName", "Name", "Settings")
             .AdditionalProperties(true);
 
         var fragments = await GatherFragmentsAsync(ContentDefinitionSchemaType.Part);
+
         if (fragments.Count > 0)
         {
             result = result.Properties(("Settings", new JsonSchemaBuilder()
@@ -135,12 +146,13 @@ public abstract class ContentDefinitionRecipeStepBase(
                 ("FieldName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(fieldTypeNames)),
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Settings", GenericSubSettings("ContentPartFieldSettings")))
+        ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Settings", GenericSubSettings("ContentPartFieldSettings")))
             .Required("FieldName", "Name", "Settings")
             .AdditionalProperties(true);
 
         var fragments = await GatherFragmentsAsync(ContentDefinitionSchemaType.Field);
+
         if (fragments.Count > 0)
         {
             result = result.Properties(("Settings", new JsonSchemaBuilder()
@@ -161,17 +173,18 @@ public abstract class ContentDefinitionRecipeStepBase(
                     .Type(SchemaValueType.Object)
                     .Properties(
                         ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Position", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("DisplayMode", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Editor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                    .AdditionalProperties(false)))
+        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Position", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("DisplayMode", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Editor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+            .AdditionalProperties(false)))
             .AdditionalProperties(true);
     }
 
     private async ValueTask<List<JsonSchemaBuilder>> GatherFragmentsAsync(ContentDefinitionSchemaType target)
     {
         var collected = new List<JsonSchemaBuilder>();
+
         foreach (var schemaDefinition in _schemaDefinitions)
         {
             if (schemaDefinition.Type == target)

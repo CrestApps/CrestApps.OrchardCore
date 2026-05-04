@@ -1,5 +1,8 @@
 namespace CrestApps.OrchardCore.AI.Chat.Settings;
 
+/// <summary>
+/// Represents the AI chat admin widget settings.
+/// </summary>
 public sealed class AIChatAdminWidgetSettings
 {
     public const string DefaultPrimaryColor = "#41b670";
@@ -11,6 +14,11 @@ public sealed class AIChatAdminWidgetSettings
     /// Gets or sets the AI profile ID to use for the admin widget.
     /// </summary>
     public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the admin widget is enabled.
+    /// </summary>
+    public bool IsEnabled => !string.IsNullOrWhiteSpace(ProfileId);
 
     /// <summary>
     /// Gets or sets the maximum number of previous sessions to display in the widget history.

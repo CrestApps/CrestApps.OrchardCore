@@ -1,7 +1,8 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Deployment;
 using OrchardCore.Modules;
@@ -14,6 +15,12 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name.</param>
+    /// <param name="handlers">The collection of handlers invoked during connection export.</param>
+    /// <param name="logger">The logger instance for this source.</param>
     public AIProviderConnectionDeploymentSource(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IEnumerable<IAIProviderConnectionHandler> handlers,
@@ -31,8 +38,8 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         var connectionObjects = new JsonArray();
 
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -46,17 +53,11 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "ItemId", connection.ItemId },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-                { "ChatDeploymentName", connection.ChatDeploymentName },
-                { "EmbeddingDeploymentName", connection.EmbeddingDeploymentName },
-                { "ImagesDeploymentName", connection.ImagesDeploymentName },
-                { "UtilityDeploymentName", connection.UtilityDeploymentName },
-#pragma warning restore CS0618
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },
                 { "OwnerId", connection.OwnerId },
                 { "Author", connection.Author },
-                { "Properties", connection.Properties?.DeepClone() },
+                { "Properties", JsonSerializer.SerializeToNode(connection.Properties) },
             };
 
             var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
@@ -73,4 +74,3 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         });
     }
 }
-

@@ -1,8 +1,7 @@
+﻿using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -17,10 +16,14 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Controllers;
 
-[Feature(McpConstants.Feature.Server)]
+/// <summary>
+/// Provides endpoints for managing prompts resources.
+/// </summary>
+[Feature(McpPermissions.Feature.Server)]
 public sealed class PromptsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -34,6 +37,16 @@ public sealed class PromptsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptsController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayDriver">The display driver.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public PromptsController(
         INamedCatalogManager<McpPrompt> manager,
         IAuthorizationService authorizationService,
@@ -52,6 +65,13 @@ public sealed class PromptsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/mcp/prompts", "AIMCPPromptsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -104,6 +124,10 @@ public sealed class PromptsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -121,6 +145,9 @@ public sealed class PromptsController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     [Admin("ai/mcp/prompt/create", "AIMCPPromptCreate")]
     public async Task<ActionResult> Create()
     {
@@ -140,6 +167,9 @@ public sealed class PromptsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates a new post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/mcp/prompt/create", "AIMCPPromptCreate")]
@@ -169,6 +199,10 @@ public sealed class PromptsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [Admin("ai/mcp/prompt/edit/{id}", "AIMCPPromptEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -193,6 +227,10 @@ public sealed class PromptsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the edit post operation.
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/mcp/prompt/edit/{id}", "AIMCPPromptEdit")]
@@ -228,6 +266,10 @@ public sealed class PromptsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="id">The id.</param>
     [HttpPost]
     [Admin("ai/mcp/prompt/delete/{id}", "AIMCPPromptDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -256,6 +298,11 @@ public sealed class PromptsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

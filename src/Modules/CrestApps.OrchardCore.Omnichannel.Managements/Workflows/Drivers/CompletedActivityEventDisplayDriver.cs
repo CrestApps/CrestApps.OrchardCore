@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -17,6 +17,11 @@ internal sealed class CompletedActivityEventDisplayDriver : ActivityDisplayDrive
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CompletedActivityEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="catalog">The catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public CompletedActivityEventDisplayDriver(
         ICatalog<OmnichannelCampaign> catalog,
         IStringLocalizer<CompletedActivityEventDisplayDriver> stringLocalizer)

@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -7,10 +7,17 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile data extraction shape.
+/// </summary>
 public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDataExtractionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileDataExtractionDisplayDriver(
         IStringLocalizer<AIProfileDataExtractionDisplayDriver> stringLocalizer)
     {
@@ -26,14 +33,14 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
-                .Select(e => new DataExtractionEntryViewModel
-                {
-                    Name = e.Name,
-                    Description = e.Description,
-                    AllowMultipleValues = e.AllowMultipleValues,
-                    IsUpdatable = e.IsUpdatable,
-                })
-                .ToList();
+            .Select(e => new DataExtractionEntryViewModel
+            {
+                Name = e.Name,
+                Description = e.Description,
+                AllowMultipleValues = e.AllowMultipleValues,
+                IsUpdatable = e.IsUpdatable,
+            })
+        .ToList();
         }).Location("Content:5#Data Processing & Metrics;10");
     }
 

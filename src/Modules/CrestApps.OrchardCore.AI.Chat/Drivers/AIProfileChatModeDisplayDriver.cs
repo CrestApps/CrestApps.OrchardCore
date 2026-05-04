@@ -1,6 +1,7 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -8,6 +9,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile chat mode shape.
+/// </summary>
 public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
@@ -15,6 +19,12 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileChatModeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
@@ -33,12 +43,13 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.ChatMode = settings.ChatMode;
                 model.VoiceName = settings.VoiceName;
+                model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             }
 
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:10%Interactions;3")
+        }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
             if (profile.Type != AIProfileType.Chat)
@@ -67,6 +78,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             settings.VoiceName = model.ChatMode == ChatMode.Conversation
                 ? model.VoiceName?.Trim()
                 : null;
+            settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
         return Edit(profile, context);

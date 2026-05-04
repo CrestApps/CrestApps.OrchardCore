@@ -1,12 +1,12 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.A2A.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
-using CrestApps.OrchardCore.Core;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.A2A.Drivers;
@@ -17,6 +17,11 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="A2AConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public A2AConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<A2AConnectionDisplayDriver> stringLocalizer)
@@ -29,8 +34,8 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
     {
         return CombineAsync(
             View("A2AConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-            View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-            View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+        View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+        View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
         );
     }
 
@@ -41,13 +46,13 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             model.DisplayText = connection.DisplayText;
             model.Endpoint = connection.Endpoint;
 
-            var metadata = connection.As<A2AConnectionMetadata>();
+            var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
             model.AuthenticationType = metadata.AuthenticationType;
 
-            if (metadata.AuthenticationType == A2AClientAuthenticationType.Anonymous &&
+            if (metadata.AuthenticationType == ClientAuthenticationType.Anonymous &&
                 metadata.AdditionalHeaders is { Count: > 0 })
             {
-                model.AuthenticationType = A2AClientAuthenticationType.CustomHeaders;
+                model.AuthenticationType = ClientAuthenticationType.CustomHeaders;
             }
 
             model.ApiKeyHeaderName = metadata.ApiKeyHeaderName;
@@ -75,14 +80,14 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
             model.Schema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
         }).Location("Content:1");
     }
 
@@ -102,7 +107,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint is required."]);
         }
         else if (!Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri) ||
-                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint must be a valid HTTP or HTTPS URL."]);
         }
@@ -110,7 +115,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         connection.DisplayText = model.DisplayText;
         connection.Endpoint = model.Endpoint;
 
-        var metadata = connection.As<A2AConnectionMetadata>();
+        var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
 
         var existingApiKey = metadata.ApiKey;
@@ -126,27 +131,27 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
         switch (model.AuthenticationType)
         {
-            case A2AClientAuthenticationType.ApiKey:
+            case ClientAuthenticationType.ApiKey:
                 ValidateAndPopulateApiKey(context, model, metadata, protector, existingApiKey);
                 break;
 
-            case A2AClientAuthenticationType.Basic:
+            case ClientAuthenticationType.Basic:
                 ValidateAndPopulateBasic(context, model, metadata, protector, existingBasicPassword);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2ClientCredentials:
+            case ClientAuthenticationType.OAuth2ClientCredentials:
                 ValidateAndPopulateOAuth2(context, model, metadata, protector, existingOAuth2ClientSecret);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2PrivateKeyJwt:
+            case ClientAuthenticationType.OAuth2PrivateKeyJwt:
                 ValidateAndPopulateOAuth2PrivateKeyJwt(context, model, metadata, protector, existingOAuth2PrivateKey);
                 break;
 
-            case A2AClientAuthenticationType.OAuth2Mtls:
+            case ClientAuthenticationType.OAuth2Mtls:
                 ValidateAndPopulateOAuth2Mtls(context, model, metadata, protector, existingOAuth2ClientCertificate, existingOAuth2ClientCertificatePassword);
                 break;
 
-            case A2AClientAuthenticationType.CustomHeaders:
+            case ClientAuthenticationType.CustomHeaders:
                 ValidateAndPopulateCustomHeaders(context, model, metadata);
                 break;
         }

@@ -10,7 +10,7 @@ const glob = require("glob"),
 const isCI = process.env.CI === 'true' || process.env.CI === true;
 const npmCommand = isCI ? 'npm ci' : 'npm install';
 
-const assetPaths = glob.sync("./src/{Modules,Themes}/*/" + packageFileName, {});
+const assetPaths = glob.sync("./src/**/Modules/*/" + packageFileName, {});
 
 assetPaths.forEach(function (assetPath) {
     let path = assetPath.substring(0, assetPath.length - packageFileName.length);

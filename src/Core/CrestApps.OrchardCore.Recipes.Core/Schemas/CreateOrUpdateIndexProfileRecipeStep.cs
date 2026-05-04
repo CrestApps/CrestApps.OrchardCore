@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -10,28 +10,32 @@ public sealed class CreateOrUpdateIndexProfileRecipeStep : IRecipeStep
     private JsonSchema _cached;
     public string Name => "CreateOrUpdateIndexProfile";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
+
         return ValueTask.FromResult(_cached);
     }
 
     private static JsonSchema CreateSchema()
         => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateOrUpdateIndexProfile")),
-                ("Indexes", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                        .AdditionalProperties(true))))
-            .Required("name", "Indexes")
-            .AdditionalProperties(true)
-            .Build();
+        .Type(SchemaValueType.Object)
+        .Properties(
+            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateOrUpdateIndexProfile")),
+    ("Indexes", new JsonSchemaBuilder()
+        .Type(SchemaValueType.Array)
+        .Items(new JsonSchemaBuilder()
+        .Type(SchemaValueType.Object)
+        .Properties(
+            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+    ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+    ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+        .AdditionalProperties(true))))
+        .Required("name", "Indexes")
+        .AdditionalProperties(true)
+        .Build();
 }

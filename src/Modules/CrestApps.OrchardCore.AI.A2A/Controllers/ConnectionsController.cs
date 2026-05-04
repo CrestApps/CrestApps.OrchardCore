@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
+﻿using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -15,9 +14,13 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.AI.A2A.Controllers;
 
+/// <summary>
+/// Provides admin actions for managing connections resources.
+/// </summary>
 public sealed class ConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -31,6 +34,16 @@ public sealed class ConnectionsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionsController"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="instanceDisplayManager">The instance display manager.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ConnectionsController(
         ICatalogManager<A2AConnection> manager,
         IAuthorizationService authorizationService,
@@ -49,6 +62,13 @@ public sealed class ConnectionsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Index.
+    /// </summary>
+    /// <param name="options">The options to configure.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/a2a/connections", "AIA2AConnectionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -100,6 +120,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Index Filter Post.
+    /// </summary>
+    /// <param name="model">The model instance.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -117,6 +141,9 @@ public sealed class ConnectionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
     [Admin("ai/a2a/connection/create", "AIA2AConnectionCreate")]
     public async Task<ActionResult> Create()
     {
@@ -136,6 +163,9 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Creates post.
+    /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/a2a/connection/create", "AIA2AConnectionCreate")]
@@ -165,6 +195,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Edit.
+    /// </summary>
+    /// <param name="id">The unique identifier.</param>
     [Admin("ai/a2a/connection/edit/{id}", "AIA2AConnectionEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -189,6 +223,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Edit Post.
+    /// </summary>
+    /// <param name="id">The unique identifier.</param>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/a2a/connection/edit/{id}", "AIA2AConnectionEdit")]
@@ -224,6 +262,10 @@ public sealed class ConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Removes the specified item.
+    /// </summary>
+    /// <param name="id">The unique identifier.</param>
     [HttpPost]
     [Admin("ai/a2a/connection/delete/{id}", "AIA2AConnectionDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -252,6 +294,11 @@ public sealed class ConnectionsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Index Post.
+    /// </summary>
+    /// <param name="options">The options to configure.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]

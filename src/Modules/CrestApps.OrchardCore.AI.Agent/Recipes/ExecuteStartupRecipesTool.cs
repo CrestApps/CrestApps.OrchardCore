@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,24 +11,30 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
+/// <summary>
+/// Represents the execute startup recipes tool.
+/// </summary>
 public sealed class ExecuteStartupRecipesTool : AIFunction
 {
     public const string TheName = "executeNonStartupRecipe";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "recipeName": {
-              "type": "string",
-              "description": "The name of the non-startup recipe to execute."
-            }
-          },
-          "required": ["recipeName"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "recipeName": {
+          "type": "string",
+          "description": "The name of the non-startup recipe to execute."
         }
-        """);
+      },
+      "required": [
+        "recipeName"
+      ],
+      "additionalProperties": false
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -53,6 +59,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var logger = arguments.Services.GetRequiredService<ILogger<ExecuteStartupRecipesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -66,6 +73,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         }
 
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
+
         var recipes = await GetRecipesAsync(recipeHarvesters, features);
 
         var recipe = recipes.FirstOrDefault(c => c.Name == recipeName);
@@ -114,8 +122,9 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         var recipeCollections = await Task.WhenAll(recipeHarvesters.Select(x => x.HarvestRecipesAsync()));
         var recipes = recipeCollections.SelectMany(x => x)
             .Where(r => !r.IsSetupRecipe &&
+
                 (r.Tags == null || !r.Tags.Contains("hidden", StringComparer.InvariantCultureIgnoreCase)) &&
-                features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                    features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
 
         return recipes;
     }

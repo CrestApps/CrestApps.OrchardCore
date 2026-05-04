@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,18 +6,21 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
+/// <summary>
+/// Represents the list tenant tool.
+/// </summary>
 public sealed class ListTenantTool : AIFunction
 {
     public const string TheName = "listTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 

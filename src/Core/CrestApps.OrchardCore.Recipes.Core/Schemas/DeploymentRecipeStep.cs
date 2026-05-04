@@ -1,4 +1,4 @@
-using Json.Schema;
+﻿using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -10,9 +10,13 @@ public sealed class DeploymentRecipeStep : IRecipeStep
     private JsonSchema _cached;
     public string Name => "deployment";
 
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
+
         return ValueTask.FromResult(_cached);
     }
 
@@ -22,23 +26,23 @@ public sealed class DeploymentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("deployment")),
-                ("Plans", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Steps", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder()
-                                    .Type(SchemaValueType.Object)
-                                    .Properties(
-                                        ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)))
-                                    .Required("Type", "Step")
-                                    .AdditionalProperties(true))))
-                        .Required("Name")
-                        .AdditionalProperties(true))))
+        ("Plans", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Steps", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)))
+            .Required("Type", "Step")
+            .AdditionalProperties(true))))
+            .Required("Name")
+            .AdditionalProperties(true))))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

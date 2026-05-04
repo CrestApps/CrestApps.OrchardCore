@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+﻿using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -23,6 +24,13 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionDocumentsDisplayDriver(
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
@@ -37,12 +45,10 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        // Show documents tab for all providers - documents are embedded and used for RAG
         return Initialize<ChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", async model =>
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
-            model.TopN = interaction.DocumentTopN ?? 3;
 
             // Check if index profile is configured
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -53,6 +59,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
             {
                 // Check if the index profile has a valid embedding search service
                 var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+
                 if (indexProfile != null)
                 {
                     // Check if there's a keyed service registered for this provider
@@ -60,7 +67,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Parameters:3#Documents;3");
+        }).Location("Parameters:6#Knowledge;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -68,10 +75,9 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         var model = new ChatInteractionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        interaction.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
-
         // Documents are uploaded via minimal API endpoints, so we just return the current view
         // The actual document handling happens in UploadDocumentEndpoint and RemoveDocumentEndpoint
+
         return Edit(interaction, context);
     }
 }

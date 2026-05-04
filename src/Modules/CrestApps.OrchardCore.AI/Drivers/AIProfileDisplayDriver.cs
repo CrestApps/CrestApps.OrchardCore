@@ -1,7 +1,8 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -22,16 +22,24 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The store for retrieving AI profiles.</param>
+    /// <param name="liquidTemplateManager">The Liquid template manager for template validation.</param>
+    /// <param name="defaultAIOptions">The default AI configuration options.</param>
+    /// <param name="orchestratorOptions">The orchestrator configuration options.</param>
+    /// <param name="authorizationService">The authorization service for permission checks.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IOptions<AIOptions> aiOptions,
         DefaultAIOptions defaultAIOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IAuthorizationService authorizationService,
@@ -42,7 +50,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _liquidTemplateManager = liquidTemplateManager;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
-        _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions;
         _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
@@ -55,8 +62,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
             View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
             View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
-             View("AIProfile_ActionsMenu_SummaryAdmin", profile)
-            .Location("ActionsMenu:10")
+            View("AIProfile_ActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:10")
             .RenderWhen(async () => profile.GetSettings<AIProfileSettings>().IsRemovable && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         );
     }
@@ -65,8 +71,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     {
         void PopulateProfileFields(EditProfileViewModel model)
         {
-            var metadata = profile.As<AIProfileMetadata>();
-            var agentMetadata = profile.As<AgentMetadata>();
+            var metadata = profile.GetOrCreate<AIProfileMetadata>();
+            var agentMetadata = profile.GetOrCreate<AgentMetadata>();
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
@@ -99,11 +105,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         void PopulateParameters(ProfileMetadataViewModel model)
         {
-            var metadata = profile.As<AIProfileMetadata>();
+            var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
-            model.PastMessagesCount = context.IsNew ? _defaultAIOptions.PastMessagesCount : metadata.PastMessagesCount;
+            model.PastMessagesCount = metadata.PastMessagesCount ?? _defaultAIOptions.PastMessagesCount;
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : metadata.PresencePenalty;
             model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : metadata.Temperature;
             model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : metadata.MaxTokens;
@@ -124,12 +130,13 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
             var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+
             if (orchestrators.Count > 1)
             {
                 model.OrchestratorName = profile.OrchestratorName;
                 model.Orchestrators = orchestrators
-                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
-                    .ToArray();
+                .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                .ToArray();
             }
         }).Location("Content:2%General;1");
 
@@ -137,13 +144,13 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             .Location("Content:5%General;1");
 
         var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
-            .Location("Content:1%Interactions;3");
+            .Location("Content:6%General;1");
 
         var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
-            .Location("Content:5%Instructions;4");
+            .Location("Content:1%Instructions;4");
 
         var systemInstructionsResult = Initialize<ProfileMetadataViewModel>("AIProfileSystemInstructions_Edit", PopulateParameters)
-            .Location("Content:10%Instructions;4");
+            .Location("Content:5%Instructions;4");
 
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", PopulateParameters)
             .Location("Content:1%Parameters;5");
@@ -211,7 +218,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Description), S["Description is required for agent profiles."]);
             }
 
-            var agentMetadata = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            var agentMetadata = profile.GetOrCreate<AgentMetadata>();
             agentMetadata.Availability = model.AgentAvailability;
             profile.Put(agentMetadata);
         }
@@ -229,7 +236,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
 
-        var metadata = profile.As<AIProfileMetadata>();
+        var metadata = profile.GetOrCreate<AIProfileMetadata>();
         metadata.InitialPrompt = model.AddInitialPrompt ? model.InitialPrompt?.Trim() : null;
 
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;

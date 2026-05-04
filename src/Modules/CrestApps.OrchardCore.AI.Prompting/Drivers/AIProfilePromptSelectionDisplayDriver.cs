@@ -1,17 +1,23 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
+/// <summary>
+/// Display driver for the AI profile prompt selection shape.
+/// </summary>
 public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfilePromptSelectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
     public AIProfilePromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
@@ -19,7 +25,7 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
 
     public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
-        var promptMetadata = profile.As<PromptTemplateMetadata>();
+        var promptMetadata = profile.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

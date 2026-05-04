@@ -1,14 +1,22 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session shape.
+/// </summary>
 public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
 {
     private readonly IAIProfileManager _openAIChatProfileManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="openAIChatProfileManager">The open AI chat profile manager.</param>
     public AIChatSessionDisplayDriver(IAIProfileManager openAIChatProfileManager)
     {
         _openAIChatProfileManager = openAIChatProfileManager;

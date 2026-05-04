@@ -1,13 +1,19 @@
-using A2A;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.Models;
+﻿using A2A;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 /// <summary>
 /// Creates and configures an A2A <see cref="TaskManager"/> that routes incoming messages to local AI Agent profiles.
@@ -17,6 +23,10 @@ namespace CrestApps.OrchardCore.AI.A2A.Services;
 /// </summary>
 internal static class A2ATaskManagerFactory
 {
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public static ITaskManager Create(IServiceProvider serviceProvider)
     {
         var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
@@ -26,9 +36,10 @@ internal static class A2ATaskManagerFactory
         taskManager.OnAgentCardQuery = async (agentUrl, cancellationToken) =>
         {
             var services = httpContextAccessor.HttpContext.RequestServices;
+
             var options = services.GetRequiredService<IOptions<A2AHostOptions>>().Value;
             var profileManager = services.GetRequiredService<IAIProfileManager>();
-            var profiles = await profileManager.GetAsync(AIProfileType.Agent);
+            var profiles = await profileManager.GetAsync(AIProfileType.Agent, cancellationToken);
 
             if (options.ExposeAgentsAsSkill)
             {
@@ -50,12 +61,15 @@ internal static class A2ATaskManagerFactory
         // Use the task-based flow for both streaming and non-streaming.
         // When streaming, OnTaskCreated runs in a background Task.Run and pushes
         // artifact/status events through the TaskUpdateEventEnumerator.
+
         // When non-streaming, OnTaskCreated runs synchronously before the task is returned.
         taskManager.OnTaskCreated = (agentTask, cancellationToken) =>
-            ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
+
+        ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
 
         taskManager.OnTaskUpdated = (agentTask, cancellationToken) =>
-            ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
+
+        ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
 
         return taskManager;
     }
@@ -74,8 +88,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "Request services are not available."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
@@ -93,8 +107,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "No text message was provided."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
@@ -108,8 +122,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "No agents are available to process this request."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
@@ -123,13 +137,15 @@ internal static class A2ATaskManagerFactory
 
             var completionService = services.GetRequiredService<IAICompletionService>();
             var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+
             var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
-            var context = await contextBuilder.BuildAsync(targetProfile);
+            var context = await contextBuilder.BuildAsync(targetProfile, cancellationToken: cancellationToken);
+
             context.DisableTools = true;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
 
             var messages = new List<ChatMessage>
             {
@@ -162,15 +178,15 @@ internal static class A2ATaskManagerFactory
             }
 
             var finalText = responseText.Length > 0
-                ? responseText.ToString()
-                : "The agent did not produce a response.";
+            ? responseText.ToString()
+            : "The agent did not produce a response.";
 
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Completed,
                 CreateAgentMessage(agentTask.ContextId, finalText),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -180,6 +196,7 @@ internal static class A2ATaskManagerFactory
                 final: true,
                 cancellationToken: CancellationToken.None);
         }
+
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to execute agent '{AgentName}'.", targetProfile.Name);
@@ -188,8 +205,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, $"An error occurred while executing agent '{targetProfile.Name}'."),
-                final: true,
-                cancellationToken: CancellationToken.None);
+            final: true,
+            cancellationToken: CancellationToken.None);
         }
     }
 
@@ -205,6 +222,7 @@ internal static class A2ATaskManagerFactory
         AIProfile targetProfile = null;
 
         // In multi-agent mode, check query parameter first.
+
         if (!options.ExposeAgentsAsSkill)
         {
             var agentName = httpContextAccessor.HttpContext?.Request.Query["agent"].FirstOrDefault();
@@ -212,12 +230,15 @@ internal static class A2ATaskManagerFactory
             if (!string.IsNullOrEmpty(agentName))
             {
                 targetProfile = profiles?.FirstOrDefault(p =>
-                    string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
+
+                string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // Fall back to message metadata-based routing.
+
         if (targetProfile is null &&
+
             lastMessage?.Metadata?.TryGetValue("agentName", out var agentNameElement) == true)
         {
             var metaAgentName = agentNameElement.GetString();
@@ -225,11 +246,13 @@ internal static class A2ATaskManagerFactory
             if (!string.IsNullOrEmpty(metaAgentName))
             {
                 targetProfile = profiles?.FirstOrDefault(p =>
-                    string.Equals(p.Name, metaAgentName, StringComparison.OrdinalIgnoreCase));
+
+                string.Equals(p.Name, metaAgentName, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // Fall back to the first available agent.
+
         return targetProfile ?? profiles?.FirstOrDefault();
     }
 
@@ -292,7 +315,7 @@ internal static class A2ATaskManagerFactory
         }
 
         return profiles.FirstOrDefault(p =>
-            string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
+        string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static AgentMessage CreateAgentMessage(string contextId, string text)

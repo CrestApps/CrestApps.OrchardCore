@@ -1,8 +1,10 @@
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -21,11 +23,14 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+/// <summary>
+/// Provides admin controller actions for managing AI provider connections.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ProviderConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
+    private readonly IAIProviderConnectionStore _store;
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -37,7 +42,20 @@ public sealed class ProviderConnectionsController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderConnectionsController"/> class.
+    /// </summary>
+    /// <param name="manager">The provider connection catalog manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="instanceDisplayManager">The provider connection display manager.</param>
+    /// <param name="aiOptions">The AI options.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ProviderConnectionsController(
+        IAIProviderConnectionStore store,
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -48,6 +66,7 @@ public sealed class ProviderConnectionsController : Controller
         IHtmlLocalizer<ProviderConnectionsController> htmlLocalizer,
         IStringLocalizer<ProviderConnectionsController> stringLocalizer)
     {
+        _store = store;
         _manager = manager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
@@ -59,6 +78,14 @@ public sealed class ProviderConnectionsController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI provider connections.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view.</returns>
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -71,13 +98,24 @@ public sealed class ProviderConnectionsController : Controller
             return Forbid();
         }
 
+        IEnumerable<AIProviderConnection> filtered = await _store.GetAllAsync();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            filtered = filtered.Where(e => e.Name.Contains(options.Search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        filtered = filtered.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase);
+
+        var editableEntries = filtered.Where(e => !e.IsReadOnly);
+        var readOnlyEntries = filtered.Where(e => e.IsReadOnly);
+
+        var editableCount = editableEntries.Count();
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Sorted = true,
-            Name = options.Search,
-        });
+        var pagedEditable = editableEntries
+            .Skip((pager.Page - 1) * pager.PageSize)
+            .Take(pager.PageSize);
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -87,17 +125,27 @@ public sealed class ProviderConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIProviderConnection>
+        var viewModel = new ListCatalogEntryWithReadOnlyViewModel<AIProviderConnection>
         {
             Models = [],
+            ReadOnlyModels = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, editableCount, routeData),
             Sources = _aiOptions.ConnectionSources.Keys.Order(),
         };
 
-        foreach (var model in result.Entries)
+        foreach (var model in pagedEditable)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIProviderConnection>
+            {
+                Model = model,
+                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+            });
+        }
+
+        foreach (var model in readOnlyEntries)
+        {
+            viewModel.ReadOnlyModels.Add(new CatalogEntryViewModel<AIProviderConnection>
             {
                 Model = model,
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -112,6 +160,11 @@ public sealed class ProviderConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the provider connections index.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -129,6 +182,11 @@ public sealed class ProviderConnectionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays the editor for creating a new AI provider connection.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider.</param>
+    /// <returns>The create view.</returns>
     [Admin("ai/provider/connection/create/{providerName}", "AIProviderConnectionCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
@@ -155,6 +213,11 @@ public sealed class ProviderConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI provider connection.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider.</param>
+    /// <returns>A redirect to the index view on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/provider/connection/create/{providerName}", "AIProviderConnectionCreate")]
@@ -193,6 +256,11 @@ public sealed class ProviderConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Displays the editor for editing an existing AI provider connection.
+    /// </summary>
+    /// <param name="id">The unique identifier of the connection.</param>
+    /// <returns>The edit view.</returns>
     [Admin("ai/provider/connection/edit/{id}", "AIProviderConnectionEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -208,6 +276,13 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
@@ -217,6 +292,11 @@ public sealed class ProviderConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the form submission for updating an existing AI provider connection.
+    /// </summary>
+    /// <param name="id">The unique identifier of the connection.</param>
+    /// <returns>A redirect to the index view on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/provider/connection/edit/{id}", "AIProviderConnectionEdit")]
@@ -232,6 +312,13 @@ public sealed class ProviderConnectionsController : Controller
         if (model == null)
         {
             return NotFound();
+        }
+
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         var viewModel = new EditCatalogEntryViewModel
@@ -254,6 +341,11 @@ public sealed class ProviderConnectionsController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Deletes an AI provider connection by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the connection to delete.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [Admin("ai/provider/connection/delete/{id}", "AIProviderConnectionDelete")]
 
@@ -271,6 +363,13 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be deleted."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         if (await _manager.DeleteAsync(model))
         {
             _shellReleaseManager.RequestRelease();
@@ -285,6 +384,12 @@ public sealed class ProviderConnectionsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the bulk action form submission for AI provider connections.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the selected bulk action.</param>
+    /// <param name="itemIds">The identifiers of the selected connections.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -308,7 +413,7 @@ public sealed class ProviderConnectionsController : Controller
                     {
                         var instance = await _manager.FindByIdAsync(id);
 
-                        if (instance == null)
+                        if (instance == null || instance.IsReadOnly)
                         {
                             continue;
                         }

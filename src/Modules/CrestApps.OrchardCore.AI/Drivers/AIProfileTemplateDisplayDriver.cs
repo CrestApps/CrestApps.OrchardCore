@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -10,7 +10,7 @@ using OrchardCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for the generic fields shared by all AI template sources:
+/// Display driver for the generic fields shared by all template sources:
 /// Title, Technical Name, Description, Category, and IsListable.
 /// </summary>
 internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -19,6 +19,11 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="templatesCatalog">The templates catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)

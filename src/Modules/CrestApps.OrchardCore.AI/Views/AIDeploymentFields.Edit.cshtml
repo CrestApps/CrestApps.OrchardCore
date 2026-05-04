@@ -3,15 +3,6 @@
 
 @model EditDeploymentViewModel
 
-@if (!Model.HasContainedConnection && (Model.Connections == null || Model.Connections.Count == 0))
-{
-    <div class="alert alert-danger" role="alert">
-        @T["There are no configured connections."]
-    </div>
-
-    return;
-}
-
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="ModelName" class="@Orchard.GetLabelClasses()">@T["Model name"]</label>
     <div class="@Orchard.GetEndClasses()">
@@ -46,9 +37,9 @@
 }
 
 <div class="@Orchard.GetWrapperClasses()">
-    <fieldset class="mb-0">
-        <legend class="@Orchard.GetLabelClasses()">@T["Types"]</legend>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <h6>@T["Types"]</h6>
+        <div>
             @foreach (var type in Model.Types)
             {
                 var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
@@ -65,18 +56,5 @@
             <span asp-validation-for="SelectedTypes" class="text-danger"></span>
             <span class="hint">@T["Select one or more capability types for this deployment."]</span>
         </div>
-    </fieldset>
-</div>
-
-@if (!Model.HasContainedConnection)
-{
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            <span class="hint">@T["Connection name to use for this deployment."]</span>
-        </div>
     </div>
-}
-
+</div>

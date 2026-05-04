@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using A2A;
 using CrestApps.OrchardCore.Samples.A2AClient.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -6,26 +6,50 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace CrestApps.OrchardCore.Samples.A2AClient.Pages;
 
+/// <summary>
+/// Represents the agents model.
+/// </summary>
 public sealed class AgentsModel : PageModel
 {
     private readonly A2AClientFactory _clientFactory;
-    private readonly ILogger<AgentsModel> _logger;
+    private readonly ILogger _logger;
 
-    public AgentsModel(A2AClientFactory clientFactory, ILogger<AgentsModel> logger)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentsModel"/> class.
+    /// </summary>
+    /// <param name="clientFactory">The client factory.</param>
+    /// <param name="logger">The logger.</param>
+    public AgentsModel(
+        A2AClientFactory clientFactory,
+        ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets or sets the agent cards.
+    /// </summary>
     public List<AgentCard> AgentCards { get; private set; } = [];
 
+    /// <summary>
+    /// Gets or sets the error message.
+    /// </summary>
     public string ErrorMessage { get; private set; }
 
+    /// <summary>
+    /// Asynchronously performs the on get operation.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadAgentCardsAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the on post refresh operation.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IActionResult> OnPostRefreshAsync(CancellationToken cancellationToken)
     {
         await LoadAgentCardsAsync(cancellationToken);
@@ -33,6 +57,14 @@ public sealed class AgentsModel : PageModel
         return Page();
     }
 
+    /// <summary>
+    /// Asynchronously performs the on post send message operation.
+    /// </summary>
+    /// <param name="agentUrl">The agent url.</param>
+    /// <param name="agentName">The agent name.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="stream">The stream.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<IActionResult> OnPostSendMessageAsync(string agentUrl, string agentName, string message, bool stream, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -83,7 +115,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Authentication failed (401 Unauthorized). " +
-                        "The A2A host requires authentication. Check the agent card's security schemes for details."
+                "The A2A host requires authentication. Check the agent card's security schemes for details."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -93,7 +125,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Access denied (403 Forbidden). " +
-                        "You do not have permission to access this agent."
+                "You do not have permission to access this agent."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -101,8 +133,8 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "The A2A host returned a 404 Not Found response. " +
-                        "Please ensure the A2A Host feature is enabled on the default tenant " +
-                        "(Configuration > Features > search for 'A2A Host')."
+                "Please ensure the A2A Host feature is enabled on the default tenant " +
+                "(Configuration > Features > search for 'A2A Host')."
             });
         }
         catch (Exception ex)
@@ -165,8 +197,8 @@ public sealed class AgentsModel : PageModel
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             ErrorMessage = "The A2A host returned a 404 Not Found response. " +
-                           "Please ensure the A2A Host feature is enabled on the default tenant " +
-                           "(Configuration > Features > search for 'A2A Host').";
+            "Please ensure the A2A Host feature is enabled on the default tenant " +
+            "(Configuration > Features > search for 'A2A Host').";
         }
         catch (Exception ex)
         {
@@ -185,13 +217,26 @@ public sealed class AgentsModel : PageModel
         private readonly MessageSendParams _sendParams;
         private readonly ILogger _logger;
 
-        public StreamingA2AResult(A2A.A2AClient client, MessageSendParams sendParams, ILogger logger)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StreamingA2AResult"/> class.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="sendParams">The send params.</param>
+        /// <param name="logger">The logger.</param>
+        public StreamingA2AResult(
+            A2A.A2AClient client,
+            MessageSendParams sendParams,
+            ILogger logger)
         {
             _client = client;
             _sendParams = sendParams;
             _logger = logger;
         }
 
+        /// <summary>
+        /// Asynchronously performs the execute result operation.
+        /// </summary>
+        /// <param name="context">The context.</param>
         public async Task ExecuteResultAsync(ActionContext context)
         {
             var httpResponse = context.HttpContext.Response;
@@ -211,17 +256,18 @@ public sealed class AgentsModel : PageModel
                     if (a2aEvent is TaskArtifactUpdateEvent artifactUpdate)
                     {
                         chunk = string.Join(string.Empty,
-                            artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
+                        artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
                     }
                     else if (a2aEvent is TaskStatusUpdateEvent statusUpdate)
                     {
                         if (statusUpdate.Final)
                         {
                             // If the task failed, send the error message.
+
                             if (statusUpdate.Status.State == TaskState.Failed)
                             {
                                 var errorText = statusUpdate.Status.Message?.Parts
-                                    ?.OfType<TextPart>()
+                                ?.OfType<TextPart>()
                                     .Select(p => p.Text)
                                     .FirstOrDefault() ?? "Agent task failed.";
 

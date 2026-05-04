@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,6 +16,11 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeleteAIDeploymentDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentsCatalog">The deployments catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DeleteAIDeploymentDeploymentStepDisplayDriver(
         INamedCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<DeleteAIDeploymentDeploymentStepDisplayDriver> stringLocalizer)
@@ -28,7 +33,7 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
     {
         return CombineAsync(
             View("DeleteAIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
-            View("DeleteAIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        View("DeleteAIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
         );
     }
 
@@ -47,8 +52,8 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
         var model = new AIDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DeploymentNames);
+        p => p.IncludeAll,
+        p => p.DeploymentNames);
 
         if (model.IncludeAll)
         {

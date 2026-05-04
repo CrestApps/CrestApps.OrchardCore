@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -8,10 +9,17 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session field extracted event shape.
+/// </summary>
 public sealed class AIChatSessionFieldExtractedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventViewModel>
 {
     private readonly IAIProfileStore _profileStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatSessionFieldExtractedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
     public AIChatSessionFieldExtractedEventDisplayDriver(
         IAIProfileStore profileStore)
     {

@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -11,18 +11,22 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
-    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name.</param>
+    /// <param name="shellReleaseManager">The shell release manager for requesting tenant restarts.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProviderConnectionDisplayDriver(
-        INamedCatalog<AIProviderConnection> connectionsCatalog,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IShellReleaseManager shellReleaseManager,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _connectionsCatalog = connectionsCatalog;
-        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -45,7 +49,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
             model.IsNew = context.IsNew;
-
         }).Location("Content:1");
     }
 
@@ -75,8 +78,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
 
         connection.DisplayText = model.DisplayText;
-
-        _shellReleaseManager.RequestRelease();
 
         return Edit(connection, context);
     }

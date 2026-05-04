@@ -1,10 +1,11 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -21,6 +22,9 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing admin resources.
+/// </summary>
 [Admin("ai/chat/interactions/{action}/{itemId?}", "ChatInteractions{action}")]
 public sealed class AdminController : Controller
 {
@@ -35,6 +39,16 @@ public sealed class AdminController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminController"/> class.
+    /// </summary>
+    /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="interactionDisplayManager">The interaction display manager.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
         ICatalogManager<ChatInteraction> interactionManager,
         IAuthorizationService authorizationService,
@@ -53,6 +67,13 @@ public sealed class AdminController : Controller
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/chat-interactions", "AIInteractionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -98,11 +119,11 @@ public sealed class AdminController : Controller
 
         // Build display shapes for each interaction
         viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
-            new CatalogEntryViewModel<ChatInteraction>
-            {
-                Model = model,
-                Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            }))).ToList();
+        new CatalogEntryViewModel<ChatInteraction>
+        {
+            Model = model,
+            Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+        }))).ToList();
 
         viewModel.Options.BulkActions =
         [
@@ -112,6 +133,10 @@ public sealed class AdminController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Performs the index filter post operation.
+    /// </summary>
+    /// <param name="model">The model.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -129,6 +154,11 @@ public sealed class AdminController : Controller
         });
     }
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -184,6 +214,10 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Performs the chat operation.
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
     [Admin("ai/chat/interaction/chat/{itemId?}", "ChatInteractionsChat")]
     public async Task<ActionResult> Chat(string itemId)
     {
@@ -238,10 +272,17 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Performs the new operation.
+    /// </summary>
     [Admin("ai/chat/interaction/new-chat", "NewInteractionsChat")]
-    public async Task<ActionResult> New()
+    public ActionResult New()
         => RedirectToAction(nameof(Chat));
 
+    /// <summary>
+    /// Performs the clone operation.
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
     [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
     public async Task<ActionResult> Clone(string itemId)
     {
@@ -257,7 +298,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(interaction.Properties);
+        var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
         clonedInteraction.Title = GetNextTitle(interaction.Title);
         clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
         clonedInteraction.ConnectionName = interaction.ConnectionName;
@@ -268,7 +309,6 @@ public sealed class AdminController : Controller
         clonedInteraction.PresencePenalty = interaction.PresencePenalty;
         clonedInteraction.MaxTokens = interaction.MaxTokens;
         clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
-        clonedInteraction.DocumentTopN = interaction.DocumentTopN;
         clonedInteraction.ToolNames = interaction.ToolNames.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();
@@ -288,6 +328,10 @@ public sealed class AdminController : Controller
         });
     }
 
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
     [HttpPost]
     public async Task<IActionResult> Delete(string itemId)
     {

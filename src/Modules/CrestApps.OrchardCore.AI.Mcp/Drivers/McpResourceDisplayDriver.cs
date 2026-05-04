@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -15,6 +15,11 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourceDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="mcpOptions">The mcp options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourceDisplayDriver(
         IOptions<McpOptions> mcpOptions,
         IStringLocalizer<McpResourceDisplayDriver> stringLocalizer)
@@ -27,9 +32,9 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
     {
         return CombineAsync(
             View("McpResource_Fields_SummaryAdmin", entry).Location("Content:1"),
-            View("McpResource_Buttons_SummaryAdmin", entry).Location("Actions:5"),
-            View("McpResource_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
-            View("McpResource_Description_SummaryAdmin", entry).Location("Description:1")
+        View("McpResource_Buttons_SummaryAdmin", entry).Location("Actions:5"),
+        View("McpResource_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
+        View("McpResource_Description_SummaryAdmin", entry).Location("Description:1")
         );
     }
 
@@ -43,17 +48,18 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             model.DisplayText = entry.DisplayText;
 
             // Get the supported variables from the options for this resource type.
+
             if (!string.IsNullOrEmpty(entry.Source) &&
                 _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
-                typeEntry.SupportedVariables is not null)
+                    typeEntry.SupportedVariables is not null)
             {
                 model.SupportedVariables = typeEntry.SupportedVariables
-                    .Select(v => new McpResourceVariableViewModel
-                    {
-                        Name = v.Name,
-                        Description = v.Description?.Value,
-                    })
-                    .ToArray();
+                .Select(v => new McpResourceVariableViewModel
+                {
+                    Name = v.Name,
+                    Description = v.Description?.Value,
+                })
+            .ToArray();
             }
 
             if (entry.Resource is not null)

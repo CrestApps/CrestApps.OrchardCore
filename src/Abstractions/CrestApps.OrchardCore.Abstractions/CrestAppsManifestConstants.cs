@@ -1,5 +1,8 @@
-namespace CrestApps.OrchardCore;
+﻿namespace CrestApps.OrchardCore;
 
+/// <summary>
+/// Contains constant values for crest apps manifest.
+/// </summary>
 public static class CrestAppsManifestConstants
 {
     public const string Author = "The CrestApps Team";

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core.Models;
+﻿using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +13,9 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the user full name part shape.
+/// </summary>
 public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, UserFullNamePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -21,6 +24,13 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserFullNamePartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="siteService">The site service.</param>
     public UserFullNamePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -66,6 +76,7 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.EditUsers, user))
         {
             // When the user is only editing their profile never update this part of the user.
+
             return null;
         }
 

@@ -1,6 +1,8 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -13,6 +15,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat profile part shape.
+/// </summary>
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -22,6 +27,14 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatProfilePartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="chatSessionManager">The chat session manager.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,
@@ -46,6 +59,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         var user = _httpContextAccessor?.HttpContext.User;
 
         // When displaying history, we should only target session that belong to authenticated users.
+
         if (user is null || !user.Identity.IsAuthenticated)
         {
             return null;
@@ -87,7 +101,6 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
             var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
 
             model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
-
         }).Location("Content:5");
     }
 

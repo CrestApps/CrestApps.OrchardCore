@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -18,6 +18,12 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpResourceHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpResourceHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -28,13 +34,13 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpResource> context)
+    public override Task InitializingAsync(InitializingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpResource> context)
+    public override Task UpdatingAsync(UpdatingContext<McpResource> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpResource> context)
+    public override Task ValidatingAsync(ValidatingContext<McpResource> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.Source))
         {

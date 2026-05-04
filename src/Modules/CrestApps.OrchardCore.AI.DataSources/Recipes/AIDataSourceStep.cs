@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+﻿using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -16,10 +16,15 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDataSourceStep"/> class.
+    /// </summary>
+    /// <param name="dataManager">The data manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceStep(
         ICatalogManager<AIDataSource> dataManager,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _dataManager = dataManager;
         S = stringLocalizer;
@@ -51,7 +56,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             {
                 dataSource = await _dataManager.NewAsync(token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     dataSource.ItemId = id;
                 }
@@ -75,6 +80,9 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 
     private sealed class AIDataSourcesStepModel
     {
+        /// <summary>
+        /// Gets or sets the data sources.
+        /// </summary>
         public JsonArray DataSources { get; set; }
     }
 }

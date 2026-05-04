@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+﻿using CrestApps.OrchardCore.AI.Mcp.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -8,6 +8,10 @@ internal sealed class McpPromptsAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpPromptsAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpPromptsAdminMenu(IStringLocalizer<McpPromptsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -25,10 +29,7 @@ internal sealed class McpPromptsAdminMenu : AdminNavigationProvider
                         .Id("aiMcpPrompts")
                         .Action("Index", "Prompts", "CrestApps.OrchardCore.AI.Mcp")
                         .Permission(McpPermissions.ManageMcpPrompts)
-                        .LocalNav()
-                    )
-                )
-            );
+                        .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

@@ -1,7 +1,13 @@
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+﻿namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 
+/// <summary>
+/// Contains constant values for chat interactions.
+/// </summary>
 public static class ChatInteractionsConstants
 {
+    /// <summary>
+    /// Represents the feature.
+    /// </summary>
     public static class Feature
     {
         public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";

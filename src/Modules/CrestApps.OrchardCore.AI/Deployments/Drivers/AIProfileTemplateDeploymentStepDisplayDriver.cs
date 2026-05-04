@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,6 +16,11 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="templatesCatalog">The templates catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateDeploymentStepDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<AIProfileTemplateDeploymentStepDisplayDriver> stringLocalizer)
@@ -27,10 +32,10 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     public override Task<IDisplayResult> DisplayAsync(AIProfileTemplateDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIProfileTemplateDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIProfileTemplateDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIProfileTemplateDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIProfileTemplateDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIProfileTemplateDeploymentStep step, BuildEditorContext context)
@@ -48,8 +53,8 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
         var model = new AIProfileTemplateDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.TemplateNames);
+        p => p.IncludeAll,
+        p => p.TemplateNames);
 
         if (model.IncludeAll)
         {

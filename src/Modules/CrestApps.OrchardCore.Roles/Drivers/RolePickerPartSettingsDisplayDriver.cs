@@ -37,7 +37,6 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
                 ExcludedRoles = model.ExcludedRoles ?? [],
             });
 
-
         return Edit(contentTypePartDefinition, context);
     }
 }

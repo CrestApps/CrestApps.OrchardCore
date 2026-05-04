@@ -77,7 +77,6 @@
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-
         const ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechDeploymentName)');
         const voiceSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechVoiceId)');
         let currentVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? "")';
@@ -90,7 +89,6 @@
         }
 
         function loadVoices() {
-
             const deploymentName = ttsDeploymentSelect.value;
 
             if (!deploymentName) {
@@ -101,7 +99,6 @@
             fetch('@Url.RouteUrl(AIConstants.RouteNames.GetVoices)' + '?deploymentName=' + encodeURIComponent(deploymentName))
                 .then(response => response.json())
                 .then(data => {
-
                     resetVoices();
 
                     if (!data || !data.voices) {
@@ -111,7 +108,6 @@
                     const groups = {};
 
                     data.voices.forEach(voice => {
-
                         const lang = voice.languageDisplayName || voice.language || unknownLanguage;
 
                         if (!groups[lang]) {
@@ -122,12 +118,10 @@
                     });
 
                     Object.keys(groups).sort().forEach(lang => {
-
                         const optgroup = document.createElement('optgroup');
                         optgroup.label = lang;
 
                         groups[lang].forEach(voice => {
-
                             const option = document.createElement('option');
                             option.value = voice.id;
                             option.textContent = voice.name;
@@ -154,7 +148,6 @@
         }
 
         ttsDeploymentSelect.addEventListener('change', function () {
-
             currentVoiceId = '';
             loadVoices();
         });

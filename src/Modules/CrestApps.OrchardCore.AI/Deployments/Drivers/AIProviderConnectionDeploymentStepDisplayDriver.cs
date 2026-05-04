@@ -1,7 +1,7 @@
+﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,6 +16,11 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The connections catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProviderConnectionDeploymentStepDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)
@@ -27,10 +32,10 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
     public override Task<IDisplayResult> DisplayAsync(AIProviderConnectionDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIProviderConnectionDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIProviderConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIProviderConnectionDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIProviderConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIProviderConnectionDeploymentStep step, BuildEditorContext context)
@@ -44,7 +49,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
                 DisplayText = x.DisplayText,
                 IsSelected = step.ConnectionIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
-            .ToArray();
+        .ToArray();
         }).Location("Content");
     }
 
@@ -53,8 +58,8 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
         var model = new AIProviderConnectionDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.Connections);
+        p => p.IncludeAll,
+        p => p.Connections);
 
         if (model.IncludeAll)
         {

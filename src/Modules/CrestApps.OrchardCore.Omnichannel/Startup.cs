@@ -1,3 +1,4 @@
+﻿using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Migrations;
@@ -8,10 +9,15 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCatalogs();
+
         services
             .AddIndexProvider<OmnichannelMessageIndexProvider>()
             .AddDataMigration<OmnichannelMessageIndexMigrations>();
@@ -24,6 +30,9 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the AzureCommunicationServices feature.
+/// </summary>
 [Feature(OmnichannelConstants.Features.AzureCommunicationServices)]
 public sealed class AzureCommunicationServicesStartup : StartupBase
 {

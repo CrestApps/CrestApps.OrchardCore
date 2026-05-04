@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
@@ -22,6 +22,12 @@ internal sealed class TryAgainActivityTaskDisplayDriver : ActivityDisplayDriver<
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TryAgainActivityTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TryAgainActivityTaskDisplayDriver(
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,

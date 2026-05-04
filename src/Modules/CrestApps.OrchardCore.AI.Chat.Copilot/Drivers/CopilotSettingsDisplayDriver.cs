@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+﻿using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
+/// <summary>
+/// Display driver for the copilot settings shape.
+/// </summary>
 public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSettings>
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
@@ -28,6 +30,15 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CopilotSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="callbackUrlProvider">The callback url provider.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public CopilotSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -97,11 +108,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
         settings.AuthenticationType = model.AuthenticationType;
 
-        if (settings.AuthenticationType == CopilotAuthenticationType.NotConfigured)
-        {
-            return await EditAsync(site, settings, context);
-        }
-
         if (settings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
         {
             // GitHub OAuth validation
@@ -122,7 +128,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
                 context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client secret is required."]);
             }
         }
-        else
+        else if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
             // BYOK (API Key) validation
             settings.ProviderType = model.ProviderType;
@@ -160,7 +166,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(model.ApiKey)
-                && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+                    && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
                 context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }

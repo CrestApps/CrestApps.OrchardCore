@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -17,6 +17,12 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -27,13 +33,13 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<McpConnection> context)
+    public override Task InitializingAsync(InitializingContext<McpConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingContext<McpConnection> context)
+    public override Task UpdatingAsync(UpdatingContext<McpConnection> context, CancellationToken cancellationToken = default)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpConnection> context)
+    public override Task ValidatingAsync(ValidatingContext<McpConnection> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(context.Model.DisplayText))
         {
@@ -69,8 +75,9 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
 
         if (properties is not null)
         {
-            connection.Properties ??= [];
-            connection.Properties.Merge(properties);
+            connection.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties) { connection.Properties[key] = value; }
         }
 
         return Task.CompletedTask;

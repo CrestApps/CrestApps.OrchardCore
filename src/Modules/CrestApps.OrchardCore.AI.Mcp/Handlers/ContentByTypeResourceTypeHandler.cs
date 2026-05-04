@@ -1,6 +1,6 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+﻿using System.Text.Json;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
@@ -23,11 +23,17 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly DocumentJsonSerializerOptions _jsonOptions;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentByTypeResourceTypeHandler"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="jsonOptions">The json options.</param>
+    /// <param name="logger">The logger.</param>
     public ContentByTypeResourceTypeHandler(
         ISession session,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
         ILogger<ContentByTypeResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _session = session;
         _jsonOptions = jsonOptions.Value;
@@ -70,6 +76,7 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
                     MimeType = "application/json",
                     Text = json,
                 }
+
             ]
         };
     }

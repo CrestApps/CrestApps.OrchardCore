@@ -1,18 +1,31 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
-using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 
+/// <summary>
+/// Handles events for AI memory azure AI search index profile.
+/// </summary>
 public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
-    public AIMemoryAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIMemoryAzureAISearchIndexProfileHandler"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="aiClientFactory">The ai client factory.</param>
+    public AIMemoryAzureAISearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -32,9 +45,8 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
             return;
         }
 
-        var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
-        var memoryMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(memoryMetadata);
+        var metadata = indexProfile.GetOrCreate<AzureAISearchIndexMetadata>();
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
@@ -43,12 +55,14 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
             IsKey = true,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.UserId,
             Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.Name,
@@ -56,18 +70,21 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
             IsFilterable = true,
             IsSearchable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.Description,
             Type = DocumentIndex.Types.Text,
             IsSearchable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.Content,
             Type = DocumentIndex.Types.Text,
             IsSearchable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.UpdatedUtc,
@@ -75,6 +92,7 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
             IsFilterable = true,
             IsSortable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.Embedding,

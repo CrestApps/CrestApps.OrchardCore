@@ -1,14 +1,16 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -22,8 +24,11 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 {
     private const int _batchSize = 50;
-    private const string _sessionDocumentType = "CrestApps.OrchardCore.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
+    private const string _sessionDocumentType = "CrestApps.Core.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
 
+    /// <summary>
+    /// Creates a new .
+    /// </summary>
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -31,10 +36,11 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionPromptDataMigrations>>();
-
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var yesSqlStoreOptions = scope.ServiceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value;
             var dialect = store.Configuration.SqlDialect;
 
-            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(yesSqlStoreOptions.AICollectionName);
             var table = $"{store.Configuration.TablePrefix}{documentTableName}";
             var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
 
@@ -67,6 +73,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                 }
 
                 // Process in batches to avoid holding too many changes in memory.
+
                 for (var batchStart = 0; batchStart < documents.Count; batchStart += _batchSize)
                 {
                     var batch = documents.Skip(batchStart).Take(_batchSize).ToList();
@@ -96,7 +103,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                 continue;
                             }
 
-                            var createdUtc = DateTime.UtcNow;
+                            var createdUtc = clock.UtcNow;
+
                             if (sessionObject["CreatedUtc"] is JsonValue createdValue)
                             {
                                 try
@@ -119,8 +127,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                 var prompt = new AIChatSessionPrompt
                                 {
                                     ItemId = promptObject["Id"]?.GetValue<string>()
-                                        ?? promptObject["ItemId"]?.GetValue<string>()
-                                        ?? IdGenerator.GenerateId(),
+                                    ?? promptObject["ItemId"]?.GetValue<string>()
+                                    ?? UniqueId.GenerateId(),
                                     SessionId = sessionId,
                                     Role = new ChatRole(promptObject["Role"]?.GetValue<string>() ?? "user"),
                                     Content = promptObject["Content"]?.GetValue<string>(),
@@ -128,7 +136,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     CreatedUtc = createdUtc,
                                 };
 
-                                await session.SaveAsync(prompt, collection: AIConstants.AICollectionName);
+                                await session.SaveAsync(prompt, collection: yesSqlStoreOptions.AICollectionName);
                             }
 
                             // Remove the Prompts property from the original document.
@@ -143,7 +151,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     content = updatedContent,
                                     id = document.Id,
                                 }
-                            );
+                                );
                         }
                         catch (Exception ex)
                         {
@@ -156,9 +164,9 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                     if (logger.IsEnabled(LogLevel.Information))
                     {
                         logger.LogInformation("Migrated prompt batch {BatchStart}-{BatchEnd} of {Total} session documents.",
-                            batchStart + 1,
-                            Math.Min(batchStart + _batchSize, documents.Count),
-                            documents.Count);
+                        batchStart + 1,
+                        Math.Min(batchStart + _batchSize, documents.Count),
+                        documents.Count);
                     }
                 }
 

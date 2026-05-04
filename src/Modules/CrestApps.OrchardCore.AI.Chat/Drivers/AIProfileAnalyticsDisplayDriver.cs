@@ -1,9 +1,9 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -12,6 +12,10 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileAnalyticsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileAnalyticsDisplayDriver(
         IStringLocalizer<AIProfileAnalyticsDisplayDriver> stringLocalizer)
     {
@@ -22,18 +26,19 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditAIProfileAnalyticsViewModel>("AIProfileAnalytics_Edit", model =>
         {
-            var metadata = profile.As<AnalyticsMetadata>();
+            var metadata = profile.GetOrCreate<AnalyticsMetadata>();
             model.EnableSessionMetrics = metadata.EnableSessionMetrics;
+            model.EnableAIResolutionDetection = metadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = metadata.EnableConversionMetrics;
             model.ConversionGoals = metadata.ConversionGoals
-                .Select(g => new ConversionGoalViewModel
-                {
-                    Name = g.Name,
-                    Description = g.Description,
-                    MinScore = g.MinScore,
-                    MaxScore = g.MaxScore,
-                })
-                .ToList();
+            .Select(g => new ConversionGoalViewModel
+            {
+                Name = g.Name,
+                Description = g.Description,
+                MinScore = g.MinScore,
+                MaxScore = g.MaxScore,
+            })
+        .ToList();
         }).Location("Content:15#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(profile.Type == AIProfileType.Chat));
     }
@@ -92,8 +97,9 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
             }
         }
 
-        var metadata = profile.As<AnalyticsMetadata>();
+        var metadata = profile.GetOrCreate<AnalyticsMetadata>();
         metadata.EnableSessionMetrics = model.EnableSessionMetrics;
+        metadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         metadata.EnableConversionMetrics = model.EnableConversionMetrics;
         metadata.ConversionGoals = goals.Select(g => new ConversionGoal
         {
