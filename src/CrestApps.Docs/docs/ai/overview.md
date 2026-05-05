@@ -83,8 +83,9 @@ Use `appsettings.json` when you want startup defaults for Orchard-hosted AI beha
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "DefaultParameters": {
+    "CrestApps": {
+      "AI": {
+        "DefaultParameters": {
         "Temperature": 0,
         "MaxOutputTokens": 800
       }

@@ -1,5 +1,7 @@
+using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -42,7 +44,11 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCatalogs()
+            .AddCatalogManagers();
+
         services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
+
         services
             .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>()
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)

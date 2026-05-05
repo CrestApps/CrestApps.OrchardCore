@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
@@ -40,7 +40,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     public AIProfileDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        DefaultAIOptions defaultAIOptions,
+        IOptions<DefaultAIOptions> defaultAIOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
@@ -50,7 +50,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _liquidTemplateManager = liquidTemplateManager;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
-        _defaultAIOptions = defaultAIOptions;
+        _defaultAIOptions = defaultAIOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
     }

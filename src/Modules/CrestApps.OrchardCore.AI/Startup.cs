@@ -1,7 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
-using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
@@ -75,7 +74,7 @@ public sealed class Startup : StartupBase
             .AddCatalogs()
             .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
             .AddScoped<CompositeAIReferenceLinkResolver>()
-            .AddScoped<CrestApps.OrchardCore.AI.Core.Services.CitationReferenceCollector>()
+            .AddScoped<Core.Services.CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()

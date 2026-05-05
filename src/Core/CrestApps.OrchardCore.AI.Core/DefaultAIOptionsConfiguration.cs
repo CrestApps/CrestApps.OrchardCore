@@ -28,6 +28,7 @@ public sealed class DefaultAIOptionsConfiguration : IConfigureOptions<DefaultAIO
     public void Configure(DefaultAIOptions options)
     {
         _shellConfiguration.GetSection("CrestApps_AI:DefaultParameters").Bind(options);
+        _shellConfiguration.GetSection("CrestApps:AI:DefaultParameters").Bind(options);
         options.Normalize();
     }
 }
