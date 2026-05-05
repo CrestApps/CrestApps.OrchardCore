@@ -66,4 +66,30 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
 
         return result;
     }
+
+    /// <inheritdoc/>
+    public async Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter)
+    {
+        var result = await _store.PageBulkManageableAsync(page, pageSize, filter);
+
+        foreach (var entry in result.Entries)
+        {
+            await LoadAsync(entry);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter)
+    {
+        var activities = await _store.ListBulkManageableAsync(filter);
+
+        foreach (var activity in activities)
+        {
+            await LoadAsync(activity);
+        }
+
+        return activities;
+    }
 }

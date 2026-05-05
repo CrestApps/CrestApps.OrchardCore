@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model BulkManageOmnichannelActivityContainer
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Manage Activities"])</h1>
+</zone>
+
+@await DisplayAsync(Model)

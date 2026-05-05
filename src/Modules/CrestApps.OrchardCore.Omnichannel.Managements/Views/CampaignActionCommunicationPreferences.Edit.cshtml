@@ -1,0 +1,65 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model CampaignActionViewModel
+
+@{
+    var toggleId = Html.IdFor(m => m.ShowCommunicationPreferences);
+    var panelId = $"{toggleId}_Panel";
+}
+
+<fieldset class="mb-3">
+    <legend>@T["Communication preferences"]</legend>
+    <span class="hint d-block mb-2">@T["Optionally update contact communication preferences when this action executes."]</span>
+
+    <div class="form-check mb-3">
+        <input asp-for="ShowCommunicationPreferences" class="form-check-input js-communication-preferences-toggle" type="checkbox" data-target-id="@panelId" />
+        <label asp-for="ShowCommunicationPreferences" class="form-check-label">@T["Show communication preferences"]</label>
+    </div>
+
+    <div id="@panelId" class="border rounded p-3">
+        <div class="form-check">
+            <input id="@Html.IdFor(m => m.SetDoNotCall)" name="@Html.NameFor(m => m.SetDoNotCall)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotCall == true)" />
+            <label for="@Html.IdFor(m => m.SetDoNotCall)" class="form-check-label">@T["Set do not call"]</label>
+        </div>
+
+        <div class="form-check">
+            <input id="@Html.IdFor(m => m.SetDoNotSms)" name="@Html.NameFor(m => m.SetDoNotSms)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotSms == true)" />
+            <label for="@Html.IdFor(m => m.SetDoNotSms)" class="form-check-label">@T["Set do not SMS"]</label>
+        </div>
+
+        <div class="form-check">
+            <input id="@Html.IdFor(m => m.SetDoNotEmail)" name="@Html.NameFor(m => m.SetDoNotEmail)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotEmail == true)" />
+            <label for="@Html.IdFor(m => m.SetDoNotEmail)" class="form-check-label">@T["Set do not email"]</label>
+        </div>
+
+        <div class="form-check">
+            <input id="@Html.IdFor(m => m.SetDoNotChat)" name="@Html.NameFor(m => m.SetDoNotChat)" class="form-check-input js-communication-preference-option" type="checkbox" value="true" checked="@(Model.SetDoNotChat == true)" />
+            <label for="@Html.IdFor(m => m.SetDoNotChat)" class="form-check-label">@T["Set do not chat"]</label>
+        </div>
+    </div>
+</fieldset>
+
+<script at="Foot">
+(() => {
+    const toggle = document.getElementById('@toggleId');
+    const panel = document.getElementById('@panelId');
+
+    if (!toggle || !panel) {
+        return;
+    }
+
+    const preferenceInputs = panel.querySelectorAll('.js-communication-preference-option');
+
+    const sync = () => {
+        const isVisible = toggle.checked;
+        panel.classList.toggle('d-none', !isVisible);
+
+        preferenceInputs.forEach((input) => {
+            input.disabled = !isVisible;
+        });
+    };
+
+    toggle.addEventListener('change', sync);
+    sync();
+})();
+</script>

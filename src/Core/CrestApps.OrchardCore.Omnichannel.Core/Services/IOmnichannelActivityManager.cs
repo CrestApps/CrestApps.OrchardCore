@@ -33,4 +33,18 @@ public interface IOmnichannelActivityManager : ICatalogManager<OmnichannelActivi
     /// <param name="page">The page number to load.</param>
     /// <param name="pageSize">The number of entries per page.</param>
     Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize);
+
+    /// <summary>
+    /// Pages bulk-manageable activities (NotStarted status with Manual interaction type) using the specified filter.
+    /// </summary>
+    /// <param name="page">The page number to load.</param>
+    /// <param name="pageSize">The number of entries per page.</param>
+    /// <param name="filter">The bulk manage filter criteria.</param>
+    Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter);
+
+    /// <summary>
+    /// Lists all bulk-manageable activities (NotStarted status with Manual interaction type) using the specified filter.
+    /// </summary>
+    /// <param name="filter">The bulk manage filter criteria.</param>
+    Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter);
 }

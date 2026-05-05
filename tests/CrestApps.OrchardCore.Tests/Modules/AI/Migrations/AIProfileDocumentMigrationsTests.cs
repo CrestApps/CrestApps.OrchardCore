@@ -183,7 +183,7 @@ public sealed class AIProfileDocumentMigrationsTests
             return catalog;
         }
 
-        if (parameterType == typeof(INamedCatalog<AIDeployment>))
+        if (parameterType == typeof(INamedSourceCatalog<AIDeployment>))
         {
             return new TestDeploymentCatalog();
         }
@@ -458,7 +458,7 @@ public sealed class AIProfileDocumentMigrationsTests
         }
     }
 
-    private sealed class TestDeploymentCatalog : INamedCatalog<AIDeployment>
+    private sealed class TestDeploymentCatalog : INamedSourceCatalog<AIDeployment>
     {
         public ValueTask<AIDeployment> FindByIdAsync(
             string id,
@@ -506,5 +506,11 @@ public sealed class AIProfileDocumentMigrationsTests
             string name,
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult<AIDeployment>(null);
+
+        public ValueTask<AIDeployment> GetAsync(string name, string source, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<AIDeployment>(null);
+
+        public ValueTask<IReadOnlyCollection<AIDeployment>> GetAsync(string source, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyCollection<AIDeployment>>([]);
     }
 }

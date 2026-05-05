@@ -29,6 +29,9 @@ public class OmnichannelActivityViewModel
     /// Gets or sets the campaign title.
     /// </summary>
     [BindNever]
+    public string CampaignId { get; set; }
+
+    [BindNever]
     public string CampaignTitle { get; set; }
 
     /// <summary>
@@ -54,6 +57,18 @@ public class OmnichannelActivityViewModel
     /// </summary>
     [BindNever]
     public string Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject content type.
+    /// </summary>
+    [BindNever]
+    public string SubjectContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current attempt number.
+    /// </summary>
+    [BindNever]
+    public int Attempts { get; set; }
 
     /// <summary>
     /// Gets or sets the scheduled local.

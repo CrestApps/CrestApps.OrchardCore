@@ -1,14 +1,16 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -24,7 +26,6 @@ using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
-using OrchardCore.Workflows.Services;
 using YesSql;
 using YesSql.Services;
 
@@ -45,9 +46,10 @@ public sealed class ActivitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly IWorkflowManager _workflowManager;
+    private readonly ICampaignActionExecutor _campaignActionExecutor;
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
 
     internal readonly IStringLocalizer S;
@@ -65,9 +67,10 @@ public sealed class ActivitiesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
-    /// <param name="workflowManager">The workflow manager.</param>
+    /// <param name="campaignActionExecutor">The campaign action executor.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="localClock">The local clock.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
@@ -81,9 +84,10 @@ public sealed class ActivitiesController : Controller
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        IWorkflowManager workflowManager,
+        ICampaignActionExecutor campaignActionExecutor,
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         IClock clock,
+        ILocalClock localClock,
         INotifier notifier,
         IStringLocalizer<ActivitiesController> stringLocalizer,
         IHtmlLocalizer<ActivitiesController> htmlLocalizer)
@@ -97,9 +101,10 @@ public sealed class ActivitiesController : Controller
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
-        _workflowManager = workflowManager;
+        _campaignActionExecutor = campaignActionExecutor;
         _dispositionsCatalog = dispositionsCatalog;
         _clock = clock;
+        _localClock = localClock;
         _notifier = notifier;
         S = stringLocalizer;
         H = htmlLocalizer;
@@ -526,7 +531,7 @@ public sealed class ActivitiesController : Controller
 
         if (ModelState.IsValid)
         {
-            // Trigger the workflow here.
+            // Execute campaign actions for the selected disposition.
             activity.Subject = subject;
             activity.Status = ActivityStatus.Completed;
             activity.CompletedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -536,15 +541,15 @@ public sealed class ActivitiesController : Controller
             await _omnichannelActivityManager.UpdateAsync(activity);
             var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
 
-            var input = new Dictionary<string, object>
+            var executionContext = new CampaignActionExecutionContext
             {
-                { "Activity", activity },
-                { "Contact", model.ContactContentItem },
-                { "Subject", subject },
-                { "Disposition", disposition },
+                Activity = activity,
+                Contact = model.ContactContentItem,
+                Subject = subject,
+                Disposition = disposition,
             };
 
-            await _workflowManager.TriggerEventAsync(nameof(CompletedActivityEvent), input, correlationId: activity.ItemId);
+            await _campaignActionExecutor.ExecuteAsync(executionContext);
 
             await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 
@@ -552,5 +557,384 @@ public sealed class ActivitiesController : Controller
         }
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Displays the bulk manage activities page.
+    /// </summary>
+    /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
+    /// <param name="bulkActionsDisplayManager">The bulk actions display manager.</param>
+    [HttpGet]
+    [Admin("omnichannel/manage-activities", "ManageOmnichannelActivities")]
+    public async Task<IActionResult> ManageActivities(
+        BulkManageActivityFilter options,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager,
+        [FromServices] IDisplayManager<BulkManageOmnichannelActivityContainer> bulkActionsDisplayManager)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
+        {
+            return Forbid();
+        }
+
+        var pager = new Pager(pagerParameters.Page, pagerParameters.PageSize, pagerOptions.Value.GetPageSize());
+
+        options ??= new BulkManageActivityFilter();
+
+        var header = await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+        AddPagerRouteValues(options.RouteValues, pagerParameters);
+
+        var result = await _omnichannelActivityManager.PageBulkManageableAsync(pager.Page, pager.PageSize, options);
+
+        var pagerShape = await shapeFactory.PagerAsync(pager, result.Count, options.RouteValues);
+
+        var contactsIds = result.Entries.Select(x => x.ContactContentItemId)
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct()
+            .ToArray();
+
+        var userIds = result.Entries.Select(x => x.AssignedToId)
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct()
+            .ToArray();
+
+        var contacts = await _contentManager.GetAsync(contactsIds, VersionOptions.Latest);
+
+        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
+            .ListAsync();
+
+        var containerSummaries = new List<IShape>();
+        var activityItemIds = new List<string>();
+        var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in result.Entries)
+        {
+            var contact = contacts.FirstOrDefault(x => x.ContentItemId == entry.ContactContentItemId);
+
+            if (!contentTypeDefinitions.TryGetValue(entry.SubjectContentType, out var contentTypeDefinition))
+            {
+                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.SubjectContentType);
+                contentTypeDefinitions[entry.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(entry.SubjectContentType, entry.SubjectContentType);
+            }
+
+            var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
+            var container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user);
+
+            containerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin"));
+            activityItemIds.Add(entry.ItemId);
+        }
+
+        var model = new BulkManageOmnichannelActivityContainer()
+        {
+            Header = header,
+            Containers = containerSummaries,
+            ActivityItemIds = activityItemIds,
+            Pager = pagerShape,
+            TotalCount = result.Count,
+            CurrentPageSize = pager.PageSize,
+            PageSizeOptions =
+            [
+                new SelectListItem("10", "10", pager.PageSize == 10),
+                new SelectListItem("25", "25", pager.PageSize == 25),
+                new SelectListItem("50", "50", pager.PageSize == 50),
+                new SelectListItem("100", "100", pager.PageSize == 100),
+            ],
+        };
+
+        dynamic bulkActionsShape = await bulkActionsDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater);
+        model.BulkActions = bulkActionsShape.Content;
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Processes a bulk action filter post for manage activities.
+    /// </summary>
+    /// <param name="filterDisplayManager">The filter display manager.</param>
+    [HttpPost]
+    [ActionName(nameof(ManageActivities))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("omnichannel/manage-activities", "ManageOmnichannelActivities")]
+    public async Task<ActionResult> ManageActivitiesFilterPost(
+        PagerParameters pagerParameters,
+        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
+        {
+            return Forbid();
+        }
+
+        var options = new BulkManageActivityFilter();
+
+        await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+        AddPagerRouteValues(options.RouteValues, pagerParameters);
+
+        return RedirectToAction(nameof(ManageActivities), options.RouteValues);
+    }
+
+    /// <summary>
+    /// Processes a bulk action on selected activities.
+    /// </summary>
+    /// <param name="viewModel">The view model containing action and selection data.</param>
+    [HttpPost]
+    [ActionName(nameof(ManageActivities))]
+    [FormValueRequired("submit.BulkAction")]
+    [Admin("omnichannel/manage-activities", "ManageOmnichannelActivities")]
+    public async Task<ActionResult> ManageActivitiesBulkActionPost(
+        BulkManageActivitiesViewModel viewModel,
+        PagerParameters pagerParameters,
+        [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
+        {
+            return Forbid();
+        }
+
+        var filter = new BulkManageActivityFilter();
+        await filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, isNew: false);
+        AddPagerRouteValues(filter.RouteValues, pagerParameters);
+        var applyToAllMatching = Request.Form["ApplyToAllMatching"]
+            .Any(value => string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase));
+
+        if (viewModel.ItemIds is null || viewModel.ItemIds.Length == 0)
+        {
+            if (!applyToAllMatching)
+            {
+                await _notifier.WarningAsync(H["No activities were selected."]);
+
+                return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+            }
+        }
+
+        if (viewModel.BulkAction == BulkActivityAction.None)
+        {
+            await _notifier.WarningAsync(H["No action was selected."]);
+
+            return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+        }
+
+        List<OmnichannelActivity> activities;
+
+        if (applyToAllMatching)
+        {
+            activities = (await _omnichannelActivityManager.ListBulkManageableAsync(filter)).ToList();
+        }
+        else
+        {
+            activities = [];
+
+            foreach (var itemId in viewModel.ItemIds)
+            {
+                var activity = await _omnichannelActivityManager.FindByIdAsync(itemId);
+
+                if (activity is not null && activity.Status == ActivityStatus.NotStated && activity.InteractionType == ActivityInteractionType.Manual)
+                {
+                    activities.Add(activity);
+                }
+            }
+        }
+
+        if (activities.Count == 0)
+        {
+            await _notifier.WarningAsync(H["No valid activities were found for the selected action."]);
+
+            return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+        }
+
+        var processedCount = 0;
+
+        switch (viewModel.BulkAction)
+        {
+            case BulkActivityAction.Assign:
+                processedCount = await BulkAssignAsync(activities, viewModel.AssignToUserIds);
+                break;
+
+            case BulkActivityAction.Reschedule:
+                processedCount = await BulkRescheduleAsync(activities, viewModel.NewScheduledDate);
+                break;
+
+            case BulkActivityAction.Purge:
+                processedCount = await BulkPurgeAsync(activities);
+                break;
+
+            case BulkActivityAction.SetInstructions:
+                processedCount = await BulkSetInstructionsAsync(activities, viewModel.Instructions);
+                break;
+
+            case BulkActivityAction.SetUrgencyLevel:
+                processedCount = await BulkSetUrgencyLevelAsync(activities, viewModel.NewUrgencyLevel);
+                break;
+
+            case BulkActivityAction.ChangeSubject:
+                processedCount = await BulkChangeSubjectAsync(activities, viewModel.NewSubjectContentType);
+                break;
+        }
+
+        if (processedCount > 0)
+        {
+            await _notifier.SuccessAsync(H["Successfully processed {0} activities.", processedCount]);
+        }
+        else
+        {
+            await _notifier.WarningAsync(H["No activities were processed. Please verify the action parameters."]);
+        }
+
+        return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+    }
+
+    private static void AddPagerRouteValues(RouteValueDictionary routeValues, PagerParameters pagerParameters)
+    {
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues["pageSize"] = pagerParameters.PageSize.Value.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    private async Task<int> BulkAssignAsync(List<OmnichannelActivity> activities, string[] assignToUserIds)
+    {
+        if (assignToUserIds is null || assignToUserIds.Length == 0)
+        {
+            return 0;
+        }
+
+        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(assignToUserIds))
+            .ListAsync();
+
+        var userList = users.ToArray();
+
+        if (userList.Length == 0)
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+        var processedCount = 0;
+
+        for (var i = 0; i < activities.Count; i++)
+        {
+            var activity = activities[i];
+            var user = userList[i % userList.Length];
+
+            activity.AssignedToId = user.UserId;
+            activity.AssignedToUsername = user.UserName;
+            activity.AssignedToUtc = now;
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkRescheduleAsync(List<OmnichannelActivity> activities, string newScheduledDate)
+    {
+        if (string.IsNullOrEmpty(newScheduledDate))
+        {
+            return 0;
+        }
+
+        if (!DateTime.TryParseExact(newScheduledDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledDate) &&
+            !DateTime.TryParse(newScheduledDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out scheduledDate))
+        {
+            return 0;
+        }
+
+        var scheduledUtc = await _localClock.ConvertToUtcAsync(scheduledDate);
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.ScheduledUtc = scheduledUtc;
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkPurgeAsync(List<OmnichannelActivity> activities)
+    {
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.Status = ActivityStatus.Purged;
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkSetInstructionsAsync(List<OmnichannelActivity> activities, string instructions)
+    {
+        if (instructions is null)
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.Instructions = instructions;
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkSetUrgencyLevelAsync(List<OmnichannelActivity> activities, ActivityUrgencyLevel? urgencyLevel)
+    {
+        if (!urgencyLevel.HasValue)
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.UrgencyLevel = urgencyLevel.Value;
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkChangeSubjectAsync(List<OmnichannelActivity> activities, string newSubjectContentType)
+    {
+        if (string.IsNullOrEmpty(newSubjectContentType))
+        {
+            return 0;
+        }
+
+        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(newSubjectContentType);
+
+        if (contentTypeDefinition is null)
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.SubjectContentType = newSubjectContentType;
+            activity.Subject = null;
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
     }
 }

@@ -71,6 +71,15 @@ public static class OmnichannelConstants
         public const string Email = "Email";
     }
 
+    public static class ActionTypes
+    {
+        public const string Finish = "Finish";
+
+        public const string TryAgain = "TryAgain";
+
+        public const string NewActivity = "NewActivity";
+    }
+
     /// <summary>
     /// Represents the events.
     /// </summary>
@@ -130,6 +139,11 @@ public static class OmnichannelConstants
         /// Gets the permission to manage campaigns.
         /// </summary>
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
+
+        /// <summary>
+        /// Gets the permission to manage activities in bulk.
+        /// </summary>
+        public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");
 
         /// <summary>
         /// Gets the permission to manage activity batches.

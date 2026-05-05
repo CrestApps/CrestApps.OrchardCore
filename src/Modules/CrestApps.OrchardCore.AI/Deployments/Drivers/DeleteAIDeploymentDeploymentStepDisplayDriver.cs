@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, DeleteAIDeploymentDeploymentStep>
 {
-    private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
+    private readonly INamedSourceCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
 
@@ -22,7 +22,7 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
     /// <param name="deploymentsCatalog">The deployments catalog.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DeleteAIDeploymentDeploymentStepDisplayDriver(
-        INamedCatalog<AIDeployment> deploymentsCatalog,
+        INamedSourceCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<DeleteAIDeploymentDeploymentStepDisplayDriver> stringLocalizer)
     {
         _deploymentsCatalog = deploymentsCatalog;

@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using CrestApps.Core;
-using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -28,7 +27,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
-    private readonly IAIProfileStore _aiProfileStore;
+    private readonly ISourceCatalog<CampaignAction> _actionCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
@@ -45,7 +44,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="campaignsCatalog">The campaigns catalog.</param>
     /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
-    /// <param name="aiProfileStore">The ai profile store.</param>
+    /// <param name="actionCatalog">The campaign action catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="clock">The clock.</param>
@@ -58,7 +57,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
-        IAIProfileStore aiProfileStore,
+        ISourceCatalog<CampaignAction> actionCatalog,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
@@ -71,7 +70,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
-        _aiProfileStore = aiProfileStore;
+        _actionCatalog = actionCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
         _clock = clock;
@@ -152,18 +151,39 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
 
-            var campaignDispositionIds = campaign?.DispositionIds ?? [];
+            // Derive distinct dispositions from campaign actions.
+            var allActions = await _actionCatalog.GetAllAsync();
+            var campaignDispositionIds = allActions
+                .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.DispositionId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             if (!string.IsNullOrEmpty(activity.DispositionId) && !campaignDispositionIds.Contains(activity.DispositionId))
             {
                 campaignDispositionIds.Add(activity.DispositionId);
             }
 
+            model.CampaignId = activity.CampaignId;
             model.Channel = activity.Channel;
             model.CampaignTitle = campaign?.DisplayText;
             model.Channel = activity.Channel;
             model.InteractionType = activity.InteractionType.ToString();
             model.Instructions = activity.Instructions;
+            model.SubjectContentType = activity.SubjectContentType;
+            model.Attempts = activity.Attempts;
+
+            if (string.IsNullOrWhiteSpace(activity.Subject?.DisplayText))
+            {
+                var subjectContentType = await _contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType);
+                model.Subject = subjectContentType?.DisplayName ?? activity.SubjectContentType;
+            }
+            else
+            {
+                model.Subject = activity.Subject.DisplayText;
+            }
+
             model.Dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
             model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;
@@ -204,9 +224,14 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
             else
             {
-                var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
-
-                var campaignDispositionIds = campaign?.DispositionIds ?? [];
+                // Derive valid dispositions from campaign actions.
+                var allActions = await _actionCatalog.GetAllAsync();
+                var campaignDispositionIds = allActions
+                    .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+                    .Select(a => a.DispositionId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
                 if (!string.IsNullOrEmpty(activity.DispositionId))
                 {
@@ -220,10 +245,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 if (disposition == null)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The selected Disposition is invalid."]);
-                }
-                else if (isCompletingActivity && disposition.CaptureDate && !processModel.ScheduleDate.HasValue)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.ScheduleDate), S["The Schedule Date field is required."]);
                 }
             }
 

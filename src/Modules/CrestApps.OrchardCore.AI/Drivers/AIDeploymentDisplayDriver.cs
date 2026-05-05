@@ -17,7 +17,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIOptions _aiOptions;
     private readonly IAIProviderConnectionStore _connectionsStore;
-    private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
+    private readonly INamedSourceCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
 
@@ -29,7 +29,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     /// <param name="aiOptions">The AI configuration options.</param>
     /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIDeploymentDisplayDriver(
-        INamedCatalog<AIDeployment> deploymentCatalog,
+        INamedSourceCatalog<AIDeployment> deploymentCatalog,
         IAIProviderConnectionStore connectionsStore,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)

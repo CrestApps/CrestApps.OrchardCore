@@ -18,13 +18,3 @@
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 </div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="CaptureDate">
-            <label class="form-check-label" asp-for="CaptureDate">@T["Capture date on new or follow up activity"]</label>
-            <span class="hint dashed">@T["When enabled, the activity will prompt the user to select a date for the following activity."]</span>
-        </div>
-    </div>
-</div>

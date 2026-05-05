@@ -17,7 +17,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<OmnichannelCampaign>
 {
-    private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
     private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -37,7 +36,6 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
     /// <param name="liquidTemplateManager">The liquid template manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelCampaignDisplayDriver(
-        ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
         INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
@@ -45,7 +43,6 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
-        _dispositionsCatalog = dispositionsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
         _connectionsCatalog = connectionsCatalog;
         _toolDefinitions = toolDefinitions.Value;
@@ -90,16 +87,6 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : campaign.PresencePenalty;
             model.AllowAIToUpdateContact = !context.IsNew && campaign.AllowAIToUpdateContact;
             model.AllowAIToUpdateSubject = context.IsNew || campaign.AllowAIToUpdateSubject;
-
-            var dispositions = await _dispositionsCatalog.GetAllAsync();
-
-            model.Dispositions = dispositions.Select(d => new SelectListItem
-            {
-                Text = d.DisplayText,
-                Value = d.ItemId,
-                Selected = campaign.DispositionIds is not null && campaign.DispositionIds.Contains(d.ItemId)
-            }).OrderBy(x => x.Text)
-        .ToArray();
 
             model.Providers = (await _connectionsCatalog.GetAllAsync())
                 .Select(connection => connection.ClientName)
@@ -149,22 +136,6 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Name is a required field."]);
-        }
-
-        var dispositions = await _dispositionsCatalog.GetAllAsync();
-
-        var selectedDispositionIds = (model.Dispositions?.Where(x => x.Selected)
-            .Select(d => d.Value) ?? [])
-            .Intersect(dispositions.Select(y => y.ItemId))
-            .ToArray();
-
-        if (selectedDispositionIds is null || selectedDispositionIds.Length == 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Dispositions), S["At least one Disposition must be selected."]);
-        }
-        else
-        {
-            campaign.DispositionIds = selectedDispositionIds;
         }
 
         if (string.IsNullOrEmpty(model.Channel))

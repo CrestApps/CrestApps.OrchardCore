@@ -1,0 +1,129 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model BulkManageOmnichannelActivityContainer
+
+<script asp-name="list-management-ui" at="Foot"></script>
+<script asp-name="flatpickr" at="Foot"></script>
+<style asp-name="flatpickr"></style>
+
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
+    <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
+    <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />
+
+    @if (Model.Header is not null)
+    {
+        <div class="card text-bg-theme mb-3 position-sticky action-bar">
+            <div class="card-body">
+                <div class="row gx-2 gy-2 align-items-end">
+                    @await DisplayAsync(Model.Header)
+
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm mb-1" for="page-size">@T["Page size"]</label>
+                        <select id="page-size" name="pageSize" asp-items="Model.PageSizeOptions" class="form-select form-select-sm"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.BulkActions is not null)
+    {
+        @await DisplayAsync(Model.BulkActions)
+    }
+
+    <ul class="list-group with-checkbox">
+        <li class="list-group-item text-bg-theme">
+            <div class="form-check my-1">
+                <input type="checkbox" class="form-check-input" id="select-all">
+                <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
+                <label id="items" for="select-all">
+                    @T["{0} activities", Model.TotalCount]
+                </label>
+                <label id="selected-items" class="text-muted d-none" for="select-all"></label>
+            </div>
+        </li>
+
+        @if (Model.Containers.Count > 0)
+        {
+            for (var i = 0; i < Model.Containers.Count; i++)
+            {
+                var container = Model.Containers[i];
+                var itemId = Model.ActivityItemIds[i];
+
+                <li class="list-group-item list-group-item-action list-group-striped">
+                    <div class="d-flex">
+                        <div class="form-check me-2">
+                            <input type="checkbox" class="form-check-input" name="ItemIds" value="@itemId" id="item-@itemId">
+                            <label class="form-check-label" for="item-@itemId">&nbsp;</label>
+                        </div>
+                        <div class="flex-grow-1">
+                            @await DisplayAsync(container)
+                        </div>
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item">
+                <div class="alert alert-info mb-0 text-center">
+                    @T["No activities match the current filter criteria."]
+                </div>
+            </li>
+        }
+    </ul>
+
+</form>
+
+@if (Model.Pager is not null)
+{
+    @await DisplayAsync(Model.Pager)
+}
+
+<script at="Foot" depends-on="list-management-ui, flatpickr">
+    document.addEventListener('DOMContentLoaded', function () {
+        listManagementUI.initialize('@T["selected"]', {
+            itemInputName: 'ItemIds'
+        });
+
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr('#new-scheduled-date', { dateFormat: 'Y-m-d', allowInput: true });
+        }
+
+        var bulkActionParams = document.getElementById('bulk-action-params');
+        var bulkActionInput = document.getElementById('BulkAction');
+        var bulkActionTitle = document.getElementById('bulk-action-title');
+        var dropdownItems = document.querySelectorAll('.bulk-action-item');
+
+        dropdownItems.forEach(function (item) {
+            item.addEventListener('click', function () {
+                var action = item.dataset.action;
+                var title = item.dataset.title;
+
+                document.querySelectorAll('.bulk-action-param').forEach(function (panel) {
+                    panel.classList.add('d-none');
+                });
+
+                var paramPanel = document.getElementById('params-' + action);
+
+                if (paramPanel) {
+                    paramPanel.classList.remove('d-none');
+                    bulkActionParams.classList.remove('d-none');
+                } else if (action === 'Purge') {
+                    bulkActionInput.value = action;
+                    document.querySelector('[name="submit.BulkAction"]').click();
+
+                    return;
+                }
+
+                bulkActionInput.value = action;
+
+                if (bulkActionTitle) {
+                    bulkActionTitle.textContent = title;
+                }
+            });
+        });
+    });
+</script>

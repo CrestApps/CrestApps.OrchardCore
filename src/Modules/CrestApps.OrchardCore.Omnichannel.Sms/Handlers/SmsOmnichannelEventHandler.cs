@@ -12,7 +12,6 @@ using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -23,7 +22,6 @@ using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
-using OrchardCore.Workflows.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
@@ -250,13 +248,21 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // we use deferred task here to ensure that we don't hold current process for a longer running
                     // AI conclusion detection.
                     var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
+                    var actionCatalog = scope.ServiceProvider.GetRequiredService<ISourceCatalog<CampaignAction>>();
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
 
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
                     var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
 
                     var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
-                    var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);
+                    var allActions = await actionCatalog.GetAllAsync();
+                    var campaignDispositionIds = allActions
+                        .Where(a => string.Equals(a.CampaignId, campaign.ItemId, StringComparison.OrdinalIgnoreCase))
+                        .Select(a => a.DispositionId)
+                        .Where(id => !string.IsNullOrEmpty(id))
+                        .Distinct()
+                        .ToList();
+                    var dispositions = await dispositionCatalog.GetAsync(campaignDispositionIds);
 
                     var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, campaign.DeploymentName, campaign.ProviderName);
 
@@ -347,7 +353,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         if (result.Result.Concluded)
                         {
                             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-                            var workflowManager = scope.ServiceProvider.GetRequiredService<IWorkflowManager>();
+                            var executor = scope.ServiceProvider.GetRequiredService<ICampaignActionExecutor>();
 
                             omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
@@ -362,20 +368,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                             await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
 
-                            var disposition = await _omnichannelActivityStore.FindByIdAsync(activity.DispositionId);
-
                             subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
                             contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
-                            var input = new Dictionary<string, object>
-                            {
-                                { "Activity", activity },
-                                { "Contact", contact },
-                                { "Subject", subject },
-                                { "Disposition", disposition },
-                            };
+                            var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
 
-                            await workflowManager.TriggerEventAsync(nameof(CompletedActivityEvent), input, correlationId: activity.ItemId);
+                            await executor.ExecuteAsync(new CampaignActionExecutionContext
+                            {
+                                Activity = omnichannelActivity,
+                                Contact = contact,
+                                Subject = subject,
+                                Disposition = dispositionObj,
+                            });
                         }
                     }
                 });

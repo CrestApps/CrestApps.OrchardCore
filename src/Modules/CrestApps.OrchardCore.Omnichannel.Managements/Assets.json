@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/js/activity-query-builder.js"
+    ],
+    "output": "wwwroot/scripts/activity-query-builder.js"
+  }
+]

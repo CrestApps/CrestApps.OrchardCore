@@ -1,0 +1,55 @@
+@model CrestApps.OrchardCore.Resources.ViewComponents.ItemSelectorViewModel
+
+<style asp-name="item-selector" at="Head"></style>
+<script asp-name="item-selector" at="Foot"></script>
+
+<div id="@Model.Id" class="item-selector dropdown" data-item-selector>
+    <script type="application/json" class="item-selector-config">
+        @Html.Raw(Model.ConfigurationJson)
+    </script>
+
+    <div class="item-selector-hidden-inputs"></div>
+
+    <button type="button"
+            class="btn btn-sm btn-outline-secondary dropdown-toggle item-selector-toggle"
+            aria-expanded="false"
+            data-item-selector-toggle>
+        @T["Select item"]
+    </button>
+
+    <div class="item-selector-selected mt-2"></div>
+
+    <div class="dropdown-menu item-selector-menu p-0 shadow-sm" data-item-selector-menu>
+        <div class="item-selector-section d-flex align-items-center justify-content-between p-2 border-bottom">
+            <div class="item-selector-section-title small text-muted item-selector-menu-title"></div>
+            <button type="button"
+                    class="btn-close item-selector-close"
+                    aria-label="@T["Close"]"></button>
+        </div>
+
+        <div class="item-selector-section p-2 border-bottom item-selector-search">
+            <div class="input-group input-group-sm">
+                <input type="search" class="form-control item-selector-search-input" />
+                <button type="button" class="btn btn-secondary item-selector-search-button">@T["Search"]</button>
+            </div>
+        </div>
+
+        <div class="item-selector-section p-2 border-bottom item-selector-actions d-none">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary item-selector-select-all">@T["Select all"]</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary item-selector-deselect-all">@T["Deselect all"]</button>
+            </div>
+        </div>
+
+        <div class="item-selector-section p-2 border-bottom item-selector-selection-summary">
+            <div class="item-selector-section-title small text-muted mb-2"></div>
+            <div class="item-selector-selected-items"></div>
+        </div>
+
+        <div class="item-selector-section p-2">
+            <div class="item-selector-section-title small text-muted mb-2 item-selector-available-label"></div>
+            <div class="item-selector-status text-muted small mb-2 d-none"></div>
+            <div class="list-group list-group-flush item-selector-options"></div>
+        </div>
+    </div>
+</div>

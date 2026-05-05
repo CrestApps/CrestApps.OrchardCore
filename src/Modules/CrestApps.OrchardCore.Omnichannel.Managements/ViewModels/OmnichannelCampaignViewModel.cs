@@ -102,11 +102,6 @@ public class OmnichannelCampaignViewModel
     public Dictionary<string, ToolEntry[]> Tools { get; set; }
 
     /// <summary>
-    /// Gets or sets the dispositions.
-    /// </summary>
-    public SelectListItem[] Dispositions { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether allow AI to update contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }

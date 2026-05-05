@@ -9,13 +9,13 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploymentDeploymentStep>
 {
-    private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
+    private readonly INamedSourceCatalog<AIDeployment> _deploymentCatalog;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIDeploymentDeploymentSource"/> class.
     /// </summary>
     /// <param name="deploymentCatalog">The deployment catalog.</param>
-    public AIDeploymentDeploymentSource(INamedCatalog<AIDeployment> deploymentCatalog)
+    public AIDeploymentDeploymentSource(INamedSourceCatalog<AIDeployment> deploymentCatalog)
     {
         _deploymentCatalog = deploymentCatalog;
     }

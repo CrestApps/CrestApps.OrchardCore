@@ -1,0 +1,98 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.DisplayManagement
+
+@model CampaignActionsListViewModel
+
+<fieldset class="mb-3 mt-4">
+    <legend class="d-flex justify-content-between align-items-center mb-3">
+        <span>@T["Campaign Actions"]</span>
+
+        @if (!string.IsNullOrEmpty(Model.CampaignId) && Model.ActionTypes.Any())
+        {
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#modalAddCampaignAction">
+                @T["Add Campaign Action"]
+            </button>
+        }
+    </legend>
+
+@if (string.IsNullOrEmpty(Model.CampaignId))
+{
+    <div class="alert alert-info">
+        @T["Save the campaign first to add campaign actions."]
+    </div>
+    }
+    else
+    {
+        if (Model.Actions.Count > 0)
+        {
+            <ul class="list-group mb-3">
+                @foreach (var entry in Model.Actions)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1 me-3">
+                            <div class="fw-semibold">@entry.DispositionDisplayText</div>
+                            <div class="mt-1 d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge text-bg-secondary">@entry.ActionTypeDisplayName</span>
+
+                                @if (!string.IsNullOrWhiteSpace(entry.SubjectDisplayText))
+                                {
+                                    <span class="badge text-bg-light border">@entry.SubjectDisplayText</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <a class="btn btn-sm btn-secondary"
+                               asp-route-action="Edit"
+                               asp-route-controller="CampaignActions"
+                               asp-route-id="@entry.Model.ItemId">@T["Edit"]</a>
+                            <a class="btn btn-sm btn-danger"
+                               asp-route-action="Delete"
+                               asp-route-controller="CampaignActions"
+                               asp-route-id="@entry.Model.ItemId"
+                               data-title="@T["Delete"]"
+                               data-message="@T["Are you sure you want to delete this campaign action?"]"
+                               data-ok-text="@T["Delete"]"
+                               data-cancel-text="@T["Cancel"]"
+                               data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                @T["No campaign actions have been added yet. Click \"Add Campaign Action\" to define what happens when a disposition is selected."]
+            </div>
+        }
+
+        @if (Model.ActionTypes.Any())
+        {
+            <!-- Modal -->
+            <div class="modal fade" id="modalAddCampaignAction" tabindex="-1" role="dialog" aria-labelledby="available-action-types-title" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="available-action-types-title">@T["Available Action Types"]</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row row-cols-1 row-cols-md-3 g-2">
+                                @foreach (var actionType in Model.ActionTypes)
+                                {
+                                    IShape shape = await New.CampaignAction_Link(Source: actionType.Type, CampaignId: Model.CampaignId);
+
+                                    @await DisplayAsync(shape)
+                                }
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</fieldset>

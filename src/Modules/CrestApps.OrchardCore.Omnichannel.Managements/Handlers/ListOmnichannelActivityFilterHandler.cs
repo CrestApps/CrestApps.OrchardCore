@@ -38,6 +38,11 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
 
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('+'), out var minAttempts))
                 {
+                    if (minAttempts <= 1)
+                    {
+                        minAttempts = 2;
+                    }
+
                     context.Query = context.Query.Where(index => index.Attempts >= minAttempts);
                 }
             }
@@ -52,8 +57,10 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             }
             else if (int.TryParse(filter.AttemptFilter, out var exactAttempts))
             {
-                // Handle exact values "0", "1", "2", etc.
-                context.Query = context.Query.Where(index => index.Attempts == exactAttempts);
+                // Handle exact values where 0 or 1 both mean "no attempt".
+                context.Query = exactAttempts <= 1
+                    ? context.Query.Where(index => index.Attempts <= 1)
+                    : context.Query.Where(index => index.Attempts == exactAttempts);
             }
         }
 

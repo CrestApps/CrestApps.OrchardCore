@@ -38,25 +38,6 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label class="@Orchard.GetLabelClasses()">@T["Dispositions"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        @for (var i = 0; i < Model.Dispositions.Length; i++)
-        {
-            var disposition = Model.Dispositions[i];
-            var htmlId = Html.IdFor(m => m.Dispositions[i].Selected);
-
-            <div class="form-check">
-                <input type="hidden" asp-for="Dispositions[i].Value" />
-                <input type="checkbox" asp-for="Dispositions[i].Selected" id="@htmlId" class="form-check-input" />
-                <label for="@htmlId" class="form-check-label">
-                    @disposition.Text
-                </label>
-            </div>
-        }
-    </div>
-</div>
-
 <div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
     <label asp-for="ChannelEndpointId" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
     <div class="@Orchard.GetEndClasses()">

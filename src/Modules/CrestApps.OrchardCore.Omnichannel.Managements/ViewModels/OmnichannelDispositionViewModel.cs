@@ -14,9 +14,4 @@ public class OmnichannelDispositionViewModel
     /// Gets or sets the description.
     /// </summary>
     public string Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the capture date.
-    /// </summary>
-    public bool CaptureDate { get; set; }
 }
