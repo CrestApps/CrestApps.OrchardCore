@@ -2,13 +2,40 @@ flatpickrCulture = function () {
     const machineDateFormat = "Y-m-d";
     const machineDateTimeFormat = "Y-m-d\\TH:i";
     const directionMarksPattern = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+    const unicodeSpacesPattern = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g;
 
-    const csharpDatePatternToFlatpickr = (pattern) => {
+    const normalizePattern = (pattern) => {
         if (!pattern || typeof pattern !== "string") {
             return pattern;
         }
 
-        // Order matters: longer tokens first
+        return pattern
+            .replace(directionMarksPattern, "")
+            .replace(unicodeSpacesPattern, " ")
+            .trim();
+    };
+
+    const normalizeDisplayValue = (value) => {
+        if (typeof value !== "string") {
+            return value;
+        }
+
+        return value
+            .replace(directionMarksPattern, "")
+            .replace(unicodeSpacesPattern, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    };
+
+    const csharpDatePatternToFlatpickr = (pattern) => {
+        pattern = normalizePattern(pattern);
+
+        if (!pattern || typeof pattern !== "string") {
+            return pattern;
+        }
+
+        // Order matters: longer tokens first.
+        // Use placeholders to prevent cascade (e.g. dd→d then d→j).
         return pattern
             // Year
             .replace(/yyyy/g, "Y")
@@ -18,26 +45,36 @@ flatpickrCulture = function () {
             // Month
             .replace(/MMMM/g, "F")
             .replace(/MMM/g, "M")
-            .replace(/MM/g, "m")
+            .replace(/MM/g, "\x01")
             .replace(/M/g, "n")
+            .replace(/\x01/g, "m")
 
             // Day
             .replace(/dddd/g, "l")
             .replace(/ddd/g, "D")
-            .replace(/dd/g, "d")
-            .replace(/d/g, "j");
+            .replace(/dd/g, "\x02")
+            .replace(/d/g, "j")
+            .replace(/\x02/g, "d");
     };
 
     const csharpTimePatternToFlatpickr = (pattern) => {
+        pattern = normalizePattern(pattern);
+
         if (!pattern || typeof pattern !== "string") {
             return pattern;
         }
 
         // flatpickr uses 24hr tokens (H) and 12hr tokens (h + K)
-        // We'll detect 12-hour patterns by the presence of 't' (AM/PM designator).
-        const is12Hour = /t+/i.test(pattern);
+        // Detect both Windows ("tt") and ICU ("a", "B") AM/PM/day-period symbols.
+        const is12Hour = /t+|a+|b+|B+/i.test(pattern);
 
         let p = pattern;
+
+        // Remove quoted literals we don't support in flatpickr display patterns.
+        p = p.replace(/'[^']*'/g, " ").replace(/"[^"]*"/g, " ");
+
+        // Era designator has no flatpickr equivalent for our use cases.
+        p = p.replace(/g+/gi, " ");
 
         // Seconds (ignored by our UIs; keep mapping for completeness)
         p = p.replace(/ss/g, "S").replace(/s/g, "S");
@@ -49,14 +86,24 @@ flatpickrCulture = function () {
         if (is12Hour) {
             p = p.replace(/hh/g, "h");
             p = p.replace(/HH/g, "h").replace(/H/g, "h");
-            p = p.replace(/tt/g, "K").replace(/t/g, "K");
+            p = p
+                .replace(/tt/g, "K")
+                .replace(/t/g, "K")
+                .replace(/a+/gi, "K")
+                .replace(/b+/g, "K")
+                .replace(/B+/g, "K");
         } else {
             p = p.replace(/HH/g, "H");
             p = p.replace(/hh/g, "H").replace(/h/g, "H");
-            p = p.replace(/tt/g, "").replace(/t/g, "");
+            p = p
+                .replace(/tt/g, "")
+                .replace(/t/g, "")
+                .replace(/a+/gi, "")
+                .replace(/b+/g, "")
+                .replace(/B+/g, "");
         }
 
-        return p.trim();
+        return normalizePattern(p);
     };
 
     const createFlatpickrDateTimePattern = (csharpShortDatePattern, csharpShortTimePattern, defaultDatePattern, defaultTimePattern) => {
@@ -75,7 +122,7 @@ flatpickrCulture = function () {
             return value;
         }
 
-        return value.replace(directionMarksPattern, "").trim();
+        return normalizeDisplayValue(value);
     };
 
     const pad = (value) => value.toString().padStart(2, "0");
@@ -164,7 +211,7 @@ flatpickrCulture = function () {
         }
 
         if (typeof flatpickr !== "undefined") {
-            return flatpickr.formatDate(date, format);
+            return normalizeDisplayValue(flatpickr.formatDate(date, format));
         }
 
         return formatMachineDateTime(date);
@@ -210,6 +257,7 @@ flatpickrCulture = function () {
         createLocalizedDateTimeConfig,
         formatMachineDate,
         formatMachineDateTime,
+        normalizeDisplayValue,
         stripDirectionMarks
     };
 }();
