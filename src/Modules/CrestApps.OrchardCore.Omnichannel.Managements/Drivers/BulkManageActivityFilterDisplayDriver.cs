@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -159,22 +160,22 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             filter.UrgencyLevel = urgencyLevel;
         }
 
-        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParse(model.ScheduledFrom, out var scheduledFrom))
+        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParseExact(model.ScheduledFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledFrom))
         {
             filter.ScheduledFrom = scheduledFrom;
         }
 
-        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParse(model.ScheduledTo, out var scheduledTo))
+        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParseExact(model.ScheduledTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledTo))
         {
             filter.ScheduledTo = scheduledTo;
         }
 
-        if (!string.IsNullOrEmpty(model.CreatedFrom) && DateTime.TryParse(model.CreatedFrom, out var createdFrom))
+        if (!string.IsNullOrEmpty(model.CreatedFrom) && DateTime.TryParseExact(model.CreatedFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdFrom))
         {
             filter.CreatedFrom = createdFrom;
         }
 
-        if (!string.IsNullOrEmpty(model.CreatedTo) && DateTime.TryParse(model.CreatedTo, out var createdTo))
+        if (!string.IsNullOrEmpty(model.CreatedTo) && DateTime.TryParseExact(model.CreatedTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdTo))
         {
             filter.CreatedTo = createdTo;
         }

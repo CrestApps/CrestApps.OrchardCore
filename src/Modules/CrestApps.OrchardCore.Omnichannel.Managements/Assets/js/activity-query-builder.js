@@ -236,10 +236,19 @@ window.activityQueryBuilder = (function () {
         // Initialize flatpickr if available.
         setTimeout(function () {
             if (typeof flatpickr !== 'undefined') {
-                flatpickr(input, {
-                    dateFormat: field.dateFormat || 'Y-m-d',
-                    allowInput: true
-                });
+                const options = typeof flatpickrCulture !== 'undefined'
+                    ? flatpickrCulture.createLocalizedDateConfig(field.csharpDatePattern, {
+                        dateFormat: field.dateFormat || flatpickrCulture.machineDateFormat,
+                        altFormat: field.altFormat,
+                        altInput: Boolean(field.csharpDatePattern || field.altFormat),
+                        altInputClass: input.className,
+                    })
+                    : {
+                        dateFormat: field.dateFormat || 'Y-m-d',
+                        allowInput: true,
+                    };
+
+                flatpickr(input, options);
             }
         }, 0);
 

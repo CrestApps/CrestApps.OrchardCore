@@ -2,6 +2,7 @@
 
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="col p-1">
     <label class="visually-hidden" asp-for="StartDate">@T["From"]</label>
@@ -12,13 +13,11 @@
     <input type="text" class="form-control flatpickr-input" asp-for="EndDate" placeholder="@T["To"]" readonly="readonly" />
 </div>
 
-<script at="Foot" depends-on="flatpickr">
-    flatpickr('#@Html.IdFor(m => m.StartDate)', {
-        dateFormat: 'Y-m-d',
-        allowInput: true
-    });
-    flatpickr('#@Html.IdFor(m => m.EndDate)', {
-        dateFormat: 'Y-m-d',
-        allowInput: true
-    });
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
+        altInputClass: 'form-control flatpickr-input'
+    }));
+    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
+        altInputClass: 'form-control flatpickr-input'
+    }));
 </script>

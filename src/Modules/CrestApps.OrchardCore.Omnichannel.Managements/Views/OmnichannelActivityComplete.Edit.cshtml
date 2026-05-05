@@ -5,18 +5,30 @@
 
 @model OmnichannelActivityViewModel
 
-<dl class="mb-3">
-    <dt>@T["Interaction type"]</dt>
-    <dd>@Model.InteractionType</dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="InteractionType" class="@Orchard.GetLabelClasses()">@T["Interaction type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="InteractionType" class="form-control-plaintext" />
+    </div>
+</div>
 
-    <dt>@T["Channel"]</dt>
-    <dd>@Model.Channel</dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Channel" class="@Orchard.GetLabelClasses()">@T["Channel"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Channel" class="form-control-plaintext" />
+    </div>
+</div>
 
-    <dt>@T["Campaign"]</dt>
-    <dd>@Model.CampaignTitle</dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="CampaignTitle" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="CampaignTitle" class="form-control-plaintext" />
+    </div>
+</div>
 
-    <dt>@T["Urgency level"]</dt>
-    <dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
+    <div class="@Orchard.GetEndClasses()">
         @{
             var value = Model.UrgencyLevel switch
             {
@@ -27,30 +39,48 @@
                 ActivityUrgencyLevel.VeryHigh => T["Very high"],
                 _ => T["Normal"],
             };
-
-            @value
         }
-    </dd>
+        <input asp-for="UrgencyLevel" class="form-control-plaintext" value="@value" />
+    </div>
+</div>
 
-    <dt>@T["Assigned to"]</dt>
-    <dd>@Model.AssignedToName</dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="AssignedToName" class="@Orchard.GetLabelClasses()">@T["Assigned to"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="AssignedToName" class="form-control-plaintext" />
+    </div>
+</div>
 
-    <dt>@T["Scheduled at"]</dt>
-    <dd>@Model.ScheduledLocal.ToString("g")</dd>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ScheduledLocal" class="@Orchard.GetLabelClasses()">@T["Scheduled at"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="ScheduledLocal" class="form-control-plaintext" />
+    </div>
+</div>
 
-    @if (Model.CompletedLocal.HasValue)
-    {
-        <dt>@T["Completed by"]</dt>
-        <dd>@Model.CompletedByName</dd>
+@if (Model.CompletedLocal.HasValue)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="CompletedByName" class="@Orchard.GetLabelClasses()">@T["Completed by"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input asp-for="CompletedByName" class="form-control-plaintext" />
+        </div>
+    </div>
 
-        <dt>@T["Completed at"]</dt>
-        <dd>@Model.CompletedLocal.Value.ToString("g")</dd>
-    }
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="CompletedLocal" class="@Orchard.GetLabelClasses()">@T["Completed at"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input asp-for="CompletedLocal" class="form-control-plaintext" />
+        </div>
+    </div>
+}
 
-    <dt>@T["Instructions"]</dt>
-    <dd>@Model.Instructions</dd>
-
-</dl>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Instructions" class="form-control-plaintext" />
+    </div>
+</div>
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Notes" class="@Orchard.GetLabelClasses()">@T["Notes"]</label>
@@ -72,13 +102,15 @@
                 }
             </select>
             <span asp-validation-for="DispositionId" class="text-danger"></span>
+
+            <div id="campaign-actions-preview" class="d-none my-3">
+                <h5 class="text-uppercase">@T["Workflow Results"]</h5>
+                <div id="actions-list"></div>
+            </div>
         </div>
+
     </div>
 
-    <div id="campaign-actions-preview" class="d-none mb-3">
-        <h5 class="text-uppercase">@T["Workflow Results"]</h5>
-        <div id="actions-list"></div>
-    </div>
 </div>
 
 <style asp-name="flatpickr"></style>
@@ -89,7 +121,6 @@
     document.addEventListener("DOMContentLoaded", function () {
         var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
         var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
-        var patterns = flatpickrCulture.createFlatpickrDateTimePattern(datePattern, timePattern);
 
         const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
         const previewContainer = document.getElementById("campaign-actions-preview");
@@ -100,12 +131,9 @@
         const currentAttempts = @Model.Attempts;
 
         function initFlatpickr(input) {
-            flatpickr(input, {
-                enableTime: true,
-                time_24hr: patterns.time24hr,
-                dateFormat: patterns.dateTimePattern,
-                allowInput: true,
-            });
+            flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
+                altInputClass: input.className,
+            }));
         }
 
         async function loadDispositionActions() {
@@ -155,12 +183,12 @@
                         const inputId = 'schedule-' + action.actionId;
                         const inputName = 'ActionScheduleDates[' + action.actionId + ']';
                         const defaultDate = action.defaultScheduleDate
-                            ? new Date(action.defaultScheduleDate).toLocaleString()
+                            ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
                             : '';
 
                         cardBody += '<div class="mt-2">';
-                        cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule date"]</label>';
-                        cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule date"]" />';
+                        cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule at"]</label>';
+                        cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule at"]" />';
                         cardBody += '</div>';
                     }
 

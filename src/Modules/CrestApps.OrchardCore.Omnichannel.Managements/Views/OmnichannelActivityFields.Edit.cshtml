@@ -8,6 +8,7 @@
 @{
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
     var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+    var scheduleAtValue = Model.ScheduleAt?.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
 }
 
 <style asp-name="flatpickr"></style>
@@ -40,7 +41,7 @@
         <input type="text"
                id="@Html.IdFor(m => m.ScheduleAt)"
                name="@Html.NameFor(m => m.ScheduleAt)"
-               value="@Model.ScheduleAt"
+               value="@scheduleAtValue"
                class="form-control"
                placeholder="@T["Schedule at"]" />
         <span asp-validation-for="ScheduleAt" class="text-danger"></span>
@@ -49,16 +50,11 @@
 
 <script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
-        var patterns = flatpickrCulture.createFlatpickrDateTimePattern("@datePattern", "@timePattern");
-
         var scheduleAtField = document.getElementById('@Html.IdFor(m => m.ScheduleAt)');
         if (scheduleAtField) {
-            flatpickr(scheduleAtField, {
-                enableTime: true,
-                time_24hr: patterns.time24hr,
-                dateFormat: patterns.dateTimePattern,
-                allowInput: true,
-            });
+            flatpickr(scheduleAtField, flatpickrCulture.createLocalizedDateTimeConfig("@datePattern", "@timePattern", {
+                altInputClass: scheduleAtField.className,
+            }));
         }
     });
 </script>

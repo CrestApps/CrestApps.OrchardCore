@@ -1,9 +1,15 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using System.Globalization
 
 @model BulkManageActivityFilterViewModel
 
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
+
+@{
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+}
 
 <div class="row gx-2 gy-2">
     <div class="col-12">
@@ -97,11 +103,11 @@
     </div>
 </div>
 
-<script at="Foot" depends-on="flatpickr">
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
-        flatpickr('#bulk-scheduled-from', { dateFormat: 'Y-m-d', allowInput: true });
-        flatpickr('#bulk-scheduled-to', { dateFormat: 'Y-m-d', allowInput: true });
-        flatpickr('#bulk-created-from', { dateFormat: 'Y-m-d', allowInput: true });
-        flatpickr('#bulk-created-to', { dateFormat: 'Y-m-d', allowInput: true });
+        flatpickr('#bulk-scheduled-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        flatpickr('#bulk-scheduled-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        flatpickr('#bulk-created-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        flatpickr('#bulk-created-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
     });
 </script>

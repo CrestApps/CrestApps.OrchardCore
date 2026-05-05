@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using System.Globalization;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -42,8 +43,8 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.SubjectContentType = filter.SubjectContentType;
             model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
-            model.ScheduledFrom = filter.ScheduledFrom?.ToShortDateString();
-            model.ScheduledTo = filter.ScheduledTo?.ToShortDateString();
+            model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
             model.UrgencyLevels =
             [
@@ -112,12 +113,12 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.ScheduledFrom = null;
         filter.ScheduledTo = null;
 
-        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParse(model.ScheduledFrom, out var scheduledFrom))
+        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParseExact(model.ScheduledFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledFrom))
         {
             filter.ScheduledFrom = scheduledFrom;
         }
 
-        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParse(model.ScheduledTo, out var scheduledTo))
+        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParseExact(model.ScheduledTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledTo))
         {
             filter.ScheduledTo = scheduledTo;
         }
@@ -146,12 +147,12 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
         if (filter.ScheduledFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToShortDateString());
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
 
         if (filter.ScheduledTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToShortDateString());
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
 
         return Edit(filter, context);
