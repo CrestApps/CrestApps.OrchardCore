@@ -1,17 +1,15 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
 /// <summary>
-/// Handles events for list omnichannel activity filter.
+/// Handles filtering for bulk manage activity queries.
 /// </summary>
-public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActivityFilterHandler
+public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterHandler
 {
-    /// <summary>
-    /// Asynchronously performs the filtering operation.
-    /// </summary>
-    /// <param name="context">The context.</param>
-    public Task FilteringAsync(ListOmnichannelActivityFilterContext context)
+    /// <inheritdoc/>
+    public Task FilteringAsync(BulkManageActivityFilterContext context)
     {
         var filter = context.Filter;
 
@@ -30,12 +28,15 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             context.Query = context.Query.Where(index => index.Channel == filter.Channel);
         }
 
+        if (filter.AssignedToUserIds is { Length: > 0 })
+        {
+            context.Query = context.Query.Where(index => index.AssignedToId.IsIn(filter.AssignedToUserIds));
+        }
+
         if (!string.IsNullOrEmpty(filter.AttemptFilter))
         {
             if (filter.AttemptFilter.EndsWith('+'))
             {
-                // Handle "1+", "2+", etc. - minimum attempts
-
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('+'), out var minAttempts))
                 {
                     if (minAttempts <= 1)
@@ -48,8 +49,6 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             }
             else if (filter.AttemptFilter.EndsWith('-'))
             {
-                // Handle "2-", "3-", etc. - maximum attempts
-
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('-'), out var maxAttempts))
                 {
                     context.Query = context.Query.Where(index => index.Attempts <= maxAttempts);
@@ -57,7 +56,6 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             }
             else if (int.TryParse(filter.AttemptFilter, out var exactAttempts))
             {
-                // Handle exact values where 0 or 1 both mean "no attempt".
                 context.Query = exactAttempts <= 1
                     ? context.Query.Where(index => index.Attempts <= 1)
                     : context.Query.Where(index => index.Attempts == exactAttempts);
@@ -72,6 +70,16 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
         if (filter.ScheduledTo.HasValue)
         {
             context.Query = context.Query.Where(index => index.ScheduledUtc <= filter.ScheduledTo.Value);
+        }
+
+        if (filter.CreatedFrom.HasValue)
+        {
+            context.Query = context.Query.Where(index => index.CreatedUtc >= filter.CreatedFrom.Value);
+        }
+
+        if (filter.CreatedTo.HasValue)
+        {
+            context.Query = context.Query.Where(index => index.CreatedUtc <= filter.CreatedTo.Value);
         }
 
         return Task.CompletedTask;

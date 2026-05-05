@@ -1,0 +1,107 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model BulkManageActivityFilterViewModel
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+
+<div class="row gx-2 gy-2">
+    <div class="col-12">
+        <h6 class="mb-1">@T["Contact filters"]</h6>
+    </div>
+
+    @if (Model.ContactPublishedOptions.Any())
+    {
+        <div class="col-lg-3">
+            <select asp-for="ContactIsPublished" asp-items="Model.ContactPublishedOptions" class="form-select form-select-sm"></select>
+        </div>
+    }
+</div>
+
+<div class="row gx-2 gy-2 mt-1">
+    <div class="col-12">
+        <h6 class="mb-1">@T["Activity filters"]</h6>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-scheduled-from"
+               asp-for="ScheduledFrom"
+               class="form-control form-control-sm"
+               placeholder="@T["Scheduled from"]" />
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-scheduled-to"
+               asp-for="ScheduledTo"
+               class="form-control form-control-sm"
+               placeholder="@T["Scheduled to"]" />
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-created-from"
+               asp-for="CreatedFrom"
+               class="form-control form-control-sm"
+               placeholder="@T["Created from"]" />
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-created-to"
+               asp-for="CreatedTo"
+               class="form-control form-control-sm"
+               placeholder="@T["Created to"]" />
+    </div>
+
+    <div class="col-12 mt-2">
+        <label class="form-label form-label-sm mb-1">@T["Assigned to users"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "bulk-filter-assigned-user-selector",
+            inputName = Html.NameFor(m => m.AssignedToUserIds),
+            endpoint = Url.Content(Model.UserSearchEndpoint),
+            initialItemsJson = Model.SelectedAssignedUsersJson,
+            multiple = true,
+            enableSearch = true,
+            enableSelectAll = false,
+            enableDeselectAll = true,
+            buttonText = T["Assigned to"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["Any user"].Value,
+            loadingText = T["Loading..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected"].Value,
+            availableItemsLabel = T["Available"].Value,
+            searchButtonText = T["Search"].Value,
+        })
+    </div>
+</div>
+
+<script at="Foot" depends-on="flatpickr">
+    document.addEventListener('DOMContentLoaded', function () {
+        flatpickr('#bulk-scheduled-from', { dateFormat: 'Y-m-d', allowInput: true });
+        flatpickr('#bulk-scheduled-to', { dateFormat: 'Y-m-d', allowInput: true });
+        flatpickr('#bulk-created-from', { dateFormat: 'Y-m-d', allowInput: true });
+        flatpickr('#bulk-created-to', { dateFormat: 'Y-m-d', allowInput: true });
+    });
+</script>

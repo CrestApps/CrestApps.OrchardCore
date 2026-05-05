@@ -5,7 +5,23 @@
 
 @model ShapeViewModel<OmnichannelActivityContainer>
 
-<h5 class="mb-0">
+@{
+    var urgencyIcon = Model.Value.Activity.UrgencyLevel switch
+    {
+        ActivityUrgencyLevel.VeryLow => "urgency_very_low.png",
+        ActivityUrgencyLevel.Low => "urgency_low.png",
+        ActivityUrgencyLevel.Medium => "urgency_medium.png",
+        ActivityUrgencyLevel.High => "urgency_high.png",
+        ActivityUrgencyLevel.VeryHigh => "urgency_very_high.png",
+        _ => "urgency_normal.png",
+    };
+}
+
+<h5 class="mb-0 d-flex align-items-center gap-2">
+    <img src="@Url.Content($"~/CrestApps.OrchardCore.Omnichannel.Managements/images/{urgencyIcon}")"
+         alt="@Model.Value.Activity.UrgencyLevel"
+         width="20"
+         height="20" />
     <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ItemId">
         @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
     </a>

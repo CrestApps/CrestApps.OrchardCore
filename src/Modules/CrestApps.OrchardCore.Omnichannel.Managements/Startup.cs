@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +63,13 @@ public sealed class Startup : StartupBase
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()
             .AddScoped<IListOmnichannelActivityFilterHandler, ListOmnichannelActivityFilterHandler>();
+
+        services
+            .AddDisplayDriver<BulkManageActivityFilter, BulkManageActivityFilterDisplayDriver>()
+            .AddScoped<IBulkManageActivityFilterHandler, BulkManageActivityFilterHandler>();
+
+        services
+            .AddDisplayDriver<BulkManageOmnichannelActivityContainer, BulkManageActivityActionsDisplayDriver>();
 
         services
             .AddDisplayDriver<OmnichannelDisposition, OmnichannelDispositionDisplayDriver>()

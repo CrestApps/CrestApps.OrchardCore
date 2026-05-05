@@ -67,13 +67,11 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.AttemptFilters =
             [
                 new(S["Any attempt"], ""),
-                new(S["No attempts"], "0"),
-                new(S["1 attempt"], "1"),
+                new(S["No attempt"], "0"),
                 new(S["2 attempts"], "2"),
                 new(S["3 attempts"], "3"),
                 new(S["4 attempts"], "4"),
                 new(S["5 attempts"], "5"),
-                new(S["1+ attempts"], "1+"),
                 new(S["2+ attempts"], "2+"),
                 new(S["3+ attempts"], "3+"),
                 new(S["4+ attempts"], "4+"),

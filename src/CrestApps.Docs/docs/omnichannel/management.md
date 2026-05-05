@@ -148,3 +148,59 @@ The batch will run in the background and will load activities incrementally.
 5. Adjust the schedule dates if needed.
 6. Click **Complete** to save and execute the campaign actions.
 
+## Bulk Activity Management
+
+The **Manage Activities** page provides a centralized interface for performing bulk operations on `NotStarted` manual activities.
+
+### Accessing the page
+
+Navigate to **Interaction Center → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
+
+Route: `Admin/omnichannel/manage-activities`
+
+### Filters
+
+The filter panel groups fields into **Contact filters** and **Activity filters** so managers can narrow the result set quickly.
+
+#### Contact Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| Contact status | Select | Filter by published or unpublished contacts |
+
+#### Activity Filters
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| Attempts | Select | Filter by the current attempt number. Values `0` and `1` both mean no attempt, and `2` means the second attempt. |
+| Subject | Select | Filter by subject content type |
+| Channel | Select | Filter by communication channel (Phone, SMS, Email) |
+| Assigned to users | User picker | Filter by one or more assigned users |
+| Urgency level | Select | Filter by urgency level (Normal, Low, Medium, High, etc.) |
+| Scheduled from | Date | Filter activities scheduled on or after this date |
+| Scheduled to | Date | Filter activities scheduled on or before this date |
+| Created from | Date | Filter activities created on or after this date |
+| Created to | Date | Filter activities created on or before this date |
+
+The assigned-user filter is displayed on its own row to make multi-user searches easier to manage.
+
+Activity rows display an urgency icon so managers can identify priority visually at a glance.
+
+### Bulk Actions
+
+Use the **Bulk actions** card to choose an action and its scope:
+
+- Apply the action to the activities selected on the current page
+- Apply the action to **all matching activities** returned by the current filter
+
+The page also includes a **Page size** selector so managers can review more than the default number of results at once.
+
+| Action | Description |
+|--------|-------------|
+| **Assign** | Assign activities to one or more users. When multiple users are selected, activities are evenly distributed (round-robin). |
+| **Reschedule** | Set a new scheduled date for all selected activities. |
+| **Purge** | Change the status of selected activities to `Purged`. This cannot be undone. |
+| **Set Instructions** | Set instruction text for all selected activities. Instructions are notes the agent reads before completing the task. |
+| **Set Urgency Level** | Update the urgency level for all selected activities. |
+| **Change Subject** | Change the subject content type for all selected activities. |
+
