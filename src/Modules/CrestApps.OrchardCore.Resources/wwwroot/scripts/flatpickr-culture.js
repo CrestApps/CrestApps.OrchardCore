@@ -6,194 +6,97 @@
 flatpickrCulture = function () {
   var machineDateFormat = "Y-m-d";
   var machineDateTimeFormat = "Y-m-d\\TH:i";
-  var directionMarksPattern = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-  var unicodeSpacesPattern = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g;
-  var normalizePattern = function normalizePattern(pattern) {
-    if (!pattern || typeof pattern !== "string") {
-      return pattern;
-    }
-    return pattern.replace(directionMarksPattern, "").replace(unicodeSpacesPattern, " ").trim();
-  };
-  var normalizeDisplayValue = function normalizeDisplayValue(value) {
-    if (typeof value !== "string") {
-      return value;
-    }
-    return value.replace(directionMarksPattern, "").replace(unicodeSpacesPattern, " ").replace(/\s+/g, " ").trim();
-  };
-  var csharpDatePatternToFlatpickr = function csharpDatePatternToFlatpickr(pattern) {
-    pattern = normalizePattern(pattern);
-    if (!pattern || typeof pattern !== "string") {
-      return pattern;
-    }
 
-    // Order matters: longer tokens first
-    return pattern
-    // Year
-    .replace(/yyyy/g, "Y").replace(/yyy/g, "Y").replace(/yy/g, "y")
+  // Sanitize a pattern string by removing HTML entities (injected by Razor's
+  // HTML-encoding inside <script> tags), unicode spaces, and bidi marks.
+  // This is the critical fix: on Linux/ICU, .NET's ShortTimePattern may contain
+  // \u202F (narrow no-break space). Razor HTML-encodes it to "&#x202F;" and the
+  // literal "F" in that entity would be interpreted by flatpickr as "full month name".
+  function sanitize(pattern) {
+    if (!pattern) return "";
+    return pattern.replace(/&#x[0-9a-fA-F]+;?/g, " ").replace(/&#\d+;?/g, " ").replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ").replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim();
+  }
+  function datePatternToFlatpickr(pattern) {
+    var p = sanitize(pattern);
+    if (!p) return machineDateFormat;
 
-    // Month
-    .replace(/MMMM/g, "F").replace(/MMM/g, "M").replace(/MM/g, "m").replace(/M/g, "n")
+    // Convert C# date tokens to flatpickr tokens.
+    // Use placeholders (\x01, \x02) to prevent cascade replacements.
+    return p.replace(/yyyy/g, "Y").replace(/yy/g, "y").replace(/MMMM/g, "F").replace(/MMM/g, "M").replace(/MM/g, "\x01").replace(/M/g, "n").replace(/\x01/g, "m").replace(/dddd/g, "l").replace(/ddd/g, "D").replace(/dd/g, "\x02").replace(/d/g, "j").replace(/\x02/g, "d");
+  }
+  function timePatternToFlatpickr(pattern) {
+    var p = sanitize(pattern);
+    if (!p) return "H:i";
 
-    // Day
-    .replace(/dddd/g, "l").replace(/ddd/g, "D").replace(/dd/g, "d").replace(/d/g, "j");
-  };
-  var csharpTimePatternToFlatpickr = function csharpTimePatternToFlatpickr(pattern) {
-    pattern = normalizePattern(pattern);
-    if (!pattern || typeof pattern !== "string") {
-      return pattern;
-    }
+    // Detect 12-hour format: Windows uses "tt", ICU uses "a" or "B".
+    var is12hr = /t|a/i.test(p);
 
-    // flatpickr uses 24hr tokens (H) and 12hr tokens (h + K)
-    // Detect both Windows ("tt") and ICU ("a", "B") AM/PM/day-period symbols.
-    var is12Hour = /t+|a+|b+|B+/i.test(pattern);
-    var p = pattern;
+    // Remove quoted literals and era designators.
+    p = p.replace(/'[^']*'/g, "").replace(/g+/gi, "");
 
-    // Remove quoted literals we don't support in flatpickr display patterns.
-    p = p.replace(/'[^']*'/g, " ").replace(/"[^"]*"/g, " ");
-
-    // Era designator has no flatpickr equivalent for our use cases.
-    p = p.replace(/g+/gi, " ");
-
-    // Seconds (ignored by our UIs; keep mapping for completeness)
-    p = p.replace(/ss/g, "S").replace(/s/g, "S");
-
-    // Minutes
+    // Minutes: mm or m → i
     p = p.replace(/mm/g, "i").replace(/m/g, "i");
-
-    // Hours
-    if (is12Hour) {
-      p = p.replace(/hh/g, "h");
-      p = p.replace(/HH/g, "h").replace(/H/g, "h");
-      p = p.replace(/tt/g, "K").replace(/t/g, "K").replace(/a+/gi, "K").replace(/b+/g, "K").replace(/B+/g, "K");
+    if (is12hr) {
+      p = p.replace(/[hH]+/g, "h");
+      p = p.replace(/tt|t|a+|b+|B+/gi, "K");
     } else {
-      p = p.replace(/HH/g, "H");
-      p = p.replace(/hh/g, "H").replace(/h/g, "H");
-      p = p.replace(/tt/g, "").replace(/t/g, "").replace(/a+/gi, "").replace(/b+/g, "").replace(/B+/g, "");
+      p = p.replace(/[hH]+/g, "H");
+      p = p.replace(/tt|t|a+|b+|B+/gi, "");
     }
-    return normalizePattern(p);
-  };
-  var createFlatpickrDateTimePattern = function createFlatpickrDateTimePattern(csharpShortDatePattern, csharpShortTimePattern, defaultDatePattern, defaultTimePattern) {
-    var datePattern = csharpDatePatternToFlatpickr(csharpShortDatePattern) || defaultDatePattern || "Y-m-d";
-    var timePattern = csharpTimePatternToFlatpickr(csharpShortTimePattern) || defaultTimePattern || "H:i";
-    return {
-      datePattern: datePattern,
-      timePattern: timePattern,
-      dateTimePattern: (datePattern + " " + timePattern).trim(),
-      time24hr: !/K/.test(timePattern)
-    };
-  };
-  var stripDirectionMarks = function stripDirectionMarks(value) {
-    if (typeof value !== "string") {
-      return value;
-    }
-    return normalizeDisplayValue(value);
-  };
-  var pad = function pad(value) {
-    return value.toString().padStart(2, "0");
-  };
-  var formatMachineDate = function formatMachineDate(date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-      return "";
-    }
-    return "".concat(date.getFullYear(), "-").concat(pad(date.getMonth() + 1), "-").concat(pad(date.getDate()));
-  };
-  var formatMachineDateTime = function formatMachineDateTime(date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-      return "";
-    }
-    return "".concat(formatMachineDate(date), "T").concat(pad(date.getHours()), ":").concat(pad(date.getMinutes()));
-  };
-  var parseMachineDate = function parseMachineDate(value) {
-    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stripDirectionMarks(value));
-    if (!match) {
-      return null;
-    }
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  };
-  var parseMachineDateTime = function parseMachineDateTime(value) {
-    var match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(stripDirectionMarks(value));
-    if (!match) {
-      return null;
-    }
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), match[6] ? Number(match[6]) : 0);
-  };
-  var createParseDate = function createParseDate(displayFormat, enableTime) {
-    return function (value, format) {
-      var sanitizedValue = stripDirectionMarks(value);
-      if (!sanitizedValue) {
-        return undefined;
-      }
-      var machineDate = parseMachineDate(sanitizedValue);
-      if (machineDate) {
-        return machineDate;
-      }
-      var machineDateTime = parseMachineDateTime(sanitizedValue);
-      if (machineDateTime) {
-        return machineDateTime;
-      }
-      if (displayFormat && typeof flatpickr !== "undefined") {
-        var localizedDate = flatpickr.parseDate(sanitizedValue, displayFormat);
-        if (localizedDate) {
-          return localizedDate;
-        }
-      }
-      if (typeof flatpickr !== "undefined") {
-        return flatpickr.parseDate(sanitizedValue, format);
-      }
-      return enableTime ? parseMachineDateTime(sanitizedValue) : parseMachineDate(sanitizedValue);
-    };
-  };
-  var createFormatDate = function createFormatDate() {
-    return function (date, format) {
-      if (format === machineDateFormat) {
-        return formatMachineDate(date);
-      }
-      if (format === machineDateTimeFormat) {
-        return formatMachineDateTime(date);
-      }
-      if (typeof flatpickr !== "undefined") {
-        return normalizeDisplayValue(flatpickr.formatDate(date, format));
-      }
-      return formatMachineDateTime(date);
-    };
-  };
-  var createLocalizedDateConfig = function createLocalizedDateConfig(csharpShortDatePattern, options) {
-    var datePattern = csharpDatePatternToFlatpickr(csharpShortDatePattern) || machineDateFormat;
-    var useAltInput = datePattern !== machineDateFormat;
+
+    // Clean up any leftover whitespace.
+    return p.replace(/\s+/g, " ").trim();
+  }
+  function pad(v) {
+    return v.toString().padStart(2, "0");
+  }
+  function formatMachineDate(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+    return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+  }
+  function formatMachineDateTime(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+    return formatMachineDate(date) + "T" + pad(date.getHours()) + ":" + pad(date.getMinutes());
+  }
+  function createLocalizedDateConfig(csharpDatePattern, options) {
+    var altFormat = datePatternToFlatpickr(csharpDatePattern);
     return Object.assign({
       allowInput: true,
       dateFormat: machineDateFormat,
-      altInput: useAltInput,
-      altFormat: datePattern,
-      parseDate: createParseDate(datePattern, false),
-      formatDate: createFormatDate()
+      altInput: true,
+      altFormat: altFormat
     }, options || {});
-  };
-  var createLocalizedDateTimeConfig = function createLocalizedDateTimeConfig(csharpShortDatePattern, csharpShortTimePattern, options) {
-    var patterns = createFlatpickrDateTimePattern(csharpShortDatePattern, csharpShortTimePattern, machineDateFormat, "H:i");
-    var useAltInput = patterns.dateTimePattern !== machineDateTimeFormat;
+  }
+  function createLocalizedDateTimeConfig(csharpDatePattern, csharpTimePattern, options) {
+    var dp = datePatternToFlatpickr(csharpDatePattern);
+    var tp = timePatternToFlatpickr(csharpTimePattern);
+    var is24hr = tp.indexOf("K") === -1;
     return Object.assign({
       enableTime: true,
-      time_24hr: patterns.time24hr,
+      time_24hr: is24hr,
       allowInput: true,
       dateFormat: machineDateTimeFormat,
-      altInput: useAltInput,
-      altFormat: patterns.dateTimePattern,
-      parseDate: createParseDate(patterns.dateTimePattern, true),
-      formatDate: createFormatDate()
+      altInput: true,
+      altFormat: dp + " " + tp
     }, options || {});
-  };
+  }
+  function createFlatpickrDateTimePattern(csharpDatePattern, csharpTimePattern) {
+    var dp = datePatternToFlatpickr(csharpDatePattern);
+    var tp = timePatternToFlatpickr(csharpTimePattern);
+    return {
+      datePattern: dp,
+      timePattern: tp,
+      dateTimePattern: dp + " " + tp,
+      time24hr: tp.indexOf("K") === -1
+    };
+  }
   return {
     machineDateFormat: machineDateFormat,
     machineDateTimeFormat: machineDateTimeFormat,
-    csharpDatePatternToFlatpickr: csharpDatePatternToFlatpickr,
-    csharpTimePatternToFlatpickr: csharpTimePatternToFlatpickr,
-    createFlatpickrDateTimePattern: createFlatpickrDateTimePattern,
     createLocalizedDateConfig: createLocalizedDateConfig,
     createLocalizedDateTimeConfig: createLocalizedDateTimeConfig,
+    createFlatpickrDateTimePattern: createFlatpickrDateTimePattern,
     formatMachineDate: formatMachineDate,
-    formatMachineDateTime: formatMachineDateTime,
-    normalizeDisplayValue: normalizeDisplayValue,
-    stripDirectionMarks: stripDirectionMarks
+    formatMachineDateTime: formatMachineDateTime
   };
 }();
