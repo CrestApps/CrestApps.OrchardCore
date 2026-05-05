@@ -108,7 +108,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.js")
-            .SetVersion("1.0.0");
+            .SetVersion("1.0.1");
 
         _manifest
             .DefineScript("dompurify")
