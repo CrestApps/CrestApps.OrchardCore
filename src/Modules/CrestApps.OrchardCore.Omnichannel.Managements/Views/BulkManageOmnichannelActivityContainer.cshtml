@@ -5,6 +5,7 @@
 
 <script asp-name="list-management-ui" at="Foot"></script>
 <script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
 <form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit">
@@ -82,14 +83,16 @@
     @await DisplayAsync(Model.Pager)
 }
 
-<script at="Foot" depends-on="list-management-ui, flatpickr">
+<script at="Foot" depends-on="list-management-ui, flatpickr, flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
         listManagementUI.initialize('@T["selected"]', {
             itemInputName: 'ItemIds'
         });
 
         if (typeof flatpickr !== 'undefined') {
-            flatpickr('#new-scheduled-date', { dateFormat: 'Y-m-d', allowInput: true });
+            flatpickr('#new-scheduled-date', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
+                altInputClass: 'form-control',
+            }));
         }
 
         var bulkActionParams = document.getElementById('bulk-action-params');

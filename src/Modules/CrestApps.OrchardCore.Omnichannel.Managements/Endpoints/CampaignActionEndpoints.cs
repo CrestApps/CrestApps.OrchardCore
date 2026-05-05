@@ -32,7 +32,7 @@ internal static class CampaignActionEndpoints
         ICatalog<OmnichannelDisposition> dispositionCatalog,
         IOptions<CampaignActionOptions> actionOptions,
         IContentDefinitionManager contentDefinitionManager,
-        IStringLocalizer<CampaignActionEndpointsMarker> stringLocalizer,
+        IStringLocalizer<CampaignActionEndpointsMarker> S,
         IClock clock,
         HttpContext httpContext)
     {
@@ -54,7 +54,6 @@ internal static class CampaignActionEndpoints
             .ToArray();
 
         var options = actionOptions.Value;
-        var S = stringLocalizer;
         var now = clock.UtcNow;
 
         var responses = await Task.WhenAll(actions.Select(async action =>
@@ -114,6 +113,8 @@ internal static class CampaignActionEndpoints
 
         var result = responses
             .OfType<DispositionActionResponse>()
+            .OrderBy(x => x.RequiresScheduleDate ? 1 : 0)
+            .ThenBy(x => x.DefaultScheduleDate)
             .ToArray();
 
         return Results.Ok(result);

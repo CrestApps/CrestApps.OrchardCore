@@ -4,6 +4,9 @@
 */
 
 flatpickrCulture = function () {
+  var machineDateFormat = "Y-m-d";
+  var machineDateTimeFormat = "Y-m-d\\TH:i";
+  var directionMarksPattern = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
   var csharpDatePatternToFlatpickr = function csharpDatePatternToFlatpickr(pattern) {
     if (!pattern || typeof pattern !== "string") {
       return pattern;
@@ -58,9 +61,117 @@ flatpickrCulture = function () {
       time24hr: !/K/.test(timePattern)
     };
   };
+  var stripDirectionMarks = function stripDirectionMarks(value) {
+    if (typeof value !== "string") {
+      return value;
+    }
+    return value.replace(directionMarksPattern, "").trim();
+  };
+  var pad = function pad(value) {
+    return value.toString().padStart(2, "0");
+  };
+  var formatMachineDate = function formatMachineDate(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return "";
+    }
+    return "".concat(date.getFullYear(), "-").concat(pad(date.getMonth() + 1), "-").concat(pad(date.getDate()));
+  };
+  var formatMachineDateTime = function formatMachineDateTime(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return "";
+    }
+    return "".concat(formatMachineDate(date), "T").concat(pad(date.getHours()), ":").concat(pad(date.getMinutes()));
+  };
+  var parseMachineDate = function parseMachineDate(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stripDirectionMarks(value));
+    if (!match) {
+      return null;
+    }
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  };
+  var parseMachineDateTime = function parseMachineDateTime(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(stripDirectionMarks(value));
+    if (!match) {
+      return null;
+    }
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), match[6] ? Number(match[6]) : 0);
+  };
+  var createParseDate = function createParseDate(displayFormat, enableTime) {
+    return function (value, format) {
+      var sanitizedValue = stripDirectionMarks(value);
+      if (!sanitizedValue) {
+        return undefined;
+      }
+      var machineDate = parseMachineDate(sanitizedValue);
+      if (machineDate) {
+        return machineDate;
+      }
+      var machineDateTime = parseMachineDateTime(sanitizedValue);
+      if (machineDateTime) {
+        return machineDateTime;
+      }
+      if (displayFormat && typeof flatpickr !== "undefined") {
+        var localizedDate = flatpickr.parseDate(sanitizedValue, displayFormat);
+        if (localizedDate) {
+          return localizedDate;
+        }
+      }
+      if (typeof flatpickr !== "undefined") {
+        return flatpickr.parseDate(sanitizedValue, format);
+      }
+      return enableTime ? parseMachineDateTime(sanitizedValue) : parseMachineDate(sanitizedValue);
+    };
+  };
+  var createFormatDate = function createFormatDate() {
+    return function (date, format) {
+      if (format === machineDateFormat) {
+        return formatMachineDate(date);
+      }
+      if (format === machineDateTimeFormat) {
+        return formatMachineDateTime(date);
+      }
+      if (typeof flatpickr !== "undefined") {
+        return flatpickr.formatDate(date, format);
+      }
+      return formatMachineDateTime(date);
+    };
+  };
+  var createLocalizedDateConfig = function createLocalizedDateConfig(csharpShortDatePattern, options) {
+    var datePattern = csharpDatePatternToFlatpickr(csharpShortDatePattern) || machineDateFormat;
+    var useAltInput = datePattern !== machineDateFormat;
+    return Object.assign({
+      allowInput: true,
+      dateFormat: machineDateFormat,
+      altInput: useAltInput,
+      altFormat: datePattern,
+      parseDate: createParseDate(datePattern, false),
+      formatDate: createFormatDate()
+    }, options || {});
+  };
+  var createLocalizedDateTimeConfig = function createLocalizedDateTimeConfig(csharpShortDatePattern, csharpShortTimePattern, options) {
+    var patterns = createFlatpickrDateTimePattern(csharpShortDatePattern, csharpShortTimePattern, machineDateFormat, "H:i");
+    var useAltInput = patterns.dateTimePattern !== machineDateTimeFormat;
+    return Object.assign({
+      enableTime: true,
+      time_24hr: patterns.time24hr,
+      allowInput: true,
+      dateFormat: machineDateTimeFormat,
+      altInput: useAltInput,
+      altFormat: patterns.dateTimePattern,
+      parseDate: createParseDate(patterns.dateTimePattern, true),
+      formatDate: createFormatDate()
+    }, options || {});
+  };
   return {
+    machineDateFormat: machineDateFormat,
+    machineDateTimeFormat: machineDateTimeFormat,
     csharpDatePatternToFlatpickr: csharpDatePatternToFlatpickr,
     csharpTimePatternToFlatpickr: csharpTimePatternToFlatpickr,
-    createFlatpickrDateTimePattern: createFlatpickrDateTimePattern
+    createFlatpickrDateTimePattern: createFlatpickrDateTimePattern,
+    createLocalizedDateConfig: createLocalizedDateConfig,
+    createLocalizedDateTimeConfig: createLocalizedDateTimeConfig,
+    formatMachineDate: formatMachineDate,
+    formatMachineDateTime: formatMachineDateTime,
+    stripDirectionMarks: stripDirectionMarks
   };
 }();
