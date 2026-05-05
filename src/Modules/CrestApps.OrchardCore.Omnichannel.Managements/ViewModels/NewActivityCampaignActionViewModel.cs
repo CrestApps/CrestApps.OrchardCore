@@ -32,6 +32,12 @@ public class NewActivityCampaignActionViewModel
     public int? DefaultScheduleHours { get; set; }
 
     /// <summary>
+    /// Gets or sets the initially selected users.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> SelectedUsers { get; set; }
+
+    /// <summary>
     /// Gets or sets the campaigns.
     /// </summary>
     [BindNever]

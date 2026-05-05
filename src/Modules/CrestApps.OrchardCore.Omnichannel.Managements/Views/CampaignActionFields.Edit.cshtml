@@ -13,28 +13,3 @@
         <span asp-validation-for="DispositionId" class="text-danger"></span>
     </div>
 </div>
-
-<fieldset class="mb-3">
-    <legend>@T["Communication preferences"]</legend>
-    <span class="hint d-block mb-2">@T["Optionally set communication preferences on the contact when this action executes."]</span>
-
-    <div class="form-check">
-        <input id="@Html.IdFor(m => m.SetDoNotCall)" name="@Html.NameFor(m => m.SetDoNotCall)" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotCall == true)" />
-        <label for="@Html.IdFor(m => m.SetDoNotCall)" class="form-check-label">@T["Set do not call"]</label>
-    </div>
-
-    <div class="form-check">
-        <input id="@Html.IdFor(m => m.SetDoNotSms)" name="@Html.NameFor(m => m.SetDoNotSms)" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotSms == true)" />
-        <label for="@Html.IdFor(m => m.SetDoNotSms)" class="form-check-label">@T["Set do not SMS"]</label>
-    </div>
-
-    <div class="form-check">
-        <input id="@Html.IdFor(m => m.SetDoNotEmail)" name="@Html.NameFor(m => m.SetDoNotEmail)" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotEmail == true)" />
-        <label for="@Html.IdFor(m => m.SetDoNotEmail)" class="form-check-label">@T["Set do not email"]</label>
-    </div>
-
-    <div class="form-check">
-        <input id="@Html.IdFor(m => m.SetDoNotChat)" name="@Html.NameFor(m => m.SetDoNotChat)" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotChat == true)" />
-        <label for="@Html.IdFor(m => m.SetDoNotChat)" class="form-check-label">@T["Set do not chat"]</label>
-    </div>
-</fieldset>

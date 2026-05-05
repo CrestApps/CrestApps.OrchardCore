@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
@@ -12,18 +11,20 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Users;
+using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
-    private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ILocalClock _localClock;
+    private readonly ISession _session;
 
     internal readonly IStringLocalizer S;
 
@@ -31,24 +32,24 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// Initializes a new instance of the <see cref="OmnichannelActivityBatchDisplayDriver"/> class.
     /// </summary>
     /// <param name="campaignCatalog">The campaign catalog.</param>
-    /// <param name="userManager">The user manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="localClock">The local clock.</param>
+    /// <param name="session">The YesSql session.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         ICatalog<OmnichannelCampaign> campaignCatalog,
-        UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
         ILocalClock localClock,
+        ISession session,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _campaignCatalog = campaignCatalog;
-        _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
         _localClock = localClock;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -107,17 +108,21 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 }
             }
 
-            var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
-
-            var usersListItems = new List<SelectListItem>();
-
-            foreach (var user in users)
+            if (batch.UserIds is { Length: > 0 })
             {
-                var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
+                var users = (await _session.Query<User, UserIndex>(x => x.UserId.IsIn(batch.UserIds)).ListAsync())
+                    .OrderBy(user => Array.FindIndex(batch.UserIds, itemId => string.Equals(itemId, user.UserId, StringComparison.OrdinalIgnoreCase)));
 
-                var displayName = await _displayNameProvider.GetAsync(user);
+                var selectedUsers = new List<SelectListItem>();
 
-                usersListItems.Add(new SelectListItem(displayName, userId));
+                foreach (var user in users)
+                {
+                    var displayName = await _displayNameProvider.GetAsync(user);
+
+                    selectedUsers.Add(new SelectListItem(displayName, user.UserId));
+                }
+
+                model.SelectedUsers = selectedUsers;
             }
 
             model.UrgencyLevels =
@@ -132,7 +137,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
-            model.Users = usersListItems.OrderBy(x => x.Text);
+            model.SelectedUsers ??= [];
         }).Location("Content:1");
     }
 

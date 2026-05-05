@@ -3,13 +3,16 @@ using CrestApps.OrchardCore.Users.Core.Handlers;
 using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Drivers;
+using CrestApps.OrchardCore.Users.Endpoints;
 using CrestApps.OrchardCore.Users.Filters;
 using CrestApps.OrchardCore.Users.Indexes;
 using CrestApps.OrchardCore.Users.Migrations;
 using CrestApps.OrchardCore.Users.Models;
 using CrestApps.OrchardCore.Users.Recipes;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentFields.Drivers;
@@ -46,6 +49,11 @@ public sealed class Startup : StartupBase
         services.TryAddBasicDisplayNameProvider();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddUserSearchEndpoint();
     }
 }
 

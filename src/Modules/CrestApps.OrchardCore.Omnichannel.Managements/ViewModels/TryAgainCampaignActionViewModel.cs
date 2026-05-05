@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
@@ -11,4 +12,6 @@ public class TryAgainCampaignActionViewModel
     public string NormalizedUserName { get; set; }
 
     public int? DefaultScheduleHours { get; set; }
+
+    public IEnumerable<SelectListItem> SelectedUsers { get; set; }
 }

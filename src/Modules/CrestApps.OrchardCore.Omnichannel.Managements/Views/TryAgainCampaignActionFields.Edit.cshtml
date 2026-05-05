@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore
@@ -31,8 +32,28 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="NormalizedUserName" class="@Orchard.GetLabelClasses()">@T["Assign to user"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input asp-for="NormalizedUserName" class="form-control" />
-        <span class="hint">@T["The normalized username to assign the retry to. Leave empty to assign to the user who completed the activity."]</span>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
+            inputName = Html.NameFor(m => m.NormalizedUserName),
+            endpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=normalizedUserName"),
+            initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+            multiple = false,
+            enableSearch = true,
+            enableSelectAll = false,
+            enableDeselectAll = true,
+            buttonText = T["Browse users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["No user selected."].Value,
+            loadingText = T["Loading users..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected user"].Value,
+            availableItemsLabel = T["Available users"].Value,
+            searchButtonText = T["Search"].Value,
+        })
+        <span class="hint">@T["Assign the retry to a specific user. Leave empty to assign it to the user who completed the activity."]</span>
     </div>
 </div>
 

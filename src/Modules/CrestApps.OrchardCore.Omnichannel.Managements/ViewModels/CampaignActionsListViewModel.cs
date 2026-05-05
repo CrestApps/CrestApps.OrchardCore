@@ -18,4 +18,6 @@ public class CampaignActionEntryViewModel
     public string DispositionDisplayText { get; set; }
 
     public string ActionTypeDisplayName { get; set; }
+
+    public string SubjectDisplayText { get; set; }
 }

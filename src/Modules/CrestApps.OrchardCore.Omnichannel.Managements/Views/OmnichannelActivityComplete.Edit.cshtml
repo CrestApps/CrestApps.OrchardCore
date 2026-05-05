@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore
@@ -75,7 +76,7 @@
     </div>
 
     <div id="campaign-actions-preview" class="d-none mb-3">
-        <h5>@T["What will happen next"]</h5>
+        <h5 class="text-uppercase">@T["Workflow Results"]</h5>
         <div id="actions-list"></div>
     </div>
 </div>
@@ -94,6 +95,9 @@
         const previewContainer = document.getElementById("campaign-actions-preview");
         const actionsList = document.getElementById("actions-list");
         const campaignId = '@Model.CampaignId';
+        const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
+        const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
+        const currentAttempts = @Model.Attempts;
 
         function initFlatpickr(input) {
             flatpickr(input, {
@@ -117,7 +121,13 @@
                 const response = await fetch('@Url.Content("~/api/omnichannel/disposition-actions")', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ campaignId: campaignId, dispositionId: dispositionId })
+                    body: JSON.stringify({
+                        campaignId: campaignId,
+                        dispositionId: dispositionId,
+                        currentSubjectTitle: currentSubjectTitle,
+                        currentSubjectContentType: currentSubjectContentType,
+                        currentAttempts: currentAttempts
+                    })
                 });
 
                 if (!response.ok) {
@@ -139,7 +149,7 @@
                     const card = document.createElement("div");
                     card.className = "card mb-2";
 
-                    let cardBody = '<div class="card-body"><strong>' + action.actionTypeDisplayName + '</strong>';
+                    let cardBody = '<div class="card-body"><strong>' + action.previewTitle + '</strong>';
 
                     if (action.requiresScheduleDate) {
                         const inputId = 'schedule-' + action.actionId;

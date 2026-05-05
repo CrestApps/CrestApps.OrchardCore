@@ -34,27 +34,13 @@ internal sealed class CampaignActionDisplayDriver : DisplayDriver<CampaignAction
         );
     }
 
-    public override IDisplayResult Edit(CampaignAction action, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(CampaignAction action, BuildEditorContext context)
     {
-        return Initialize<CampaignActionViewModel>("CampaignActionFields_Edit", async model =>
-        {
-            model.DispositionId = action.DispositionId;
-            model.SetDoNotCall = action.SetDoNotCall;
-            model.SetDoNotSms = action.SetDoNotSms;
-            model.SetDoNotEmail = action.SetDoNotEmail;
-            model.SetDoNotChat = action.SetDoNotChat;
-
-            var dispositions = await _dispositionsCatalog.GetAllAsync();
-
-            model.Dispositions = dispositions
-                .Select(d => new SelectListItem
-                {
-                    Text = d.DisplayText,
-                    Value = d.ItemId,
-                    Selected = string.Equals(d.ItemId, action.DispositionId, StringComparison.OrdinalIgnoreCase),
-                })
-                .OrderBy(x => x.Text);
-        }).Location("Content:1");
+        return Combine(
+            Initialize<CampaignActionViewModel>("CampaignActionFields_Edit", async model => await PopulateAsync(model, action))
+                .Location("Content:1"),
+            Initialize<CampaignActionViewModel>("CampaignActionCommunicationPreferences_Edit", async model => await PopulateAsync(model, action))
+                .Location("Content:100"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CampaignAction action, UpdateEditorContext context)
@@ -69,11 +55,47 @@ internal sealed class CampaignActionDisplayDriver : DisplayDriver<CampaignAction
         }
 
         action.DispositionId = model.DispositionId;
-        action.SetDoNotCall = model.SetDoNotCall;
-        action.SetDoNotSms = model.SetDoNotSms;
-        action.SetDoNotEmail = model.SetDoNotEmail;
-        action.SetDoNotChat = model.SetDoNotChat;
 
-        return Edit(action, context);
+        if (model.ShowCommunicationPreferences)
+        {
+            action.SetDoNotCall = model.SetDoNotCall;
+            action.SetDoNotSms = model.SetDoNotSms;
+            action.SetDoNotEmail = model.SetDoNotEmail;
+            action.SetDoNotChat = model.SetDoNotChat;
+        }
+        else
+        {
+            action.SetDoNotCall = null;
+            action.SetDoNotSms = null;
+            action.SetDoNotEmail = null;
+            action.SetDoNotChat = null;
+        }
+
+        return await EditAsync(action, context);
+    }
+
+    private async Task PopulateAsync(CampaignActionViewModel model, CampaignAction action)
+    {
+        model.DispositionId = action.DispositionId;
+        model.ShowCommunicationPreferences =
+            action.SetDoNotCall.HasValue ||
+            action.SetDoNotSms.HasValue ||
+            action.SetDoNotEmail.HasValue ||
+            action.SetDoNotChat.HasValue;
+        model.SetDoNotCall = action.SetDoNotCall;
+        model.SetDoNotSms = action.SetDoNotSms;
+        model.SetDoNotEmail = action.SetDoNotEmail;
+        model.SetDoNotChat = action.SetDoNotChat;
+
+        var dispositions = await _dispositionsCatalog.GetAllAsync();
+
+        model.Dispositions = dispositions
+            .Select(d => new SelectListItem
+            {
+                Text = d.DisplayText,
+                Value = d.ItemId,
+                Selected = string.Equals(d.ItemId, action.DispositionId, StringComparison.OrdinalIgnoreCase),
+            })
+            .OrderBy(x => x.Text);
     }
 }

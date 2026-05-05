@@ -1,7 +1,9 @@
-@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using CrestApps.OrchardCore.Omnichannel.Core.Models
-@using OrchardCore
 @using System.Globalization
+@using System.Text.Json
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
 
 @model OmnichannelActivityBatchViewModel
 
@@ -77,7 +79,29 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="UserIds" class="@Orchard.GetLabelClasses()">@T["User(s) to assign activities to"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="UserIds" asp-items="Model.Users" class="form-select" multiple></select>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = $"{Html.IdFor(m => m.UserIds)}_Selector",
+            inputName = Html.NameFor(m => m.UserIds),
+            endpoint = Url.Content($"~/Admin/api/crestapps/users/search?valueType=userId&role={OmnichannelConstants.AgentRole}"),
+            initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+            multiple = true,
+            enableSearch = true,
+            enableSelectAll = true,
+            enableDeselectAll = true,
+            buttonText = T["Browse users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["No users selected."].Value,
+            loadingText = T["Loading users..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected users"].Value,
+            availableItemsLabel = T["Available users"].Value,
+            selectAllText = T["Select all"].Value,
+            deselectAllText = T["Deselect all"].Value,
+            searchButtonText = T["Search"].Value,
+        })
         <span asp-validation-for="UserIds" class="text-danger"></span>
     </div>
 </div>

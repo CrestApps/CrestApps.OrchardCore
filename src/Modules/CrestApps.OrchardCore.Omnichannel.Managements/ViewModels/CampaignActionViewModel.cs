@@ -8,6 +8,8 @@ public class CampaignActionViewModel
 {
     public string DispositionId { get; set; }
 
+    public bool ShowCommunicationPreferences { get; set; }
+
     public bool? SetDoNotCall { get; set; }
 
     public bool? SetDoNotSms { get; set; }

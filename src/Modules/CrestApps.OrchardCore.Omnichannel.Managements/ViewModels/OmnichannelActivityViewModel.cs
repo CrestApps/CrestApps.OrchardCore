@@ -59,6 +59,18 @@ public class OmnichannelActivityViewModel
     public string Subject { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject content type.
+    /// </summary>
+    [BindNever]
+    public string SubjectContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current attempt number.
+    /// </summary>
+    [BindNever]
+    public int Attempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the scheduled local.
     /// </summary>
     [BindNever]

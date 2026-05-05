@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 
@@ -29,6 +31,8 @@ internal static class CampaignActionEndpoints
         ISourceCatalog<CampaignAction> actionCatalog,
         ICatalog<OmnichannelDisposition> dispositionCatalog,
         IOptions<CampaignActionOptions> actionOptions,
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<CampaignActionEndpointsMarker> stringLocalizer,
         IClock clock,
         HttpContext httpContext)
     {
@@ -50,10 +54,16 @@ internal static class CampaignActionEndpoints
             .ToArray();
 
         var options = actionOptions.Value;
+        var S = stringLocalizer;
         var now = clock.UtcNow;
 
-        var result = actions.Select(action =>
+        var responses = await Task.WhenAll(actions.Select(async action =>
         {
+            if (string.Equals(action.Source, OmnichannelConstants.ActionTypes.Finish, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
             var typeDisplayName = options.ActionTypes.TryGetValue(action.Source, out var typeEntry)
                 ? typeEntry.DisplayName?.Value
                 : action.Source;
@@ -89,17 +99,93 @@ internal static class CampaignActionEndpoints
                     : now.AddDays(1);
             }
 
+            var previewTitle = await ResolvePreviewTitleAsync(action, request, contentDefinitionManager, S);
+
             return new DispositionActionResponse
             {
                 ActionId = action.ItemId,
                 ActionType = action.Source,
                 ActionTypeDisplayName = typeDisplayName,
+                PreviewTitle = string.IsNullOrWhiteSpace(previewTitle) ? typeDisplayName : previewTitle,
                 RequiresScheduleDate = requiresScheduleDate,
                 DefaultScheduleDate = defaultScheduleDate,
             };
-        }).ToArray();
+        }));
+
+        var result = responses
+            .OfType<DispositionActionResponse>()
+            .ToArray();
 
         return Results.Ok(result);
+    }
+
+    private static async Task<string> ResolvePreviewTitleAsync(
+        CampaignAction action,
+        DispositionActionsRequest request,
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer stringLocalizer)
+    {
+        if (string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(request?.CurrentSubjectTitle))
+            {
+                return stringLocalizer["{0} {1} attempt", request.CurrentSubjectTitle, ToOrdinal(request.CurrentAttempts + 1)].Value;
+            }
+
+            return null;
+        }
+
+        if (!string.Equals(action.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string subjectContentType = null;
+
+        if (action.TryGet<NewActivityActionMetadata>(out var newActivityMeta) && !string.IsNullOrWhiteSpace(newActivityMeta.SubjectContentType))
+        {
+            subjectContentType = newActivityMeta.SubjectContentType;
+        }
+        else
+        {
+            subjectContentType = request?.CurrentSubjectContentType;
+        }
+
+        if (string.IsNullOrWhiteSpace(subjectContentType))
+        {
+            return null;
+        }
+
+        var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
+
+        return contentTypeDefinition?.DisplayName ?? subjectContentType;
+    }
+
+    private static string ToOrdinal(int number)
+    {
+        if (number <= 0)
+        {
+            return number.ToString();
+        }
+
+        var lastTwoDigits = number % 100;
+        var lastDigit = number % 10;
+        var suffix = lastTwoDigits is 11 or 12 or 13
+            ? "th"
+            : lastDigit switch
+            {
+                1 => "st",
+                2 => "nd",
+                3 => "rd",
+                _ => "th",
+            };
+
+        return $"{number}{suffix}";
+    }
+
+    private sealed class CampaignActionEndpointsMarker
+    {
+
     }
 }
 
@@ -108,6 +194,12 @@ internal sealed class DispositionActionsRequest
     public string CampaignId { get; set; }
 
     public string DispositionId { get; set; }
+
+    public string CurrentSubjectTitle { get; set; }
+
+    public string CurrentSubjectContentType { get; set; }
+
+    public int CurrentAttempts { get; set; }
 }
 
 internal sealed class DispositionActionResponse
@@ -117,6 +209,8 @@ internal sealed class DispositionActionResponse
     public string ActionType { get; set; }
 
     public string ActionTypeDisplayName { get; set; }
+
+    public string PreviewTitle { get; set; }
 
     public bool RequiresScheduleDate { get; set; }
 

@@ -6,6 +6,18 @@
     "output": "wwwroot/scripts/list-management-ui.js"
   },
   {
+    "inputs": [
+      "Assets/js/item-selector.js"
+    ],
+    "output": "wwwroot/scripts/item-selector.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/item-selector.css"
+    ],
+    "output": "wwwroot/styles/item-selector.css"
+  },
+  {
     "copy": true,
     "inputs": [
       "node_modules/chart.js/dist/chart.umd.js"

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -63,6 +65,9 @@ public sealed class CampaignAction : SourceCatalogEntry, IDisplayTextAwareModel,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
+            Properties = Properties is null
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(Properties)),
         };
     }
 }

@@ -1,13 +1,15 @@
+@using System.Text.Json
+@using CrestApps.Core.Support
 @using CrestApps.OrchardCore.Users
 @using CrestApps.OrchardCore.Users.Core
+@using Microsoft.AspNetCore.Mvc.Rendering
 @using OrchardCore
-@using OrchardCore.Contents.ViewModels
 @using OrchardCore.ContentManagement
+@using OrchardCore.Contents.ViewModels
+@using OrchardCore.Users
 @using OrchardCore.Users.Indexes
 @using OrchardCore.Users.Models
 @using YesSql
-@using CrestApps.Core.Support
-@using OrchardCore.Users
 
 @model OwnerEditorViewModel
 
@@ -18,23 +20,46 @@
 
 @{
     var normalizedUserName = Normalizer.NormalizeName(Model.OwnerName);
-    var users = await Session.Query<User, UserIndex>(q => q.IsEnabled || q.NormalizedUserName == normalizedUserName).ListAsync();
+    var selectedUser = await Session.Query<User, UserIndex>(q => q.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
     var items = new List<SelectListItem>();
 
-    foreach (var user in users)
+    if (selectedUser != null)
     {
-        await UserCacheService.SetAsync(user);
-        string displayName = await DisplayNameProvider.GetAsync(user);
+        await UserCacheService.SetAsync(selectedUser);
+        string displayName = await DisplayNameProvider.GetAsync(selectedUser);
 
-        items.Add(new SelectListItem(displayName, user.UserName));
+        items.Add(new SelectListItem(displayName, selectedUser.UserName));
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.OwnerName))
+    {
+        items.Add(new SelectListItem(Model.OwnerName, Model.OwnerName));
     }
 }
 
 <div class="@Orchard.GetWrapperClasses("field-wrapper")">
-
     <label asp-for="OwnerName" class="@Orchard.GetLabelClasses()">@T["Owner Name"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="OwnerName" class="form-control" asp-items="items"></select>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = $"{Html.IdFor(m => m.OwnerName)}_Selector",
+            inputName = Html.NameFor(m => m.OwnerName),
+            endpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName"),
+            initialItemsJson = JsonSerializer.Serialize(items.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+            multiple = false,
+            enableSearch = true,
+            enableSelectAll = false,
+            enableDeselectAll = true,
+            buttonText = T["Browse users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["No user selected."].Value,
+            loadingText = T["Loading users..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected user"].Value,
+            availableItemsLabel = T["Available users"].Value,
+            searchButtonText = T["Search"].Value,
+        })
         <span class="hint">@T["The name of the owner of the content item."]</span>
     </div>
 </div>

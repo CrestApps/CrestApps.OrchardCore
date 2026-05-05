@@ -171,6 +171,19 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.Channel = activity.Channel;
             model.InteractionType = activity.InteractionType.ToString();
             model.Instructions = activity.Instructions;
+            model.SubjectContentType = activity.SubjectContentType;
+            model.Attempts = activity.Attempts;
+
+            if (string.IsNullOrWhiteSpace(activity.Subject?.DisplayText))
+            {
+                var subjectContentType = await _contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType);
+                model.Subject = subjectContentType?.DisplayName ?? activity.SubjectContentType;
+            }
+            else
+            {
+                model.Subject = activity.Subject.DisplayText;
+            }
+
             model.Dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
             model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;

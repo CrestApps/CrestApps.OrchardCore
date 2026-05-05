@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.ContentManagement.Metadata;
@@ -9,6 +11,10 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Users.Indexes;
+using OrchardCore.Users.Models;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -16,13 +22,19 @@ internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<Cam
 {
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ISession _session;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     public NewActivityCampaignActionDisplayDriver(
         ICatalog<OmnichannelCampaign> campaignCatalog,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        ISession session,
+        IDisplayNameProvider displayNameProvider)
     {
         _campaignCatalog = campaignCatalog;
         _contentDefinitionManager = contentDefinitionManager;
+        _session = session;
+        _displayNameProvider = displayNameProvider;
     }
 
     public override IDisplayResult Edit(CampaignAction action, BuildEditorContext context)
@@ -41,6 +53,26 @@ internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<Cam
                 model.UrgencyLevel = metadata.UrgencyLevel;
                 model.NormalizedUserName = metadata.NormalizedUserName;
                 model.DefaultScheduleHours = metadata.DefaultScheduleHours;
+
+                if (!string.IsNullOrWhiteSpace(metadata.NormalizedUserName))
+                {
+                    var selectedUser = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == metadata.NormalizedUserName).FirstOrDefaultAsync();
+
+                    if (selectedUser != null)
+                    {
+                        model.SelectedUsers =
+                        [
+                            new SelectListItem(await _displayNameProvider.GetAsync(selectedUser), metadata.NormalizedUserName),
+                        ];
+                    }
+                    else
+                    {
+                        model.SelectedUsers =
+                        [
+                            new SelectListItem(metadata.NormalizedUserName, metadata.NormalizedUserName),
+                        ];
+                    }
+                }
             }
 
             var campaigns = await _campaignCatalog.GetAllAsync();
@@ -65,6 +97,8 @@ internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<Cam
                     Selected = string.Equals(t.Name, metadata?.SubjectContentType, StringComparison.OrdinalIgnoreCase),
                 })
                 .OrderBy(x => x.Text);
+
+            model.SelectedUsers ??= [];
         }).Location("Content:5");
     }
 
