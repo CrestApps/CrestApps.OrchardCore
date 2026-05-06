@@ -244,7 +244,7 @@ internal static class LegacyAIDeploymentMigrationHelper
         return deployments
             .Where(deployment =>
                 deployment.SupportsType(type) &&
-                string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase) &&
+                MatchesLegacyDeploymentName(deployment, deploymentName) &&
                 (string.Equals(deployment.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)))
             .Select(deployment => deployment.Name)
@@ -252,8 +252,14 @@ internal static class LegacyAIDeploymentMigrationHelper
             ?? deployments
                 .Where(deployment =>
                     deployment.SupportsType(type) &&
-                    string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase))
+                    MatchesLegacyDeploymentName(deployment, deploymentName))
                 .Select(deployment => deployment.Name)
                 .FirstOrDefault();
+    }
+
+    private static bool MatchesLegacyDeploymentName(AIDeployment deployment, string deploymentName)
+    {
+        return string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(deployment.ModelName, deploymentName, StringComparison.OrdinalIgnoreCase);
     }
 }
