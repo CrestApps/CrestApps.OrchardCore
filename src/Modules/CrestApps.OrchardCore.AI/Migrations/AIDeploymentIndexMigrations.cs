@@ -241,7 +241,8 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         }
 
         var connections = (await connectionManager.GetAllAsync()).ToList();
-        await TryBackfillDefaultDeploymentSettingsAsync(siteService, connections, existingDeployments);
+        var deploymentDefaults = await CollectDeploymentDefaultsAsync(deploymentManager, existingDeployments);
+        await TryBackfillDefaultDeploymentSettingsAsync(siteService, connections, deploymentDefaults);
 
         if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
         {
@@ -283,6 +284,37 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         }
 
         await siteService.UpdateSiteSettingsAsync(site);
+    }
+
+    private static async Task<List<AIDeployment>> CollectDeploymentDefaultsAsync(
+        IAIDeploymentManager deploymentManager,
+        IEnumerable<AIDeployment> deployments)
+    {
+        var results = deployments.ToDictionary(deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase);
+        var types = new[]
+        {
+            AIDeploymentType.Chat,
+            AIDeploymentType.Utility,
+            AIDeploymentType.Embedding,
+            AIDeploymentType.Image,
+            AIDeploymentType.SpeechToText,
+            AIDeploymentType.TextToSpeech,
+        };
+
+        foreach (var type in types)
+        {
+            foreach (var deployment in await deploymentManager.GetByTypeAsync(type))
+            {
+                if (string.IsNullOrWhiteSpace(deployment.ItemId))
+                {
+                    continue;
+                }
+
+                results[deployment.ItemId] = deployment;
+            }
+        }
+
+        return results.Values.ToList();
     }
 
     private static async Task<List<Document>> GetLegacyDocumentsAsync(
