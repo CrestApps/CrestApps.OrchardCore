@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +12,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Settings;
 using YesSql;
 using YesSql.Sql;
 
@@ -84,6 +87,8 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         var store = serviceProvider.GetRequiredService<IStore>();
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
+        var connectionManager = serviceProvider.GetRequiredService<INamedSourceCatalogManager<AIProviderConnection>>();
+        var siteService = serviceProvider.GetRequiredService<ISiteService>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIDeploymentIndexMigrations>>();
 
         var dialect = store.Configuration.SqlDialect;
@@ -177,6 +182,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                     modelName,
                     sourceName,
                     connectionName);
+                var existingDeploymentType = deployment?.Type ?? AIDeploymentType.None;
 
                 if (deployment is not null)
                 {
@@ -215,9 +221,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
                 if (deploymentType.IsValidSelection())
                 {
-                    deployment.Type = deployment.Type.IsValidSelection()
-                        ? deployment.Type | deploymentType
-                        : deploymentType;
+                    deployment.Type = LegacyAIDeploymentMigrationHelper.MergeDeploymentTypes(existingDeploymentType, deploymentType);
                 }
 
                 var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -235,6 +239,9 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 importedCount++;
             }
         }
+
+        var connections = (await connectionManager.GetAllAsync()).ToList();
+        await TryBackfillDefaultDeploymentSettingsAsync(siteService, connections, existingDeployments);
 
         if (importedCount > 0 && logger.IsEnabled(LogLevel.Information))
         {
@@ -255,6 +262,27 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         }
 
         deployments.Add(deployment);
+    }
+
+    private static async Task TryBackfillDefaultDeploymentSettingsAsync(
+        ISiteService siteService,
+        IEnumerable<AIProviderConnection> connections,
+        IEnumerable<AIDeployment> deployments)
+    {
+        var site = await siteService.LoadSiteSettingsAsync();
+        var updated = false;
+
+        site.Alter<DefaultAIDeploymentSettings>(settings =>
+        {
+            updated = LegacyAIDeploymentMigrationHelper.TryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+        });
+
+        if (!updated)
+        {
+            return;
+        }
+
+        await siteService.UpdateSiteSettingsAsync(site);
     }
 
     private static async Task<List<Document>> GetLegacyDocumentsAsync(
@@ -433,6 +461,8 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         deploymentType = InferDeploymentType(
             deploymentName,
             FindMatchingConnection(connectionSelector, sourceName, legacyConnections));
+
+        deploymentType = LegacyAIDeploymentMigrationHelper.NormalizeInteractiveTypes(deploymentType);
 
         return deploymentType.IsValidSelection()
             ? deploymentType
