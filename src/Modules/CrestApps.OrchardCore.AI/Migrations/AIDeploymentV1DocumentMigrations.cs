@@ -78,6 +78,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         }
 
         var importedCount = 0;
+        var existingDeployments = (await deploymentManager.GetAllAsync()).ToList();
 
         foreach (var batch in BatchDocuments(documents))
         {
@@ -101,11 +102,13 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
 
                         var itemId = deploymentObject[nameof(AIDeployment.ItemId)]?.GetValue<string>();
                         var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
+                        var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
 #pragma warning disable CS0618 // Type or member is obsolete
                         var sourceName = deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
                             ?? deploymentObject[nameof(AIDeployment.ProviderName)]?.GetValue<string>()?.Trim()
                             ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
+                        var connectionName = deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
 
                         if (string.IsNullOrWhiteSpace(itemId) &&
                             (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(sourceName)))
@@ -116,19 +119,13 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                             continue;
                         }
 
-                        AIDeployment deployment = null;
-
-                        if (!string.IsNullOrWhiteSpace(itemId))
-                        {
-                            deployment = await deploymentManager.FindByIdAsync(itemId);
-                        }
-
-                        if (deployment is null &&
-                            !string.IsNullOrWhiteSpace(name) &&
-                            !string.IsNullOrWhiteSpace(sourceName))
-                        {
-                            deployment = await deploymentManager.GetAsync(name, sourceName);
-                        }
+                        var deployment = LegacyAIDeploymentMigrationHelper.FindWritableDeployment(
+                            existingDeployments,
+                            itemId,
+                            name,
+                            modelName,
+                            sourceName,
+                            connectionName);
 
                         if (deployment is not null)
                         {
@@ -144,12 +141,36 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                                 continue;
                             }
 
+                            var uniqueName = LegacyAIDeploymentMigrationHelper.GenerateUniqueDeploymentName(existingDeployments, name);
+
+                            if (!string.Equals(uniqueName, name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                deploymentObject[nameof(AIDeployment.ModelName)] ??= name;
+                                deploymentObject[nameof(AIDeployment.Name)] = uniqueName;
+
+                                if (logger.IsEnabled(LogLevel.Information))
+                                {
+                                    logger.LogInformation(
+                                        "Creating migrated v1 AI deployment {ItemId} as '{UniqueName}' because '{OriginalName}' is already used by another deployment.",
+                                        itemId ?? record.Key,
+                                        uniqueName,
+                                        name);
+                                }
+                            }
+
                             deployment = await deploymentManager.NewAsync(sourceName, deploymentObject);
 
                             if (!string.IsNullOrWhiteSpace(itemId) && UniqueId.IsValid(itemId))
                             {
                                 deployment.ItemId = itemId;
                             }
+                        }
+
+                        if (TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out var deploymentType))
+                        {
+                            deployment.Type = deployment.Type.IsValidSelection()
+                                ? deployment.Type | deploymentType
+                                : deploymentType;
                         }
 
                         var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -164,6 +185,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                         }
 
                         await deploymentManager.CreateAsync(deployment);
+                        UpsertExistingDeployment(existingDeployments, deployment);
                         importedCount++;
                     }
                     catch (Exception ex)
@@ -178,6 +200,19 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         {
             logger.LogInformation("Completed v1 AIDeployment migration. Migrated or updated {Count} deployments.", importedCount);
         }
+    }
+
+    private static void UpsertExistingDeployment(List<AIDeployment> deployments, AIDeployment deployment)
+    {
+        var existingDeployment = deployments.FirstOrDefault(item =>
+            string.Equals(item.ItemId, deployment.ItemId, StringComparison.OrdinalIgnoreCase));
+
+        if (existingDeployment is not null)
+        {
+            deployments.Remove(existingDeployment);
+        }
+
+        deployments.Add(deployment);
     }
 
     private static async Task TryBackfillDefaultDeploymentSettingsAsync(IServiceProvider serviceProvider)
