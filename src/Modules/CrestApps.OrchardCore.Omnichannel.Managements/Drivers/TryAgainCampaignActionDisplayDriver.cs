@@ -3,14 +3,12 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
-using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 

@@ -9,6 +9,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -85,12 +86,12 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         if (model.MaximumIterationsPerRequest < 1)
         {
-            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", S["Maximum iterations per request must be at least {0}.", 1]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaximumIterationsPerRequest), S["Maximum iterations per request must be at least {0}.", 1]);
         }
 
         if (model.MaximumIterationsPerRequest > _defaultAIOptions.AbsoluteMaximumIterationsPerRequest)
         {
-            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", S["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaximumIterationsPerRequest), S["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
         }
 
         if (!context.Updater.ModelState.IsValid)

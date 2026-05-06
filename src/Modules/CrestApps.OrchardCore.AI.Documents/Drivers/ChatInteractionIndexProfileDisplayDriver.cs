@@ -1,6 +1,5 @@
-﻿using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;

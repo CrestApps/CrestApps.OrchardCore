@@ -219,8 +219,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
                         if (!result.Success)
                         {
-                            context.Updater.ModelState.AddModelError(
-                                $"{Prefix}.{nameof(model.Files)}",
+                            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Files),
                             S["{0}: {1}", file.FileName, result.Error]);
                             continue;
                         }

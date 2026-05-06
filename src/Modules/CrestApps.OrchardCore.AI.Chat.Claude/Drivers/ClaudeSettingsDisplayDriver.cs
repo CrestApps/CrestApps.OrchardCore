@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Claude.Models;
+using CrestApps.Core.AI.Claude.Models;
 using CrestApps.Core.AI.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
@@ -11,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Claude.Drivers;
@@ -102,7 +103,7 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
             }
             else if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required."]);
             }
         }
 

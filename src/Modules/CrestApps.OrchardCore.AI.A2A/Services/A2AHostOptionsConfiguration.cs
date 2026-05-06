@@ -17,7 +17,6 @@ internal sealed class A2AHostOptionsConfiguration : IConfigureOptions<A2AHostOpt
     /// Initializes a new instance of the <see cref="A2AHostOptionsConfiguration"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The shell configuration.</param>
-    /// <param name="logger">The logger.</param>
     public A2AHostOptionsConfiguration(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;
@@ -29,11 +28,14 @@ internal sealed class A2AHostOptionsConfiguration : IConfigureOptions<A2AHostOpt
     /// <param name="options">The options instance to configure.</param>
     public void Configure(A2AHostOptions options)
     {
+        var deprecatedSection = _shellConfiguration.GetSection("CrestApps:A2AHost");
         var section = _shellConfiguration.GetSection("CrestApps:AI:A2AHost");
 
+        deprecatedSection.Bind(options);
         section.Bind(options);
 
-        if (string.IsNullOrWhiteSpace(section[nameof(A2AHostOptions.AuthenticationType)]))
+        if (string.IsNullOrWhiteSpace(section[nameof(A2AHostOptions.AuthenticationType)]) &&
+            string.IsNullOrWhiteSpace(deprecatedSection[nameof(A2AHostOptions.AuthenticationType)]))
         {
             options.AuthenticationType = A2AHostAuthenticationType.OpenId;
         }

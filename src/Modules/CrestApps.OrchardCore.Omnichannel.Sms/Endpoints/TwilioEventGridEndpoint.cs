@@ -1,5 +1,4 @@
-﻿using System.Text;
-using CrestApps.Core.Support;
+using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Builder;

@@ -2,9 +2,8 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Users;
-using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -14,7 +13,6 @@ using OrchardCore.Entities;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 

@@ -13,7 +13,6 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
     /// Initializes a new instance of the <see cref="McpServerOptionsConfiguration"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The shell configuration.</param>
-    /// <param name="logger">The logger.</param>
     public McpServerOptionsConfiguration(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;
@@ -25,11 +24,14 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
     /// <param name="options">The options.</param>
     public void Configure(McpServerOptions options)
     {
+        var deprecatedSection = _shellConfiguration.GetSection("CrestApps:McpServer");
         var section = _shellConfiguration.GetSection("CrestApps:AI:McpServer");
 
+        deprecatedSection.Bind(options);
         section.Bind(options);
 
-        if (string.IsNullOrWhiteSpace(section[nameof(McpServerOptions.AuthenticationType)]))
+        if (string.IsNullOrWhiteSpace(section[nameof(McpServerOptions.AuthenticationType)]) &&
+            string.IsNullOrWhiteSpace(deprecatedSection[nameof(McpServerOptions.AuthenticationType)]))
         {
             options.AuthenticationType = McpServerAuthenticationType.OpenId;
         }

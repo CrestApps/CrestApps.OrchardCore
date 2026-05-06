@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -11,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
@@ -115,7 +116,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.IsNullOrWhiteSpace(settings.ClientId))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ClientId), S["Client ID is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ClientId), S["Client ID is required."]);
             }
 
             if (!string.IsNullOrWhiteSpace(model.ClientSecret))
@@ -125,7 +126,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             }
             else if (string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client secret is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ClientSecret), S["Client secret is required."]);
             }
         }
         else if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
@@ -139,17 +140,17 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.IsNullOrWhiteSpace(settings.ProviderType))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ProviderType), S["Provider type is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderType), S["Provider type is required."]);
             }
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.BaseUrl), S["Base URL is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["Base URL is required."]);
             }
 
             if (string.IsNullOrWhiteSpace(settings.DefaultModel))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.DefaultModel), S["Default model is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultModel), S["Default model is required."]);
             }
 
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
@@ -161,14 +162,14 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(settings.AzureApiVersion))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.AzureApiVersion), S["Azure API version is required for Azure provider."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AzureApiVersion), S["Azure API version is required for Azure provider."]);
             }
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(model.ApiKey)
                     && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required for Azure provider."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }
         }
 
