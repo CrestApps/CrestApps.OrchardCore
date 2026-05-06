@@ -82,7 +82,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
     }
 
     [Fact]
-    public void TryPopulateDefaultDeploymentSettings_WhenMultiTypeDeploymentExists_ShouldBackfillChatAndUtility()
+    public void TryPopulateDefaultDeploymentSettings_WhenMatchingDeploymentsExist_ShouldBackfillAllMissingDefaults()
     {
         // Arrange
         var settings = new DefaultAIDeploymentSettings();
@@ -97,6 +97,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
         };
         connections[0].SetLegacyChatDeploymentName("gpt-4.1-mini");
         connections[0].SetLegacyUtilityDeploymentName("gpt-4.1-mini");
+        connections[0].SetLegacyEmbeddingDeploymentName("text-embedding-3-small");
 
         var deployments = new[]
         {
@@ -109,6 +110,33 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ConnectionName = "winnerware",
                 Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
             },
+            new AIDeployment
+            {
+                ItemId = "embedding-id",
+                Name = "text-embedding-3-small-migrated",
+                ModelName = "text-embedding-3-small",
+                Source = "Azure",
+                ConnectionName = "winnerware",
+                Type = AIDeploymentType.Embedding,
+            },
+            new AIDeployment
+            {
+                ItemId = "stt-id",
+                Name = "whisper",
+                ModelName = "whisper",
+                Source = "Azure",
+                ConnectionName = "winnerware",
+                Type = AIDeploymentType.SpeechToText,
+            },
+            new AIDeployment
+            {
+                ItemId = "tts-id",
+                Name = "AzureTextToSpeech",
+                ModelName = "AzureTextToSpeech",
+                Source = "Azure",
+                ConnectionName = "winnerware",
+                Type = AIDeploymentType.TextToSpeech,
+            },
         };
 
         // Act
@@ -118,6 +146,9 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
         Assert.True(updated);
         Assert.Equal("gpt-4.1-mini-migrated", settings.DefaultChatDeploymentName);
         Assert.Equal("gpt-4.1-mini-migrated", settings.DefaultUtilityDeploymentName);
+        Assert.Equal("text-embedding-3-small-migrated", settings.DefaultEmbeddingDeploymentName);
+        Assert.Equal("whisper", settings.DefaultSpeechToTextDeploymentName);
+        Assert.Equal("AzureTextToSpeech", settings.DefaultTextToSpeechDeploymentName);
     }
 
     private static AIDeployment InvokeFindWritableDeployment(
