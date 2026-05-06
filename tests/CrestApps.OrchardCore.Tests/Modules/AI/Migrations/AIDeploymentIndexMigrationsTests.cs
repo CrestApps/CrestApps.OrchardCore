@@ -58,6 +58,33 @@ public sealed class AIDeploymentIndexMigrationsTests
     }
 
     [Fact]
+    public void InferLegacyDeploymentType_WhenConnectionReferencesUtilityDeployment_ShouldReturnChatAndUtility()
+    {
+        // Arrange
+        var connections = new[]
+        {
+            CreateConnection(
+                itemId: "winnerware-id",
+                name: "winnerware",
+                clientName: "Azure",
+                legacyUtilityDeploymentName: "gpt-4.1-mini"),
+        };
+
+        // Act
+        var deploymentType = InvokeInferLegacyDeploymentType(
+            itemId: "utility-id",
+            deploymentName: "gpt-4.1-mini",
+            connectionSelector: "winnerware",
+            sourceName: "Azure",
+            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase),
+            connections);
+
+        // Assert
+        Assert.Equal(AIDeploymentType.Chat | AIDeploymentType.Utility, deploymentType);
+    }
+
+    [Fact]
     public void InferLegacyDeploymentType_WhenNoLegacyHintsExist_ShouldFallbackToChat()
     {
         // Arrange
@@ -100,7 +127,8 @@ public sealed class AIDeploymentIndexMigrationsTests
         string itemId,
         string name,
         string clientName,
-        string legacyEmbeddingDeploymentName = null)
+        string legacyEmbeddingDeploymentName = null,
+        string legacyUtilityDeploymentName = null)
     {
         var connection = new AIProviderConnection
         {
@@ -110,6 +138,7 @@ public sealed class AIDeploymentIndexMigrationsTests
         };
 
         connection.SetLegacyEmbeddingDeploymentName(legacyEmbeddingDeploymentName);
+        connection.SetLegacyUtilityDeploymentName(legacyUtilityDeploymentName);
 
         return connection;
     }

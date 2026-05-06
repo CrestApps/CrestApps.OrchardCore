@@ -126,6 +126,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                             modelName,
                             sourceName,
                             connectionName);
+                        var existingDeploymentType = deployment?.Type ?? AIDeploymentType.None;
 
                         if (deployment is not null)
                         {
@@ -168,9 +169,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
 
                         if (TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out var deploymentType))
                         {
-                            deployment.Type = deployment.Type.IsValidSelection()
-                                ? deployment.Type | deploymentType
-                                : deploymentType;
+                            deployment.Type = LegacyAIDeploymentMigrationHelper.MergeDeploymentTypes(existingDeploymentType, deploymentType);
                         }
 
                         var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -291,9 +290,10 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         if (!TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out _))
         {
             deploymentObject[nameof(AIDeployment.Type)] = CreateTypeNode(
-                InferDeploymentType(
+                LegacyAIDeploymentMigrationHelper.NormalizeInteractiveTypes(
+                    InferDeploymentType(
                     deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>(),
-                    connection));
+                    connection)));
         }
     }
 
@@ -342,6 +342,8 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
         AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacySpeechToTextDeploymentName(), AIDeploymentType.SpeechToText);
 
+        deploymentType = LegacyAIDeploymentMigrationHelper.NormalizeInteractiveTypes(deploymentType);
+
         return deploymentType.IsValidSelection()
             ? deploymentType
             : AIDeploymentType.Chat;
@@ -379,129 +381,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         IEnumerable<AIProviderConnection> connections,
         IEnumerable<AIDeployment> deployments)
     {
-        var updated = false;
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultChatDeploymentName,
-            value => settings.DefaultChatDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.Chat,
-                static connection => connection.GetLegacyChatDeploymentName()));
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultUtilityDeploymentName,
-            value => settings.DefaultUtilityDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.Utility,
-                static connection => connection.GetLegacyUtilityDeploymentName()));
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultEmbeddingDeploymentName,
-            value => settings.DefaultEmbeddingDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.Embedding,
-                static connection => connection.GetLegacyEmbeddingDeploymentName()));
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultImageDeploymentName,
-            value => settings.DefaultImageDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.Image,
-                static connection => connection.GetLegacyImageDeploymentName()));
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultSpeechToTextDeploymentName,
-            value => settings.DefaultSpeechToTextDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.SpeechToText,
-                static connection => connection.GetLegacySpeechToTextDeploymentName()));
-
-        updated |= TryPopulateDefaultDeploymentName(
-            settings.DefaultTextToSpeechDeploymentName,
-            value => settings.DefaultTextToSpeechDeploymentName = value,
-            FindPreferredDeploymentName(
-                deployments,
-                connections,
-                AIDeploymentType.TextToSpeech));
-
-        return updated;
-    }
-
-    private static bool TryPopulateDefaultDeploymentName(
-        string currentValue,
-        Action<string> assign,
-        string newValue)
-    {
-        if (!string.IsNullOrWhiteSpace(currentValue) || string.IsNullOrWhiteSpace(newValue))
-        {
-            return false;
-        }
-
-        assign(newValue);
-
-        return true;
-    }
-
-    private static string FindPreferredDeploymentName(
-        IEnumerable<AIDeployment> deployments,
-        IEnumerable<AIProviderConnection> connections,
-        AIDeploymentType type,
-        Func<AIProviderConnection, string> legacyDeploymentNameAccessor = null)
-    {
-        var candidates = deployments
-            .Where(deployment => deployment.SupportsType(type))
-            .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (legacyDeploymentNameAccessor != null)
-        {
-            foreach (var connection in connections
-                .Where(connection => !string.IsNullOrWhiteSpace(legacyDeploymentNameAccessor(connection)))
-                .OrderBy(connection => connection.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                var deploymentName = FindConnectionDeploymentName(type, connection, candidates, legacyDeploymentNameAccessor(connection));
-
-                if (!string.IsNullOrWhiteSpace(deploymentName))
-                {
-                    return deploymentName;
-                }
-            }
-        }
-
-        return candidates.FirstOrDefault()?.Name;
-    }
-
-    private static string FindConnectionDeploymentName(
-        AIDeploymentType type,
-        AIProviderConnection connection,
-        IEnumerable<AIDeployment> deployments,
-        string deploymentName)
-    {
-        return deployments
-            .Where(deployment =>
-                deployment.SupportsType(type) &&
-                string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase) &&
-                (string.Equals(deployment.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(deployment.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)))
-            .Select(deployment => deployment.Name)
-            .FirstOrDefault()
-            ?? deployments
-                .Where(deployment =>
-                    deployment.SupportsType(type) &&
-                    string.Equals(deployment.Name, deploymentName, StringComparison.OrdinalIgnoreCase))
-                .Select(deployment => deployment.Name)
-                .FirstOrDefault();
+        return LegacyAIDeploymentMigrationHelper.TryPopulateDefaultDeploymentSettings(settings, connections, deployments);
     }
 
     private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)

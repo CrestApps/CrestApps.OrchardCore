@@ -36,7 +36,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
         Assert.Equal("legacy-deployment-id", deploymentObject[nameof(AIDeployment.ItemId)]?.GetValue<string>());
         Assert.Equal("gpt-4.1-mini", deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>());
         Assert.Equal("Azure", deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>());
-        Assert.Equal("Chat", deploymentObject[nameof(AIDeployment.Type)]?.GetValue<string>());
+        Assert.Equal(@"[""Chat"",""Utility""]", deploymentObject[nameof(AIDeployment.Type)]?.ToJsonString());
         Assert.Null(deploymentObject[nameof(AIDeployment.Properties)]?["ConnectionNameAlias"]);
     }
 
