@@ -126,6 +126,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
             quotedContentColumnName,
             quotedTableName);
         var importedCount = 0;
+        var existingDeployments = (await deploymentManager.GetAllAsync()).ToList();
 
         foreach (var document in documents)
         {
@@ -157,15 +158,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                     ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>();
 #pragma warning restore CS0618 // Type or member is obsolete
                 var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
-
-                var deployment = await deploymentManager.FindByIdAsync(itemId);
-
-                if (deployment is null &&
-                    !string.IsNullOrWhiteSpace(name) &&
-                    !string.IsNullOrWhiteSpace(sourceName))
-                {
-                    deployment = await deploymentManager.GetAsync(name, sourceName);
-                }
+                var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
 
                 var deploymentType = TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out var parsedDeploymentType)
                     ? parsedDeploymentType
@@ -177,6 +170,13 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                         legacyProfileDeploymentTypeHints.DeploymentTypesById,
                         legacyProfileDeploymentTypeHints.DeploymentTypesByName,
                         legacyConnections);
+                var deployment = LegacyAIDeploymentMigrationHelper.FindWritableDeployment(
+                    existingDeployments,
+                    itemId,
+                    name,
+                    modelName,
+                    sourceName,
+                    connectionName);
 
                 if (deployment is not null)
                 {
@@ -192,13 +192,32 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                         continue;
                     }
 
+                    var uniqueName = LegacyAIDeploymentMigrationHelper.GenerateUniqueDeploymentName(existingDeployments, name);
+
+                    if (!string.Equals(uniqueName, name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        deploymentObject[nameof(AIDeployment.ModelName)] ??= name;
+                        deploymentObject[nameof(AIDeployment.Name)] = uniqueName;
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Creating migrated AI deployment {ItemId} as '{UniqueName}' because '{OriginalName}' is already used by another deployment.",
+                                itemId,
+                                uniqueName,
+                                name);
+                        }
+                    }
+
                     deployment = await deploymentManager.NewAsync(sourceName, deploymentObject);
                     deployment.ItemId = itemId;
                 }
 
                 if (deploymentType.IsValidSelection())
                 {
-                    deployment.Type = deploymentType;
+                    deployment.Type = deployment.Type.IsValidSelection()
+                        ? deployment.Type | deploymentType
+                        : deploymentType;
                 }
 
                 var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -212,6 +231,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 }
 
                 await deploymentManager.CreateAsync(deployment);
+                UpsertExistingDeployment(existingDeployments, deployment);
                 importedCount++;
             }
         }
@@ -222,6 +242,19 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 "Imported or updated {Count} legacy AI deployments from dictionary documents.",
                 importedCount);
         }
+    }
+
+    private static void UpsertExistingDeployment(List<AIDeployment> deployments, AIDeployment deployment)
+    {
+        var existingDeployment = deployments.FirstOrDefault(item =>
+            string.Equals(item.ItemId, deployment.ItemId, StringComparison.OrdinalIgnoreCase));
+
+        if (existingDeployment is not null)
+        {
+            deployments.Remove(existingDeployment);
+        }
+
+        deployments.Add(deployment);
     }
 
     private static async Task<List<Document>> GetLegacyDocumentsAsync(
