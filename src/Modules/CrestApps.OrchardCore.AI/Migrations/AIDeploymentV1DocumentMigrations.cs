@@ -221,7 +221,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         var connectionManager = serviceProvider.GetRequiredService<INamedSourceCatalogManager<AIProviderConnection>>();
 
         var settings = await siteService.LoadSiteSettingsAsync();
-        var deployments = (await deploymentManager.GetAllAsync()).ToList();
+        var deployments = await CollectDeploymentDefaultsAsync(deploymentManager);
 
         if (deployments.Count == 0)
         {
@@ -242,6 +242,37 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         }
 
         await siteService.UpdateSiteSettingsAsync(settings);
+    }
+
+    private static async Task<List<AIDeployment>> CollectDeploymentDefaultsAsync(IAIDeploymentManager deploymentManager)
+    {
+        var results = (await deploymentManager.GetAllAsync())
+            .Where(deployment => !string.IsNullOrWhiteSpace(deployment.ItemId))
+            .ToDictionary(deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase);
+        var types = new[]
+        {
+            AIDeploymentType.Chat,
+            AIDeploymentType.Utility,
+            AIDeploymentType.Embedding,
+            AIDeploymentType.Image,
+            AIDeploymentType.SpeechToText,
+            AIDeploymentType.TextToSpeech,
+        };
+
+        foreach (var type in types)
+        {
+            foreach (var deployment in await deploymentManager.GetByTypeAsync(type))
+            {
+                if (string.IsNullOrWhiteSpace(deployment.ItemId))
+                {
+                    continue;
+                }
+
+                results[deployment.ItemId] = deployment;
+            }
+        }
+
+        return results.Values.ToList();
     }
 
     private static IEnumerable<IReadOnlyList<Document>> BatchDocuments(List<Document> documents)
