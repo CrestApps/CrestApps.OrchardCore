@@ -23,21 +23,23 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "Azure": {
-          "DefaultConnectionName": "<!-- Default connection name -->",
-          "Connections": {
-            "<!-- Unique connection name, ideally your Azure AccountName -->": {
-              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
-              "AuthenticationType": "ApiKey",
-              "ApiKey": "<!-- API Key for your Azure AI instance -->",
-              "Deployments": [
-                { "Name": "<!-- chat model deployment -->", "Type": "Chat", "IsDefault": true },
-                { "Name": "<!-- utility model deployment -->", "Type": "Utility", "IsDefault": true },
-                { "Name": "<!-- embedding model deployment -->", "Type": "Embedding", "IsDefault": true },
-                { "Name": "<!-- image model deployment -->", "Type": "Image", "IsDefault": true }
-              ]
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "Azure": {
+            "DefaultConnectionName": "<!-- Default connection name -->",
+            "Connections": {
+              "<!-- Unique connection name, ideally your Azure AccountName -->": {
+                "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+                "AuthenticationType": "ApiKey",
+                "ApiKey": "<!-- API Key for your Azure AI instance -->",
+                "Deployments": [
+                  { "Name": "<!-- chat model deployment -->", "Type": "Chat", "IsDefault": true },
+                  { "Name": "<!-- utility model deployment -->", "Type": "Utility", "IsDefault": true },
+                  { "Name": "<!-- embedding model deployment -->", "Type": "Embedding", "IsDefault": true },
+                  { "Name": "<!-- image model deployment -->", "Type": "Image", "IsDefault": true }
+                ]
+              }
             }
           }
         }
@@ -159,18 +161,20 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Deployments": [
-        {
-          "ClientName": "AzureSpeech",
-          "Name": "my-speech-to-text",
-          "Type": "SpeechToText",
-          "IsDefault": true,
-          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-          "AuthenticationType": "ApiKey",
-          "ApiKey": "your-speech-service-api-key"
-        }
-      ]
+    "CrestApps": {
+      "AI": {
+        "Deployments": [
+          {
+            "ClientName": "AzureSpeech",
+            "Name": "my-speech-to-text",
+            "Type": "SpeechToText",
+            "IsDefault": true,
+            "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+            "AuthenticationType": "ApiKey",
+            "ApiKey": "your-speech-service-api-key"
+          }
+        ]
+      }
     }
   }
 }

@@ -136,7 +136,7 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
                 }
                 else if (!string.IsNullOrEmpty(lastName) && !string.IsNullOrEmpty(firstName))
                 {
-                    displayName = lastName + ", " + firstName;
+                    displayName = $"{lastName}, {firstName}";
                 }
             }
             else if (settings.Type == DisplayNameType.FirstThenLast)

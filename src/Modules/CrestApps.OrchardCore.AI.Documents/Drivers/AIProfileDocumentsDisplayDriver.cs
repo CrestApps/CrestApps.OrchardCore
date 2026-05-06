@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
@@ -20,6 +20,7 @@ using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
@@ -196,8 +197,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
                     if (!_extractorOptions.Value.EmbeddableFileExtensions.Contains(extension))
                     {
-                        context.Updater.ModelState.AddModelError(
-                            Prefix + "." + nameof(model.Files),
+                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Files),
                         S["File type '{0}' is not supported for AI Profile documents. Only text-based files are allowed.", extension]);
                         continue;
                     }
@@ -212,9 +212,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
                         if (!result.Success)
                         {
-                            context.Updater.ModelState.AddModelError(
-                                Prefix + "." + nameof(model.Files),
-                            S["{0}: {1}", file.FileName, result.Error]);
+                            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Files), S["{0}: {1}", file.FileName, result.Error]);
                             continue;
                         }
 
@@ -232,9 +230,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Failed to process file {FileName}", file.FileName.SanitizeLogValue());
-                        context.Updater.ModelState.AddModelError(
-                            Prefix + "." + nameof(model.Files),
-                        S["Failed to process file '{0}'.", file.FileName]);
+                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Files), S["Failed to process file '{0}'.", file.FileName]);
                     }
                 }
 

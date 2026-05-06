@@ -153,28 +153,30 @@ To enable image generation, create an `AIDeployment` record with type `Image` fo
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "Deployments": [
-                {
-                  "Name": "gpt-4o",
-                  "Type": "Chat",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "gpt-4o-mini",
-                  "Type": "Utility",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "dall-e-3",
-                  "Type": "Image",
-                  "IsDefault": true
-                }
-              ]
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "OpenAI": {
+            "Connections": {
+              "default": {
+                "Deployments": [
+                  {
+                    "Name": "gpt-4o",
+                    "Type": "Chat",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "gpt-4o-mini",
+                    "Type": "Utility",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "dall-e-3",
+                    "Type": "Image",
+                    "IsDefault": true
+                  }
+                ]
+              }
             }
           }
         }

@@ -114,8 +114,7 @@ public sealed class AgentsModel : PageModel
 
             return new JsonResult(new
             {
-                error = "Authentication failed (401 Unauthorized). " +
-                "The A2A host requires authentication. Check the agent card's security schemes for details."
+                error = "Authentication failed (401 Unauthorized). The A2A host requires authentication. Check the agent card's security schemes for details."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -124,17 +123,14 @@ public sealed class AgentsModel : PageModel
 
             return new JsonResult(new
             {
-                error = "Access denied (403 Forbidden). " +
-                "You do not have permission to access this agent."
+                error = "Access denied (403 Forbidden). You do not have permission to access this agent."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return new JsonResult(new
             {
-                error = "The A2A host returned a 404 Not Found response. " +
-                "Please ensure the A2A Host feature is enabled on the default tenant " +
-                "(Configuration > Features > search for 'A2A Host')."
+                error = "The A2A host returned a 404 Not Found response. Please ensure the A2A Host feature is enabled on the default tenant (Configuration > Features > search for 'A2A Host')."
             });
         }
         catch (Exception ex)
@@ -196,9 +192,7 @@ public sealed class AgentsModel : PageModel
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            ErrorMessage = "The A2A host returned a 404 Not Found response. " +
-            "Please ensure the A2A Host feature is enabled on the default tenant " +
-            "(Configuration > Features > search for 'A2A Host').";
+            ErrorMessage = "The A2A host returned a 404 Not Found response. Please ensure the A2A Host feature is enabled on the default tenant (Configuration > Features > search for 'A2A Host').";
         }
         catch (Exception ex)
         {

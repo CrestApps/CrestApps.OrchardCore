@@ -86,6 +86,6 @@ public sealed class CloneContentTool : AIFunction
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 
-        return "Content item was successfully cloned. The ContentItemId of the new contentItem is: " + clone.ContentItemId;
+        return $"Content item was successfully cloned. The ContentItemId of the new contentItem is: {clone.ContentItemId}";
     }
 }

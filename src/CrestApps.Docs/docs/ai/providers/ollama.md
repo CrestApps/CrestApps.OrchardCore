@@ -34,17 +34,19 @@ To configure the Ollama connection, add the following settings to the `appsettin
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "Ollama": {
-          "DefaultConnectionName": "Default",
-          "Connections": {
-            "Default": {
-              "Endpoint": "<!-- Ollama host address -->",
-              "Deployments": [
-                { "Name": "deepseek-v2:16b", "Type": "Chat", "IsDefault": true },
-                { "Name": "deepseek-v2:16b", "Type": "Utility", "IsDefault": true }
-              ]
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "Ollama": {
+            "DefaultConnectionName": "Default",
+            "Connections": {
+              "Default": {
+                "Endpoint": "<!-- Ollama host address -->",
+                "Deployments": [
+                  { "Name": "deepseek-v2:16b", "Type": "Chat", "IsDefault": true },
+                  { "Name": "deepseek-v2:16b", "Type": "Utility", "IsDefault": true }
+                ]
+              }
             }
           }
         }

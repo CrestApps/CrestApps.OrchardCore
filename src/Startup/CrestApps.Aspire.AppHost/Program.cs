@@ -42,30 +42,30 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         // Uncomment the following lines to configure the Copilot orchestrator with BYOK authentication.
         // This bypasses GitHub OAuth and uses your own API key from a model provider.
         //
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__AuthenticationType", "ApiKey");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__ProviderType", "openai");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__BaseUrl", "http://localhost:11434/v1");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__DefaultModel", ollamaModelName);
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__WireApi", "completions");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__AuthenticationType", "ApiKey");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__ProviderType", "openai");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__BaseUrl", "http://localhost:11434/v1");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__DefaultModel", ollamaModelName);
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__WireApi", "completions");
         //
         // For Azure AI Foundry:
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__ProviderType", "azure");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__BaseUrl", "https://your-resource.openai.azure.com");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__ApiKey", "<your-api-key>");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__DefaultModel", "gpt-4o");
-        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__Copilot__AzureApiVersion", "2024-10-21");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__ProviderType", "azure");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__BaseUrl", "https://your-resource.openai.azure.com");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__ApiKey", "<your-api-key>");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__DefaultModel", "gpt-4o");
+        // options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Copilot__AzureApiVersion", "2024-10-21");
 
         // Disable auth so local clients can connect to the host endpoints during development.
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__McpServer__AuthenticationType", "None");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__A2AHost__AuthenticationType", "None");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__A2AHost__ExposeAgentsAsSkill", "false");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__McpServer__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__ExposeAgentsAsSkill", "false");
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
-    .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
+    .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
     .WithReference(orchardCore)

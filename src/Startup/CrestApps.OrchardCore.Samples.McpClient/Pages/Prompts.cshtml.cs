@@ -85,6 +85,10 @@ public sealed class PromptsModel : PageModel
 
             return new JsonResult(new { description = result.Description, messages });
         }
+        catch (InvalidOperationException ex)
+        {
+            return new JsonResult(new { error = ex.Message });
+        }
         catch (Exception)
         {
             return new JsonResult(new { error = "An error occurred while getting the prompt." });
@@ -97,6 +101,11 @@ public sealed class PromptsModel : PageModel
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Prompts = await client.ListPromptsAsync(options: null, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            Prompts = [];
         }
         catch (Exception)
         {

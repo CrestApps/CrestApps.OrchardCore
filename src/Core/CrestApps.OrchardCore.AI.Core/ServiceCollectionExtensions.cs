@@ -122,7 +122,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<AIProviderConnectionCatalogOptions>(o =>
         {
-            // This code will be removed in the v3. We'll keep it now for backward compatibility.
+            // Deprecated: will be removed in a future version.
             o.ProviderSections.Add("CrestApps_AI:Providers");
         });
 

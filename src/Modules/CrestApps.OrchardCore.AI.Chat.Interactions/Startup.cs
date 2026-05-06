@@ -15,9 +15,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -29,17 +29,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions;
 /// </summary>
 public sealed class Startup : StartupBase
 {
-    private readonly IShellConfiguration _configuration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Startup"/> class.
-    /// </summary>
-    /// <param name="configuration">The configuration.</param>
-    public Startup(IShellConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register framework-level chat interaction handlers.
@@ -64,8 +53,8 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        // Configure RowLevelTabularBatchSettings from configuration
-        services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
+        // Configure RowLevelTabularBatchSettings from configuration.
+        services.AddTransient<IConfigureOptions<RowLevelTabularBatchOptions>, RowLevelTabularBatchOptionsConfiguration>();
 
         // Chat Interaction notification transport and hub options.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);

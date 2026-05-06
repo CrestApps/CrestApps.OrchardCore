@@ -40,7 +40,7 @@ public sealed class McpClientFactory
         var transportOptions = new HttpClientTransportOptions
         {
             Endpoint = new Uri(endpoint),
-            TransportMode = HttpTransportMode.Sse,
+            TransportMode = HttpTransportMode.AutoDetect,
         };
 
         var apiKey = _configuration["Mcp:ApiKey"];
@@ -71,17 +71,21 @@ public sealed class McpClientFactory
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             throw new InvalidOperationException(
-                $"The MCP server at '{endpoint}' returned a 404 Not Found response. " +
-                "Please ensure the MCP Server feature is enabled on the default tenant in the Orchard Core admin dashboard " +
-                "(Configuration > Features > search for 'MCP Server').", ex);
+                $"""
+                The MCP server at '{endpoint}' returned a 404 Not Found response.
+                Use the MCP base endpoint (for example, 'https://localhost:5001/mcp') instead of a transport-specific path.
+                Please ensure the MCP Server feature is enabled on the default tenant in the Orchard Core admin dashboard (Configuration > Features > search for 'MCP Server').
+                """,
+                ex);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             throw new InvalidOperationException(
-                $"The MCP server at '{endpoint}' returned a 401 Unauthorized response. " +
-                "The server requires authentication. Configure the 'Mcp:ApiKey' setting in appsettings.json " +
-                "with a valid API key, and ensure the MCP server's authentication type is set to 'ApiKey' " +
-                "with a matching key in the Orchard Core admin dashboard.", ex);
+                $"""
+                The MCP server at '{endpoint}' returned a 401 Unauthorized response.
+                The server requires authentication. Configure the 'Mcp:ApiKey' setting in appsettings.json with a valid API key, and ensure the MCP server's authentication type is set to 'ApiKey' with a matching key in the Orchard Core admin dashboard.
+                """,
+                ex);
         }
     }
 }

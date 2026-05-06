@@ -15,13 +15,31 @@ public sealed class McpServerOptionsConfigurationTests
             .Build();
         var options = new McpServerOptions();
 
-        new McpServerOptionsConfiguration(new MockShellConfiguration(configuration)).Configure(options);
+        new McpServerOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
 
         Assert.Equal(McpServerAuthenticationType.OpenId, options.AuthenticationType);
     }
 
     [Fact]
-    public void Configure_PreservesExplicitAnonymousConfiguration()
+    public void Configure_PreservesExplicitAnonymousConfiguration_FromNewPath()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["CrestApps:AI:McpServer:AuthenticationType"] = "None",
+            })
+            .Build();
+        var options = new McpServerOptions();
+
+        new McpServerOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
+
+        Assert.Equal(McpServerAuthenticationType.None, options.AuthenticationType);
+    }
+
+    [Fact]
+    public void Configure_PreservesExplicitAnonymousConfiguration_FromDeprecatedPath()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
@@ -31,7 +49,8 @@ public sealed class McpServerOptionsConfigurationTests
             .Build();
         var options = new McpServerOptions();
 
-        new McpServerOptionsConfiguration(new MockShellConfiguration(configuration)).Configure(options);
+        new McpServerOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
 
         Assert.Equal(McpServerAuthenticationType.None, options.AuthenticationType);
     }

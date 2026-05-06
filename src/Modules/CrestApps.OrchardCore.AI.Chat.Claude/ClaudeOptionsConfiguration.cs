@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Claude.Models;
+using CrestApps.Core.AI.Claude.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -37,15 +37,14 @@ internal sealed class ClaudeOptionsConfiguration : IConfigureOptions<ClaudeOptio
     }
 
     /// <summary>
-    /// Configures the .
+    /// Configures the <see cref="ClaudeOptions"/>.
     /// </summary>
     /// <param name="options">The options.</param>
     public void Configure(ClaudeOptions options)
     {
-        _shellConfiguration.GetSection("CrestApps:Claude").Bind(options);
+        _shellConfiguration.GetSection("CrestApps:AI:Claude").Bind(options);
 
-        var settings = _siteService.GetSettingsAsync<ClaudeSettings>()
-            .GetAwaiter().GetResult();
+        var settings = _siteService.GetSettings<ClaudeSettings>();
 
         if (!string.IsNullOrWhiteSpace(settings.BaseUrl))
         {

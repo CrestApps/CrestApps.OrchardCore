@@ -369,6 +369,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Charset**: UTF-8
 - **Braces**: Always use braces for code blocks, opening brace on new line (Allman style)
 - **var usage**: Prefer `var` everywhere (built-in types, apparent types, and elsewhere)
+- **Strings**: Prefer standard string interpolation for short single-line strings. Use raw triple-quoted strings (`"""`) or raw interpolated strings (`$"""` / `$$"""`) for multi-line or more complex text when they improve readability without changing whitespace or line-ending behavior. Keep concatenation only when interpolation or raw strings would hurt readability or change semantics.
 - **this.**: Avoid using `this.` qualifier unless necessary
 - **Language keywords**: Use language keywords (e.g., `int`, `string`) over framework types (e.g., `Int32`, `String`)
 - **Namespaces**: Use file-scoped namespace declarations (C# 10+)

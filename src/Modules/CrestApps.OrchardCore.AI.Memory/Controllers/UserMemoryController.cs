@@ -139,6 +139,6 @@ public sealed class UserMemoryController : Controller
             return returnUrl;
         }
 
-        return Url.Content("~/" + _adminOptions.AdminUrlPrefix);
+        return Url.Content($"~/{_adminOptions.AdminUrlPrefix}");
     }
 }

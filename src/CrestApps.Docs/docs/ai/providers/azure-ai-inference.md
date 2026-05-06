@@ -23,19 +23,21 @@ To configure an Azure AI Inference connection, add the following settings to `ap
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "AzureAIInference": {
-          "DefaultConnectionName": "default",
-          "Connections": {
-            "default": {
-              "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
-              "AuthenticationType": "ApiKey",
-              "ApiKey": "<!-- Your GitHub Access Token goes here -->",
-              "Deployments": [
-                { "Name": "Phi-3-medium-4k-instruct", "Type": "Chat", "IsDefault": true },
-                { "Name": "Phi-3-medium-4k-instruct", "Type": "Utility", "IsDefault": true }
-              ]
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "AzureAIInference": {
+            "DefaultConnectionName": "default",
+            "Connections": {
+              "default": {
+                "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
+                "AuthenticationType": "ApiKey",
+                "ApiKey": "<!-- Your GitHub Access Token goes here -->",
+                "Deployments": [
+                  { "Name": "Phi-3-medium-4k-instruct", "Type": "Chat", "IsDefault": true },
+                  { "Name": "Phi-3-medium-4k-instruct", "Type": "Utility", "IsDefault": true }
+                ]
+              }
             }
           }
         }

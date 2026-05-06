@@ -88,6 +88,10 @@ public sealed class ResourcesModel : PageModel
 
             return new JsonResult(new { contents });
         }
+        catch (InvalidOperationException ex)
+        {
+            return new JsonResult(new { error = ex.Message });
+        }
         catch (Exception)
         {
             return new JsonResult(new { error = "An error occurred while reading the resource." });
@@ -101,6 +105,11 @@ public sealed class ResourcesModel : PageModel
             var client = await _clientFactory.CreateAsync(cancellationToken);
             var result = await client.ListResourcesAsync(options: null, cancellationToken);
             Resources = result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            Resources = [];
         }
         catch (Exception)
         {

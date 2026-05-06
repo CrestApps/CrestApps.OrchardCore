@@ -122,6 +122,6 @@ public sealed class CopilotCallbackUrlProvider
             return uri;
         }
 
-        return new Uri(uri.AbsoluteUri + "/", UriKind.Absolute);
+        return new Uri($"{uri.AbsoluteUri}/", UriKind.Absolute);
     }
 }

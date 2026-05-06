@@ -37,7 +37,7 @@ public sealed class A2AClientFactory
     /// <param name="agentUrl">The agent url.</param>
     public A2A.A2AClient Create(string agentUrl = null)
     {
-        var url = agentUrl ?? GetEndpoint() + "/a2a";
+        var url = agentUrl ?? $"{GetEndpoint()}/a2a";
         var httpClient = _httpClientFactory.CreateClient();
         ApplyAuthentication(httpClient);
 
