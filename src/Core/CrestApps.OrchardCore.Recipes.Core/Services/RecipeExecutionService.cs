@@ -43,7 +43,7 @@ public sealed class RecipeExecutionService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
+        var tempArchiveName = $"{PathExtensions.GetTempFileName()}.json";
         var tempArchiveFolder = PathExtensions.GetTempFileName();
 
         try

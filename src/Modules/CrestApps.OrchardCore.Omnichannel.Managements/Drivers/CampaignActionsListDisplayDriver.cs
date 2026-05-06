@@ -49,38 +49,38 @@ internal sealed class CampaignActionsListDisplayDriver : DisplayDriver<Omnichann
 
         return Initialize<CampaignActionsListViewModel>("CampaignActionsList_Edit", async model =>
         {
-                model.CampaignId = campaign.ItemId;
-                model.ActionTypes = _actionOptions.ActionTypes.Values;
+            model.CampaignId = campaign.ItemId;
+            model.ActionTypes = _actionOptions.ActionTypes.Values;
 
-                var allActions = await _actionCatalog.GetAllAsync();
-                var subjectDisplayTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var allActions = await _actionCatalog.GetAllAsync();
+            var subjectDisplayTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-                var campaignActions = allActions
-                    .Where(a => string.Equals(a.CampaignId, campaign.ItemId, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(a => a.DispositionId)
-                    .ThenBy(a => a.Source);
+            var campaignActions = allActions
+                .Where(a => string.Equals(a.CampaignId, campaign.ItemId, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(a => a.DispositionId)
+                .ThenBy(a => a.Source);
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
             var dispositionMap = dispositions.ToDictionary(d => d.ItemId, d => d.DisplayText, StringComparer.OrdinalIgnoreCase);
 
             foreach (var action in campaignActions)
+            {
+                dispositionMap.TryGetValue(action.DispositionId ?? string.Empty, out var dispositionText);
+
+                var typeDisplayName = _actionOptions.ActionTypes.TryGetValue(action.Source, out var typeEntry)
+                    ? typeEntry.DisplayName?.Value
+                    : action.Source;
+                var subjectDisplayText = await GetSubjectDisplayTextAsync(action, subjectDisplayTexts);
+
+                model.Actions.Add(new CampaignActionEntryViewModel
                 {
-                    dispositionMap.TryGetValue(action.DispositionId ?? string.Empty, out var dispositionText);
-
-                    var typeDisplayName = _actionOptions.ActionTypes.TryGetValue(action.Source, out var typeEntry)
-                        ? typeEntry.DisplayName?.Value
-                        : action.Source;
-                    var subjectDisplayText = await GetSubjectDisplayTextAsync(action, subjectDisplayTexts);
-
-                    model.Actions.Add(new CampaignActionEntryViewModel
-                    {
-                        Model = action,
-                        DispositionDisplayText = dispositionText ?? action.DispositionId,
-                        ActionTypeDisplayName = typeDisplayName ?? action.Source,
-                        SubjectDisplayText = subjectDisplayText,
-                    });
-                }
-            }).Location("Content:100");
+                    Model = action,
+                    DispositionDisplayText = dispositionText ?? action.DispositionId,
+                    ActionTypeDisplayName = typeDisplayName ?? action.Source,
+                    SubjectDisplayText = subjectDisplayText,
+                });
+            }
+        }).Location("Content:100");
     }
 
     private async Task<string> GetSubjectDisplayTextAsync(CampaignAction action, Dictionary<string, string> subjectDisplayTexts)

@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -7,6 +7,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Liquid;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -45,7 +46,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IServiceProvider serviceProvider,
-        DefaultAIOptions defaultOptions,
+        IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AICompletionWithConfigTask> logger,
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
@@ -53,7 +54,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         _aIToolsService = aIToolsService;
         _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
-        _defaultOptions = defaultOptions;
+        _defaultOptions = defaultOptions.Value;
         ServiceProvider = serviceProvider;
         _logger = logger;
         S = stringLocalizer;

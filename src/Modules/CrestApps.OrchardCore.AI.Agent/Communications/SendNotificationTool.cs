@@ -118,7 +118,7 @@ public sealed class SendNotificationTool : AIFunction
         if (user is null)
         {
             logger.LogWarning("AI tool '{ToolName}' could not find user with ID '{UserId}'.", Name, userId);
-            return "Unable to find a user that matches the given userId: " + userId;
+            return $"Unable to find a user that matches the given userId: {userId}";
         }
 
         var count = await notificationService.SendAsync(user, message);

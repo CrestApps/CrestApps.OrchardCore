@@ -61,8 +61,6 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>()
             .AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>()
             .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>();
-
-        services.AddOrchardCoreAgentSkillServices();
     }
 }
 

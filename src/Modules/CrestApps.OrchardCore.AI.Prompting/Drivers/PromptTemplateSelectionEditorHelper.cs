@@ -4,6 +4,7 @@ using CrestApps.Core.Templates.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
@@ -78,8 +79,8 @@ internal static class PromptTemplateSelectionEditorHelper
 
                     if (template == null)
                     {
-                        modelState.AddModelError(
-                            BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.TemplateId)),
+                        modelState.AddModelError(prefix,
+                            BuildFieldName(index, nameof(PromptTemplateSelectionItemViewModel.TemplateId)),
                         $"Prompt template '{selection.TemplateId}' was not found.");
                     }
                     else
@@ -88,8 +89,8 @@ internal static class PromptTemplateSelectionEditorHelper
 
                         if (invalidKeys.Count > 0)
                         {
-                            modelState.AddModelError(
-                                BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
+                            modelState.AddModelError(prefix,
+                                BuildFieldName(index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
                             $"The following parameter keys are not supported by this template: {string.Join(", ", invalidKeys)}");
                         }
                         else
@@ -100,8 +101,8 @@ internal static class PromptTemplateSelectionEditorHelper
                 }
                 else
                 {
-                    modelState.AddModelError(
-                        BuildFieldName(prefix, index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
+                    modelState.AddModelError(prefix,
+                        BuildFieldName(index, nameof(PromptTemplateSelectionItemViewModel.PromptParameters)),
                     "The parameters must be valid JSON with string key-value pairs. Example: {\"key1\": \"value1\"}");
                 }
             }
@@ -186,6 +187,6 @@ internal static class PromptTemplateSelectionEditorHelper
         return invalidKeys;
     }
 
-    private static string BuildFieldName(string prefix, int index, string propertyName)
-        => $"{prefix}.{nameof(AITemplateSelectionViewModel.PromptTemplates)}[{index}].{propertyName}";
+    private static string BuildFieldName(int index, string propertyName)
+        => $"{nameof(AITemplateSelectionViewModel.PromptTemplates)}[{index}].{propertyName}";
 }

@@ -99,15 +99,17 @@ After the automatic migration runs:
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "ChatDeploymentName": "gpt-4o",
-              "UtilityDeploymentName": "gpt-4o-mini",
-              "EmbeddingDeploymentName": "text-embedding-3-small",
-              "ImagesDeploymentName": "dall-e-3"
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "OpenAI": {
+            "Connections": {
+              "default": {
+                "ChatDeploymentName": "gpt-4o",
+                "UtilityDeploymentName": "gpt-4o-mini",
+                "EmbeddingDeploymentName": "text-embedding-3-small",
+                "ImagesDeploymentName": "dall-e-3"
+              }
             }
           }
         }
@@ -122,33 +124,35 @@ After the automatic migration runs:
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "Deployments": [
-                {
-                  "Name": "gpt-4o",
-                  "Type": "Chat",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "gpt-4.1-mini",
-                  "Type": ["Chat", "Utility"],
-                  "IsDefault": true
-                },
-                {
-                  "Name": "text-embedding-3-small",
-                  "Type": "Embedding",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "dall-e-3",
-                  "Type": "Image",
-                  "IsDefault": true
-                }
-              ]
+    "CrestApps": {
+      "AI": {
+        "Providers": {
+          "OpenAI": {
+            "Connections": {
+              "default": {
+                "Deployments": [
+                  {
+                    "Name": "gpt-4o",
+                    "Type": "Chat",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "gpt-4.1-mini",
+                    "Type": ["Chat", "Utility"],
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "text-embedding-3-small",
+                    "Type": "Embedding",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "dall-e-3",
+                    "Type": "Image",
+                    "IsDefault": true
+                  }
+                ]
+              }
             }
           }
         }
@@ -166,23 +170,25 @@ Both formats are supported simultaneously. If both are present, the `Deployments
 
 ### Non-Connection Deployments (New)
 
-Contained-connection deployments (e.g., Azure Speech) can also be defined in `appsettings.json` using the `CrestApps_AI:Deployments` section. These deployments embed their own connection parameters and do not reference a shared provider connection.
+Contained-connection deployments (e.g., Azure Speech) can also be defined in `appsettings.json` using the `CrestApps:AI:Deployments` section. These deployments embed their own connection parameters and do not reference a shared provider connection.
 
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "Deployments": [
-        {
-          "ClientName": "AzureSpeech",
-          "Name": "my-speech-to-text",
-          "Type": "SpeechToText",
-          "IsDefault": true,
-          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-          "AuthenticationType": "ApiKey",
-          "ApiKey": "your-speech-service-api-key"
-        }
-      ]
+    "CrestApps": {
+      "AI": {
+        "Deployments": [
+          {
+            "ClientName": "AzureSpeech",
+            "Name": "my-speech-to-text",
+            "Type": "SpeechToText",
+            "IsDefault": true,
+            "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+            "AuthenticationType": "ApiKey",
+            "ApiKey": "your-speech-service-api-key"
+          }
+        ]
+      }
     }
   }
 }

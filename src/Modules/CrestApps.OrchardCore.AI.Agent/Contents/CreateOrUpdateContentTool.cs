@@ -185,7 +185,7 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
             {
                 logger.LogWarning("AI tool '{ToolName}': Unable to update content item due to validation errors: {Errors}.", TheName, string.Join("; ", result.Errors.Select(x => x.ErrorMessage)));
 
-                return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
+                return $"Unable to update the content item due to the following errors: {string.Join(';', result.Errors.Select(x => x.ErrorMessage))}";
             }
         }
 
@@ -220,12 +220,18 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
 
             if (metadata.AdminRouteValues is not null)
             {
-                response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
+                response = $"""
+{response}
+The edit URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues)}
+""";
             }
 
             if (metadata.DisplayRouteValues is not null)
             {
-                response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);
+                response = $"""
+{response}
+The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues)}
+""";
             }
         }
         else if (logger.IsEnabled(LogLevel.Debug))

@@ -98,6 +98,10 @@ public sealed class ToolsModel : PageModel
 
             return new JsonResult(new { contents, isError = result.IsError });
         }
+        catch (InvalidOperationException ex)
+        {
+            return new JsonResult(new { error = ex.Message });
+        }
         catch (Exception)
         {
             return new JsonResult(new { error = "An error occurred while invoking the tool." });
@@ -110,6 +114,11 @@ public sealed class ToolsModel : PageModel
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Tools = await client.ListToolsAsync(options: null, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            Tools = [];
         }
         catch (Exception)
         {

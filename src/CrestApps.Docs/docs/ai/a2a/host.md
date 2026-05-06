@@ -67,12 +67,14 @@ Authentication is configured via shell configuration (e.g., `appsettings.json`):
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "A2AHost": {
-        "AuthenticationType": "None",
-        "ApiKey": "your-api-key-here",
-        "RequireAccessPermission": false,
-        "ExposeAgentsAsSkill": false
+    "CrestApps": {
+      "AI": {
+        "A2AHost": {
+          "AuthenticationType": "None",
+          "ApiKey": "your-api-key-here",
+          "RequireAccessPermission": false,
+          "ExposeAgentsAsSkill": false
+        }
       }
     }
   }

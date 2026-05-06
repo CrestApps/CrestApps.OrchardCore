@@ -39,14 +39,14 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
         INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        DefaultAIOptions defaultAIOptions,
+        IOptions<DefaultAIOptions> defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
         _channelEndpointsCatalog = channelEndpointsCatalog;
         _connectionsCatalog = connectionsCatalog;
         _toolDefinitions = toolDefinitions.Value;
-        _defaultAIOptions = defaultAIOptions;
+        _defaultAIOptions = defaultAIOptions.Value;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }

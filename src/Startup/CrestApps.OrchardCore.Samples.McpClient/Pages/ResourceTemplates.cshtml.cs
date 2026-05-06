@@ -89,6 +89,10 @@ public sealed partial class ResourceTemplatesModel : PageModel
 
             return new JsonResult(new { contents });
         }
+        catch (InvalidOperationException ex)
+        {
+            return new JsonResult(new { error = ex.Message });
+        }
         catch (Exception)
         {
             return new JsonResult(new { error = "An error occurred while reading the resource template." });
@@ -128,6 +132,11 @@ public sealed partial class ResourceTemplatesModel : PageModel
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Templates = await client.ListResourceTemplatesAsync(options: null, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            Templates = [];
         }
         catch (Exception)
         {

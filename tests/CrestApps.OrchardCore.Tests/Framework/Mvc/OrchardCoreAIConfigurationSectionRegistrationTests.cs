@@ -29,6 +29,7 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         var options = serviceProvider.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>().Value;
 
         Assert.Contains("CrestApps_AI:Deployments", options.DeploymentSections);
+        Assert.Contains("CrestApps:AI:Deployments", options.DeploymentSections);
     }
 
     [Fact]
@@ -44,7 +45,9 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         var options = serviceProvider.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>().Value;
 
         Assert.Contains("CrestApps_AI:Connections", options.ConnectionSections);
+        Assert.Contains("CrestApps:AI:Connections", options.ConnectionSections);
         Assert.Contains("CrestApps_AI:Providers", options.ProviderSections);
+        Assert.Contains("CrestApps:AI:Providers", options.ProviderSections);
     }
 
     [Fact]
@@ -57,9 +60,9 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
                 ["CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
                 ["CrestApps_AI:Connections:0:Name"] = "legacy-openai",
                 ["CrestApps_AI:Connections:0:ClientName"] = "OpenAI",
-                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:Endpoint"] = "https://example.openai.azure.com/",
-                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:AuthenticationType"] = "ApiKey",
-                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:ApiKey"] = "secret",
+                ["CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:Endpoint"] = "https://example.openai.azure.com/",
+                ["CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:AuthenticationType"] = "ApiKey",
+                ["CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:ApiKey"] = "secret",
             })
             .Build();
 

@@ -14,9 +14,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -53,27 +53,9 @@ public sealed class A2AHostStartup : StartupBase
 {
     private const string A2AHostPolicyName = "A2AHostPolicy";
 
-    private readonly IShellConfiguration _shellConfiguration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="A2AHostStartup"/> class.
-    /// </summary>
-    /// <param name="shellConfiguration">The shell configuration.</param>
-    public A2AHostStartup(IShellConfiguration shellConfiguration)
-    {
-        _shellConfiguration = shellConfiguration;
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<A2AHostOptions>(_shellConfiguration.GetSection("CrestApps:A2AHost"));
-        services.PostConfigure<A2AHostOptions>(options =>
-        {
-            if (string.IsNullOrWhiteSpace(_shellConfiguration["CrestApps:A2AHost:AuthenticationType"]))
-            {
-                options.AuthenticationType = A2AHostAuthenticationType.OpenId;
-            }
-        });
+        services.AddTransient<IConfigureOptions<A2AHostOptions>, A2AHostOptionsConfiguration>();
 
         services.AddPermissionProvider<A2AHostPermissionsProvider>();
 

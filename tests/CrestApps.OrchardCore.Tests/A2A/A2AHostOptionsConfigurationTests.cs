@@ -1,8 +1,6 @@
 using CrestApps.Core.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A;
+using CrestApps.OrchardCore.AI.A2A.Services;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.Tests.A2A;
@@ -10,23 +8,38 @@ namespace CrestApps.OrchardCore.Tests.A2A;
 public sealed class A2AHostOptionsConfigurationTests
 {
     [Fact]
-    public void ConfigureServices_DefaultsAuthenticationTypeToOpenId_WhenNotConfigured()
+    public void Configure_DefaultsAuthenticationTypeToOpenId_WhenNotConfigured()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection([])
             .Build();
-        var services = new ServiceCollection();
+        var options = new A2AHostOptions();
 
-        new A2AHostStartup(new MockShellConfiguration(configuration)).ConfigureServices(services);
-
-        using var serviceProvider = services.BuildServiceProvider();
-        var options = serviceProvider.GetRequiredService<IOptions<A2AHostOptions>>().Value;
+        new A2AHostOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
 
         Assert.Equal(A2AHostAuthenticationType.OpenId, options.AuthenticationType);
     }
 
     [Fact]
-    public void ConfigureServices_PreservesExplicitAnonymousConfiguration()
+    public void Configure_PreservesExplicitAnonymousConfiguration_FromNewPath()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["CrestApps:AI:A2AHost:AuthenticationType"] = "None",
+            })
+            .Build();
+        var options = new A2AHostOptions();
+
+        new A2AHostOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
+
+        Assert.Equal(A2AHostAuthenticationType.None, options.AuthenticationType);
+    }
+
+    [Fact]
+    public void Configure_PreservesExplicitAnonymousConfiguration_FromDeprecatedPath()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
@@ -34,12 +47,10 @@ public sealed class A2AHostOptionsConfigurationTests
                 ["CrestApps:A2AHost:AuthenticationType"] = "None",
             })
             .Build();
-        var services = new ServiceCollection();
+        var options = new A2AHostOptions();
 
-        new A2AHostStartup(new MockShellConfiguration(configuration)).ConfigureServices(services);
-
-        using var serviceProvider = services.BuildServiceProvider();
-        var options = serviceProvider.GetRequiredService<IOptions<A2AHostOptions>>().Value;
+        new A2AHostOptionsConfiguration(
+            new MockShellConfiguration(configuration)).Configure(options);
 
         Assert.Equal(A2AHostAuthenticationType.None, options.AuthenticationType);
     }

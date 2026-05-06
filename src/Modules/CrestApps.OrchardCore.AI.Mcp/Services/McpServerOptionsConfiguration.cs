@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
@@ -19,16 +19,19 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
     }
 
     /// <summary>
-    /// Configures the .
+    /// Configures the <see cref="McpServerOptions"/>.
     /// </summary>
     /// <param name="options">The options.</param>
     public void Configure(McpServerOptions options)
     {
-        var section = _shellConfiguration.GetSection("CrestApps:McpServer");
+        var deprecatedSection = _shellConfiguration.GetSection("CrestApps:McpServer");
+        var section = _shellConfiguration.GetSection("CrestApps:AI:McpServer");
 
+        deprecatedSection.Bind(options);
         section.Bind(options);
 
-        if (string.IsNullOrWhiteSpace(section[nameof(McpServerOptions.AuthenticationType)]))
+        if (string.IsNullOrWhiteSpace(section[nameof(McpServerOptions.AuthenticationType)]) &&
+            string.IsNullOrWhiteSpace(deprecatedSection[nameof(McpServerOptions.AuthenticationType)]))
         {
             options.AuthenticationType = McpServerAuthenticationType.OpenId;
         }

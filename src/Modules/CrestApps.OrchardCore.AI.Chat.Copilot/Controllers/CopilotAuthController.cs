@@ -76,7 +76,7 @@ public sealed class CopilotAuthController : Controller
         ? "__popup__"
         : returnUrl != null && Url.IsLocalUrl(returnUrl)
         ? returnUrl
-        : "~/" + _adminOptions.AdminUrlPrefix;
+        : $"~/{_adminOptions.AdminUrlPrefix}";
 
         try
         {
@@ -154,10 +154,17 @@ public sealed class CopilotAuthController : Controller
             var safeUsername = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(username ?? string.Empty);
 
             return Content(
-                "<!DOCTYPE html><html><body><script>" +
-                $"window.opener.postMessage({{ type: 'github-auth-complete', success: {(success ? "true" : "false")}, username: '{safeUsername}' }}, window.location.origin);" +
-                "window.close();" +
-                "</script></body></html>",
+                $$"""
+                <!DOCTYPE html>
+                <html>
+                <body>
+                    <script>
+                        window.opener.postMessage({ type: 'github-auth-complete', success: {{(success ? "true" : "false")}}, username: '{{safeUsername}}' }, window.location.origin);
+                        window.close();
+                    </script>
+                </body>
+                </html>
+                """,
                 "text/html");
         }
 
@@ -258,6 +265,6 @@ public sealed class CopilotAuthController : Controller
             return Redirect(returnUrl);
         }
 
-        return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
+        return LocalRedirect($"~/{_adminOptions.AdminUrlPrefix}");
     }
 }

@@ -29,6 +29,178 @@ The MCP server exposes the following capabilities:
 | **Resources** | MCP resources registered in Orchard Core are exposed, allowing clients to access various data sources. Resources can be added and managed via the admin UI. |
 | **Templated Resources** | Resources with URI variable placeholders (e.g., `{fileName}`, `{contentType}`) that resolve dynamically based on client requests |
 
+## Authentication and authorization
+
+The MCP server supports these authentication modes:
+
+| Mode | Description | Use case |
+| --- | --- | --- |
+| `OpenId` | OpenID Connect authentication via the `Api` scheme | Production environments |
+| `ApiKey` | Predefined API key authentication | Simple integrations and testing |
+| `None` | No authentication required | Local development only |
+
+When `OpenId` is used, you can also require the `AccessMcpServer` permission for an additional authorization check.
+
+## Configuration
+
+Configure the MCP server in `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "AuthenticationType": "OpenId",
+          "RequireAccessPermission": true
+        }
+      }
+    }
+  }
+}
+```
+
+### Configuration options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `AuthenticationType` | `string` | `OpenId` | Authentication type: `OpenId`, `ApiKey`, or `None` |
+| `ApiKey` | `string` | `null` | API key for `ApiKey` authentication |
+| `RequireAccessPermission` | `bool` | `true` | Whether to require the `AccessMcpServer` permission in `OpenId` mode |
+
+### Authentication types
+
+#### OpenId
+
+Uses Orchard Core OpenID authentication through the `Api` scheme.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "AuthenticationType": "OpenId",
+          "RequireAccessPermission": true
+        }
+      }
+    }
+  }
+}
+```
+
+#### ApiKey
+
+Uses a configured API key. Clients can send the key as `Bearer your-api-key`, `ApiKey your-api-key`, or the raw key value.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "AuthenticationType": "ApiKey",
+          "ApiKey": "your-secure-api-key-here"
+        }
+      }
+    }
+  }
+}
+```
+
+#### None
+
+Use only for local development and testing.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "AuthenticationType": "None"
+        }
+      }
+    }
+  }
+}
+```
+
+## Getting started
+
+1. Enable **Model Context Protocol (MCP) Server** under **Tools -> Features**.
+2. Choose and configure an authentication mode.
+3. Grant the `AccessMcpServer` permission when you use `OpenId` with access checks enabled.
+4. Connect an MCP client to the SSE endpoint.
+
+## MCP endpoint
+
+The server exposes a single SSE endpoint:
+
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/mcp/sse` | POST | SSE transport for MCP communication |
+
+Example request:
+
+```text
+POST /mcp/sse
+Authorization: Bearer <your-token-or-api-key>
+```
+
+## Example client configuration
+
+### OpenId
+
+```json
+{
+  "mcpServers": {
+    "orchard-core": {
+      "transport": {
+        "type": "sse",
+        "url": "https://your-orchard-site.com/mcp/sse",
+        "headers": {
+          "Authorization": "Bearer <your-oauth-token>"
+        }
+      }
+    }
+  }
+}
+```
+
+### ApiKey
+
+```json
+{
+  "mcpServers": {
+    "orchard-core": {
+      "transport": {
+        "type": "sse",
+        "url": "https://your-orchard-site.com/mcp/sse",
+        "headers": {
+          "Authorization": "ApiKey <your-api-key>"
+        }
+      }
+    }
+  }
+}
+```
+
+### None
+
+```json
+{
+  "mcpServers": {
+    "orchard-core": {
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:5000/mcp/sse"
+      }
+    }
+  }
+}
+```
+
 ## Prompt Support
 
 MCP **Prompts** are reusable prompt templates that MCP clients can discover and invoke. They allow you to define pre-configured system or user messages that external AI agents can request on demand — for example, a "summarize" prompt that instructs the model to summarize a given document, or a "translate" prompt that translates text into a target language.
@@ -171,3 +343,38 @@ Resources can be exported and imported via recipes:
 ## Admin Chat UI with MCP Server Integration
 
 ![Screen cast of the admin chat](/img/docs/mcp-integration.gif)
+
+## Security considerations
+
+- Use `OpenId` in production environments.
+- Treat API keys as secrets and rotate them periodically.
+- Do not use `None` outside local development.
+- Keep `RequireAccessPermission` enabled in `OpenId` mode when you want an extra authorization layer.
+- Tool execution still respects Orchard Core permissions and tenant boundaries.
+
+## Troubleshooting
+
+### Connection refused
+
+- Verify the MCP Server feature is enabled.
+- Verify the configured authentication mode matches the client request.
+- In `OpenId` mode, make sure API authentication is configured.
+- In `ApiKey` mode, verify the configured API key matches the request.
+
+### Tools, prompts, or resources do not appear
+
+- Verify the required Orchard Core and CrestApps features are enabled.
+- Check that the expected AI tools, prompts, or resources are registered.
+
+### Configuration does not apply
+
+- Verify the `OrchardCore:CrestApps:AI:McpServer` path in `appsettings.json`.
+- Restart the application after changing configuration.
+- Confirm the JSON syntax is valid.
+
+## Related documentation
+
+- [MCP overview](/docs/ai/mcp)
+- [MCP client](client)
+- [FTP resource type](ftp)
+- [SFTP resource type](sftp)
