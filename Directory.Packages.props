@@ -2,15 +2,15 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[3.0.0-preview-18999, )</OrchardCoreVersion>
-    <CrestAppsCoreVersion>1.0.0-preview-81</CrestAppsCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-19002, )</OrchardCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-85</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>1.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0005" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
-    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.19.18" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.19.21" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="JsonSchema.Net" Version="8.0.5" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
@@ -88,7 +88,7 @@
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
   </ItemGroup>
   <ItemGroup>
-    <!-- CrestApps Packages -->
+    <!-- CrestApps Core Packages -->
     <PackageVersion Include="CrestApps.Core.Abstractions" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Data.YesSql" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core" Version="$(CrestAppsCoreVersion)" />
