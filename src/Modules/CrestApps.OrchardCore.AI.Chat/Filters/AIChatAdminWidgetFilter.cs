@@ -128,7 +128,6 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
 
         _resourceManager.RegisterResource("script", "AIChatApp").AtFoot();
         _resourceManager.RegisterResource("script", "AIChatWidgetApp").AtFoot();
-        _resourceManager.RegisterResource("script", "AIChatAppPatch").AtFoot();
 
         var sessionResult = await _sessionManager.PageAsync(
             page: 1,

@@ -6,6 +6,7 @@
 @using CrestApps.OrchardCore.AI.Core.Services
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.AI.Deployments
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
 @using CrestApps.Core.Services
 @using CrestApps.Core.SignalR.Services
@@ -26,6 +27,7 @@
 @inject IAIProfileStore ProfilesCatalog
 @inject HubRouteManager HubRouteManager
 @inject IAIChatSessionPromptStore PromptStore
+@inject IAIDeploymentManager AIDeploymentManager
 
 @{
     var baseId = Html.IdForModel();
@@ -69,13 +71,24 @@
 
         : ChatMode.TextInput;
 
-    var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
-
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
+    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
+        && speechToTextDeployment != null;
+    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
+        && textToSpeechDeployment != null;
 
     var ttsVoiceName = chatModeSettings?.VoiceName;
 
-    var conversationModeEnabled = chatMode == ChatMode.Conversation;
+    var effectiveChatMode = chatMode switch
+    {
+        ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
+        ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
+        ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
+        _ => ChatMode.TextInput,
+    };
+
+    var conversationModeEnabled = effectiveChatMode == ChatMode.Conversation;
 
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
@@ -211,17 +224,12 @@
 }
 
 <script asp-name="AIChatApp" at="Foot"></script>
-<script asp-name="AIChatAppPatch" at="Foot"></script>
 
-<script at="Foot" depends-on="AIChatAppPatch">
+<script at="Foot" depends-on="AIChatApp">
     var configEl = document.getElementById('@($"{baseId}_Config")');
 
     if (configEl) {
-        var chatApp = openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
-
-        if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
-            window.crestAppsAIChat.patchSessionProfileSync(chatApp);
-        }
+        openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
     }
 </script>
 
@@ -238,7 +246,7 @@
         ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
         ["messages"] = prompts,
         ["metricsEnabled"] = metricsEnabled,
-        ["chatMode"] = chatMode.ToString(),
+        ["chatMode"] = effectiveChatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
@@ -250,15 +258,10 @@
     if (sessionDocumentsEnabled)
     {
         chatConfig["sessionDocumentsEnabled"] = true;
-
         chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
-
         chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
-
         chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
-
         chatConfig["allowedExtensions"] = allowedExtensions;
-
         chatConfig["existingDocuments"] = Model.Session.Documents ?? new List<ChatDocumentInfo>();
     }
 }

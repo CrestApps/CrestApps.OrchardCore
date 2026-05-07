@@ -1,5 +1,6 @@
 @using CrestApps.Core
 @using CrestApps.Core.AI
+@using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
@@ -21,6 +22,7 @@
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
+@inject IAIDeploymentManager AIDeploymentManager
 
 @{
     ContentItem contentItem = Model.ContentItem;
@@ -86,10 +88,21 @@
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
 
     var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
-    var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
+    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
+        && speechToTextDeployment != null;
+    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
+        && textToSpeechDeployment != null;
     var ttsVoiceName = chatModeSettings?.VoiceName;
-    var conversationModeEnabled = chatMode == ChatMode.Conversation;
+    var effectiveChatMode = chatMode switch
+    {
+        ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
+        ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
+        ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
+        _ => ChatMode.TextInput,
+    };
+    var conversationModeEnabled = effectiveChatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
     var orchestratorAvailability = new OrchestratorAvailability();
@@ -286,7 +299,6 @@
 
 <script asp-name="AIChatApp" at="Foot"></script>
 <script asp-name="AIChatWidgetApp" at="Foot"></script>
-<script asp-name="AIChatAppPatch" at="Foot"></script>
 
 @{
     var chatConfig = new Dictionary<string, object>
@@ -301,7 +313,7 @@
         ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
         ["messages"] = Array.Empty<object>(),
         ["metricsEnabled"] = metricsEnabled,
-        ["chatMode"] = chatMode.ToString(),
+        ["chatMode"] = effectiveChatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
@@ -324,7 +336,7 @@
 
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
-<script at="Foot" depends-on="AIChatAppPatch">
+<script at="Foot" depends-on="AIChatWidgetApp">
     (function () {
         var shell = document.getElementById('@($"{baseId}_Shell")');
         var initializationAttempts = 0;
@@ -408,23 +420,15 @@
         <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
 
             <div>
-
                 <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">@T["You"]</div>
-
                 <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-
                     <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
-
                     @T["Assistant"]
-
                 </div>
 
                 <div class="ai-chat-message-body min-w-0 lh-base">
-
                     <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
-
                     <div v-html="message.htmlContent" style="font-size: 0.85rem; line-height: 1.5;"></div>
-
                     <ol v-if="message.citationReferences && message.citationReferences.length" class="ai-chat-citation-list">
                         <li v-for="citation in message.citationReferences" :key="'citation-' + (citation.referenceKey || citation.displayIndex)" class="ai-chat-citation-item">
                             <a v-if="citation.link" :href="citation.link" :target="citation.isDownload ? null : '_new'" :rel="citation.isDownload ? null : 'noopener noreferrer'">{{ citation.label }}</a>
@@ -433,56 +437,35 @@
                     </ol>
 
                     <span class="message-buttons-container" v-if="!isIndicator(message)">
-
                         <template v-if="metricsEnabled && message.role === 'assistant'">
-
                             <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
-
-                                <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
-
+                                <button type="button" class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
                                     <i class="fa-regular fa-thumbs-up" style="font-size: 0.9rem;"></i>
-
                                 </button>
-
-                                <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
-
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
                                     <i class="fa-regular fa-thumbs-down" style="font-size: 0.9rem;"></i>
-
                                 </button>
-
                             </span>
-
                         </template>
 
-                        <button v-if="textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming" class="btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox" :class="{ 'tts-playing': ttsPlayingMessageIndex === index }" :data-tts-message-index="index" @@click="toggleMessageTts(message, index)" :title="ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'">
+                        <button type="button" v-if="textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming" class="btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox" :class="{ 'tts-playing': ttsPlayingMessageIndex === index }" :data-tts-message-index="index" @@click="toggleMessageTts(message, index)" :title="ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'">
                             <span :class="ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'" style="font-size: 0.9rem;"></span>
                         </button>
-                        <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message)" title="@T["Copy"]">
-
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message)" title="@T["Copy"]">
                             <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
-
                         </button>
-
                     </span>
-
                 </div>
-
             </div>
-
         </div>
-
     </div>
-
 </template>
 
 <template id="@($"{baseId}_IndicatorTemplate")">
 
     <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
-
         <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
-
         @T["Assistant"]
-
     </div>
 
 </template>

@@ -12,5 +12,12 @@
       "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js"
     ],
     "output": "wwwroot/scripts/chat-interaction.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js.map"
+    ],
+    "output": "wwwroot/scripts/chat-interaction.min.js.map"
   }
 ]

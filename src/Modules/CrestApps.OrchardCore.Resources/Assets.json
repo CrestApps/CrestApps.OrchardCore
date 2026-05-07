@@ -130,6 +130,13 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/dompurify/dist/purify.min.js.map"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/highlight.js/styles/github.css"
     ],
     "output": "wwwroot/vendors/highlightjs/css/highlightjs.css"
