@@ -17,8 +17,8 @@ Provider-specific indexing support is split into separate modules:
 | Module | Feature ID |
 | --- | --- |
 | AI Memory (Core) | `CrestApps.OrchardCore.AI.Memory` |
-| AI Memory (Azure AI Search) | `CrestApps.OrchardCore.AI.Memory.AzureAI` |
-| AI Memory (Elasticsearch) | `CrestApps.OrchardCore.AI.Memory.Elasticsearch` |
+| [AI Memory (Azure AI Search)](./memory-azure-ai) | `CrestApps.OrchardCore.AI.Memory.AzureAI` |
+| [AI Memory (Elasticsearch)](./memory-elasticsearch) | `CrestApps.OrchardCore.AI.Memory.Elasticsearch` |
 
 ## Overview
 
@@ -91,8 +91,8 @@ Within the tenant store, memory queries are always scoped by `userId` and ordere
 
 Enable one of the provider modules in Orchard Core:
 
-- **AI Memory (Azure AI Search)** for Azure AI Search-backed memory indexes
-- **AI Memory (Elasticsearch)** for Elasticsearch-backed memory indexes
+- **[AI Memory (Azure AI Search)](./memory-azure-ai)** for Azure AI Search-backed memory indexes
+- **[AI Memory (Elasticsearch)](./memory-elasticsearch)** for Elasticsearch-backed memory indexes
 
 The core **AI Memory** feature is enabled by dependency when one of those provider features is enabled.
 
@@ -171,3 +171,5 @@ Users can clear their own saved AI memory from their user profile editor.
 - [AI Chat Interactions](./chat-interactions)
 - [AI Documents](./documents/)
 - [AI Data Sources](./data-sources/)
+- [AI Memory (Azure AI Search)](./memory-azure-ai)
+- [AI Memory (Elasticsearch)](./memory-elasticsearch)

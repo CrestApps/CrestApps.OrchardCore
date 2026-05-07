@@ -19,6 +19,7 @@ The Omnichannel modules provide Orchard Core building blocks for coordinating co
 | Module | Docs |
 | --- | --- |
 | Base orchestration module | This page |
+| Azure Communication Services integration | [Azure Communication Services](azure-communication-services) |
 | Event Grid integration | [Event Grid](event-grid) |
 | Management UI | [Management](management) |
 | SMS automation | [SMS](sms) |
@@ -28,6 +29,7 @@ The Omnichannel modules provide Orchard Core building blocks for coordinating co
 - provides the shared Orchard communication layer
 - exposes the generic omnichannel webhook endpoint
 - supplies shared concepts used by the management and channel modules
+- acts as the dependency root for optional channel integrations such as Azure Communication Services
 
 ## Enable the feature
 

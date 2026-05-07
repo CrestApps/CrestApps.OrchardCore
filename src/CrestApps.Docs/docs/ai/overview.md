@@ -10,7 +10,7 @@ description: Orchard Core foundational AI features, module composition, and admi
 | | |
 | --- | --- |
 | **Module** | `CrestApps.OrchardCore.AI` |
-| **Primary feature IDs** | `CrestApps.OrchardCore.AI`, `CrestApps.OrchardCore.AI.ChatCore`, `CrestApps.OrchardCore.AI.ChatApi`, `CrestApps.OrchardCore.AI.ConnectionManagement` |
+| **Primary feature IDs** | `CrestApps.OrchardCore.AI`, `CrestApps.OrchardCore.AI.Chat.Core`, `CrestApps.OrchardCore.AI.Chat.Api`, `CrestApps.OrchardCore.AI.ConnectionManagement` |
 
 `CrestApps.OrchardCore.AI` is the Orchard foundation for the AI suite. It wires shared CrestApps.Core AI services into Orchard Core and adds the admin surfaces used by the rest of the AI modules.
 
@@ -31,8 +31,8 @@ The base AI module exposes multiple Orchard features:
 | Feature ID | Purpose |
 | --- | --- |
 | `CrestApps.OrchardCore.AI` | Base AI services and shared admin wiring |
-| `CrestApps.OrchardCore.AI.ChatCore` | Profile-driven chat services and session processing |
-| `CrestApps.OrchardCore.AI.ChatApi` | REST endpoints for AI chat and completion access |
+| `CrestApps.OrchardCore.AI.Chat.Core` | Profile-driven chat services and session processing |
+| `CrestApps.OrchardCore.AI.Chat.Api` | REST endpoints for AI chat and completion access |
 | `CrestApps.OrchardCore.AI.ConnectionManagement` | Provider connection management UI |
 
 In a typical Orchard setup:

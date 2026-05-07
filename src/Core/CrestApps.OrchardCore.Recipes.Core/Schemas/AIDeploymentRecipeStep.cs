@@ -27,7 +27,7 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment name as specified by the vendor.")),
-                ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider name (e.g., OpenAI, DeepSeek).")),
+                ("ClientName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Client name (e.g., OpenAI, Azure, AzureAIInference, Ollama).")),
                 ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")),
                 ("Type", new JsonSchemaBuilder().AnyOf(
                     new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The deployment type, or a comma-separated flag value such as 'Chat, Utility'. Defaults to Chat when not specified."),

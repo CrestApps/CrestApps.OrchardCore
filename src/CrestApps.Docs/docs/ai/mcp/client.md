@@ -14,7 +14,7 @@ Two transport types are supported:
 | Transport | Feature ID | Description |
 |---|---|---|
 | **Server-Sent Events (SSE)** | `CrestApps.OrchardCore.AI.Mcp` | Connect to remote MCP servers over HTTP. |
-| **Standard Input/Output (Stdio)** | `CrestApps.OrchardCore.AI.Mcp.LocalClient` | Connect to local MCP servers (e.g., Docker containers). |
+| **Standard Input/Output (Stdio)** | `CrestApps.OrchardCore.AI.Mcp.Stdio` | Connect to local MCP servers (e.g., Docker containers). |
 
 ---
 
@@ -144,7 +144,7 @@ Sensitive values (ApiKey, BasicPassword, OAuth2ClientSecret, OAuth2PrivateKey, O
 | | |
 | --- | --- |
 | **Feature Name** | Model Context Protocol (MCP) Local Client |
-| **Feature ID** | `CrestApps.OrchardCore.AI.Mcp.LocalClient` |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Mcp.Stdio` |
 
 The **Local MCP Client Feature** allows your application to connect to MCP servers running locally, typically in containers. It uses **Standard Input/Output (Stdio)** for communication — ideal for offline tools or running local services.
 

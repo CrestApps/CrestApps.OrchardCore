@@ -29,7 +29,7 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
-                ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The AI provider name.")),
+                ("ClientName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Client name (e.g., OpenAI, Azure, AzureAIInference, Ollama).")),
                 ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Connection properties.")))
             .Required("Name")
             .AdditionalProperties(true);

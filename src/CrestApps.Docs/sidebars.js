@@ -5,6 +5,7 @@ const sidebars = {
     docsSidebar: [
         'intro',
         'getting-started',
+        'feature-reference',
         {
             type: 'category',
             label: 'Artificial Intelligence Suite',
@@ -25,6 +26,8 @@ const sidebars = {
                 'ai/prompt-templates',
                 'ai/profile-templates',
                 'ai/memory',
+                'ai/memory-azure-ai',
+                'ai/memory-elasticsearch',
                 'ai/workflows',
                 {
                     type: 'category',
@@ -85,6 +88,7 @@ const sidebars = {
             label: 'Omnichannel Communications',
             items: [
                 'omnichannel/index',
+                'omnichannel/azure-communication-services',
                 'omnichannel/event-grid',
                 'omnichannel/management',
                 'omnichannel/sms',

@@ -10,6 +10,7 @@ description: Orchard Core module guidance for agent profiles and agent-enabled A
 | | |
 | --- | --- |
 | **Module** | `CrestApps.OrchardCore.AI.Agent` |
+| **Manifest ID** | `CrestApps.OrchardCore.AI.Agent` |
 
 The Orchard agent module surfaces agent profiles inside Orchard Core so they can participate in module-driven AI experiences such as profile-based chat, A2A hosting, and other Orchard-managed orchestration flows.
 
