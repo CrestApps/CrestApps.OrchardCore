@@ -114,7 +114,8 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             connection.DisplayText = displayText;
         }
 
-        var source = data[nameof(AIProviderConnection.Source)]?.GetValue<string>()?.Trim();
+        var source = data[nameof(AIProviderConnection.Source)]?.GetValue<string>()?.Trim()
+            ?? data[nameof(AIProviderConnection.ClientName)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(source))
         {

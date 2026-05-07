@@ -64,3 +64,5 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 ```
 
 For detailed instructions on creating Azure AI Inference and obtaining the Endpoint, refer to the official [documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/model-inference/how-to/configure-project-connection?pivots=ai-foundry-portal).
+
+When you import Azure AI Inference connections through the `AIProviderConnections` recipe step, the schema and import pipeline now recognize the common root-level `Endpoint`, `AuthenticationType`, optional `IdentityId`, and `ApiKey` fields in addition to the exported `Properties.AzureAIInferenceConnectionMetadata` shape.

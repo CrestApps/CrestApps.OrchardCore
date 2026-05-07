@@ -128,6 +128,8 @@ The **Azure Speech** deployment provider allows you to register [Azure AI Speech
 
 Under the hood, this provider uses the [Azure Speech SDK for .NET](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech) (`Microsoft.CognitiveServices.Speech`) with continuous recognition for real-time streaming transcription. The SDK automatically handles audio format detection, WebSocket connections, and supports multiple authentication methods (API Key, Managed Identity, Default Azure credentials).
 
+For recipe-driven imports, contained `AIDeployment` entries using `ClientName: "AzureSpeech"` can now provide `Endpoint`, `AuthenticationType`, optional `IdentityId`, and `ApiKey` directly on the deployment entry. Those values are normalized into the deployment `Properties` bag during import, and the legacy `Properties` form continues to work.
+
 This is useful when:
 
 - You want to use **Azure AI Speech Service** for speech-to-text rather than an Azure OpenAI Whisper deployment.

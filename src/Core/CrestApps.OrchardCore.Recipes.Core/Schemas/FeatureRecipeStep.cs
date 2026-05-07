@@ -25,7 +25,7 @@ public sealed class FeatureRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public async ValueTask<JsonSchema> GetSchemaAsync()
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_cached is not null)
         {
@@ -42,14 +42,14 @@ public sealed class FeatureRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
-        ("enable", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(featureItemSchema)
-            .Description("Feature IDs to enable.")),
-        ("disable", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(featureItemSchema)
-            .Description("Feature IDs to disable.")))
+                ("enable", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(featureItemSchema)
+                    .Description("Feature IDs to enable.")),
+                ("disable", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(featureItemSchema)
+                    .Description("Feature IDs to disable.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

@@ -47,6 +47,11 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
         var metadata = context.Model.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
+        if (metadata.Endpoint is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Endpoint is required for Azure AI Inference connections."], [nameof(AzureAIInferenceConnectionMetadata.Endpoint)]));
+        }
+
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
             context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureAIInferenceConnectionMetadata.ApiKey)]));
@@ -62,7 +67,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureAIInferenceConnectionMetadata)]?.AsObject();
+        var metadataNode = GetMetadataNode(data);
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
@@ -70,6 +75,13 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         }
 
         var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
+
+        var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
+
+        if (endpoint is not null && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            metadata.Endpoint = uri;
+        }
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
 
@@ -88,5 +100,35 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         connection.Put(metadata);
 
         return Task.CompletedTask;
+    }
+
+    private static JsonObject GetMetadataNode(JsonNode data)
+    {
+        JsonObject result = [];
+
+        CopyNode(data, result, nameof(AzureAIInferenceConnectionMetadata.Endpoint));
+        CopyNode(data, result, nameof(AzureAIInferenceConnectionMetadata.AuthenticationType));
+        CopyNode(data, result, nameof(AzureAIInferenceConnectionMetadata.ApiKey));
+        CopyNode(data, result, nameof(AzureAIInferenceConnectionMetadata.IdentityId));
+
+        var nested = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureAIInferenceConnectionMetadata)]?.AsObject();
+
+        if (nested != null)
+        {
+            foreach (var property in nested)
+            {
+                result[property.Key] = property.Value?.DeepClone();
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static void CopyNode(JsonNode source, JsonObject destination, string propertyName)
+    {
+        if (source[propertyName] is JsonNode node)
+        {
+            destination[propertyName] = node.DeepClone();
+        }
     }
 }

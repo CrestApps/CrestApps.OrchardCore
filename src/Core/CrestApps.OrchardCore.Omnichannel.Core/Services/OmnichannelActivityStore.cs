@@ -35,7 +35,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
 
@@ -51,13 +51,13 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await query.CountAsync(),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
+            Count = await query.CountAsync(cancellationToken),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
         };
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
         ArgumentNullException.ThrowIfNull(filter);
@@ -71,7 +71,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         foreach (var handler in _handlers)
         {
-            await handler.FilteringAsync(context);
+            await handler.FilteringAsync(context, cancellationToken);
         }
 
         query = context.Query.With<OmnichannelActivityIndex>()
@@ -82,17 +82,17 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await query.CountAsync(),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
+            Count = await query.CountAsync(cancellationToken),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
         };
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter)
+    public async Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
 
-        var filteredQuery = await BuildBulkManageableQueryAsync(filter);
+        var filteredQuery = await BuildBulkManageableQueryAsync(filter, cancellationToken);
         var orderedQuery = filteredQuery.With<OmnichannelActivityIndex>()
             .OrderByDescending(x => x.ScheduledUtc)
             .ThenBy(x => x.Id);
@@ -100,28 +100,28 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await filteredQuery.CountAsync(),
-            Entries = (await orderedQuery.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
+            Count = await filteredQuery.CountAsync(cancellationToken),
+            Entries = (await orderedQuery.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
         };
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter)
+    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
 
-        var filteredQuery = await BuildBulkManageableQueryAsync(filter);
+        var filteredQuery = await BuildBulkManageableQueryAsync(filter, cancellationToken);
 
         var activities = await filteredQuery
             .With<OmnichannelActivityIndex>()
             .OrderByDescending(x => x.ScheduledUtc)
             .ThenBy(x => x.Id)
-            .ListAsync();
+            .ListAsync(cancellationToken);
 
         return activities.ToArray();
     }
 
-    private async Task<IQuery<OmnichannelActivity>> BuildBulkManageableQueryAsync(BulkManageActivityFilter filter)
+    private async Task<IQuery<OmnichannelActivity>> BuildBulkManageableQueryAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken)
     {
         var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(collection: OmnichannelConstants.CollectionName)
             .Where(index => index.Status == ActivityStatus.NotStated && index.InteractionType == ActivityInteractionType.Manual);
@@ -130,14 +130,14 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         foreach (var handler in _bulkManageHandlers)
         {
-            await handler.FilteringAsync(context);
+            await handler.FilteringAsync(context, cancellationToken);
         }
 
         var filteredQuery = context.Query;
 
         if (filter.ContactIsPublished.HasValue)
         {
-            var contactContentItemIds = (await filteredQuery.ListAsync())
+            var contactContentItemIds = (await filteredQuery.ListAsync(cancellationToken))
                 .Select(activity => activity.ContactContentItemId)
                 .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
                 .Distinct()
@@ -154,7 +154,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
                 ? contactQuery.Where(index => index.Published)
                 : contactQuery.Where(index => index.Latest && !index.Published);
 
-            var filteredContactContentItemIds = (await contactQuery.ListAsync())
+            var filteredContactContentItemIds = (await contactQuery.ListAsync(cancellationToken))
                 .Select(contentItem => contentItem.ContentItemId)
                 .Distinct()
                 .ToArray();
@@ -171,7 +171,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);
 
@@ -185,13 +185,13 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await query.CountAsync(),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
+            Count = await query.CountAsync(cancellationToken),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
         };
     }
 
     /// <inheritdoc/>
-    public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType)
+    public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);
         ArgumentException.ThrowIfNullOrEmpty(channelEndpointId);
@@ -203,6 +203,6 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             index.InteractionType == interactionType, collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.ScheduledUtc)
             .ThenByDescending(x => x.CreatedUtc)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

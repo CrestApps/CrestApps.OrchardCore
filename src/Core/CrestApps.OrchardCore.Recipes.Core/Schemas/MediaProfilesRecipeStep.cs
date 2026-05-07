@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -13,7 +13,7 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -26,28 +26,28 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-        ("Width", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-        ("Height", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-        ("Mode", new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(MediaProfileEnums.ResizeModes)
-            .Description("The image resize mode.")),
-        ("Format", new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(MediaProfileEnums.OutputFormats)
-            .Description("The output image format.")),
-        ("Quality", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-        ("BackgroundColor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                ("Width", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("Height", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("Mode", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(MediaProfileEnums.ResizeModes)
+                    .Description("The image resize mode.")),
+                ("Format", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(MediaProfileEnums.OutputFormats)
+                    .Description("The output image format.")),
+                ("Quality", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("BackgroundColor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("MediaProfiles")),
-        ("MediaProfiles", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .AdditionalProperties(profileItemSchema)
-            .Description("A dictionary keyed by profile name. Each value is a media profile object.")))
+                ("MediaProfiles", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .AdditionalProperties(profileItemSchema)
+                    .Description("A dictionary keyed by profile name. Each value is a media profile object.")))
             .Required("name", "MediaProfiles")
             .AdditionalProperties(true)
             .Build();

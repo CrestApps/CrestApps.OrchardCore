@@ -25,7 +25,7 @@ public sealed class OrchardFeatureSchemaProvider : IFeatureSchemaProvider
     /// <summary>
     /// Retrieves the feature ids async.
     /// </summary>
-    public Task<IEnumerable<string>> GetFeatureIdsAsync()
+    public Task<IEnumerable<string>> GetFeatureIdsAsync(CancellationToken cancellationToken = default)
     {
         var ids = _extensionManager.GetFeatures()
             .Select(f => f.Id)
@@ -38,7 +38,7 @@ public sealed class OrchardFeatureSchemaProvider : IFeatureSchemaProvider
     /// <summary>
     /// Retrieves the theme ids async.
     /// </summary>
-    public Task<IEnumerable<string>> GetThemeIdsAsync()
+    public Task<IEnumerable<string>> GetThemeIdsAsync(CancellationToken cancellationToken = default)
     {
         var ids = _extensionManager.GetFeatures()
             .Where(f => string.Equals(f.Extension?.Manifest?.Type, ThemeManifestType, StringComparison.OrdinalIgnoreCase))

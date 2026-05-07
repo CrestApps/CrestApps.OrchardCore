@@ -24,27 +24,27 @@ public sealed class ThemesRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public async ValueTask<JsonSchema> GetSchemaAsync()
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_cached is not null)
         {
             return _cached;
         }
 
-        var themeIds = await _featureProvider.GetThemeIdsAsync();
+        var themeIds = await _featureProvider.GetThemeIdsAsync(cancellationToken);
 
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes")),
-        ("site", new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(themeIds)
-            .Description("The theme ID to use for the front-end site.")),
-        ("admin", new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(themeIds)
-            .Description("The theme ID to use for the admin dashboard.")))
+                ("site", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(themeIds)
+                    .Description("The theme ID to use for the front-end site.")),
+                ("admin", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(themeIds)
+                    .Description("The theme ID to use for the admin dashboard.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

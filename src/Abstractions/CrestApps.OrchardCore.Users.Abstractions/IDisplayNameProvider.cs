@@ -11,5 +11,6 @@ public interface IDisplayNameProvider
     /// Gets the display name for the specified user.
     /// </summary>
     /// <param name="user">The user to describe.</param>
-    Task<string> GetAsync(IUser user);
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<string> GetAsync(IUser user, CancellationToken cancellationToken = default);
 }

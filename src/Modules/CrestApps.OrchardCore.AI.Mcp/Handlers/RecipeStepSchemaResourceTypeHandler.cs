@@ -46,7 +46,7 @@ public sealed class RecipeStepSchemaResourceTypeHandler : McpResourceTypeHandler
             _logger.LogDebug("Reading recipe step schema for step: {StepName}", stepName);
         }
 
-        var stepSchema = await _recipeSchemaService.GetStepSchemaAsync(stepName);
+        var stepSchema = await _recipeSchemaService.GetStepSchemaAsync(stepName, cancellationToken);
 
         if (stepSchema is null)
         {

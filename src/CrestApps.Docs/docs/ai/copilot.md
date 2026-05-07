@@ -43,7 +43,7 @@ Depending on which authentication mode you choose:
 
 ## Configuration
 
-Configure the Copilot orchestrator at **Settings → Copilot**. The main choice is which **authentication type** you want to use.
+Configure the Copilot orchestrator at **Settings → Artificial Intelligence → Copilot**. The main choice is which **authentication type** you want to use.
 
 | Authentication type | When to use | What you configure |
 |---|---|---|
@@ -68,7 +68,7 @@ Use this mode when you want the orchestrator to authenticate to Copilot via GitH
    - GitHub Settings → Developer settings → OAuth Apps → **New OAuth App**
    - **Authorization callback URL**: `https://your-domain.com/copilot/OAuthCallback`
    - Copy the **Client ID** and **Client Secret**
-2. In Orchard Core: go to **Settings → Copilot** and enter the client ID/secret.
+2. In Orchard Core: go to **Settings → Artificial Intelligence → Copilot** and enter the client ID/secret.
 
 The **Client Secret** field only needs a value the first time you configure GitHub OAuth. After that, leave it empty to keep the existing encrypted secret, or enter a new value to replace it.
 
@@ -107,7 +107,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 
 #### Setup steps
 
-1. Go to **Settings → Copilot**.
+1. Go to **Settings → Artificial Intelligence → Copilot**.
 2. Set **Authentication Type** to **API Key (Bring your own key)**.
 3. Choose a **Provider Type**.
 4. Configure the settings listed above.
@@ -115,7 +115,7 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 
 ## Usage
 
-Usage differs slightly depending on the authentication type selected in **Settings → Copilot**.
+Usage differs slightly depending on the authentication type selected in **Settings → Artificial Intelligence → Copilot**.
 
 In all modes, **Allow All** is checked by default (passes `--allow-all` to the Copilot CLI) and settings are saved automatically via SignalR using the extensible `IChatInteractionSettingsHandler` pipeline.
 
@@ -151,7 +151,7 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 #### Chat Interactions
 
 - No GitHub sign-in is required.
-- The session uses the **Default Model** configured in **Settings → Copilot**.
+- The session uses the **Default Model** configured in **Settings → Artificial Intelligence → Copilot**.
 - AI Profiles, AI Profile templates, and Chat Interactions can still override the model name and **Effort level** for that specific Copilot-backed session.
 
 #### AI Profiles

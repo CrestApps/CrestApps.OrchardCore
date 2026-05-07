@@ -19,6 +19,6 @@ public sealed class AIProfileAdminMenuCacheHandlerTests
         await handler.UpdatedAsync(new UpdatedContext<AIProfile>(profile), TestContext.Current.CancellationToken);
         await handler.DeletedAsync(new DeletedContext<AIProfile>(profile), TestContext.Current.CancellationToken);
 
-        cacheService.Verify(x => x.InvalidateAsync(), Times.Exactly(3));
+        cacheService.Verify(x => x.InvalidateAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 }

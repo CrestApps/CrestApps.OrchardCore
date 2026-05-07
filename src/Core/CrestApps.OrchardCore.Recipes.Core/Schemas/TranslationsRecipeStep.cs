@@ -13,16 +13,16 @@ public sealed class TranslationsRecipeStep : RecipeStepSchemaBase
         => RecipeStepSchemaBuilders.BuildNamedStep(
             Name,
             [
-            ("translations", RecipeStepSchemaBuilders.Array(
-            RecipeStepSchemaBuilders.Object(
-            [
-            ("culture", RecipeStepSchemaBuilders.String()),
-    ("context", RecipeStepSchemaBuilders.String()),
-    ("key", RecipeStepSchemaBuilders.String()),
-    ("value", RecipeStepSchemaBuilders.String()),
-    ],
-    ["culture", "key"]),
-    1)),
-    ],
-    ["translations"]);
+                ("translations", RecipeStepSchemaBuilders.Array(
+                    RecipeStepSchemaBuilders.Object(
+                        [
+                            ("culture", RecipeStepSchemaBuilders.String()),
+                            ("context", RecipeStepSchemaBuilders.String()),
+                            ("key", RecipeStepSchemaBuilders.String()),
+                            ("value", RecipeStepSchemaBuilders.String()),
+                        ],
+                        ["culture", "key"]),
+                    1)),
+            ],
+            ["translations"]);
 }

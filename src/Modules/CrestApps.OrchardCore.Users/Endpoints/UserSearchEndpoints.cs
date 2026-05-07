@@ -29,7 +29,8 @@ internal static class UserSearchEndpoints
         RoleManager<IRole> roleManager,
         UserManager<IUser> userManager,
         YSession session,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        CancellationToken cancellationToken)
     {
         var searchQuery = session.Query<User>();
 
@@ -58,7 +59,7 @@ internal static class UserSearchEndpoints
             searchQuery = searchQuery.With<UserIndex>(x => x.IsEnabled && x.NormalizedUserName.Contains(normalizedQuery));
         }
 
-        var users = await searchQuery.Take(50).ListAsync();
+        var users = await searchQuery.Take(50).ListAsync(cancellationToken);
         var items = new List<UserSearchItem>(users.Count());
 
         foreach (var user in users)
@@ -66,7 +67,7 @@ internal static class UserSearchEndpoints
             items.Add(new UserSearchItem
             {
                 Value = ResolveValue(user, valueType),
-                Text = await displayNameProvider.GetAsync(user),
+                Text = await displayNameProvider.GetAsync(user, cancellationToken),
                 IsEnabled = user.IsEnabled,
             });
         }

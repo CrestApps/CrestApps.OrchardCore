@@ -63,7 +63,7 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
                     continue;
                 }
 
-                schema = await recipeStep.GetSchemaAsync();
+                schema = await recipeStep.GetSchemaAsync(cancellationToken);
                 break;
             }
 

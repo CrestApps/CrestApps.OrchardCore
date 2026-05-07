@@ -19,5 +19,6 @@ public interface IAIProfileAdminMenuCacheService
     /// <summary>
     /// Invalidates the cached admin-menu AI profiles.
     /// </summary>
-    ValueTask InvalidateAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    ValueTask InvalidateAsync(CancellationToken cancellationToken = default);
 }

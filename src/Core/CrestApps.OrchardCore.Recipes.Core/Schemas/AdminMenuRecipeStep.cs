@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -13,7 +13,7 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -22,24 +22,24 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
 
     private static JsonSchema CreateSchema()
         => new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminMenu")),
-    ("data", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Array)
-        .Items(new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-    ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-    ("MenuItems", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Array)
-        .Items(ContentCommonSchemas.ContentItemSchema)
-        .Description("The list of menu item content items.")))
-        .Required("Id", "Name", "MenuItems")
-        .AdditionalProperties(true))))
-        .Required("name", "data")
-        .AdditionalProperties(true)
-        .Build();
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminMenu")),
+                ("data", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                            ("MenuItems", new JsonSchemaBuilder()
+                                .Type(SchemaValueType.Array)
+                                .Items(ContentCommonSchemas.ContentItemSchema)
+                                .Description("The list of menu item content items.")))
+                        .Required("Id", "Name", "MenuItems")
+                        .AdditionalProperties(true))))
+            .Required("name", "data")
+            .AdditionalProperties(true)
+            .Build();
 }

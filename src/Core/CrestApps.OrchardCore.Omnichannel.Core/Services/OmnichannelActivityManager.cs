@@ -29,65 +29,65 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var result = await _store.PageContactManualScheduledAsync(contentContentItemId, page, pageSize);
+        var result = await _store.PageContactManualScheduledAsync(contentContentItemId, page, pageSize, cancellationToken);
 
         foreach (var entry in result.Entries)
         {
-            await LoadAsync(entry);
+            await LoadAsync(entry, cancellationToken);
         }
 
         return result;
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter, CancellationToken cancellationToken = default)
     {
-        var result = await _store.PageManualScheduledAsync(userId, page, pageSize, filter);
+        var result = await _store.PageManualScheduledAsync(userId, page, pageSize, filter, cancellationToken);
 
         foreach (var entry in result.Entries)
         {
-            await LoadAsync(entry);
+            await LoadAsync(entry, cancellationToken);
         }
 
         return result;
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var result = await _store.PageContactManualCompletedAsync(contentContentItemId, page, pageSize);
+        var result = await _store.PageContactManualCompletedAsync(contentContentItemId, page, pageSize, cancellationToken);
 
         foreach (var entry in result.Entries)
         {
-            await LoadAsync(entry);
+            await LoadAsync(entry, cancellationToken);
         }
 
         return result;
     }
 
     /// <inheritdoc/>
-    public async Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter)
+    public async Task<PageResult<OmnichannelActivity>> PageBulkManageableAsync(int page, int pageSize, BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
-        var result = await _store.PageBulkManageableAsync(page, pageSize, filter);
+        var result = await _store.PageBulkManageableAsync(page, pageSize, filter, cancellationToken);
 
         foreach (var entry in result.Entries)
         {
-            await LoadAsync(entry);
+            await LoadAsync(entry, cancellationToken);
         }
 
         return result;
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter)
+    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
-        var activities = await _store.ListBulkManageableAsync(filter);
+        var activities = await _store.ListBulkManageableAsync(filter, cancellationToken);
 
         foreach (var activity in activities)
         {
-            await LoadAsync(activity);
+            await LoadAsync(activity, cancellationToken);
         }
 
         return activities;

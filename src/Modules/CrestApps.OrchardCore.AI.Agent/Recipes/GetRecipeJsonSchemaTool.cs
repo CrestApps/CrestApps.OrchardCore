@@ -81,7 +81,7 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
                     continue;
                 }
 
-                stepSchema = await recipeStep.GetSchemaAsync();
+                stepSchema = await recipeStep.GetSchemaAsync(cancellationToken);
                 break;
             }
 

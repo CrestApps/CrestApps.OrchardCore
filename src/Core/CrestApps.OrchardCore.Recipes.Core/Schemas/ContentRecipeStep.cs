@@ -25,7 +25,7 @@ public sealed class ContentRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public async ValueTask<JsonSchema> GetSchemaAsync()
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_cached is not null)
         {
@@ -41,10 +41,10 @@ public sealed class ContentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("content")),
-        ("data", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(contentItemSchema)
-            .MinItems(1)))
+                ("data", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(contentItemSchema)
+                    .MinItems(1)))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();

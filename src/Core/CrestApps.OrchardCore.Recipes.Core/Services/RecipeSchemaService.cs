@@ -41,7 +41,8 @@ public sealed class RecipeSchemaService
     /// Gets the JSON schema for a specific recipe step by name.
     /// </summary>
     /// <param name="stepName">The name of the recipe step.</param>
-    public ValueTask<JsonSchema> GetStepSchemaAsync(string stepName)
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public ValueTask<JsonSchema> GetStepSchemaAsync(string stepName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stepName);
 
@@ -49,7 +50,7 @@ public sealed class RecipeSchemaService
 
         if (step is not null)
         {
-            return step.GetSchemaAsync();
+            return step.GetSchemaAsync(cancellationToken);
         }
 
         return ValueTask.FromResult<JsonSchema>(null);

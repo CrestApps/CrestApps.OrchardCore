@@ -200,6 +200,8 @@ Contained-connection deployments (e.g., Azure Speech) can also be defined in `ap
 
 Deployments defined this way are read-only, ephemeral (exist only while in configuration), and appear alongside database-managed deployments in dropdown menus and API queries.
 
+For recipe-based imports, the `AIDeployment` step now exposes the same contained Azure Speech fields (`Endpoint`, `AuthenticationType`, optional `IdentityId`, and `ApiKey`) so the recipe schema matches the deployment editor more closely.
+
 ---
 
 ## Code Migration

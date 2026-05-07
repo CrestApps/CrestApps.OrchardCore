@@ -37,7 +37,7 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 
 1. **Keep changes local**  
    - All experimental or temporary modifications must remain on your machine.  
-   - Do not merge or push to the shared repository.
+   - Do not commit code changes. Keep everything locally.
 
 2. **Use local configuration overrides**  
    - Store environment-specific settings in `appsettings.Development.json` or environment variables.  

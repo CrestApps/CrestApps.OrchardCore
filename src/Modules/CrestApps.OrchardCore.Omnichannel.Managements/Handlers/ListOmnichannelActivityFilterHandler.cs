@@ -11,7 +11,7 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
     /// Asynchronously performs the filtering operation.
     /// </summary>
     /// <param name="context">The context.</param>
-    public Task FilteringAsync(ListOmnichannelActivityFilterContext context)
+    public Task FilteringAsync(ListOmnichannelActivityFilterContext context, CancellationToken cancellationToken = default)
     {
         var filter = context.Filter;
 

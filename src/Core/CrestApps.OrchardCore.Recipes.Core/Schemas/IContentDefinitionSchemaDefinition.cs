@@ -24,7 +24,8 @@ public interface IContentDefinitionSchemaDefinition
     /// <summary>
     /// Builds the schema describing the settings payload for this content definition.
     /// </summary>
-    ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -46,7 +47,8 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     /// <summary>
     /// Retrieves the settings schema async.
     /// </summary>
-    public ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync()
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cache ??= BuildSettingsCore();
 

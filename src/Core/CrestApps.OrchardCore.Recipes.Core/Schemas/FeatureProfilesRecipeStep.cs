@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -13,7 +13,7 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -22,27 +22,27 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
 
     private static JsonSchema CreateSchema()
         => new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("FeatureProfiles")),
-    ("FeatureProfiles", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .AdditionalProperties(new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-    ("FeatureRules", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Array)
-        .Items(new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("Rule", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-    ("Expression", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-        .Required("Rule", "Expression")
-        .AdditionalProperties(true))))
-        .AdditionalProperties(true))))
-        .Required("name", "FeatureProfiles")
-        .AdditionalProperties(true)
-        .Build();
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("FeatureProfiles")),
+                ("FeatureProfiles", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .AdditionalProperties(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("FeatureRules", new JsonSchemaBuilder()
+                                .Type(SchemaValueType.Array)
+                                .Items(new JsonSchemaBuilder()
+                                    .Type(SchemaValueType.Object)
+                                    .Properties(
+                                        ("Rule", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                        ("Expression", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                                    .Required("Rule", "Expression")
+                                    .AdditionalProperties(true))))
+                        .AdditionalProperties(true))))
+            .Required("name", "FeatureProfiles")
+            .AdditionalProperties(true)
+            .Build();
 }

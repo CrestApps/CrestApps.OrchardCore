@@ -98,7 +98,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// Handles the async.
     /// </summary>
     /// <param name="omnichannelEvent">The omnichannel event.</param>
-    public async Task HandleAsync(OmnichannelEvent omnichannelEvent)
+    public async Task HandleAsync(OmnichannelEvent omnichannelEvent, CancellationToken cancellationToken = default)
     {
         if (omnichannelEvent.EventType != OmnichannelConstants.Events.SmsReceived ||
             omnichannelEvent.Message.Channel != OmnichannelConstants.Channels.Sms ||
@@ -109,7 +109,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         var serviceAddress = omnichannelEvent.Message.ServiceAddress.GetCleanedPhoneNumber();
 
-        var endpoint = await _channelEndpointsManager.GetByServiceAddressAsync(omnichannelEvent.Message.Channel, serviceAddress);
+        var endpoint = await _channelEndpointsManager.GetByServiceAddressAsync(omnichannelEvent.Message.Channel, serviceAddress, cancellationToken);
 
         if (endpoint is null)
         {
@@ -121,7 +121,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
         endpoint.ItemId,
         omnichannelEvent.Message.CustomerAddress,
-        ActivityInteractionType.Automated);
+        ActivityInteractionType.Automated,
+        cancellationToken);
 
         if (activity is null)
         {
@@ -133,7 +134,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         // Always set the activity status to AwaitingAgentResponse when a new message is received from the customer to ensure we don't miss responding to them.
         activity.Status = ActivityStatus.AwaitingAgentResponse;
 
-        await _omnichannelActivityStore.UpdateAsync(activity);
+        await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(activity.CampaignId))
         {
@@ -142,7 +143,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        var campaign = await _campaignManager.FindByIdAsync(activity.CampaignId);
+        var campaign = await _campaignManager.FindByIdAsync(activity.CampaignId, cancellationToken);
 
         if (campaign == null)
         {
@@ -158,7 +159,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        var chatSession = await _chatSessionManager.FindByIdAsync(activity.AISessionId);
+        var chatSession = await _chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
 
         if (chatSession is null)
         {
@@ -173,7 +174,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             SessionId = chatSession.SessionId,
             Role = ChatRole.User,
             Content = omnichannelEvent.Message.Content
-        });
+        }, cancellationToken);
 
         // TODO: add a way to extract data from the message when needed to update Subject or the Contact objects.
         // Maybe in the campaign we can see if updating the subject or contact should be allowed and use AI to extract the data.
@@ -200,10 +201,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             context.AdditionalProperties["Session"] = chatSession;
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
 
-            var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context);
+            var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, cancellationToken);
 
             bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
 
@@ -236,11 +237,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     SessionId = chatSession.SessionId,
                     Role = ChatRole.Assistant,
                     Content = bestChoice,
-                });
+                }, cancellationToken);
 
                 activity.Status = ActivityStatus.AwaitingCustomerAnswer;
 
-                await _omnichannelActivityStore.UpdateAsync(activity);
+                await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
 
                 ShellScope.AddDeferredTask(async scope =>
                 {

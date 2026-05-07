@@ -11,5 +11,7 @@ public interface ICampaignActionExecutor
     /// <summary>
     /// Executes all campaign actions associated with the given campaign and disposition.
     /// </summary>
-    Task ExecuteAsync(CampaignActionExecutionContext context);
+    /// <param name="context">The campaign action execution context.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task ExecuteAsync(CampaignActionExecutionContext context, CancellationToken cancellationToken = default);
 }

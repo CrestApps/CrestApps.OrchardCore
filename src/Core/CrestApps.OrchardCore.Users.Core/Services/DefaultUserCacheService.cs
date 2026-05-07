@@ -28,7 +28,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
     }
 
     /// <inheritdoc />
-    public async Task<IUser> GetUserAsync(string username)
+    public async Task<IUser> GetUserAsync(string username, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(username);
 
@@ -49,7 +49,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
     }
 
     /// <inheritdoc />
-    public Task SetAsync(IUser user)
+    public Task SetAsync(IUser user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
 
@@ -62,7 +62,7 @@ public sealed class DefaultUserCacheService : IUserCacheService
     }
 
     /// <inheritdoc />
-    public Task RemoveAsync(string username)
+    public Task RemoveAsync(string username, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(username);
 

@@ -154,6 +154,8 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.ConnectionName = connectionName;
         }
 
+        PopulateContainedConnectionAliases(deployment, data);
+
         if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
         {
             deployment.Type = type;
@@ -171,6 +173,27 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         }
 
         return Task.CompletedTask;
+    }
+
+    private static void PopulateContainedConnectionAliases(AIDeployment deployment, JsonNode data)
+    {
+        CopyStringProperty(data, deployment, "Endpoint");
+        CopyStringProperty(data, deployment, "AuthenticationType");
+        CopyStringProperty(data, deployment, "ApiKey");
+        CopyStringProperty(data, deployment, "IdentityId");
+    }
+
+    private static void CopyStringProperty(JsonNode data, AIDeployment deployment, string propertyName)
+    {
+        var propertyValue = data[propertyName]?.GetValue<string>();
+
+        if (propertyValue is null)
+        {
+            return;
+        }
+
+        deployment.Properties ??= new Dictionary<string, object>();
+        deployment.Properties[propertyName] = propertyValue;
     }
 
     private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)

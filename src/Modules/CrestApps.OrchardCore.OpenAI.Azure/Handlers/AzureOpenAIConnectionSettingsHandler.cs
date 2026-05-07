@@ -46,7 +46,12 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        if (context.Model.TryGet<AzureConnectionMetadata>(out var metadata) &&
+        if (!context.Model.TryGet<AzureConnectionMetadata>(out var metadata) || metadata.Endpoint is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Endpoint is required for Azure OpenAI connections."], [nameof(AzureConnectionMetadata.Endpoint)]));
+        }
+
+        if (context.Model.TryGet<AzureConnectionMetadata>(out metadata) &&
             metadata.AuthenticationType == AzureAuthenticationType.ApiKey &&
             string.IsNullOrEmpty(metadata.ApiKey))
         {
@@ -63,9 +68,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadataNode =
-            data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject() ??
-            data[nameof(AIProviderConnection.Properties)]?[_legacyAzureConnectionMetadataPropertyName]?.AsObject();
+        var metadataNode = GetMetadataNode(data);
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
@@ -99,5 +102,37 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         connection.Put(metadata);
 
         return Task.CompletedTask;
+    }
+
+    private static JsonObject GetMetadataNode(JsonNode data)
+    {
+        JsonObject result = [];
+
+        CopyNode(data, result, nameof(AzureConnectionMetadata.Endpoint));
+        CopyNode(data, result, nameof(AzureConnectionMetadata.AuthenticationType));
+        CopyNode(data, result, nameof(AzureConnectionMetadata.ApiKey));
+        CopyNode(data, result, nameof(AzureConnectionMetadata.IdentityId));
+
+        var nested =
+            data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject() ??
+            data[nameof(AIProviderConnection.Properties)]?[_legacyAzureConnectionMetadataPropertyName]?.AsObject();
+
+        if (nested != null)
+        {
+            foreach (var property in nested)
+            {
+                result[property.Key] = property.Value?.DeepClone();
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static void CopyNode(JsonNode source, JsonObject destination, string propertyName)
+    {
+        if (source[propertyName] is JsonNode node)
+        {
+            destination[propertyName] = node.DeepClone();
+        }
     }
 }

@@ -27,8 +27,8 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
         var deploymentData = new JsonArray();
 
         var deploymentNames = step.IncludeAll
-        ? []
-        : step.DeploymentNames ?? [];
+            ? []
+            : step.DeploymentNames ?? [];
 
         foreach (var deployment in deployments)
         {
