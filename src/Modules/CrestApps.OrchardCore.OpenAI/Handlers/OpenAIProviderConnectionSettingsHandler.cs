@@ -66,7 +66,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(OpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode = GetMetadataNode(data);
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
@@ -94,5 +94,33 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
         connection.Put(metadata);
 
         return Task.CompletedTask;
+    }
+
+    private static JsonObject GetMetadataNode(JsonNode data)
+    {
+        JsonObject result = [];
+
+        CopyNode(data, result, nameof(OpenAIConnectionMetadata.Endpoint));
+        CopyNode(data, result, nameof(OpenAIConnectionMetadata.ApiKey));
+
+        var nested = data[nameof(AIProviderConnection.Properties)]?[nameof(OpenAIConnectionMetadata)]?.AsObject();
+
+        if (nested != null)
+        {
+            foreach (var property in nested)
+            {
+                result[property.Key] = property.Value?.DeepClone();
+            }
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static void CopyNode(JsonNode source, JsonObject destination, string propertyName)
+    {
+        if (source[propertyName] is JsonNode node)
+        {
+            destination[propertyName] = node.DeepClone();
+        }
     }
 }

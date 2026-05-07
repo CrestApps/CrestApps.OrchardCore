@@ -23,14 +23,50 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
 
     private static JsonSchema CreateSchema()
     {
+        var azureAuthenticationTypeSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum("Default", "ManagedIdentity", "ApiKey")
+            .Description("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.");
+
+        var openAIMetadataSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint.")),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API key.")))
+            .AdditionalProperties(true);
+
+        var azureMetadataSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API endpoint.")),
+                ("AuthenticationType", azureAuthenticationTypeSchema),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider API key. Required when AuthenticationType is ApiKey.")),
+                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional client ID of a user-assigned managed identity. Used when AuthenticationType is ManagedIdentity.")))
+            .AdditionalProperties(true);
+
+        var propertiesSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("OpenAIConnectionMetadata", openAIMetadataSchema.Description("Metadata for OpenAI-compatible connections.")),
+                ("AzureConnectionMetadata", azureMetadataSchema.Description("Metadata for Azure OpenAI connections.")),
+                ("AzureOpenAIConnectionMetadata", azureMetadataSchema.Description("Legacy metadata alias for Azure OpenAI connections.")),
+                ("AzureAIInferenceConnectionMetadata", azureMetadataSchema.Description("Metadata for Azure AI Inference connections.")))
+            .AdditionalProperties(true)
+            .Description("Provider-specific connection metadata. Recipe exports keep provider settings under these metadata objects.");
+
         var connectionSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
+                ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection source/provider identifier (for example OpenAI, Azure, or AzureAIInference).")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
-                ("ClientName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Client name (e.g., OpenAI, Azure, AzureAIInference, Ollama).")),
-                ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Connection properties.")))
+                ("ClientName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Obsolete alias for Source kept for backward compatibility.")),
+                ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection endpoint alias for recipe imports.")),
+                ("AuthenticationType", azureAuthenticationTypeSchema.Description("Common Azure connection authentication type alias for recipe imports.")),
+                ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection API key alias for recipe imports.")),
+                ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common Azure connection managed identity client ID alias for recipe imports.")),
+                ("Properties", propertiesSchema))
             .Required("Name")
             .AdditionalProperties(true);
 

@@ -141,6 +141,8 @@ If you are using the **AI Connection Management** feature, you can configure Dee
 }
 ```
 
+`Source` is the preferred connection-source field in `AIProviderConnections` recipes. For backward compatibility, the import pipeline still accepts `ClientName`, and the recipe schema also surfaces the common root-level `Endpoint` and `ApiKey` aliases even though exported recipes keep the provider settings under `Properties.OpenAIConnectionMetadata`.
+
 ---
 
 ### Configuring Other AI Providers  
