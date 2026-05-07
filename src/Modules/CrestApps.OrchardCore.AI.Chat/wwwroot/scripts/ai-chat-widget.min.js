@@ -701,7 +701,7 @@ window.openAIChatWidgetManager = window.openAIChatWidgetManager || function () {
       buttons.forEach(function (button) {
         var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
         var isPlaying = buttonIndex === widgetApp.ttsPlayingMessageIndex;
-        var iconHtml = isPlaying ? '<span class="fa-solid fa-circle-pause" style="font-size: 0.9rem;"></span>' : '<span class="fa-solid fa-circle-play" style="font-size: 0.9rem;"></span>';
+        var iconHtml = isPlaying ? '<i class="fa-solid fa-circle-pause" style="font-size: 0.9rem;"></i>' : '<i class="fa-solid fa-circle-play" style="font-size: 0.9rem;"></i>';
         button.classList.toggle('tts-playing', isPlaying);
         button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
         button.replaceChildren(DOMPurify.sanitize(iconHtml, {
