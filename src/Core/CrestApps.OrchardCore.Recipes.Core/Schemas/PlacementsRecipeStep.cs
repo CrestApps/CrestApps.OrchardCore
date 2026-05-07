@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -13,7 +13,7 @@ public sealed class PlacementsRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -22,14 +22,14 @@ public sealed class PlacementsRecipeStep : IRecipeStep
 
     private static JsonSchema CreateSchema()
         => new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Placements")),
-    ("Placements", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .AdditionalProperties(true)
-        .Description("A dictionary keyed by shape type. Each value is an array of placement objects with 'place' and optional filters.")))
-        .Required("name", "Placements")
-        .AdditionalProperties(true)
-        .Build();
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Placements")),
+                ("Placements", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .AdditionalProperties(true)
+                    .Description("A dictionary keyed by shape type. Each value is an array of placement objects with 'place' and optional filters.")))
+            .Required("name", "Placements")
+            .AdditionalProperties(true)
+            .Build();
 }

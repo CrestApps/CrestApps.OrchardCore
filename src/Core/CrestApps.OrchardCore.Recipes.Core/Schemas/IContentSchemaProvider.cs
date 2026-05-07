@@ -7,8 +7,10 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public interface IContentSchemaProvider
 {
     /// <summary>Returns names of all known content parts (code-defined + user-defined).</summary>
-    Task<IEnumerable<string>> GetPartNamesAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IEnumerable<string>> GetPartNamesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Returns CLR type names of all registered content fields.</summary>
-    Task<IEnumerable<string>> GetFieldTypeNamesAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IEnumerable<string>> GetFieldTypeNamesAsync(CancellationToken cancellationToken = default);
 }

@@ -34,7 +34,7 @@ public sealed class RecipesRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public async ValueTask<JsonSchema> GetSchemaAsync()
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_cached is not null)
         {
@@ -62,15 +62,15 @@ public sealed class RecipesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("recipes")),
-        ("Values", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-        ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
-            .Required("executionid", "name")
-            .AdditionalProperties(true))))
+                ("Values", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
+                        .Required("executionid", "name")
+                        .AdditionalProperties(true))))
             .Required("name", "Values")
             .AdditionalProperties(true)
             .Build();

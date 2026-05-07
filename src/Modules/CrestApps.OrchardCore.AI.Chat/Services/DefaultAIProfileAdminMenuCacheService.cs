@@ -58,7 +58,7 @@ internal sealed class DefaultAIProfileAdminMenuCacheService : IAIProfileAdminMen
     /// <summary>
     /// Invalidates the cached admin-menu AI profiles.
     /// </summary>
-    public ValueTask InvalidateAsync()
+    public ValueTask InvalidateAsync(CancellationToken cancellationToken = default)
     {
         _memoryCache.Remove(_cacheKey);
 

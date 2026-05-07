@@ -39,13 +39,13 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CampaignActionExecutionContext context)
+    public async Task ExecuteAsync(CampaignActionExecutionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.Activity);
         ArgumentNullException.ThrowIfNull(context.Disposition);
 
-        var allActions = await _actionCatalog.GetAllAsync();
+        var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
 
         var actions = allActions
             .Where(a => string.Equals(a.CampaignId, context.Activity.CampaignId, StringComparison.OrdinalIgnoreCase)

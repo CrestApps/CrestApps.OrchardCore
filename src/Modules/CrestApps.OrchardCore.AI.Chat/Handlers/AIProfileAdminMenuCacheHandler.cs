@@ -20,16 +20,16 @@ internal sealed class AIProfileAdminMenuCacheHandler : CatalogEntryHandlerBase<A
 
     public override async Task CreatedAsync(CreatedContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
-        await _cacheService.InvalidateAsync();
+        await _cacheService.InvalidateAsync(cancellationToken);
     }
 
     public override async Task UpdatedAsync(UpdatedContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
-        await _cacheService.InvalidateAsync();
+        await _cacheService.InvalidateAsync(cancellationToken);
     }
 
     public override async Task DeletedAsync(DeletedContext<AIProfile> context, CancellationToken cancellationToken = default)
     {
-        await _cacheService.InvalidateAsync();
+        await _cacheService.InvalidateAsync(cancellationToken);
     }
 }

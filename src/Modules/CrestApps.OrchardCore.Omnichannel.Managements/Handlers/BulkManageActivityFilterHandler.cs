@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterHandler
 {
     /// <inheritdoc/>
-    public Task FilteringAsync(BulkManageActivityFilterContext context)
+    public Task FilteringAsync(BulkManageActivityFilterContext context, CancellationToken cancellationToken = default)
     {
         var filter = context.Filter;
 

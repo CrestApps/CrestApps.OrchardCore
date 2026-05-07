@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -14,7 +14,7 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -27,13 +27,12 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment name as specified by the vendor.")),
-        ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider name (e.g., OpenAI, DeepSeek).")),
-        ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")),
-        ("Type", new JsonSchemaBuilder().AnyOf(
-            new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The deployment type, or a comma-separated flag value such as 'Chat, Utility'. Defaults to Chat when not specified."),
-        new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
-            new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech")).MinItems(1).UniqueItems(true).Description("The deployment types."))),
-        ("IsDefault", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this deployment is the default for its type and connection.")))
+                ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider name (e.g., OpenAI, DeepSeek).")),
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")),
+                ("Type", new JsonSchemaBuilder().AnyOf(
+                    new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The deployment type, or a comma-separated flag value such as 'Chat, Utility'. Defaults to Chat when not specified."),
+                    new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
+                        new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech")).MinItems(1).UniqueItems(true).Description("The deployment types."))))
             .Required("Name")
             .AdditionalProperties(true);
 
@@ -41,11 +40,11 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIDeployment")),
-        ("Deployments", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(deploymentSchema)
-            .MinItems(1)
-            .Description("The AI deployments to create or update.")))
+                ("Deployments", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(deploymentSchema)
+                    .MinItems(1)
+                    .Description("The AI deployments to create or update.")))
             .Required("name", "Deployments")
             .AdditionalProperties(true)
             .Build();

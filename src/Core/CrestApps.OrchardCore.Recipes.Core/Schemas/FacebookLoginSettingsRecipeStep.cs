@@ -11,7 +11,7 @@ public sealed class FacebookLoginSettingsRecipeStep : RecipeStepSchemaBase
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-    [
-        ("CallbackPath", RecipeStepSchemaBuilders.String()),
-        ]);
+            [
+                ("CallbackPath", RecipeStepSchemaBuilders.String()),
+            ]);
 }

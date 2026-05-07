@@ -13,5 +13,6 @@ public interface IOmnichannelChannelEndpointManager : ICatalogManager<Omnichanne
     /// </summary>
     /// <param name="channel">The channel name.</param>
     /// <param name="serviceAddress">The service address to match.</param>
-    ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress);
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, CancellationToken cancellationToken = default);
 }

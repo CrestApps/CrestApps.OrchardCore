@@ -7,8 +7,10 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public interface IFeatureSchemaProvider
 {
     /// <summary>Returns IDs of all available features.</summary>
-    Task<IEnumerable<string>> GetFeatureIdsAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IEnumerable<string>> GetFeatureIdsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Returns IDs of themes only.</summary>
-    Task<IEnumerable<string>> GetThemeIdsAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IEnumerable<string>> GetThemeIdsAsync(CancellationToken cancellationToken = default);
 }

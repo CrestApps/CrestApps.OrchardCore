@@ -15,5 +15,6 @@ public interface IRecipeStep
     /// <summary>
     /// Builds the JSON schema for this recipe step.
     /// </summary>
-    ValueTask<JsonSchema> GetSchemaAsync();
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default);
 }

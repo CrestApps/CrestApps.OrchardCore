@@ -37,7 +37,7 @@ public sealed class DefaultAIProfileAdminMenuCacheServiceTests
         var firstProfiles = await cacheService.GetProfilesAsync(TestContext.Current.CancellationToken);
         var secondProfiles = await cacheService.GetProfilesAsync(TestContext.Current.CancellationToken);
 
-        await cacheService.InvalidateAsync();
+        await cacheService.InvalidateAsync(TestContext.Current.CancellationToken);
 
         var refreshedProfiles = await cacheService.GetProfilesAsync(TestContext.Current.CancellationToken);
 

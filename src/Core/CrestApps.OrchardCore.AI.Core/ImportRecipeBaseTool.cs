@@ -105,7 +105,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     continue;
                 }
 
-                var stepSchema = await recipeStep.GetSchemaAsync();
+                var stepSchema = await recipeStep.GetSchemaAsync(cancellationToken);
 
                 if (stepSchema is not null)
                 {

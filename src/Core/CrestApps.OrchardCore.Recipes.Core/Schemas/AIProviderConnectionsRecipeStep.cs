@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -14,7 +14,7 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -27,10 +27,10 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
-        ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
-        ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
-        ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The AI provider name.")),
-        ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Connection properties.")))
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
+                ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
+                ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The AI provider name.")),
+                ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Connection properties.")))
             .Required("Name")
             .AdditionalProperties(true);
 
@@ -38,11 +38,11 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProviderConnections")),
-        ("Connections", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(connectionSchema)
-            .MinItems(1)
-            .Description("The AI provider connections to create or update.")))
+                ("Connections", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(connectionSchema)
+                    .MinItems(1)
+                    .Description("The AI provider connections to create or update.")))
             .Required("name", "Connections")
             .AdditionalProperties(true)
             .Build();

@@ -11,12 +11,12 @@ public sealed class FacebookCoreSettingsRecipeStep : RecipeStepSchemaBase
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-    [
-        ("AppId", RecipeStepSchemaBuilders.String()),
-        ("AppSecret", RecipeStepSchemaBuilders.String()),
-        ("SdkJs", RecipeStepSchemaBuilders.String()),
-        ("FBInit", RecipeStepSchemaBuilders.Boolean()),
-        ("FBInitParams", RecipeStepSchemaBuilders.String()),
-        ("Version", RecipeStepSchemaBuilders.String()),
-        ]);
+            [
+                ("AppId", RecipeStepSchemaBuilders.String()),
+                ("AppSecret", RecipeStepSchemaBuilders.String()),
+                ("SdkJs", RecipeStepSchemaBuilders.String()),
+                ("FBInit", RecipeStepSchemaBuilders.Boolean()),
+                ("FBInitParams", RecipeStepSchemaBuilders.String()),
+                ("Version", RecipeStepSchemaBuilders.String()),
+            ]);
 }

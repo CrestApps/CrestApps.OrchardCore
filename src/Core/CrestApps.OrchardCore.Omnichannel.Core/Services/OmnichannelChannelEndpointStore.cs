@@ -21,7 +21,7 @@ public sealed class OmnichannelChannelEndpointStore : Catalog<OmnichannelChannel
     }
 
     /// <inheritdoc/>
-    public async ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress)
+    public async ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);
         ArgumentException.ThrowIfNullOrEmpty(serviceAddress);

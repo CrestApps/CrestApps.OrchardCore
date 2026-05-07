@@ -28,8 +28,8 @@ public sealed class OmnichannelChannelEndpointManager : CatalogManager<Omnichann
     }
 
     /// <inheritdoc/>
-    public ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress)
+    public ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, CancellationToken cancellationToken = default)
     {
-        return _store.GetByServiceAddressAsync(channel, serviceAddress);
+        return _store.GetByServiceAddressAsync(channel, serviceAddress, cancellationToken);
     }
 }

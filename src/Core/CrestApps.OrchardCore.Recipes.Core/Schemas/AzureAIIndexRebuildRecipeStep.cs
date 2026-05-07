@@ -1,4 +1,4 @@
-﻿using Json.Schema;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
@@ -13,7 +13,7 @@ public sealed class AzureAIIndexRebuildRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= CreateSchema();
 
@@ -22,14 +22,14 @@ public sealed class AzureAIIndexRebuildRecipeStep : IRecipeStep
 
     private static JsonSchema CreateSchema()
         => new JsonSchemaBuilder()
-        .Type(SchemaValueType.Object)
-        .Properties(
-            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-rebuild")),
-    ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-    ("Indices", new JsonSchemaBuilder()
-        .Type(SchemaValueType.Array)
-        .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
-        .Required("name")
-        .AdditionalProperties(true)
-        .Build();
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-rebuild")),
+                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                ("Indices", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+            .Required("name")
+            .AdditionalProperties(true)
+            .Build();
 }

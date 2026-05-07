@@ -39,7 +39,7 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
     }
 
     /// <inheritdoc />
-    public async Task<string> GetAsync(IUser user)
+    public async Task<string> GetAsync(IUser user, CancellationToken cancellationToken = default)
     {
         if (user == null)
         {

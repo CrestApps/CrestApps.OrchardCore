@@ -11,5 +11,6 @@ public interface IOmnichannelEventHandler
     /// Handles the specified omnichannel event.
     /// </summary>
     /// <param name="omnichannelEvent">The event to handle.</param>
-    public Task HandleAsync(OmnichannelEvent omnichannelEvent);
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public Task HandleAsync(OmnichannelEvent omnichannelEvent, CancellationToken cancellationToken = default);
 }

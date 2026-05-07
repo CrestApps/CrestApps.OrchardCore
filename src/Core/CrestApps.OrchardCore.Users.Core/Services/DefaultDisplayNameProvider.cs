@@ -8,6 +8,6 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 public sealed class DefaultDisplayNameProvider : IDisplayNameProvider
 {
     /// <inheritdoc />
-    public Task<string> GetAsync(IUser user)
+    public Task<string> GetAsync(IUser user, CancellationToken cancellationToken = default)
         => Task.FromResult(user?.UserName ?? string.Empty);
 }

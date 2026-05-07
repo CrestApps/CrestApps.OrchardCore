@@ -380,19 +380,19 @@ internal sealed class Program
         IReadOnlyList<string> partNames,
         IReadOnlyList<string> fieldTypeNames) : IContentSchemaProvider
     {
-        public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
+        public Task<IEnumerable<string>> GetFieldTypeNamesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
 
-        public Task<IEnumerable<string>> GetPartNamesAsync()
+        public Task<IEnumerable<string>> GetPartNamesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(partNames);
     }
 
     private sealed class StubFeatureSchemaProvider : IFeatureSchemaProvider
     {
-        public Task<IEnumerable<string>> GetFeatureIdsAsync()
+        public Task<IEnumerable<string>> GetFeatureIdsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(_featureIds);
 
-        public Task<IEnumerable<string>> GetThemeIdsAsync()
+        public Task<IEnumerable<string>> GetThemeIdsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(_themeIds);
     }
 

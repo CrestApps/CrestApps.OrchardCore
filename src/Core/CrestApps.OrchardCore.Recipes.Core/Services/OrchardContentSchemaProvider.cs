@@ -40,7 +40,7 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
     /// <summary>
     /// Gets the names of all available content parts, excluding parts that share a name with a content type.
     /// </summary>
-    public async Task<IEnumerable<string>> GetPartNamesAsync()
+    public async Task<IEnumerable<string>> GetPartNamesAsync(CancellationToken cancellationToken = default)
     {
         var typeNames = new HashSet<string>(
             (await _defManager.ListTypeDefinitionsAsync()).Select(t => t.Name));
@@ -59,6 +59,6 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
     /// <summary>
     /// Gets the type names of all available content fields.
     /// </summary>
-    public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
+    public Task<IEnumerable<string>> GetFieldTypeNamesAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(_fieldTypes.Select(t => t.Name));
 }
