@@ -1,7 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,41 +19,16 @@ namespace CrestApps.OrchardCore.RecipeSchemaExporter;
 
 internal sealed class Program
 {
-    private const string _agentSkillsRepositoryName = "CrestApps.Core.AgentSkills";
-    private const string _agentSkillsRelativePath = @"CrestApps.Core.AgentSkills\src\CrestApps.Core.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
+    private const string _agentSkillsRepositoryName = "CrestApps.AgentSkills";
+    private const string _agentSkillsRelativePath = @"CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         WriteIndented = true,
     };
 
-    private static readonly string[] _featureIds =
-    [
-        "OrchardCore.Contents",
-        "OrchardCore.Media",
-        "OrchardCore.Workflows",
-        "OrchardCore.Users",
-        "OrchardCore.Users.CustomUserSettings",
-        "OrchardCore.Microsoft.Authentication.AzureAD",
-        "OrchardCore.Microsoft.Authentication.MicrosoftAccount",
-        "OrchardCore.Facebook",
-        "OrchardCore.Facebook.Login",
-        "OrchardCore.GitHub.Authentication",
-        "OrchardCore.Twitter.Signin",
-        "OrchardCore.OpenId.Client",
-        "OrchardCore.OpenId.Management",
-        "OrchardCore.OpenId.Server",
-        "OrchardCore.OpenId.Validation",
-        "OrchardCore.DataLocalization",
-        "CrestApps.OrchardCore.AI",
-    ];
-
-    private static readonly string[] _themeIds =
-    [
-        "TheAdmin",
-        "TheTheme",
-        "SafeMode",
-    ];
+    private static string[] _featureIds = [];
+    private static string[] _themeIds = [];
 
     private static readonly string[] _fieldTypeNames =
     [
@@ -77,7 +51,13 @@ internal sealed class Program
 
     public static async Task<int> Main(string[] args)
     {
-        var outputPath = ResolveOutputPath(args);
+        var repositoryRoot = FindRepositoryRoot();
+        _featureIds = ManifestScanner.DiscoverFeatureIds(repositoryRoot);
+        _themeIds = ManifestScanner.DiscoverThemeIds(repositoryRoot);
+
+        Console.WriteLine($"Discovered {_featureIds.Length} feature IDs and {_themeIds.Length} theme IDs.");
+
+        var outputPath = ResolveOutputPath(args, repositoryRoot);
         var recipeSteps = CreateRecipeSteps()
             .OrderBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -126,26 +106,31 @@ internal sealed class Program
         return 0;
     }
 
-    private static string ResolveOutputPath(string[] args)
+    private static string ResolveOutputPath(string[] args, string repositoryRoot)
     {
         if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
         {
             return Path.GetFullPath(args[0]);
         }
 
-        return GetDefaultOutputPath();
+        return GetDefaultOutputPath(repositoryRoot);
     }
 
-    private static string GetDefaultOutputPath()
+    private static string GetDefaultOutputPath(string repositoryRoot)
     {
-        var projectRoot = FindRepositoryRoot();
-        var parentDirectory = Directory.GetParent(projectRoot)
-            ?? throw new DirectoryNotFoundException($"Could not determine the parent directory for '{projectRoot}'.");
+        var parentDirectory = Directory.GetParent(repositoryRoot)
+            ?? throw new DirectoryNotFoundException($"Could not determine the parent directory for '{repositoryRoot}'.");
         var agentSkillsRoot = Path.Combine(parentDirectory.FullName, _agentSkillsRepositoryName);
 
         if (!Directory.Exists(agentSkillsRoot))
         {
-            throw CreateAgentSkillsNotFoundException(projectRoot, agentSkillsRoot);
+            var fallbackPath = Path.Combine(repositoryRoot, "artifacts", "recipe-schemas");
+            Console.WriteLine($"Warning: Could not locate the sibling '{_agentSkillsRepositoryName}' repository.");
+            Console.WriteLine($"  Expected: '{agentSkillsRoot}'");
+            Console.WriteLine($"  Falling back to local output: '{fallbackPath}'");
+            Console.WriteLine();
+
+            return fallbackPath;
         }
 
         return Path.Combine(parentDirectory.FullName, _agentSkillsRelativePath);
@@ -183,22 +168,6 @@ internal sealed class Program
             File.Exists(Path.Combine(directory.FullName, "NuGet.config")) ||
                 File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.sln")) ||
                 File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx"));
-
-    private static DirectoryNotFoundException CreateAgentSkillsNotFoundException(string projectRoot, string agentSkillsRoot)
-    {
-        var parentDirectory = Directory.GetParent(projectRoot)?.FullName ?? projectRoot;
-
-        return new DirectoryNotFoundException(
-            $"Could not locate the sibling '{_agentSkillsRepositoryName}' repository." + Environment.NewLine +
-            $"Detected CrestApps.OrchardCore root: '{projectRoot}'." + Environment.NewLine +
-            $"Expected sibling repository root: '{agentSkillsRoot}'." + Environment.NewLine +
-            Environment.NewLine +
-            "To fix this, clone CrestApps.Core.AgentSkills next to CrestApps.OrchardCore, for example:" + Environment.NewLine +
-            $"  Set-Location '{parentDirectory}'" + Environment.NewLine +
-            "  git clone https://github.com/CrestApps/CrestApps.Core.AgentSkills.git" + Environment.NewLine +
-            Environment.NewLine +
-            "Alternatively, pass an explicit output directory as the first argument to the exporter.");
-    }
 
     private static void ClearGeneratedArtifacts(string outputPath)
     {
@@ -257,6 +226,17 @@ internal sealed class Program
                     .ToArray();
     }
 
+    private static ISiteSettingsSchemaDefinition[] CreateSiteSettingsSchemaDefinitions()
+    {
+        return typeof(ISiteSettingsSchemaDefinition).Assembly.ExportedTypes
+            .Where(type =>
+                typeof(ISiteSettingsSchemaDefinition).IsAssignableFrom(type) &&
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => (ISiteSettingsSchemaDefinition)Activator.CreateInstance(type)!)
+                    .ToArray();
+    }
+
     private static IRecipeStep CreateRecipeStep(
         Type stepType,
         IReadOnlyList<IContentDefinitionSchemaDefinition> schemaDefinitions,
@@ -264,72 +244,7 @@ internal sealed class Program
     {
         if (stepType == typeof(SettingsRecipeStep))
         {
-            return new SettingsRecipeStep(
-            [
-                new AdminSettingsSchema(),
-                new AuditTrailSettingsSchema(),
-                new AuditTrailTrimmingSettingsSchema(),
-                new AuthenticatorAppLoginSettingsSchema(),
-                new AzureADSettingsSchema(),
-                new AzureAISearchDefaultSettingsSchema(),
-                new AzureEmailSettingsSchema(),
-                new AzureSmsSettingsSchema(),
-                new ChangeEmailSettingsSchema(),
-                new ContentAuditTrailSettingsSchema(),
-                new ContentCulturePickerSettingsSchema(),
-                new ContentRequestCultureProviderSettingsSchema(),
-                new EmailAuthenticatorLoginSettingsSchema(),
-                new EmailSettingsSchema(),
-                new ExportContentToDeploymentTargetSettingsSchema(),
-                new ExternalLoginSettingsSchema(),
-                new ExternalRegistrationSettingsSchema(),
-                new FacebookLoginSettingsSchema(),
-                new FacebookPixelSettingsSchema(),
-                new FacebookSettingsSchema(),
-                new GitHubAuthenticationSettingsSchema(),
-                new GoogleAnalyticsSettingsSchema(),
-                new GoogleAuthenticationSettingsSchema(),
-                new GoogleTagManagerSettingsSchema(),
-                new HttpsSettingsSchema(),
-                new LayerSettingsSchema(),
-                new LocalizationSettingsSchema(),
-                new LoginSettingsSchema(),
-                new MicrosoftAccountSettingsSchema(),
-                new OpenIdClientSettingsSchema(),
-                new OpenIdServerSettingsSchema(),
-                new OpenIdValidationSettingsSchema(),
-                new ReCaptchaSettingsSchema(),
-                new RegistrationSettingsSchema(),
-                new ResetPasswordSettingsSchema(),
-                new ReverseProxySettingsSchema(),
-                new RobotsSettingsSchema(),
-                new RoleLoginSettingsSchema(),
-                new SearchSettingsSchema(),
-                new SecuritySettingsSchema(),
-                new SitemapsRobotsSettingsSchema(),
-                new SmsAuthenticatorLoginSettingsSchema(),
-                new SmsSettingsSchema(),
-                new SmtpSettingsSchema(),
-                new TaxonomyContentsAdminListSettingsSchema(),
-                new TwitterSettingsSchema(),
-                new TwitterSigninSettingsSchema(),
-                new TwilioSettingsSchema(),
-                new TwoFactorLoginSettingsSchema(),
-                new WorkflowTrimmingSettingsSchema(),
-                new GeneralAISettingsSchema(),
-                new DefaultAIDeploymentSettingsSchema(),
-                new DefaultOrchestratorSettingsSchema(),
-                new AIChatAdminWidgetSettingsSchema(),
-                new CopilotSettingsSchema(),
-                new ClaudeSettingsSchema(),
-                new InteractionDocumentSettingsSchema(),
-                new AIDataSourceSettingsSchema(),
-                new ChatInteractionChatModeSettingsSchema(),
-                new AIMemorySettingsSchema(),
-                new ChatInteractionMemorySettingsSchema(),
-                new DisplayNameSettingsSchema(),
-                new UserAvatarOptionsSchema(),
-            ]);
+            return new SettingsRecipeStep(CreateSiteSettingsSchemaDefinitions());
         }
 
         if (stepType == typeof(ContentDefinitionRecipeStep))

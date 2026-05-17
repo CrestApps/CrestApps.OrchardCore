@@ -85,9 +85,50 @@ public sealed class RecipeSchemaService
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            var schemaNodes = stepSchemas
-                .Select(s => JsonSerializer.SerializeToNode(s, JOptions.Default))
-                .ToArray();
+            // Build if/then pairs for discriminated union.
+            // This pattern allows Monaco to suggest name values from the enum
+            // AND per-step properties once the name is typed.
+            var ifThenNodes = new JsonArray();
+
+            foreach (var stepSchema in stepSchemas)
+            {
+                var stepNode = JsonSerializer.SerializeToNode(stepSchema, JOptions.Default);
+
+                if (stepNode is not JsonObject stepObj ||
+                    !stepObj.TryGetPropertyValue("properties", out var propsNode) ||
+                    propsNode is not JsonObject propsObj ||
+                    !propsObj.TryGetPropertyValue("name", out var nameNode) ||
+                    nameNode is not JsonObject nameObj ||
+                    !nameObj.TryGetPropertyValue("const", out var constNode))
+                {
+                    continue;
+                }
+
+                var constValue = constNode?.GetValue<string>();
+
+                if (string.IsNullOrEmpty(constValue))
+                {
+                    continue;
+                }
+
+                var ifThenEntry = new JsonObject
+                {
+                    ["if"] = new JsonObject
+                    {
+                        ["properties"] = new JsonObject
+                        {
+                            ["name"] = new JsonObject
+                            {
+                                ["const"] = constValue,
+                            },
+                        },
+                        ["required"] = new JsonArray("name"),
+                    },
+                    ["then"] = stepNode,
+                };
+
+                ifThenNodes.Add(ifThenEntry);
+            }
 
             stepsItemBuilder = new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
@@ -95,9 +136,10 @@ public sealed class RecipeSchemaService
                     ("name", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
                         .Enum(stepNames)))
-                .Required("name");
+                .Required("name")
+                .AdditionalProperties(true);
 
-            stepsItemBuilder.Add("oneOf", new JsonArray(schemaNodes));
+            stepsItemBuilder.Add("allOf", ifThenNodes);
         }
         else
         {

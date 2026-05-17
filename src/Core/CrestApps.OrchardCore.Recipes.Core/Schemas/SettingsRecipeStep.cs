@@ -11,7 +11,7 @@ public sealed class SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition
 
     private JsonSchema _cached;
 
-    public string Name => "Settings";
+    public string Name => "settings";
 
     /// <summary>
     /// Retrieves the schema async.
@@ -44,7 +44,7 @@ public sealed class SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition
     {
         return new Dictionary<string, JsonSchemaBuilder>(StringComparer.Ordinal)
         {
-            ["name"] = RecipeStepSchemaBuilders.String().Const("Settings"),
+            ["name"] = RecipeStepSchemaBuilders.String().Const("settings"),
             ["BaseUrl"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()),
             ["Calendar"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()),
             ["MaxPagedCount"] = RecipeStepSchemaBuilders.Integer(),
