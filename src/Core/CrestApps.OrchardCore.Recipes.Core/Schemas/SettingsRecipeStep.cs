@@ -3,11 +3,12 @@
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
-/// Schema for the "Settings" recipe step — the simplest step that
-/// pushes arbitrary key-value site settings.
+/// Schema for the <c>Settings</c> recipe step.
 /// </summary>
-public sealed class SettingsRecipeStep : IRecipeStep
+public sealed class SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition> schemaDefinitions) : IRecipeStep
 {
+    private readonly IEnumerable<ISiteSettingsSchemaDefinition> _schemaDefinitions = schemaDefinitions;
+
     private JsonSchema _cached;
 
     public string Name => "Settings";
@@ -15,37 +16,61 @@ public sealed class SettingsRecipeStep : IRecipeStep
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
-        _cached ??= CreateSchema();
+        if (_cached is not null)
+        {
+            return _cached;
+        }
 
-        return ValueTask.FromResult(_cached);
-    }
+        var properties = CreateBaseProperties();
 
-    private static JsonSchema CreateSchema()
-    {
-        return new JsonSchemaBuilder()
+        foreach (var schemaDefinition in _schemaDefinitions.OrderBy(definition => definition.Name, StringComparer.Ordinal))
+        {
+            properties[schemaDefinition.Name] = await schemaDefinition.GetSchemaAsync(cancellationToken);
+        }
+
+        _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("settings")),
-                ("BaseUrl", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Calendar", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("MaxPagedCount", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-                ("MaxPageSize", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-                ("PageSize", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-                ("ResourceDebugMode", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("SiteName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("PageTitleFormat", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("SiteSalt", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("SuperUser", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("TimeZoneId", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("UseCdn", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                ("CdnBaseUrl", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("AppendVersion", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                ("HomeRoute", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)),
-                ("CacheMode", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+            .Properties(properties)
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+
+        return _cached;
     }
+
+    private static Dictionary<string, JsonSchemaBuilder> CreateBaseProperties()
+    {
+        return new Dictionary<string, JsonSchemaBuilder>(StringComparer.Ordinal)
+        {
+            ["name"] = RecipeStepSchemaBuilders.String().Const("Settings"),
+            ["BaseUrl"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()),
+            ["Calendar"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()),
+            ["MaxPagedCount"] = RecipeStepSchemaBuilders.Integer(),
+            ["MaxPageSize"] = RecipeStepSchemaBuilders.Integer(),
+            ["PageSize"] = RecipeStepSchemaBuilders.Integer(),
+            ["ResourceDebugMode"] = RecipeStepSchemaBuilders.String().Enum(["FromConfiguration", "Enabled", "Disabled"]),
+            ["SiteName"] = RecipeStepSchemaBuilders.String(),
+            ["PageTitleFormat"] = RecipeStepSchemaBuilders.String(),
+            ["SiteSalt"] = RecipeStepSchemaBuilders.String(),
+            ["SuperUser"] = RecipeStepSchemaBuilders.String(),
+            ["TimeZoneId"] = RecipeStepSchemaBuilders.String(),
+            ["UseCdn"] = RecipeStepSchemaBuilders.Boolean(),
+            ["CdnBaseUrl"] = RecipeStepSchemaBuilders.Nullable(RecipeStepSchemaBuilders.String()),
+            ["AppendVersion"] = RecipeStepSchemaBuilders.Boolean(),
+            ["HomeRoute"] = RecipeStepSchemaBuilders.Nullable(BuildHomeRoute()),
+            ["CacheMode"] = RecipeStepSchemaBuilders.String().Enum(["FromConfiguration", "Enabled", "DebugEnabled", "Disabled"]),
+        };
+    }
+
+    private static JsonSchemaBuilder BuildHomeRoute()
+        => RecipeStepSchemaBuilders.Object(
+        [
+            ("Area", RecipeStepSchemaBuilders.String()),
+            ("Controller", RecipeStepSchemaBuilders.String()),
+            ("Action", RecipeStepSchemaBuilders.String()),
+        ],
+        requiredProperties: ["Area", "Controller", "Action"],
+        additionalProperties: true);
 }

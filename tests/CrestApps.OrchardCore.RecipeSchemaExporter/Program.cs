@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
@@ -261,6 +262,76 @@ internal sealed class Program
         IReadOnlyList<IContentDefinitionSchemaDefinition> schemaDefinitions,
         IReadOnlyList<string> partNames)
     {
+        if (stepType == typeof(SettingsRecipeStep))
+        {
+            return new SettingsRecipeStep(
+            [
+                new AdminSettingsSchema(),
+                new AuditTrailSettingsSchema(),
+                new AuditTrailTrimmingSettingsSchema(),
+                new AuthenticatorAppLoginSettingsSchema(),
+                new AzureADSettingsSchema(),
+                new AzureAISearchDefaultSettingsSchema(),
+                new AzureEmailSettingsSchema(),
+                new AzureSmsSettingsSchema(),
+                new ChangeEmailSettingsSchema(),
+                new ContentAuditTrailSettingsSchema(),
+                new ContentCulturePickerSettingsSchema(),
+                new ContentRequestCultureProviderSettingsSchema(),
+                new EmailAuthenticatorLoginSettingsSchema(),
+                new EmailSettingsSchema(),
+                new ExportContentToDeploymentTargetSettingsSchema(),
+                new ExternalLoginSettingsSchema(),
+                new ExternalRegistrationSettingsSchema(),
+                new FacebookLoginSettingsSchema(),
+                new FacebookPixelSettingsSchema(),
+                new FacebookSettingsSchema(),
+                new GitHubAuthenticationSettingsSchema(),
+                new GoogleAnalyticsSettingsSchema(),
+                new GoogleAuthenticationSettingsSchema(),
+                new GoogleTagManagerSettingsSchema(),
+                new HttpsSettingsSchema(),
+                new LayerSettingsSchema(),
+                new LocalizationSettingsSchema(),
+                new LoginSettingsSchema(),
+                new MicrosoftAccountSettingsSchema(),
+                new OpenIdClientSettingsSchema(),
+                new OpenIdServerSettingsSchema(),
+                new OpenIdValidationSettingsSchema(),
+                new ReCaptchaSettingsSchema(),
+                new RegistrationSettingsSchema(),
+                new ResetPasswordSettingsSchema(),
+                new ReverseProxySettingsSchema(),
+                new RobotsSettingsSchema(),
+                new RoleLoginSettingsSchema(),
+                new SearchSettingsSchema(),
+                new SecuritySettingsSchema(),
+                new SitemapsRobotsSettingsSchema(),
+                new SmsAuthenticatorLoginSettingsSchema(),
+                new SmsSettingsSchema(),
+                new SmtpSettingsSchema(),
+                new TaxonomyContentsAdminListSettingsSchema(),
+                new TwitterSettingsSchema(),
+                new TwitterSigninSettingsSchema(),
+                new TwilioSettingsSchema(),
+                new TwoFactorLoginSettingsSchema(),
+                new WorkflowTrimmingSettingsSchema(),
+                new GeneralAISettingsSchema(),
+                new DefaultAIDeploymentSettingsSchema(),
+                new DefaultOrchestratorSettingsSchema(),
+                new AIChatAdminWidgetSettingsSchema(),
+                new CopilotSettingsSchema(),
+                new ClaudeSettingsSchema(),
+                new InteractionDocumentSettingsSchema(),
+                new AIDataSourceSettingsSchema(),
+                new ChatInteractionChatModeSettingsSchema(),
+                new AIMemorySettingsSchema(),
+                new ChatInteractionMemorySettingsSchema(),
+                new DisplayNameSettingsSchema(),
+                new UserAvatarOptionsSchema(),
+            ]);
+        }
+
         if (stepType == typeof(ContentDefinitionRecipeStep))
         {
             return new ContentDefinitionRecipeStep(

@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.Recipes.Services;
@@ -61,43 +63,82 @@ public sealed class RecipeSchemaService
     /// </summary>
     public async ValueTask<JsonSchema> GetRecipeSchemaAsync()
     {
-        var stepsBuilder = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
-                    .Enum(GetStepNames())))
-                    .Required("name")
-                    .AdditionalProperties(true);
+        var stepSchemas = new List<JsonSchema>();
+
+        foreach (var step in _recipeSteps)
+        {
+            var schema = await step.GetSchemaAsync();
+
+            if (schema is not null)
+            {
+                stepSchemas.Add(schema);
+            }
+        }
+
+        JsonSchemaBuilder stepsItemBuilder;
+
+        if (stepSchemas.Count > 0)
+        {
+            var stepNames = _recipeSteps
+                .Select(s => s.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            var schemaNodes = stepSchemas
+                .Select(s => JsonSerializer.SerializeToNode(s, JOptions.Default))
+                .ToArray();
+
+            stepsItemBuilder = new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("name", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Enum(stepNames)))
+                .Required("name");
+
+            stepsItemBuilder.Add("oneOf", new JsonArray(schemaNodes));
+        }
+        else
+        {
+            stepsItemBuilder = new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("name", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Enum(GetStepNames())))
+                .Required("name")
+                .AdditionalProperties(true);
+        }
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A unique name for the recipe.")),
-        ("displayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A display name for the recipe.")),
-        ("description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A description for the recipe.")),
-        ("author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The author of the recipe.")),
-        ("website", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The website URL associated with the recipe.")),
-        ("version", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The version of the recipe.")),
-        ("isSetupRecipe", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this recipe is a setup recipe.")),
-        ("exportUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The UTC date/time when the recipe was exported.")),
-        ("categories", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-            .Description("Categories for the recipe.")),
-        ("tags", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-            .Description("Tags for the recipe.")),
-        ("requireNewScope", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Boolean)
-            .Default(true)
-            .Description("Whether the recipe requires a new scope.")),
-        ("steps", new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(stepsBuilder)
-            .MinItems(1)
-            .Description("The collection of recipe steps.")))
+                ("displayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A display name for the recipe.")),
+                ("description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A description for the recipe.")),
+                ("author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The author of the recipe.")),
+                ("website", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The website URL associated with the recipe.")),
+                ("version", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The version of the recipe.")),
+                ("isSetupRecipe", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this recipe is a setup recipe.")),
+                ("exportUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The UTC date/time when the recipe was exported.")),
+                ("categories", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Categories for the recipe.")),
+                ("tags", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Tags for the recipe.")),
+                ("requireNewScope", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Boolean)
+                    .Default(true)
+                    .Description("Whether the recipe requires a new scope.")),
+                ("steps", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(stepsItemBuilder)
+                    .MinItems(1)
+                    .Description("The collection of recipe steps.")))
             .Required("steps")
             .Build();
     }

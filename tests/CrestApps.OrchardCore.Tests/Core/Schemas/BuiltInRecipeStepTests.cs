@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -61,8 +62,81 @@ public sealed class BuiltInRecipeStepTests
         return permissionService.Object;
     }
 
+    private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
+        =>
+        [
+            new AdminSettingsSchema(),
+            new AuditTrailSettingsSchema(),
+            new AuditTrailTrimmingSettingsSchema(),
+            new AuthenticatorAppLoginSettingsSchema(),
+            new AzureADSettingsSchema(),
+            new AzureAISearchDefaultSettingsSchema(),
+            new AzureEmailSettingsSchema(),
+            new AzureSmsSettingsSchema(),
+            new ChangeEmailSettingsSchema(),
+            new ContentAuditTrailSettingsSchema(),
+            new ContentCulturePickerSettingsSchema(),
+            new ContentRequestCultureProviderSettingsSchema(),
+            new EmailAuthenticatorLoginSettingsSchema(),
+            new EmailSettingsSchema(),
+            new ExportContentToDeploymentTargetSettingsSchema(),
+            new ExternalLoginSettingsSchema(),
+            new ExternalRegistrationSettingsSchema(),
+            new FacebookLoginSettingsSchema(),
+            new FacebookPixelSettingsSchema(),
+            new FacebookSettingsSchema(),
+            new GitHubAuthenticationSettingsSchema(),
+            new GoogleAnalyticsSettingsSchema(),
+            new GoogleAuthenticationSettingsSchema(),
+            new GoogleTagManagerSettingsSchema(),
+            new HttpsSettingsSchema(),
+            new LayerSettingsSchema(),
+            new LocalizationSettingsSchema(),
+            new LoginSettingsSchema(),
+            new MicrosoftAccountSettingsSchema(),
+            new OpenIdClientSettingsSchema(),
+            new OpenIdServerSettingsSchema(),
+            new OpenIdValidationSettingsSchema(),
+            new ReCaptchaSettingsSchema(),
+            new RegistrationSettingsSchema(),
+            new ResetPasswordSettingsSchema(),
+            new ReverseProxySettingsSchema(),
+            new RobotsSettingsSchema(),
+            new RoleLoginSettingsSchema(),
+            new SearchSettingsSchema(),
+            new SecuritySettingsSchema(),
+            new SitemapsRobotsSettingsSchema(),
+            new SmsAuthenticatorLoginSettingsSchema(),
+            new SmsSettingsSchema(),
+            new SmtpSettingsSchema(),
+            new TaxonomyContentsAdminListSettingsSchema(),
+            new TwitterSettingsSchema(),
+            new TwitterSigninSettingsSchema(),
+            new TwilioSettingsSchema(),
+            new TwoFactorLoginSettingsSchema(),
+            new WorkflowTrimmingSettingsSchema(),
+            new GeneralAISettingsSchema(),
+            new DefaultAIDeploymentSettingsSchema(),
+            new DefaultOrchestratorSettingsSchema(),
+            new AIChatAdminWidgetSettingsSchema(),
+            new CopilotSettingsSchema(),
+            new ClaudeSettingsSchema(),
+            new InteractionDocumentSettingsSchema(),
+            new AIDataSourceSettingsSchema(),
+            new ChatInteractionChatModeSettingsSchema(),
+            new AIMemorySettingsSchema(),
+            new ChatInteractionMemorySettingsSchema(),
+            new DisplayNameSettingsSchema(),
+            new UserAvatarOptionsSchema(),
+        ];
+
     private static IRecipeStep CreateStep(Type stepType)
     {
+        if (stepType == typeof(SettingsRecipeStep))
+        {
+            return new SettingsRecipeStep(CreateAllSiteSettingsSchemaDefinitions());
+        }
+
         if (stepType == typeof(ContentDefinitionRecipeStep))
         {
             return new ContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
@@ -116,6 +190,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaProfilesRecipeStep), "MediaProfiles")]
     [InlineData(typeof(RolesRecipeStep), "Roles")]
     [InlineData(typeof(UsersRecipeStep), "Users")]
+    [InlineData(typeof(SettingsRecipeStep), "Settings")]
     [InlineData(typeof(CustomUserSettingsRecipeStep), "custom-user-settings")]
     [InlineData(typeof(CustomSettingsRecipeStep), "custom-settings")]
     [InlineData(typeof(AzureADSettingsRecipeStep), "AzureADSettings")]
@@ -176,6 +251,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaProfilesRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
     [InlineData(typeof(UsersRecipeStep))]
+    [InlineData(typeof(SettingsRecipeStep))]
     [InlineData(typeof(CustomUserSettingsRecipeStep))]
     [InlineData(typeof(CustomSettingsRecipeStep))]
     [InlineData(typeof(AzureADSettingsRecipeStep))]
@@ -241,6 +317,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaProfilesRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
     [InlineData(typeof(UsersRecipeStep))]
+    [InlineData(typeof(SettingsRecipeStep))]
     [InlineData(typeof(CustomUserSettingsRecipeStep))]
     [InlineData(typeof(CustomSettingsRecipeStep))]
     [InlineData(typeof(AzureADSettingsRecipeStep))]
@@ -418,6 +495,18 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"Users\"", json);
         Assert.Contains("\"UserName\"", json);
         Assert.Contains("\"RoleNames\"", json);
+    }
+
+    [Fact]
+    public async Task SettingsRecipeStep_SchemaContainsBuiltInAndContributedSettings()
+    {
+        var step = new SettingsRecipeStep(CreateAllSiteSettingsSchemaDefinitions());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"HomeRoute\"", json);
+        Assert.Contains("\"AdminSettings\"", json);
+        Assert.Contains("\"GeneralAISettings\"", json);
+        Assert.Contains("\"DisplayNameSettings\"", json);
     }
 
     [Fact]
