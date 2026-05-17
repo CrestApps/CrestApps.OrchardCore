@@ -10,11 +10,7 @@ description: JSON-Schema support for Orchard Core recipes with per-step validati
 | **Feature Name** | CrestApps Recipes |
 | **Feature ID** | `CrestApps.OrchardCore.Recipes` |
 
-Provides recipe steps for CrestApps modules.
-
-:::note Note
-This feature is enabled by dependency only.
-:::
+Provides recipe steps for all modules.
 
 ## Overview
 
@@ -54,22 +50,30 @@ If the sibling `CrestApps.AgentSkills` repository is missing, the exporter throw
 
 The `ReplaceContentDefinition` step uses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
 
+The generic `Settings` step now composes feature-gated site settings schema fragments in the same way `ContentDefinition` composes part and field settings. Base site settings such as `HomeRoute`, `CacheMode`, and `ResourceDebugMode` are modeled directly, while feature-specific settings objects such as `AdminSettings`, `GeneralAISettings`, `DisplayNameSettings`, and other contributed settings only appear when their owning feature registers a schema definition.
+
 The exported set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
 
 ## Creating a Recipe Step
 
 To define a recipe step, implement the `IRecipeStep` interface and register your implementation as a service.
 
-Here's an example of a recipe step for a **Settings** step. This step requires a JSON object with a `"name"` property set to `"settings"` and allows any other properties of any type.
+Here's an example of a recipe step for a **Settings** step. This step requires a JSON object with a `"name"` property set to `"settings"` and can compose contributed site settings definitions.
 
 ```csharp
 internal sealed class SettingsSchemaStep : IRecipeStep
 {
+    private readonly IEnumerable<ISiteSettingsSchemaDefinition> _schemaDefinitions;
     private JsonSchema _schema;
+
+    public SettingsSchemaStep(IEnumerable<ISiteSettingsSchemaDefinition> schemaDefinitions)
+    {
+        _schemaDefinitions = schemaDefinitions;
+    }
 
     public string Name => "Settings";
 
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_schema != null)
         {
@@ -83,11 +87,19 @@ internal sealed class SettingsSchemaStep : IRecipeStep
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Const("settings")
+                ),
+                ("HomeRoute", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("Area", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                        ("Controller", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                        ("Action", new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    )
+                    .AdditionalProperties(true)
                 )
             )
             .Required("name")
-            .MinProperties(2) // at least "name" plus one other property
-            .AdditionalProperties(true); // allow any other properties of any type
+            .AdditionalProperties(true);
 
         _schema = builder.Build();
 
@@ -95,6 +107,8 @@ internal sealed class SettingsSchemaStep : IRecipeStep
     }
 }
 ```
+
+Feature-specific site settings can contribute additional schema definitions by registering `ISiteSettingsSchemaDefinition` from feature-gated startups, which keeps the `Settings` step aligned with the actual `SiteDisplayDriver<TSettings>` registrations enabled for the tenant.
 
 ## Registering Your Recipe Step
 

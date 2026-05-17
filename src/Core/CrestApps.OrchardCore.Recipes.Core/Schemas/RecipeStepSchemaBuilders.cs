@@ -74,6 +74,12 @@ internal static class RecipeStepSchemaBuilders
         => new JsonSchemaBuilder().Type(SchemaValueType.Number);
 
     /// <summary>
+    /// Creates a JSON schema builder for the null type.
+    /// </summary>
+    public static JsonSchemaBuilder Null()
+        => new JsonSchemaBuilder().Type(SchemaValueType.Null);
+
+    /// <summary>
     /// Creates a JSON schema builder for an object type with optional properties and constraints.
     /// </summary>
     /// <param name="properties">The optional property definitions for the object schema.</param>
@@ -105,6 +111,13 @@ internal static class RecipeStepSchemaBuilders
     /// </summary>
     public static JsonSchemaBuilder String()
         => new JsonSchemaBuilder().Type(SchemaValueType.String);
+
+    /// <summary>
+    /// Creates a schema builder that allows the provided schema or a null value.
+    /// </summary>
+    /// <param name="schema">The schema to make nullable.</param>
+    public static JsonSchemaBuilder Nullable(JsonSchemaBuilder schema)
+        => new JsonSchemaBuilder().AnyOf(schema, Null());
 
     /// <summary>
     /// Creates a JSON schema builder for an array of strings.

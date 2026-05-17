@@ -8,7 +8,6 @@ using OrchardCore.Modules.Manifest;
     Version = CrestAppsManifestConstants.Version,
     Description = "Enhances Orchard Core recipe functionality by enabling detailed descriptions for recipes.",
     Category = "Infrastructure",
-    EnabledByDependencyOnly = true,
     Dependencies = new[]
     {
         "OrchardCore.Recipes.Core",
