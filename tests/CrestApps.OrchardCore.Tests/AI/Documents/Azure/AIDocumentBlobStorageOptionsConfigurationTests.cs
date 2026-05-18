@@ -37,6 +37,7 @@ public sealed class AIDocumentBlobStorageOptionsConfigurationTests
 
         var options = new AIDocumentBlobStorageOptions();
         var optionsConfiguration = new AIDocumentBlobStorageOptionsConfiguration(
+            new Fluid.FluidParser(),
             shellConfiguration.Object,
             shellSettings,
             NullLogger<AIDocumentBlobStorageOptionsConfiguration>.Instance);
