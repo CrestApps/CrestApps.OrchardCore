@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -136,6 +137,7 @@ public class ChatInteractionHub : ChatInteractionHubBase
         "presencePenalty" => S["Presence penalty must be between 0 and 2."].Value,
         "pastMessagesCount" => S["Past messages must be between 2 and 50."].Value,
         "maxTokens" => S["Max response tokens must be 4 or greater."].Value,
+        "documentRetrievalMode" => S["Document retrieval mode is invalid."].Value,
         _ => S["One or more settings are invalid."].Value,
     };
 

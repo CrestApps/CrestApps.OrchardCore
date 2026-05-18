@@ -1,5 +1,8 @@
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
@@ -34,6 +37,11 @@ public class EditAIProfileDocumentsViewModel
     public int TopN { get; set; } = 3;
 
     /// <summary>
+    /// Gets or sets the document retrieval mode override for the profile or template.
+    /// </summary>
+    public DocumentRetrievalMode? DocumentRetrievalMode { get; set; }
+
+    /// <summary>
     /// Gets or sets whether an index profile is configured for document embedding.
     /// </summary>
     public bool HasIndexProfile { get; set; }
@@ -47,4 +55,10 @@ public class EditAIProfileDocumentsViewModel
     /// Gets or sets whether the configured index profile has a valid embedding search service.
     /// </summary>
     public bool HasVectorSearchService { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available document retrieval modes.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> DocumentRetrievalModes { get; set; } = [];
 }

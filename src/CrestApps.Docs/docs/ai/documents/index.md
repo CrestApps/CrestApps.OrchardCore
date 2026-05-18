@@ -22,7 +22,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 
 - **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
 - **Text Extraction**: Automatic text extraction from uploaded documents via registered `IngestionDocumentReader` implementations (from `Microsoft.Extensions.DataIngestion`)
-- **Settings UI**: Admin settings page for configuring the default document index (**Settings > Artificial Intelligence**)
+- **Settings UI**: Admin settings page for configuring the default document index and default document retrieval mode (**Settings > Artificial Intelligence**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
@@ -88,7 +88,7 @@ The orchestrator supports various document-related operations:
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
 5. Start using the Documents tab in your chat interactions.
 
@@ -113,6 +113,7 @@ Profile documents are treated as **background knowledge**. End users should not 
 - **Chunking & Embedding**: Extracted text is split into chunks and embedded for semantic vector search
 - **RAG Integration**: Relevant document chunks are automatically retrieved and used as context for AI responses
 - **Top N Configuration**: Control how many matching chunks are included as context (default: 3)
+- **Retrieval Mode Override**: Choose **Chunk** or **Hierarchical** retrieval per AI Profile or profile-source AI Template, or leave it blank to use the site default
 
 ### Supported File Types
 
@@ -152,7 +153,7 @@ Legacy profile-document rows stored under older `CrestApps.OrchardCore.AI.*` or 
 1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.
 2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
 3. Use the **Documents** tab to upload text-based documents.
-4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
+4. Configure **Document Top N** and, when needed, **Document retrieval mode** to control how much document context is injected and whether the response uses chunk-level or hierarchical retrieval.
 
 ## AI Documents for Chat Sessions
 
@@ -199,7 +200,7 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
 6. Open a chat session. The attach button and drag-and-drop zone are available.

@@ -28,5 +28,6 @@ internal sealed class InteractionDocumentOptionsConfiguration : IConfigureOption
 
         options.IndexProfileName = settings.IndexProfileName;
         options.TopN = settings.TopN;
+        options.RetrievalMode = settings.RetrievalMode;
     }
 }

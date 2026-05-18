@@ -1,8 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
-using CrestApps.Core.AI.Documents;
-using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
@@ -551,94 +549,5 @@ public sealed class ProfilesController : Controller
             profile.Put(agentMeta);
         }
 
-        // Clone documents from the template to the profile when the Documents feature is enabled.
-        await CloneTemplateDocumentsAsync(profile, template);
-    }
-
-    private async Task CloneTemplateDocumentsAsync(AIProfile profile, AIProfileTemplate template)
-    {
-        var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
-
-        if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
-        {
-            return;
-        }
-
-        var documentStore = HttpContext.RequestServices.GetService<IAIDocumentStore>();
-        var chunkStore = HttpContext.RequestServices.GetService<IAIDocumentChunkStore>();
-
-        if (documentStore == null || chunkStore == null)
-        {
-            return;
-        }
-
-        var profileDocuments = new DocumentsMetadata
-        {
-            DocumentTopN = documentsMetadata.DocumentTopN,
-            Documents = [],
-        };
-
-        foreach (var docInfo in documentsMetadata.Documents)
-        {
-            var templateDocument = await documentStore.FindByIdAsync(docInfo.DocumentId);
-
-            if (templateDocument == null)
-            {
-                continue;
-            }
-
-            // Clone the document record with a new ID and profile reference.
-            var clonedDocument = new AIDocument
-            {
-                ItemId = IdGenerator.GenerateId(),
-                ReferenceId = profile.ItemId,
-                ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
-                FileName = templateDocument.FileName,
-                ContentType = templateDocument.ContentType,
-                FileSize = templateDocument.FileSize,
-                UploadedUtc = templateDocument.UploadedUtc,
-            };
-
-            await documentStore.CreateAsync(clonedDocument);
-
-            // Clone associated chunks with new IDs and updated references.
-            var templateChunks = await chunkStore.GetChunksByAIDocumentIdAsync(templateDocument.ItemId);
-
-            foreach (var templateChunk in templateChunks)
-            {
-                var clonedChunk = new AIDocumentChunk
-                {
-                    ItemId = IdGenerator.GenerateId(),
-                    AIDocumentId = clonedDocument.ItemId,
-                    ReferenceId = profile.ItemId,
-                    ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
-                    Content = templateChunk.Content,
-                    Embedding = templateChunk.Embedding,
-                    Index = templateChunk.Index,
-                };
-
-                await chunkStore.CreateAsync(clonedChunk);
-            }
-
-            profileDocuments.Documents.Add(new ChatDocumentInfo
-            {
-                DocumentId = clonedDocument.ItemId,
-                FileName = clonedDocument.FileName,
-                ContentType = clonedDocument.ContentType,
-                FileSize = clonedDocument.FileSize,
-            });
-        }
-
-        if (profileDocuments.Documents.Count > 0)
-        {
-            profile.Put(profileDocuments);
-
-            // Also update Settings for drivers that read from profile.Settings.
-            var serialized = JsonSerializer.SerializeToNode(profileDocuments);
-            if (serialized is JsonObject jsonObj)
-            {
-                profile.Settings[nameof(DocumentsMetadata)] = jsonObj;
-            }
-        }
     }
 }

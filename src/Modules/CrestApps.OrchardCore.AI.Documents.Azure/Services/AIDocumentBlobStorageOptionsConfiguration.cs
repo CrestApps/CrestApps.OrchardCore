@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+using Fluid;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
@@ -19,10 +20,11 @@ internal sealed class AIDocumentBlobStorageOptionsConfiguration : BlobStorageOpt
     /// <param name="shellSettings">The shell settings.</param>
     /// <param name="logger">The logger.</param>
     public AIDocumentBlobStorageOptionsConfiguration(
+        FluidParser fluidParser,
         IShellConfiguration shellConfiguration,
         ShellSettings shellSettings,
         ILogger<AIDocumentBlobStorageOptionsConfiguration> logger)
-        : base(shellSettings, logger)
+        : base(fluidParser, shellSettings, logger)
     {
         _shellConfiguration = shellConfiguration;
     }

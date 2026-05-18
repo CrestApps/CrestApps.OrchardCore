@@ -1,7 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
+using CrestApps.Core.AI.Documents.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Hubs;
 
 /// <summary>
 /// Represents the chat interaction settings validator.
@@ -54,7 +55,41 @@ public static class ChatInteractionSettingsValidator
             return "maxTokens";
         }
 
+        if (IsInvalidDocumentRetrievalMode(settings, "documentRetrievalMode"))
+        {
+            return "documentRetrievalMode";
+        }
+
         return null;
+    }
+
+    private static bool IsInvalidDocumentRetrievalMode(JsonElement settings, string propertyName)
+    {
+        if (!settings.TryGetProperty(propertyName, out var property))
+        {
+            return false;
+        }
+
+        if (property.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return false;
+        }
+
+        if (property.ValueKind == JsonValueKind.String)
+        {
+            var value = property.GetString();
+
+            return !string.IsNullOrWhiteSpace(value) &&
+                !Enum.TryParse<DocumentRetrievalMode>(value, ignoreCase: true, out _);
+        }
+
+        if (property.ValueKind == JsonValueKind.Number &&
+            property.TryGetInt32(out var numericValue))
+        {
+            return !Enum.IsDefined(typeof(DocumentRetrievalMode), numericValue);
+        }
+
+        return true;
     }
 
     private static bool IsOutsideRange(JsonElement settings, string propertyName, double min, double? max)

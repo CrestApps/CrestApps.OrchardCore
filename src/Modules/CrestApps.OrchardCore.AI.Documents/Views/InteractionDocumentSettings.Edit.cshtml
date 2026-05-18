@@ -23,3 +23,11 @@
         <span class="hint">@T["The index profile used to index documents for chat interactions. After this is configured in production, avoid changing it to prevent losing access to documents created for existing sessions."]</span>
     </div>
 </div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="RetrievalMode" class="@Orchard.GetLabelClasses()">@T["Document retrieval mode"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="RetrievalMode" asp-items="Model.RetrievalModes" class="form-select"></select>
+        <span class="hint">@T["Choose the default retrieval behavior for uploaded document knowledge. Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</span>
+    </div>
+</div>

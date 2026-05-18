@@ -1,12 +1,7 @@
-@using CrestApps.Core.AI
 @using CrestApps.Core.AI.Documents.Models
-@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
-@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using Microsoft.Extensions.Options
-@using OrchardCore
 
 @model ChatInteractionDocumentsViewModel
 
@@ -35,6 +30,14 @@ else if (!Model.HasVectorSearchService)
         </p>
     </div>
 }
+
+<div class="mb-3">
+    <label asp-for="DocumentRetrievalMode" class="form-label">@T["Document retrieval mode"]</label>
+    <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select setting-input" data-setting="documentRetrievalMode">
+        <option value="">@T["Use site default"]</option>
+    </select>
+    <div class="form-text">@T["Overrides the site default when this interaction searches uploaded document knowledge."]</div>
+</div>
 
 <div class="mb-3">
     <label class="form-label">

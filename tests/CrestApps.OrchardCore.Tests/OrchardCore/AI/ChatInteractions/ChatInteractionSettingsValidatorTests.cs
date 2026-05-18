@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Hubs;
 
 namespace CrestApps.OrchardCore.Tests.OrchardCore.AI.ChatInteractions;
 
@@ -52,5 +52,19 @@ public sealed class ChatInteractionSettingsValidatorTests
         var result = ChatInteractionSettingsValidator.Validate(json.RootElement);
 
         Assert.Equal("topP", result);
+    }
+
+    [Fact]
+    public void Validate_WhenDocumentRetrievalModeIsInvalid_ShouldReturnDocumentRetrievalMode()
+    {
+        using var json = JsonDocument.Parse("""
+            {
+              "documentRetrievalMode": "Invalid"
+            }
+            """);
+
+        var result = ChatInteractionSettingsValidator.Validate(json.RootElement);
+
+        Assert.Equal("documentRetrievalMode", result);
     }
 }
