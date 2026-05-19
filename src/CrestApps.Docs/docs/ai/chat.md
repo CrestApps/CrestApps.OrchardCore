@@ -40,6 +40,8 @@ Additional advanced sections such as capabilities, response handling, analytics,
 
 For chat profiles, the required **Past messages included** parameter loads the default value automatically when a profile is opened without an explicit saved value.
 
+When the AI Documents features are enabled, the **Knowledge** tab for **AI Profiles**, **profile-source AI Templates**, and **Chat Interactions** also exposes a **Document retrieval mode** selector. Leaving it blank uses the site default from **Settings → Artificial Intelligence → Documents**. **Chunk** keeps chunk-level context, while **Hierarchical** retrieves matching chunks and then injects the full text of the matched documents.
+
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using OpenAI service.

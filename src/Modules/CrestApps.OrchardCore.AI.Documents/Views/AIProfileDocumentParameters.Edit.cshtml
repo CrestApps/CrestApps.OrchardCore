@@ -1,3 +1,4 @@
+@using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 
 @model EditAIProfileDocumentsViewModel
@@ -11,4 +12,12 @@
     </label>
     <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
     <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DocumentRetrievalMode" class="form-label">@T["Document retrieval mode"]</label>
+    <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select">
+        <option value="">@T["Default setting"]</option>
+    </select>
+    <div class="form-text">@T["Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</div>
 </div>

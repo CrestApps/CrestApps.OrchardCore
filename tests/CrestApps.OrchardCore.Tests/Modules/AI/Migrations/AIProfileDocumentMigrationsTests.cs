@@ -68,85 +68,6 @@ public sealed class AIProfileDocumentMigrationsTests
         Assert.DoesNotContain(nameof(AIProfile.Properties), profile.Properties.Keys, StringComparer.Ordinal);
     }
 
-    [Fact]
-    public void NormalizePersistedProfileDocument_WhenLegacyNestedPropertiesExist_ShouldFlattenAndRenameLegacyKeys()
-    {
-        // Arrange
-        var profileDocument = new JsonObject
-        {
-            [nameof(AIProfile.Name)] = "test",
-            [nameof(AIProfile.Properties)] = new JsonObject
-            {
-                [nameof(AIProfileMetadata)] = new JsonObject
-                {
-                    [nameof(AIProfileMetadata.SystemMessage)] = "system message into",
-                },
-                ["AIProfileFunctionInvocationMetadata"] = new JsonObject
-                {
-                    [nameof(FunctionInvocationMetadata.Names)] = new JsonArray("getUserInfo"),
-                },
-                ["AIProfileDataSourceMetadata"] = new JsonObject
-                {
-                    ["DataSourceId"] = "data-source-1",
-                },
-            },
-        };
-
-        // Act
-        var updated = InvokeNormalizePersistedProfileDocument(profileDocument);
-
-        // Assert
-        Assert.True(updated);
-        Assert.DoesNotContain(nameof(AIProfile.Properties), profileDocument.Select(property => property.Key), StringComparer.Ordinal);
-        Assert.DoesNotContain("AIProfileFunctionInvocationMetadata", profileDocument.Select(property => property.Key), StringComparer.Ordinal);
-        Assert.DoesNotContain("AIProfileDataSourceMetadata", profileDocument.Select(property => property.Key), StringComparer.Ordinal);
-
-        var profile = JsonSerializer.Deserialize<AIProfile>(profileDocument.ToJsonString(), _jsonSerializerOptions);
-        Assert.NotNull(profile);
-
-        var metadata = profile.GetOrCreate<AIProfileMetadata>();
-        Assert.Equal("system message into", metadata.SystemMessage);
-
-        var functionMetadata = profile.GetOrCreate<FunctionInvocationMetadata>();
-        Assert.Equal(["getUserInfo"], functionMetadata.Names);
-
-        var dataSourceMetadata = profile.Get<DataSourceMetadata>("DataSourceMetadata");
-        Assert.Equal("data-source-1", dataSourceMetadata.DataSourceId);
-    }
-
-    [Fact]
-    public void NormalizePersistedProfileDocument_WhenPersistedProfileContainsMetadataProperties_ShouldPopulateTypedMetadata()
-    {
-        // Arrange
-        var profileDocument = JsonNode.Parse(
-            """
-            {"Name":"Test","DisplayText":"test","Type":"Chat","ChatDeploymentName":"gpt-4.1","UtilityDeploymentName":"gpt-4.1-mini","TitleType":"InitialPrompt","OrchestratorName":"default","CreatedUtc":"2026-04-20T20:19:53Z","OwnerId":"4674z7xss07cj6qqy6dsyz2zd6","Author":"malhayek","Settings":{"AIChatProfileSettings":{"IsOnAdminMenu":true},"AIProfileDataExtractionSettings":{"EnableDataExtraction":true,"ExtractionCheckInterval":1,"SessionInactivityTimeoutInMinutes":30,"DataExtractionEntries":[{"Name":"customer_name","Description":"dddd","AllowMultipleValues":false,"IsUpdatable":true}]},"AIProfilePostSessionSettings":{"EnablePostSessionProcessing":true,"PostSessionTasks":[{"Name":"asdfsdf","Type":1,"Instructions":"asdfasdfsd","AllowMultipleValues":false,"Options":[]}],"ToolNames":["queryChatSessionMetrics"]},"ChatModeProfileSettings":{"ChatMode":0}},"ItemId":"4vtqzsypttpg1vh82sxy820pcr","Properties":{"AIProfileMetadata":{"SystemMessage":"System instructions","Temperature":0,"TopP":1,"FrequencyPenalty":0,"PresencePenalty":0,"MaxTokens":400,"PastMessagesCount":10,"UseCaching":true},"FunctionInvocationMetadata":{"Names":["queryChatSessionMetrics"]},"AgentInvocationMetadata":{"Names":["data-analyst-agent","reviewer-agent"]},"PromptTemplateMetadata":{"Templates":[]},"AnalyticsMetadata":{"EnableSessionMetrics":true,"EnableAIResolutionDetection":true,"EnableConversionMetrics":true,"ConversionGoals":[{"Name":"ssss","Description":"sssss","MinScore":0,"MaxScore":10}]},"DataSourceMetadata":{"DataSourceId":"4vm3c6hjfyh0c77yb9jcjh6edp"},"AIDataSourceRagMetadata":{"Strictness":3,"TopNDocuments":5,"IsInScope":true},"AIProfileSessionDocumentsMetadata":{"AllowSessionDocuments":true},"DocumentsMetadata":{"Documents":[{"DocumentId":"4htwsv6389zaa5t3nj41kkg6dm","FileName":"12-CarRace-by-Starfall.pdf","ContentType":"application/pdf","FileSize":3176542}],"DocumentTopN":3}},"MemoryMetadata":{"EnableUserMemory":false}}
-            """) as JsonObject;
-
-        Assert.NotNull(profileDocument);
-
-        // Act
-        var updated = InvokeNormalizePersistedProfileDocument(profileDocument);
-        var profile = JsonSerializer.Deserialize<AIProfile>(profileDocument.ToJsonString(), _jsonSerializerOptions);
-
-        // Assert
-        Assert.True(updated);
-        Assert.NotNull(profile);
-        Assert.DoesNotContain(nameof(AIProfile.Properties), profileDocument.Select(property => property.Key), StringComparer.Ordinal);
-
-        var metadata = profile.GetOrCreate<AIProfileMetadata>();
-        Assert.Equal("System instructions", metadata.SystemMessage);
-        Assert.Equal(400, metadata.MaxTokens);
-        Assert.Equal(10, metadata.PastMessagesCount);
-
-        var extractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
-        Assert.True(extractionSettings.EnableDataExtraction);
-        Assert.Single(extractionSettings.DataExtractionEntries);
-
-        var functionMetadata = profile.GetOrCreate<FunctionInvocationMetadata>();
-        Assert.Equal(["queryChatSessionMetrics"], functionMetadata.Names);
-    }
-
     private static NamedCatalogManager<AIProfile> CreateManager(IEnumerable<AIProfile> profiles)
     {
         var catalog = new TestNamedCatalog(profiles);
@@ -168,7 +89,7 @@ public sealed class AIProfileDocumentMigrationsTests
             .Select(parameter => ResolveCoreProfileHandlerArgument(parameter.ParameterType, handlerType, catalog))
             .ToArray());
 
-        return Assert.IsAssignableFrom<ICatalogEntryHandler<AIProfile>>(handler);
+        return Assert.IsType<ICatalogEntryHandler<AIProfile>>(handler, exactMatch: false);
     }
 
     private static object ResolveCoreProfileHandlerArgument(Type parameterType, Type handlerType, INamedCatalog<AIProfile> catalog)

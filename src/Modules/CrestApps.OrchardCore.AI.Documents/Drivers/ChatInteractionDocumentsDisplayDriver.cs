@@ -1,7 +1,9 @@
-﻿using CrestApps.Core.AI.Documents.Models;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using CrestApps.OrchardCore.AI.Documents.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -49,6 +51,8 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
+            model.DocumentRetrievalMode = interaction.GetOrCreate<DocumentsMetadata>().RetrievalMode;
+            model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
 
             // Check if index profile is configured
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -74,6 +78,11 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
     {
         var model = new ChatInteractionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        interaction.Alter<DocumentsMetadata>(metadata =>
+        {
+            metadata.RetrievalMode = model.DocumentRetrievalMode;
+        });
 
         // Documents are uploaded via minimal API endpoints, so we just return the current view
         // The actual document handling happens in UploadDocumentEndpoint and RemoveDocumentEndpoint

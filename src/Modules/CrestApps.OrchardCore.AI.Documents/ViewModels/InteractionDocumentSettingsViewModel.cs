@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using CrestApps.Core.AI.Documents.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 
@@ -18,4 +19,15 @@ public class InteractionDocumentSettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> IndexProfiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default document retrieval mode.
+    /// </summary>
+    public DocumentRetrievalMode RetrievalMode { get; set; } = DocumentRetrievalMode.Chunk;
+
+    /// <summary>
+    /// Gets or sets the document retrieval mode options.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> RetrievalModes { get; set; }
 }

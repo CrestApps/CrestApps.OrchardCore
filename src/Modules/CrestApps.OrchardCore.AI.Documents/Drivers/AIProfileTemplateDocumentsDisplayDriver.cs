@@ -9,6 +9,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,6 +90,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
             var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
+            model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
         }).Location("Content:7#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
@@ -130,6 +133,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
         var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
+        documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
         documentsMetadata.Documents ??= [];
 
         if (context.Updater.ModelState.IsValid)
@@ -142,6 +146,13 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                 foreach (var documentId in model.RemovedDocumentIds)
                 {
                     if (string.IsNullOrEmpty(documentId))
+                    {
+                        continue;
+                    }
+
+                    var docInfo = documentsMetadata.Documents.FirstOrDefault(d => d.DocumentId == documentId);
+
+                    if (docInfo == null)
                     {
                         continue;
                     }
@@ -160,12 +171,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                         await _documentStore.DeleteAsync(document);
                     }
 
-                    var docInfo = documentsMetadata.Documents.FirstOrDefault(d => d.DocumentId == documentId);
-
-                    if (docInfo != null)
-                    {
-                        documentsMetadata.Documents.Remove(docInfo);
-                    }
+                    documentsMetadata.Documents.Remove(docInfo);
                 }
 
                 if (chunkIdsToRemove.Count > 0)

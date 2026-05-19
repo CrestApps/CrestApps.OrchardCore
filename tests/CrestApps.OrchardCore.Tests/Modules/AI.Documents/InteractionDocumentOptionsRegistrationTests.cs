@@ -15,6 +15,7 @@ public sealed class InteractionDocumentOptionsRegistrationTests
         {
             IndexProfileName = "docs-index",
             TopN = 7,
+            RetrievalMode = DocumentRetrievalMode.Hierarchical,
         };
 
         var services = new ServiceCollection();
@@ -27,6 +28,7 @@ public sealed class InteractionDocumentOptionsRegistrationTests
 
         Assert.Equal("docs-index", options.IndexProfileName);
         Assert.Equal(7, options.TopN);
+        Assert.Equal(DocumentRetrievalMode.Hierarchical, options.RetrievalMode);
     }
 
     private static ISiteService CreateSiteService(InteractionDocumentSettings settings)

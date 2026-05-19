@@ -71,8 +71,7 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
 
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()

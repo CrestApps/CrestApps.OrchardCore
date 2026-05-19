@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI.Documents.Models;
+using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -58,6 +59,8 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         return Initialize<InteractionDocumentSettingsViewModel>("InteractionDocumentSettings_Edit", async viewModel =>
         {
             viewModel.IndexProfileName = section.IndexProfileName;
+            viewModel.RetrievalMode = section.RetrievalMode;
+            viewModel.RetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, section.RetrievalMode);
 
             var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
@@ -81,9 +84,12 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         var indexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
             ? null
             : model.IndexProfileName;
-        var settingsChanged = !string.Equals(settings.IndexProfileName, indexProfileName, StringComparison.Ordinal);
+        var settingsChanged =
+            !string.Equals(settings.IndexProfileName, indexProfileName, StringComparison.Ordinal) ||
+            settings.RetrievalMode != model.RetrievalMode;
 
         settings.IndexProfileName = indexProfileName;
+        settings.RetrievalMode = model.RetrievalMode;
 
         if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {
