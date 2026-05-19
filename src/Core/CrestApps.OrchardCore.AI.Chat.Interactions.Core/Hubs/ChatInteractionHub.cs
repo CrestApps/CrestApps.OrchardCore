@@ -2,7 +2,6 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Hubs;
-using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Hubs;
@@ -200,61 +199,4 @@ public class ChatInteractionHub : ChatInteractionHubBase
         };
     }
 
-    protected override async Task ApplyCoreSettingsAsync(
-        IServiceProvider services,
-        ChatInteraction interaction,
-        JsonElement settings)
-    {
-        await base.ApplyCoreSettingsAsync(services, interaction, settings);
-
-        var dataSourceId = JsonHelper.GetString(settings, "dataSourceId");
-        var topNDocuments = JsonHelper.GetInt(settings, "topNDocuments");
-        var isInScope = JsonHelper.GetBool(settings, "isInScope") ?? false;
-
-        if (!string.IsNullOrWhiteSpace(dataSourceId))
-        {
-            var dataSourceStore = services.GetService<IAIDataSourceStore>();
-            if (dataSourceStore is not null)
-            {
-                var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
-                if (dataSource is not null)
-                {
-                    interaction.Put(new DataSourceMetadata
-                    {
-                        DataSourceId = dataSource.ItemId,
-                    });
-
-                    interaction.Put(new AIDataSourceRagMetadata
-                    {
-                        Strictness = JsonHelper.GetInt(settings, "strictness"),
-                        TopNDocuments = topNDocuments,
-                        IsInScope = isInScope,
-                        Filter = JsonHelper.GetString(settings, "filter"),
-                    });
-                }
-            }
-        }
-        else
-        {
-            interaction.Put(new DataSourceMetadata());
-            interaction.Alter<AIDataSourceRagMetadata>(metadata =>
-            {
-                metadata.Strictness = null;
-                metadata.TopNDocuments = topNDocuments;
-                metadata.IsInScope = isInScope;
-                metadata.Filter = null;
-            });
-        }
-
-        if (Logger.IsEnabled(LogLevel.Debug))
-        {
-            Logger.LogDebug(
-                "Saving chat interaction settings for '{InteractionId}' with data source '{DataSourceId}', strictness '{Strictness}', top documents '{TopNDocuments}', and in-scope '{IsInScope}'.",
-                interaction.ItemId,
-                dataSourceId,
-                JsonHelper.GetInt(settings, "strictness"),
-                topNDocuments,
-                isInScope);
-        }
-    }
 }
