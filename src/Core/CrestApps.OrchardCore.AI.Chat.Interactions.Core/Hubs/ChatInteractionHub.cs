@@ -1,10 +1,8 @@
-using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -139,9 +137,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
         "documentRetrievalMode" => S["Document retrieval mode is invalid."].Value,
         _ => S["One or more settings are invalid."].Value,
     };
-
-    protected override string ValidateSettings(JsonElement settings)
-        => ChatInteractionSettingsValidator.Validate(settings);
 
     protected override void CollectStreamingReferences(
         IServiceProvider services,
