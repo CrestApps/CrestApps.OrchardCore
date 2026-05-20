@@ -3,7 +3,7 @@ using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 
-internal sealed class McpConnectionDeploymentStep : DeploymentStep
+public sealed class McpConnectionDeploymentStep : DeploymentStep
 {
     public McpConnectionDeploymentStep()
     {

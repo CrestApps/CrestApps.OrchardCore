@@ -4,7 +4,7 @@ using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Schemas;
 
-internal sealed class WorkflowTypeSchemaStep : IRecipeStep
+public sealed class WorkflowTypeSchemaStep : IRecipeStep
 {
     private readonly IActivityLibrary _activityLibrary;
 

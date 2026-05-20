@@ -1,10 +1,9 @@
 using CrestApps.OrchardCore.AI.Agent.Services;
 using Json.Schema;
-using Parlot.Fluent;
 
 namespace CrestApps.OrchardCore.AI.Agent.Schemas;
 
-internal sealed class ContentDefinitionSchemaStep : IRecipeStep
+public sealed class ContentDefinitionSchemaStep : IRecipeStep
 {
     private readonly IEnumerable<IContentDefinitionSchemaDefinition> _contentPartDefinitionSchemaDefinitions;
     private readonly ContentMetadataService _contentMetadataService;

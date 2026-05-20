@@ -8,7 +8,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIProfileStep : NamedRecipeStepHandler
+public sealed class AIProfileStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProfile";
 

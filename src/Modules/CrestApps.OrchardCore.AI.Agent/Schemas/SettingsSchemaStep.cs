@@ -2,7 +2,7 @@ using Json.Schema;
 
 namespace CrestApps.OrchardCore.AI.Agent.Schemas;
 
-internal sealed class SettingsSchemaStep : IRecipeStep
+public sealed class SettingsSchemaStep : IRecipeStep
 {
     private JsonSchema _schema;
 

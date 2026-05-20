@@ -8,7 +8,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 
-internal sealed class McpConnectionStep : NamedRecipeStepHandler
+public sealed class McpConnectionStep : NamedRecipeStepHandler
 {
     public const string StepKey = "McpConnection";
 

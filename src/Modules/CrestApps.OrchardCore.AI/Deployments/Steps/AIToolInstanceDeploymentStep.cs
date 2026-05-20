@@ -3,7 +3,7 @@ using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 
-internal sealed class AIToolInstanceDeploymentStep : DeploymentStep
+public sealed class AIToolInstanceDeploymentStep : DeploymentStep
 {
     public AIToolInstanceDeploymentStep()
     {
