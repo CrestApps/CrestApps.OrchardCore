@@ -1,9 +1,9 @@
-﻿using CrestApps.OrchardCore.AI.Mcp.Recipes;
+using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 
-internal sealed class McpResourceDeploymentStep : DeploymentStep
+public sealed class McpResourceDeploymentStep : DeploymentStep
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="McpResourceDeploymentStep"/> class.
