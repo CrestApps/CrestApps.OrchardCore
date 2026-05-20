@@ -1,9 +1,9 @@
-﻿using CrestApps.OrchardCore.AI.Recipes;
+using CrestApps.OrchardCore.AI.Recipes;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Steps;
 
-internal sealed class AIProfileDeploymentStep : DeploymentStep
+public sealed class AIProfileDeploymentStep : DeploymentStep
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileDeploymentStep"/> class.
