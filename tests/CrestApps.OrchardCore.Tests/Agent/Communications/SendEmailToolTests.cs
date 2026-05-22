@@ -20,7 +20,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         emailService
-            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
+            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
 
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -51,7 +51,8 @@ public sealed class SendEmailToolTests
                     && m.HtmlBody == "<p>Test body</p>"
                     && m.Sender == null
                     && m.From == null),
-                It.IsAny<string>()),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -61,7 +62,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         emailService
-            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
+            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
 
         var mockUser = new Mock<IUser>();
@@ -99,7 +100,8 @@ public sealed class SendEmailToolTests
                 It.Is<MailMessage>(m =>
                     m.Sender == "sender@example.com"
                     && m.From == "sender@example.com"),
-                It.IsAny<string>()),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -127,7 +129,7 @@ public sealed class SendEmailToolTests
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         // Assert
-        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
+        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -154,7 +156,7 @@ public sealed class SendEmailToolTests
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         // Assert
-        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
+        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -181,7 +183,7 @@ public sealed class SendEmailToolTests
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         // Assert
-        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
+        emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -190,7 +192,7 @@ public sealed class SendEmailToolTests
         // Arrange
         var emailService = new Mock<IEmailService>();
         emailService
-            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
+            .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
 
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -220,7 +222,8 @@ public sealed class SendEmailToolTests
                 It.Is<MailMessage>(m =>
                     m.Cc == "cc@example.com"
                     && m.Bcc == "bcc@example.com"),
-                It.IsAny<string>()),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
