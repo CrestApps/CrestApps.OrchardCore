@@ -42,7 +42,11 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
         => PopulateAsync(context.Model, context.Data, true);
 
     public override Task UpdatingAsync(UpdatingContext<A2AConnection> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data, false);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data, false);
+    }
 
     public override Task UpdatedAsync(UpdatedContext<A2AConnection> context, CancellationToken cancellationToken = default)
     {

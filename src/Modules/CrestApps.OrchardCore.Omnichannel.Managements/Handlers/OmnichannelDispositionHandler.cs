@@ -37,7 +37,11 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
         => PopulateAsync(context.Model, context.Data);
 
     public override Task UpdatingAsync(UpdatingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
     {

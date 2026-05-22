@@ -52,7 +52,11 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         => PopulateAsync(context.Model, context.Data);
 
     public override Task UpdatingAsync(UpdatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
 
     public override async Task ValidatingAsync(ValidatingContext<AIDeployment> context, CancellationToken cancellationToken = default)
     {

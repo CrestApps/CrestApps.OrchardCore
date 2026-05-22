@@ -37,7 +37,11 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
         => PopulateAsync(context.Model, context.Data);
 
     public override Task UpdatingAsync(UpdatingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
     {

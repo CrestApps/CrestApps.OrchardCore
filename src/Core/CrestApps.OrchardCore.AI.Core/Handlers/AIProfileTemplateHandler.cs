@@ -47,7 +47,11 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         => PopulateAsync(context.Model, context.Data, true);
 
     public override Task UpdatingAsync(UpdatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data, false);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data, false);
+    }
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfileTemplate> context, CancellationToken cancellationToken = default)
     {

@@ -38,7 +38,11 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
         => PopulateAsync(context.Model, context.Data, true);
 
     public override Task UpdatingAsync(UpdatingContext<McpPrompt> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data, false);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data, false);
+    }
 
     public override Task ValidatingAsync(ValidatingContext<McpPrompt> context, CancellationToken cancellationToken = default)
     {
