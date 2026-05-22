@@ -139,7 +139,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             }
         }
 
-        var smsResult = await _smsService.SendAsync(message);
+        var smsResult = await _smsService.SendAsync(message, cancellationToken);
 
         if (smsResult.Succeeded)
         {

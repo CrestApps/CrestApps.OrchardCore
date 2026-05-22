@@ -96,7 +96,7 @@ public sealed class SendSmsTool : AIFunction
             Body = body,
         };
 
-        var result = await smsService.SendAsync(message);
+        var result = await smsService.SendAsync(message, cancellationToken);
 
         if (result.Succeeded)
         {

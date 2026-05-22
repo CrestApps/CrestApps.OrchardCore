@@ -1,19 +1,21 @@
 @using CrestApps.OrchardCore.AI.A2A.ViewModels
+@using OrchardCore
 
 @model EditProfileA2AConnectionsViewModel
 
 @if (Model.Connections is not null && Model.Connections.Length > 0)
 {
-    <h5 class="border-bottom pb-2">@T["A2A Connections"]</h5>
-
-    <div class="mb-3">
-        @for (var i = 0; i < Model.Connections.Length; i++)
-        {
-            <div class="form-check">
-                <input type="hidden" asp-for="Connections[i].ItemId" />
-                <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input">
-                <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
-            </div>
-        }
+    <div class="@Orchard.GetWrapperClasses()">
+        <div class="@Orchard.GetLabelClasses()">@T["A2A Connections"]</div>
+        <div class="@Orchard.GetEndClasses()">
+            @for (var i = 0; i < Model.Connections.Length; i++)
+            {
+                <div class="form-check">
+                    <input type="hidden" asp-for="Connections[i].ItemId" />
+                    <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input">
+                    <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
+                </div>
+            }
+        </div>
     </div>
 }

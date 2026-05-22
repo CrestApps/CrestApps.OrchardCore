@@ -1,5 +1,6 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
 
 @model EditProfileAgentsViewModel
 
@@ -8,57 +9,58 @@
     return;
 }
 
-<h4 class="border-bottom pb-2">@T["Agents"]</h4>
-
-@if (Model.AlwaysAvailableAgentCount > 0)
-{
-    <div class="alert alert-info small">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        @T["There are {0} always-available agents that will be automatically included in every request.", Model.AlwaysAvailableAgentCount]
-    </div>
-}
-
-<div class="mb-3">
-    @if (Model.Agents.Length > 5)
-    {
-        <div class="mb-3">
-            <input type="text"
-                   class="form-control form-control-sm agent-search-input"
-                   placeholder="@T["Search agents..."]"
-                   aria-label="@T["Search agents"]" />
-        </div>
-    }
-
-    <div class="form-check mb-2">
-        <input class="form-check-input agent-global-toggle"
-               type="checkbox"
-               id="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))" />
-        <label class="form-check-label fw-semibold"
-               for="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))">
-            @T["Select All Agents"]
-        </label>
-    </div>
-
-    <div class="agent-list-container ms-3">
-        @for (var i = 0; i < Model.Agents.Length; i++)
+<div class="@Orchard.GetWrapperClasses("border-bottom pb-2")">
+    <div class="@Orchard.GetLabelClasses()">@T["Agents"]</div>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.AlwaysAvailableAgentCount > 0)
         {
-            <div class="form-check agent-item"
-                 data-agent-name="@Model.Agents[i].DisplayText"
-                 data-agent-description="@Model.Agents[i].Description">
-                <input type="hidden" asp-for="Agents[i].ItemId" />
-                <input asp-for="Agents[i].IsSelected"
-                       type="checkbox"
-                       class="form-check-input agent-checkbox"
-                       id="agent_@i" />
-                <label class="form-check-label" asp-for="Agents[i].IsSelected">
-                    @Model.Agents[i].DisplayText
-                </label>
-                <span class="hint dashed">@Model.Agents[i].Description</span>
+            <div class="alert alert-info small">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                @T["There are {0} always-available agents that will be automatically included in every request.", Model.AlwaysAvailableAgentCount]
             </div>
         }
-    </div>
 
-    <div class="agent-no-results text-muted small d-none">@T["No agents match your search."]</div>
+        @if (Model.Agents.Length > 5)
+        {
+            <div class="mb-3">
+                <input type="text"
+                       class="form-control form-control-sm agent-search-input"
+                       placeholder="@T["Search agents..."]"
+                       aria-label="@T["Search agents"]" />
+            </div>
+        }
+
+        <div class="form-check mb-2">
+            <input class="form-check-input agent-global-toggle"
+                   type="checkbox"
+                   id="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))" />
+            <label class="form-check-label fw-semibold"
+                   for="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))">
+                @T["Select All Agents"]
+            </label>
+        </div>
+
+        <div class="agent-list-container ms-3">
+            @for (var i = 0; i < Model.Agents.Length; i++)
+            {
+                <div class="form-check agent-item"
+                     data-agent-name="@Model.Agents[i].DisplayText"
+                     data-agent-description="@Model.Agents[i].Description">
+                    <input type="hidden" asp-for="Agents[i].ItemId" />
+                    <input asp-for="Agents[i].IsSelected"
+                           type="checkbox"
+                           class="form-check-input agent-checkbox"
+                           id="agent_@i" />
+                    <label class="form-check-label" asp-for="Agents[i].IsSelected">
+                        @Model.Agents[i].DisplayText
+                    </label>
+                    <span class="hint dashed">@Model.Agents[i].Description</span>
+                </div>
+            }
+        </div>
+
+        <div class="agent-no-results text-muted small d-none">@T["No agents match your search."]</div>
+    </div>
 </div>
 
 <script at="Foot">

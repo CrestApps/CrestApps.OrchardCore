@@ -1,12 +1,15 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using OrchardCore
 
 @model AIProfileDataExtractionViewModel
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" />
-        <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable data extraction"]</label>
-        <span class="hint dashed">@T["When enabled, the system will extract structured data from chat messages."]</span>
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" />
+            <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable data extraction"]</label>
+            <span class="hint dashed">@T["When enabled, the system will extract structured data from chat messages."]</span>
+        </div>
     </div>
 </div>
 
@@ -20,59 +23,61 @@
         @T["Data extraction runs after each qualifying message exchange. Additionally, when an AI session is closed (either due to inactivity or natural conversation ending), a final extraction is automatically performed to capture any remaining data."]
     </div>
 
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction check interval"]</label>
+    <div class="@Orchard.GetWrapperClasses()">
+        <label class="@Orchard.GetLabelClasses()" asp-for="ExtractionCheckInterval">@T["Extraction check interval"]</label>
+        <div class="@Orchard.GetEndClasses()">
             <input type="number" class="form-control" asp-for="ExtractionCheckInterval" min="1" />
             <span class="hint">@T["Run extraction every N user messages. Default is 1 (every message)."]</span>
         </div>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">@T["Extraction entries"]</label>
-        <span class="hint dashed d-block mb-2">@T["Define the fields to extract from the conversation."]</span>
+    <div class="@Orchard.GetWrapperClasses()">
+        <div class="@Orchard.GetLabelClasses()">@T["Extraction entries"]</div>
+        <div class="@Orchard.GetEndClasses()">
+            <span class="hint dashed d-block mb-2">@T["Define the fields to extract from the conversation."]</span>
 
-        <div id="extractionEntriesContainer">
-            @for (var i = 0; i < Model.Entries.Count; i++)
-            {
-                <div class="card mb-2 extraction-entry-card">
-                    <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 entry-collapse-toggle" data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
-                            <i class="fa-solid fa-chevron-down me-1"></i>
-                            <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(Model.Entries[i].Name) ? T["New Entry"] : Model.Entries[i].Name)</span>
-                        </a>
-                        <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="@T["Remove"]">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-                    <div id="entryCollapse_@i" class="collapse show">
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">@T["Name"]</label>
-                                <input type="text" class="form-control entry-name-input" name="@Html.NameFor(m => m.Entries[i].Name)" value="@Model.Entries[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., customer_name"]" />
-                                <span class="hint">@T["A unique identifier for this field. Only alphanumeric characters and underscores are allowed."]</span>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">@T["Description"]</label>
-                                <textarea class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" rows="3" placeholder="@T["What to extract"]">@Model.Entries[i].Description</textarea>
-                                <span class="hint">@T["Describes what data to extract from the conversation. The AI model uses this to understand what to look for."]</span>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].AllowMultipleValues)" value="true" @(Model.Entries[i].AllowMultipleValues ? "checked" : "") />
-                                <label class="form-check-label">@T["Allow Multiple Values"]</label>
-                                <span class="hint dashed">@T["When enabled, the field can accumulate multiple extracted values across messages (e.g., a list of mentioned product names)."]</span>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].IsUpdatable)" value="true" @(Model.Entries[i].IsUpdatable ? "checked" : "") />
-                                <label class="form-check-label">@T["Updatable"]</label>
-                                <span class="hint dashed">@T["When enabled, the extracted value can be replaced if the user provides updated information in a later message."]</span>
+            <div id="extractionEntriesContainer">
+                @for (var i = 0; i < Model.Entries.Count; i++)
+                {
+                    <div class="card mb-2 extraction-entry-card">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 entry-collapse-toggle" data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                                <i class="fa-solid fa-chevron-down me-1"></i>
+                                <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(Model.Entries[i].Name) ? T["New Entry"] : Model.Entries[i].Name)</span>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="@T["Remove"]">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        <div id="entryCollapse_@i" class="collapse show">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">@T["Name"]</label>
+                                    <input type="text" class="form-control entry-name-input" name="@Html.NameFor(m => m.Entries[i].Name)" value="@Model.Entries[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., customer_name"]" />
+                                    <span class="hint">@T["A unique identifier for this field. Only alphanumeric characters and underscores are allowed."]</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">@T["Description"]</label>
+                                    <textarea class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" rows="3" placeholder="@T["What to extract"]">@Model.Entries[i].Description</textarea>
+                                    <span class="hint">@T["Describes what data to extract from the conversation. The AI model uses this to understand what to look for."]</span>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].AllowMultipleValues)" value="true" @(Model.Entries[i].AllowMultipleValues ? "checked" : "") />
+                                    <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                                    <span class="hint dashed">@T["When enabled, the field can accumulate multiple extracted values across messages (e.g., a list of mentioned product names)."]</span>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].IsUpdatable)" value="true" @(Model.Entries[i].IsUpdatable ? "checked" : "") />
+                                    <label class="form-check-label">@T["Updatable"]</label>
+                                    <span class="hint dashed">@T["When enabled, the extracted value can be replaced if the user provides updated information in a later message."]</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
+            <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry"><i class="fa-solid fa-plus"></i> @T["Add Entry"]</button>
         </div>
-        <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry"><i class="fa-solid fa-plus"></i> @T["Add Entry"]</button>
     </div>
 </div>
 

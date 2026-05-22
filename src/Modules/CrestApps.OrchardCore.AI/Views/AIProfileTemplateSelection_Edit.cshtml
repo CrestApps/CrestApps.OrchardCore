@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
 
 @model AIProfileTemplateSelectionViewModel
 
@@ -7,17 +8,19 @@
     var selectId = Html.IdFor(m => m.TemplateId);
     var buttonId = $"{selectId}_apply";
 
-    <div class="mb-3">
-        <label asp-for="TemplateId" class="form-label fw-semibold">@T["Template"]</label>
-        <div class="input-group">
-            <select asp-for="TemplateId" asp-items="Model.Templates" class="form-select">
-                <option value="">@T["Select a template"]</option>
-            </select>
-            <button type="button" class="btn btn-secondary" id="@buttonId">
-                <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
-            </button>
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="TemplateId" class="@Orchard.GetLabelClasses()">@T["Template"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <div class="input-group">
+                <select asp-for="TemplateId" asp-items="Model.Templates" class="form-select">
+                    <option value="">@T["Select a template"]</option>
+                </select>
+                <button type="button" class="btn btn-secondary" id="@buttonId">
+                    <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
+                </button>
+            </div>
+            <span class="hint">@T["Select a profile template to pre-fill the form fields before you save the new profile."]</span>
         </div>
-        <span class="hint">@T["Select a profile template to pre-fill the form fields before you save the new profile."]</span>
     </div>
 
     <script at="Foot">

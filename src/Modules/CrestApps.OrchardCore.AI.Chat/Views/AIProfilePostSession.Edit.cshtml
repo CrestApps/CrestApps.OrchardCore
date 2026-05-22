@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
 @using CrestApps.Core.AI.Models
+@using OrchardCore
 
 @model AIProfilePostSessionViewModel
 
@@ -16,11 +17,13 @@
     var tabContentId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_tabContent";
 }
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" />
-        <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable post-session processing"]</label>
-        <span class="hint dashed">@T["When enabled, the system will run AI-powered analysis on the complete conversation after the session is closed."]</span>
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" />
+            <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable post-session processing"]</label>
+            <span class="hint dashed">@T["When enabled, the system will run AI-powered analysis on the complete conversation after the session is closed."]</span>
+        </div>
     </div>
 </div>
 

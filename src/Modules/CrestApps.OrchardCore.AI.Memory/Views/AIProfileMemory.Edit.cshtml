@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.AI.Memory.ViewModels
+@using OrchardCore
 
 @model EditAIProfileMemoryViewModel
 
@@ -13,11 +14,13 @@
     </div>
 }
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnableUserMemory" />
-        <label class="form-check-label" asp-for="EnableUserMemory">@T["Enable user memory"]</label>
-        <span class="hint">@T["When enabled, authenticated users can store and recall durable private memory across chat sessions that use this profile, including preferences, active projects, recurring topics, and other useful background context."]</span>
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableUserMemory" />
+            <label class="form-check-label" asp-for="EnableUserMemory">@T["Enable user memory"]</label>
+            <span class="hint">@T["When enabled, authenticated users can store and recall durable private memory across chat sessions that use this profile, including preferences, active projects, recurring topics, and other useful background context."]</span>
+        </div>
     </div>
 </div>
 

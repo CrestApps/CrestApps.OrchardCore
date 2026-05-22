@@ -1,5 +1,3 @@
-@using CrestApps.Core.AI.Models
-@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.ViewModels
 @using OrchardCore
 
@@ -10,70 +8,69 @@
     return;
 }
 
-<h4 class="border-bottom pb-2">@T["Tools"]</h4>
+<div class="@Orchard.GetWrapperClasses("border-bottom pb-2")">
+    <div class="@Orchard.GetLabelClasses()">@T["Tools"]</div>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="mb-3">
+            <input type="text"
+                   class="form-control form-control-sm tool-search-input"
+                   placeholder="@T["Search tools..."]"
+                   aria-label="@T["Search tools"]" />
+        </div>
 
-<div class="mb-3">
+        <div class="form-check mb-2">
+            <input class="form-check-input global-tool-toggle"
+                   type="checkbox"
+                   id="selectAllTools" />
+            <label class="form-check-label fw-semibold" for="selectAllTools">
+                @T["Select All Tools"]
+            </label>
+        </div>
 
-    <div class="mb-3">
-        <input type="text"
-               class="form-control form-control-sm tool-search-input"
-               placeholder="@T["Search tools..."]"
-               aria-label="@T["Search tools"]" />
-    </div>
+        <div class="tool-groups-container">
+            @foreach (var tools in Model.Tools)
+            {
+                var groupKey = tools.Key;
+                var groupId = groupKey.Replace(" ", "-");
 
-    <div class="form-check mb-2">
-        <input class="form-check-input global-tool-toggle"
-               type="checkbox"
-               id="selectAllTools" />
-        <label class="form-check-label fw-semibold" for="selectAllTools">
-            @T["Select All Tools"]
-        </label>
-    </div>
+                <div class="mb-3 tool-group" data-group-name="@groupKey">
+                    <h5>@groupKey</h5>
 
-    <div class="tool-groups-container">
-        @foreach (var tools in Model.Tools)
-        {
-            var groupKey = tools.Key;
-            var groupId = groupKey.Replace(" ", "-");
+                    <div class="form-check">
+                        <input class="form-check-input group-toggle"
+                               type="checkbox"
+                               id="selectAll_@groupId"
+                               data-group="@groupId" />
+                        <label class="form-check-label" for="selectAll_@groupId">
+                            @T["Select All in {0}", groupKey]
+                        </label>
+                    </div>
 
-            <div class="mb-3 tool-group" data-group-name="@groupKey">
+                    <div class="ms-3">
+                        @for (var i = 0; i < tools.Value.Length; i++)
+                        {
+                            <div class="form-check tool-item" data-tool-name="@tools.Value[i].DisplayText" data-tool-description="@tools.Value[i].Description">
+                                <input type="hidden" asp-for="@Model.Tools[groupKey][i].ItemId" />
+                                <input asp-for="@Model.Tools[groupKey][i].IsSelected"
+                                       type="checkbox"
+                                       class="form-check-input group-checkbox"
+                                       data-group="@groupId"
+                                       id="tool_@(groupId)_@i" />
 
-                <h5>@groupKey</h5>
-
-                <div class="form-check">
-                    <input class="form-check-input group-toggle"
-                           type="checkbox"
-                           id="selectAll_@groupId"
-                           data-group="@groupId" />
-                    <label class="form-check-label" for="selectAll_@groupId">
-                        @T["Select All in {0}", groupKey]
-                    </label>
+                                <label class="form-check-label"
+                                       asp-for="@Model.Tools[groupKey][i].IsSelected">
+                                    @tools.Value[i].DisplayText
+                                </label>
+                                <span class="hint dashed">@tools.Value[i].Description</span>
+                            </div>
+                        }
+                    </div>
                 </div>
+            }
+        </div>
 
-                <div class="ms-3">
-                    @for (var i = 0; i < tools.Value.Length; i++)
-                    {
-                        <div class="form-check tool-item" data-tool-name="@tools.Value[i].DisplayText" data-tool-description="@tools.Value[i].Description">
-                            <input type="hidden" asp-for="@Model.Tools[groupKey][i].ItemId" />
-                            <input asp-for="@Model.Tools[groupKey][i].IsSelected"
-                                   type="checkbox"
-                                   class="form-check-input group-checkbox"
-                                   data-group="@groupId"
-                                   id="tool_@(groupId)_@i" />
-
-                            <label class="form-check-label"
-                                   asp-for="@Model.Tools[groupKey][i].IsSelected">
-                                @tools.Value[i].DisplayText
-                            </label>
-                            <span class="hint dashed">@tools.Value[i].Description</span>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
+        <div class="tool-no-results text-muted small d-none">@T["No tools match your search."]</div>
     </div>
-
-    <div class="tool-no-results text-muted small d-none">@T["No tools match your search."]</div>
 </div>
 
 <script at="Foot">

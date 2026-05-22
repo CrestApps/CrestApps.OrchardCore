@@ -1,7 +1,7 @@
-﻿using CrestApps.Core.AI.Documents.Models;
-using CrestApps.OrchardCore.AI.Documents.Services;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Documents.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
