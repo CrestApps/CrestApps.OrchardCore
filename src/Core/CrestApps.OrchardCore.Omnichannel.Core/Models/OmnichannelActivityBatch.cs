@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Represents the omnichannel activity batch.
 /// </summary>
-public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareModel, ICloneable<OmnichannelActivityBatch>
+public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelActivityBatch>
 {
     /// <summary>
     /// Gets or sets the display text.
@@ -53,6 +53,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// Gets or sets the created utc.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the modified utc.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the author.
@@ -126,6 +131,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             IncludeDoNoSms = IncludeDoNoSms,
             IncludeDoNoEmail = IncludeDoNoEmail,
             CreatedUtc = CreatedUtc,
+            ModifiedUtc = ModifiedUtc,
             Author = Author,
             OwnerId = OwnerId,
             ScheduleAt = ScheduleAt,

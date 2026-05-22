@@ -11,7 +11,7 @@
 @inject IAuthorizationService AuthorizationService
 
 @{
-    var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture);
 }
 
 @if (Model.Value.Activity.Attempts > 1)

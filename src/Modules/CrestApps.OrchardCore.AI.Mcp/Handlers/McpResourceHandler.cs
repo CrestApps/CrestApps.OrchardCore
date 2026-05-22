@@ -38,7 +38,11 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         => PopulateAsync(context.Model, context.Data, true);
 
     public override Task UpdatingAsync(UpdatingContext<McpResource> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data, false);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data, false);
+    }
 
     public override Task ValidatingAsync(ValidatingContext<McpResource> context, CancellationToken cancellationToken = default)
     {

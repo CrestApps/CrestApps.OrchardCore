@@ -227,7 +227,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             {
                 To = activity.PreferredDestination,
                 Body = bestChoice,
-            });
+            }, cancellationToken);
 
             if (result.Succeeded)
             {

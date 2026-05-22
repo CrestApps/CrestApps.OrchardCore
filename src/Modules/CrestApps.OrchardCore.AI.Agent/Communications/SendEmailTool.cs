@@ -148,7 +148,7 @@ public sealed class SendEmailTool : AIFunction
             message.Bcc = bcc;
         }
 
-        var result = await emailService.SendAsync(message);
+        var result = await emailService.SendAsync(message, cancellationToken: cancellationToken);
 
         if (result.Succeeded)
         {
