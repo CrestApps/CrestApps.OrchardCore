@@ -29,6 +29,8 @@ The Orchard agent module surfaces agent profiles inside Orchard Core so they can
 
 The exact tool set available to agents depends on which Orchard modules are enabled. For example, tenant-management tools only light up when Orchard tenants support is enabled, and recipe tools depend on Orchard recipes support.
 
+For the complete Orchard-specific AI function catalog, including the feature that enables each function and its description, see [AI Tools](tools).
+
 ## Orchard-specific role of agent profiles
 
 In Orchard Core, agent profiles are useful when you want:

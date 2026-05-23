@@ -295,6 +295,7 @@ tests/
 - **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
 - **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
 - **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `Templates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `ITemplateService`.
+- **AI function catalog docs**: Whenever you add, remove, rename, re-categorize, or change the description or feature requirements of an AI function/tool, update `src\CrestApps.Docs\docs\ai\tools.md` and any related feature doc (for example `ai\memory.md`) in the same change so the documented function lists stay synchronized with the codebase.
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
