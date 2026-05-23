@@ -121,9 +121,9 @@ public sealed class SendNotificationTool : AIFunction
             return $"Unable to find a user that matches the given userId: {userId}";
         }
 
-        var count = await notificationService.SendAsync(user, message);
+        var countResult = await notificationService.SendAsync(user, message, cancellationToken);
 
-        if (count > 0)
+        if (countResult.SuccessfulCount > 0)
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {

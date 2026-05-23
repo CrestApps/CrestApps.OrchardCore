@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
@@ -35,7 +35,7 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
             return null;
         }
 
-        return Initialize<AITemplateSelectionViewModel>("PromptTemplateSelection_Edit", promptSelectionModel =>
+        return Initialize<AITemplateSelectionViewModel>("PromptTemplateChatInteractionSelection_Edit", promptSelectionModel =>
         {
             promptSelectionModel.PromptTemplates = model.PromptTemplates;
             promptSelectionModel.AvailablePrompts = model.AvailablePrompts;

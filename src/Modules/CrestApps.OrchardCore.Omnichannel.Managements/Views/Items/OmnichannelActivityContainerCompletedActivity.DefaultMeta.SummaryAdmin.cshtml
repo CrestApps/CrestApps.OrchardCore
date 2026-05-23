@@ -12,7 +12,7 @@
 @inject ICatalog<OmnichannelDisposition> DispositionCatalog
 
 @{
-    var completedAt = Model.Value.Activity.CompletedUtc.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    var completedAt = Model.Value.Activity.CompletedUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture);
 }
 
 @if (Model.Value.Activity.Attempts > 1)

@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Represents the omnichannel campaign.
 /// </summary>
-public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, ICloneable<OmnichannelCampaign>
+public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelCampaign>
 {
     /// <summary>
     /// Gets or sets the display text.
@@ -101,6 +101,11 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the modified utc.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the author.
     /// </summary>
     public string Author { get; set; }
@@ -146,6 +151,7 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             MaxTokens = MaxTokens,
             ToolNames = ToolNames?.ToArray(),
             CreatedUtc = CreatedUtc,
+            ModifiedUtc = ModifiedUtc,
             Author = Author,
             OwnerId = OwnerId,
             AllowAIToUpdateContact = AllowAIToUpdateContact,

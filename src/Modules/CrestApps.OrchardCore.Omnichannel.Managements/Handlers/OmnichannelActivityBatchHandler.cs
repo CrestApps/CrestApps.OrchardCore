@@ -37,7 +37,11 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         => PopulateAsync(context.Model, context.Data);
 
     public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
     {

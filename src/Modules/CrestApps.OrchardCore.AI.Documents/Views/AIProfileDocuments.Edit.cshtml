@@ -1,6 +1,4 @@
-@using CrestApps.Core.AI
 @using CrestApps.Core.AI.Documents.Models
-@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 @using Microsoft.Extensions.Options
 @using OrchardCore
@@ -13,88 +11,93 @@
     var uniqueId = Guid.NewGuid().ToString("N")[..8];
 }
 
-<div class="mb-3">
+<div class="@Orchard.GetWrapperClasses()">
     @if (!Model.HasIndexProfile)
     {
-        <div class="alert alert-warning" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-2"></i>
-            <strong>@T["Index not configured"]</strong>
-            <p class="mb-0">
-                @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
-            </p>
+        <div class="@Orchard.GetEndClasses(true)">
+            <div class="alert alert-warning" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Index not configured"]</strong>
+                <p class="mb-0">
+                    @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
+                </p>
+            </div>
         </div>
     }
     else if (!Model.HasVectorSearchService)
     {
-        <div class="alert alert-warning" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-2"></i>
-            <strong>@T["Vector Search Service Not Available"]</strong>
-            <p class="mb-0">
-                @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
-            </p>
+        <div class="@Orchard.GetEndClasses(true)">
+            <div class="alert alert-warning" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Vector Search Service Not Available"]</strong>
+                <p class="mb-0">
+                    @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
+                </p>
+            </div>
         </div>
     }
-
-    <div class="border rounded p-3 bg-light">
-        <!-- Drag and drop zone -->
-        <div id="profileDropZone-@uniqueId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
-            <div class="drop-zone-content d-flex flex-column align-items-center" id="profileDropZoneContent-@uniqueId">
-                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
-                <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
-                <div class="text-muted mb-2">@T["or"]</div>
-                <button type="button" class="btn btn-primary" id="profileBrowseBtn-@uniqueId">
-                    <i class="fa-solid fa-folder-open me-1"></i>
-                    @T["Browse Files"]
-                </button>
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="border rounded p-3 bg-light">
+            <!-- Drag and drop zone -->
+            <div id="profileDropZone-@uniqueId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+                <div class="drop-zone-content d-flex flex-column align-items-center" id="profileDropZoneContent-@uniqueId">
+                    <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
+                    <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
+                    <div class="text-muted mb-2">@T["or"]</div>
+                    <button type="button" class="btn btn-primary" id="profileBrowseBtn-@uniqueId">
+                        <i class="fa-solid fa-folder-open me-1"></i>
+                        @T["Browse Files"]
+                    </button>
+                </div>
+                <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="profileDropZoneActive-@uniqueId">
+                    <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
+                    <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
+                </div>
             </div>
-            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="profileDropZoneActive-@uniqueId">
-                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
-                <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
+
+            <input type="file"
+                   class="d-none"
+                   id="profileDocumentUpload-@uniqueId"
+                   name="@Html.NameFor(m => m.Files)"
+                   accept="@allowedExtensions"
+                   multiple />
+            <div class="form-text mb-3">
+                @T["Supported formats: {0}. Only text-based documents for RAG.", allowedExtensions]
             </div>
-        </div>
 
-        <input type="file"
-               class="d-none"
-               id="profileDocumentUpload-@uniqueId"
-               name="@Html.NameFor(m => m.Files)"
-               accept="@allowedExtensions"
-               multiple />
-        <div class="form-text mb-3">
-            @T["Supported formats: {0}. Only text-based documents for RAG.", allowedExtensions]
-        </div>
+            <div id="profilePendingFiles-@uniqueId" class="pending-file-list"></div>
 
-        <div id="profilePendingFiles-@uniqueId" class="pending-file-list"></div>
+            <div id="removedDocumentsContainer-@uniqueId"></div>
 
-        <div id="removedDocumentsContainer-@uniqueId"></div>
-
-        <div id="profileDocumentsList-@uniqueId" class="document-list">
-            @if (Model.Documents != null && Model.Documents.Any())
-            {
-                foreach (var doc in Model.Documents)
+            <div id="profileDocumentsList-@uniqueId" class="document-list">
+                @if (Model.Documents != null && Model.Documents.Any())
                 {
-                    <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
-                        <button type="button"
-                                class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
-                                data-document-id="@doc.DocumentId"
-                                title="@T["Remove document"]">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                        <div class="text-truncate">
-                            <div class="fw-medium small text-truncate">@doc.FileName</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">
-                                @FormatFileSize(doc.FileSize)
-                            </small>
+                    foreach (var doc in Model.Documents)
+                    {
+                        <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
+                                    data-document-id="@doc.DocumentId"
+                                    title="@T["Remove document"]">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                            <div class="text-truncate">
+                                <div class="fw-medium small text-truncate">@doc.FileName</div>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    @FormatFileSize(doc.FileSize)
+                                </small>
+                            </div>
                         </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center text-muted py-3 no-documents">
+                        <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                        <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
                     </div>
                 }
-            }
-            else
-            {
-                <div class="text-center text-muted py-3 no-documents">
-                    <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
-                    <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
-                </div>
-            }
+            </div>
         </div>
     </div>
 </div>
