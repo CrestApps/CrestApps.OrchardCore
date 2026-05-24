@@ -25,5 +25,11 @@ public sealed class AIProfileRecipeStepTests
 
         Assert.Contains("\"CreateAIProfileFromTemplate\"", json);
         Assert.Contains("\"TemplateId\"", json);
+        Assert.Contains("\"Agent\"", json);
+        Assert.Contains("\"Description\"", json);
+        Assert.Contains("\"PromptSubject\"", json);
+        Assert.Contains("\"OrchestratorName\"", json);
+        Assert.DoesNotContain("\"ChatDeploymentId\"", json);
+        Assert.DoesNotContain("\"UtilityDeploymentId\"", json);
     }
 }

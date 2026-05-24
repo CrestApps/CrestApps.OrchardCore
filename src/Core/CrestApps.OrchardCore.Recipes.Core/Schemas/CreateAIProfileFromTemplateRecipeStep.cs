@@ -28,14 +28,15 @@ public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
                 ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the AI provider source name.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the profile name.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the human-readable profile display name.")),
+                ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the profile description.")),
                 ("WelcomeMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the initial greeting shown to users.")),
-                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt").Description("Overrides the profile type.")),
+                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt", "Agent").Description("Overrides the profile type.")),
                 ("TitleType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("InitialPrompt", "Generated").Description("Overrides how the session title is generated.")),
                 ("PromptTemplate", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the Liquid template for TemplatePrompt profiles.")),
+                ("PromptSubject", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the prompt subject.")),
+                ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the orchestrator name.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the chat deployment technical name.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the utility deployment technical name.")),
-                ("ChatDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy chat deployment selector override.")),
-                ("UtilityDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy utility deployment selector override.")),
                 ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Overrides extended profile properties including AIProfileMetadata.")),
                 ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Overrides profile settings.")))
             .Required("TemplateId")
