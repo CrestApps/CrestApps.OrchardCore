@@ -64,20 +64,20 @@ That includes:
 
 Use the Orchard docs here to understand **where** prompt templates show up and how they fit into the Orchard editors. Use the Core docs when you need to author complex Liquid templates or extend the shared template engine.
 
-## Using `ai_template` in Orchard scripting
+## Using `renderAITemplate` in Orchard scripting
 
-When both `CrestApps.OrchardCore.AI` and `OrchardCore.Recipes.Core` are enabled, Orchard scripting gets an `ai_template` global method for prompt-template files discovered by `ITemplateService`.
+When both `CrestApps.OrchardCore.AI` and `OrchardCore.Recipes.Core` are enabled, Orchard scripting gets a `renderAITemplate` global method for prompt-template files discovered by `ITemplateService`.
 
 Use the template **ID** (the file name without the extension), not an `AIProfileTemplate` record name:
 
 ```javascript
-ai_template("customer-support-intro")
+renderAITemplate("customer-support-intro")
 ```
 
 To render the template with variables, pass a JSON-style object as the second argument:
 
 ```javascript
-ai_template("customer-support-intro", {
+renderAITemplate("customer-support-intro", {
   siteName: "Contoso",
   audience: "support agents"
 })
@@ -85,8 +85,8 @@ ai_template("customer-support-intro", {
 
 Behavior:
 
-- `ai_template("template-id")` returns the template content as stored by `ITemplateService`
-- `ai_template("template-id", { ... })` renders that template and passes the supplied variables into the Liquid context
+- `renderAITemplate("template-id")` returns the template content as stored by `ITemplateService`
+- `renderAITemplate("template-id", { ... })` renders that template and passes the supplied variables into the Liquid context
 - the second argument must be an object (or JSON object string) whose property names match the variables used by the template
 
 This method is intended for prompt-template files under `Templates\Prompts\`. It does not read runtime `AIProfileTemplate` catalog entries.

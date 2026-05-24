@@ -21,7 +21,7 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
 
         _globalMethod = new GlobalMethod
         {
-            Name = "ai_template",
+            Name = "renderAITemplate",
             Method = _ => (Func<string, object, object>)((templateId, arguments) =>
                 ResolveTemplateContentAsync(templateId, arguments).GetAwaiter().GetResult()),
             AsyncMethod = _ => ResolveTemplateContentAsync,
@@ -170,6 +170,6 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
 
     private static ArgumentException CreateInvalidArgumentsException(Exception innerException = null)
         => innerException is null
-            ? new ArgumentException("The ai_template arguments must be a JSON object or a dictionary of template variables.")
-            : new ArgumentException("The ai_template arguments must be a JSON object or a dictionary of template variables.", innerException);
+            ? new ArgumentException("The renderAITemplate arguments must be a JSON object or a dictionary of template variables.")
+            : new ArgumentException("The renderAITemplate arguments must be a JSON object or a dictionary of template variables.", innerException);
 }
