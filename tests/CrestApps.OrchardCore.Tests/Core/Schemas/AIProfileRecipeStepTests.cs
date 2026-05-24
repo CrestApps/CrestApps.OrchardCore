@@ -16,4 +16,14 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"ChatDeploymentId\"", json);
         Assert.Contains("\"UtilityDeploymentId\"", json);
     }
+
+    [Fact]
+    public async Task CreateFromTemplateSchema_ContainsRequiredTemplateId()
+    {
+        var step = new CreateAIProfileFromTemplateRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"CreateAIProfileFromTemplate\"", json);
+        Assert.Contains("\"TemplateId\"", json);
+    }
 }
