@@ -1,8 +1,8 @@
-using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -176,7 +176,7 @@ public sealed class ProfilesController : Controller
 
             if (template != null)
             {
-                await ApplyTemplateToProfileAsync(profile, template);
+                AIProfileTemplateApplicator.Apply(profile, template);
             }
         }
 
@@ -406,146 +406,4 @@ public sealed class ProfilesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task ApplyTemplateToProfileAsync(AIProfile profile, AIProfileTemplate template)
-    {
-        // Copy all extensibility properties from the template to the profile.
-        // This transfers settings stored by external module drivers (e.g., analytics,
-        // data extraction, post-session, MCP connections, data sources, etc.).
-        // Template drivers store settings in template.Properties (via Entity.GetOrCreate<T>/Put<T>).
-        // Profile drivers may read from either profile.Properties or profile.Settings,
-        // so we copy to both to ensure all drivers can read the applied values.
-        if (template.Properties != null)
-        {
-            foreach (var property in template.Properties)
-            {
-                // Skip source-specific metadata keys; they are handled below.
-                if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
-                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                profile.Properties[property.Key] = property.Value;
-                profile.Settings[property.Key] = JsonSerializer.SerializeToNode(property.Value);
-            }
-        }
-
-        if (!string.IsNullOrEmpty(template.DisplayText))
-        {
-            profile.DisplayText = template.DisplayText;
-        }
-
-        if (!string.IsNullOrEmpty(template.Name))
-        {
-            profile.Name = template.Name;
-        }
-
-        var templateMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
-
-        if (templateMetadata.ProfileType.HasValue)
-        {
-            profile.Type = templateMetadata.ProfileType.Value;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentName))
-        {
-            profile.ChatDeploymentName = templateMetadata.ChatDeploymentName;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentName))
-        {
-            profile.UtilityDeploymentName = templateMetadata.UtilityDeploymentName;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.OrchestratorName))
-        {
-            profile.OrchestratorName = templateMetadata.OrchestratorName;
-        }
-
-        if (templateMetadata.TitleType.HasValue)
-        {
-            profile.TitleType = templateMetadata.TitleType;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.WelcomeMessage))
-        {
-            profile.WelcomeMessage = templateMetadata.WelcomeMessage;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.PromptSubject))
-        {
-            profile.PromptSubject = templateMetadata.PromptSubject;
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.PromptTemplate))
-        {
-            profile.PromptTemplate = templateMetadata.PromptTemplate;
-        }
-
-        var metadata = profile.GetOrCreate<AIProfileMetadata>();
-
-        if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
-        {
-            metadata.SystemMessage = templateMetadata.SystemMessage;
-        }
-
-        if (templateMetadata.Temperature.HasValue)
-        {
-            metadata.Temperature = templateMetadata.Temperature;
-        }
-
-        if (templateMetadata.TopP.HasValue)
-        {
-            metadata.TopP = templateMetadata.TopP;
-        }
-
-        if (templateMetadata.FrequencyPenalty.HasValue)
-        {
-            metadata.FrequencyPenalty = templateMetadata.FrequencyPenalty;
-        }
-
-        if (templateMetadata.PresencePenalty.HasValue)
-        {
-            metadata.PresencePenalty = templateMetadata.PresencePenalty;
-        }
-
-        if (templateMetadata.MaxOutputTokens.HasValue)
-        {
-            metadata.MaxTokens = templateMetadata.MaxOutputTokens;
-        }
-
-        if (templateMetadata.PastMessagesCount.HasValue)
-        {
-            metadata.PastMessagesCount = templateMetadata.PastMessagesCount;
-        }
-
-        profile.Put(metadata);
-
-        if (templateMetadata.ToolNames != null && templateMetadata.ToolNames.Length > 0)
-        {
-            var toolMetadata = profile.GetOrCreate<FunctionInvocationMetadata>();
-            toolMetadata.Names = [.. templateMetadata.ToolNames];
-            profile.Put(toolMetadata);
-        }
-
-        if (templateMetadata.AgentNames != null && templateMetadata.AgentNames.Length > 0)
-        {
-            var agentMetadata = profile.GetOrCreate<AgentInvocationMetadata>();
-            agentMetadata.Names = [.. templateMetadata.AgentNames];
-            profile.Put(agentMetadata);
-        }
-
-        if (!string.IsNullOrEmpty(templateMetadata.Description))
-        {
-            profile.Description = templateMetadata.Description;
-        }
-
-        if (templateMetadata.AgentAvailability.HasValue)
-        {
-            var agentMeta = profile.GetOrCreate<AgentMetadata>();
-            agentMeta.Availability = templateMetadata.AgentAvailability.Value;
-            profile.Put(agentMeta);
-        }
-
-    }
 }

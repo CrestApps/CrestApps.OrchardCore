@@ -3,7 +3,7 @@ using Json.Schema;
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
-/// Schema for the "CreateAIProfileFromTemplate" recipe step — creates or updates AI profiles from profile templates.
+/// Schema for the "CreateAIProfileFromTemplate" recipe step — creates or updates AI profiles from templates whose source is <c>Profile</c>.
 /// </summary>
 public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
 {
@@ -23,7 +23,7 @@ public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
         var profileSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("TemplateId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Required template identifier (or template name) to load profile defaults from.")),
+                ("TemplateId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Required identifier or name of an AI template whose source is Profile. The template is applied first, then any properties in this object override the generated profile.")),
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. If provided, used to find an existing profile to update.")),
                 ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the AI provider source name.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the profile name.")),
@@ -50,7 +50,7 @@ public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
                     .Type(SchemaValueType.Array)
                     .Items(profileSchema)
                     .MinItems(1)
-                    .Description("The AI profiles to create or update from templates.")))
+                    .Description("The AI profiles to create or update from Profile templates. Each entry starts from the selected template and then applies any explicitly provided overrides.")))
             .Required("name", "Profiles")
             .AdditionalProperties(true)
             .Build();
