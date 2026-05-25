@@ -16,4 +16,24 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"ChatDeploymentId\"", json);
         Assert.Contains("\"UtilityDeploymentId\"", json);
     }
+
+    [Fact]
+    public async Task CreateFromTemplateSchema_ContainsRequiredTemplateId()
+    {
+        var step = new CreateAIProfileFromTemplateRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"CreateAIProfileFromTemplate\"", json);
+        Assert.Contains("\"TemplateId\"", json);
+        Assert.Contains("\"Source\"", json);
+        Assert.Contains("\"DisplayText\"", json);
+        Assert.Contains("\"Agent\"", json);
+        Assert.Contains("\"Description\"", json);
+        Assert.Contains("\"PromptSubject\"", json);
+        Assert.Contains("\"OrchestratorName\"", json);
+        Assert.Contains("\"Properties\"", json);
+        Assert.Contains("\"Settings\"", json);
+        Assert.DoesNotContain("\"ChatDeploymentId\"", json);
+        Assert.DoesNotContain("\"UtilityDeploymentId\"", json);
+    }
 }

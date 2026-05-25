@@ -44,6 +44,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Scripting;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -157,7 +158,9 @@ public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IGlobalMethodProvider, AITemplateMethodProvider>();
         services.AddRecipeExecutionStep<AIProfileStep>();
+        services.AddRecipeExecutionStep<CreateAIProfileFromTemplateStep>();
         services.AddRecipeExecutionStep<AIProfileTemplateStep>();
         services.AddRecipeExecutionStep<AIDeploymentStep>();
         services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();

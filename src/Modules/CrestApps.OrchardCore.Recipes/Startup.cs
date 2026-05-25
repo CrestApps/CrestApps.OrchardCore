@@ -1294,6 +1294,7 @@ public sealed class AIRecipeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, AIProfileRecipeStep>();
+        services.AddScoped<IRecipeStep, CreateAIProfileFromTemplateRecipeStep>();
         services.AddScoped<IRecipeStep, AIProfileTemplateRecipeStep>();
         services.AddScoped<IRecipeStep, AIDeploymentRecipeStep>();
         services.AddScoped<IRecipeStep, DeleteAIDeploymentsRecipeStep>();

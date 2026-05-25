@@ -63,3 +63,32 @@ That includes:
 ## Orchard usage notes
 
 Use the Orchard docs here to understand **where** prompt templates show up and how they fit into the Orchard editors. Use the Core docs when you need to author complex Liquid templates or extend the shared template engine.
+
+## Using `renderAITemplate` in Orchard scripting
+
+When both `CrestApps.OrchardCore.AI` and `OrchardCore.Recipes.Core` are enabled, Orchard scripting gets a `renderAITemplate` global method for prompt-template files discovered by `ITemplateService`.
+
+Use the template **ID** (the file name without the extension), not an `AIProfileTemplate` record name:
+
+```javascript
+renderAITemplate("customer-support-intro")
+```
+
+To render the template with variables, pass a JSON-style object as the second argument:
+
+```javascript
+renderAITemplate("customer-support-intro", {
+  siteName: "Contoso",
+  audience: "support agents"
+})
+```
+
+Behavior:
+
+- `renderAITemplate("template-id")` returns the template content as stored by `ITemplateService`
+- `renderAITemplate("template-id", { ... })` renders that template and passes the supplied variables into the Liquid context
+- the second argument must be an object (or JSON object string) whose property names match the variables used by the template
+
+This method is intended for prompt-template files under `Templates\Prompts\`. It does not read runtime `AIProfileTemplate` catalog entries.
+
+This is especially useful with **SystemPrompt** templates because it lets recipes and Orchard scripting compose reusable system-message fragments without duplicating large prompt blocks.

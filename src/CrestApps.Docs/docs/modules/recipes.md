@@ -54,6 +54,36 @@ The generic `Settings` step now composes feature-gated site settings schema frag
 
 The exported set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
 
+## AI profile creation from templates
+
+The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**.
+
+```json
+{
+  "name": "CreateAIProfileFromTemplate",
+  "Profiles": [
+    {
+      "TemplateId": "customer-support",
+      "Name": "customer-support-prod",
+      "DisplayText": "Customer Support",
+      "ChatDeploymentName": "gpt-4o"
+    }
+  ]
+}
+```
+
+Behavior:
+
+- `TemplateId` must point to an AI template whose source is **Profile**
+- the step loads that profile template first and uses it to generate the starting `AIProfile`
+- any fields you include in the recipe object then override the generated profile values
+- any fields you do **not** include keep the values copied from the selected profile template
+- if `TemplateId` points to a missing template, or to a template whose source is not **Profile**, the step adds a recipe error for that item and skips creating the profile
+
+This means the step behaves like: **create profile from profile template, then apply explicit recipe overrides**.
+
+The schema for this step intentionally mirrors the regular `AIProfile` step for profile fields such as `Name`, `DisplayText`, `Description`, `Type`, `PromptTemplate`, `PromptSubject`, `OrchestratorName`, `ChatDeploymentName`, `UtilityDeploymentName`, `Properties`, and `Settings`, while adding the required `TemplateId` selector that must resolve to a Profile template.
+
 ## Creating a Recipe Step
 
 To define a recipe step, implement the `IRecipeStep` interface and register your implementation as a service.
