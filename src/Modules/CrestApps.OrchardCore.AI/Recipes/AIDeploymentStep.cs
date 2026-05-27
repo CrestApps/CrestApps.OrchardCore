@@ -115,7 +115,8 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
             }
 
-            if (TryGetDeploymentPurpose(token[nameof(AIDeployment.Purpose)] ?? token["Type"], out var deploymentPurpose))
+            if (TryGetDeploymentPurpose(token[nameof(AIDeployment.Purpose)], out var deploymentPurpose) ||
+                TryGetDeploymentPurpose(token["Type"], out deploymentPurpose))
             {
                 deployment.Purpose = deploymentPurpose;
             }

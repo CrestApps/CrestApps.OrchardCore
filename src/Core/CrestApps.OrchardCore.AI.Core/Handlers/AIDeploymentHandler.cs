@@ -160,16 +160,11 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         PopulateContainedConnectionAliases(deployment, data);
 
-        if (TryGetDeploymentPurpose(data[nameof(AIDeployment.Purpose)], out var purpose))
+        if (TryGetDeploymentPurpose(data[nameof(AIDeployment.Purpose)], out var purpose) ||
+            TryGetDeploymentPurpose(data["Type"], out purpose))
         {
             deployment.Purpose = purpose;
         }
-#pragma warning disable CS0618 // Type or member is obsolete
-        else if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
-        {
-            deployment.Type = type;
-        }
-#pragma warning restore CS0618
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
 
@@ -205,42 +200,6 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         deployment.Properties ??= new Dictionary<string, object>();
         deployment.Properties[propertyName] = propertyValue;
     }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
-    {
-        type = AIDeploymentType.None;
-
-        if (typeNode is null)
-        {
-            return false;
-        }
-
-        if (typeNode is JsonArray array)
-        {
-            foreach (var item in array)
-            {
-                if (item is null ||
-                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                        parsedType == AIDeploymentType.None)
-                {
-                    type = AIDeploymentType.None;
-                    return false;
-                }
-
-                type |= parsedType;
-            }
-
-            return type.IsValidSelection();
-        }
-
-        var typeValue = typeNode.GetValue<string>();
-
-        return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-                type.IsValidSelection();
-    }
-#pragma warning restore CS0618
 
     private static bool TryGetDeploymentPurpose(JsonNode purposeNode, out AIDeploymentPurpose purpose)
     {
