@@ -46,13 +46,18 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         var connectionResult = Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConnection_Edit", async model =>
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            var chatDeployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)).ToList();
+
             model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
-
-            model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
+            model.ChatDeployments = BuildGroupedDeploymentItems(chatDeployments);
+            model.DeploymentVisionSupport = chatDeployments
+                .Where(deployment => deployment.SupportsPurpose(AIDeploymentPurpose.Vision))
+                .ToDictionary(deployment => deployment.Name, _ => true, StringComparer.OrdinalIgnoreCase);
+            model.DefaultChatDeploymentSupportsVision = (await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat))
+                ?.SupportsPurpose(AIDeploymentPurpose.Vision) == true;
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));

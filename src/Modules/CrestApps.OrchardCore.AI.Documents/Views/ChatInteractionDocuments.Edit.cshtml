@@ -9,6 +9,10 @@
 @{
     var allowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(Model.VisionEnabled);
     var supportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(Model.VisionEnabled);
+    var defaultAllowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var defaultSupportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue();
+    var visionAllowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(includeVisionImages: true);
+    var visionSupportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(includeVisionImages: true);
 }
 
 @if (!Model.HasIndexProfile)
@@ -77,8 +81,13 @@ else if (!Model.HasVectorSearchService)
                class="d-none"
                id="documentUpload-@Model.ItemId"
                accept="@allowedExtensions"
+               data-default-accept="@defaultAllowedExtensions"
+               data-vision-accept="@visionAllowedExtensions"
                multiple />
-        <div class="form-text mb-3">
+        <div id="supportedFormats-@Model.ItemId"
+             class="form-text mb-3"
+             data-default-supported-text="@defaultSupportedExtensionsText"
+             data-vision-supported-text="@visionSupportedExtensionsText">
             @T["Supported formats: {0}", supportedExtensionsText]
         </div>
 
@@ -138,8 +147,33 @@ else if (!Model.HasVectorSearchService)
         const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
         const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
         const browseBtn = document.getElementById('browseBtn-' + itemId);
+        const supportedFormats = document.getElementById('supportedFormats-' + itemId);
+        const chatDeploymentSelect = document.querySelector('.setting-input[data-setting="deploymentName"]');
         const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
         const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
+
+        function setSupportedFormats(supportsVision) {
+            if (fileInput) {
+                fileInput.accept = supportsVision
+                    ? fileInput.dataset.visionAccept || ''
+                    : fileInput.dataset.defaultAccept || '';
+            }
+
+            if (supportedFormats) {
+                const supportedText = supportsVision
+                    ? supportedFormats.dataset.visionSupportedText || ''
+                    : supportedFormats.dataset.defaultSupportedText || '';
+
+                supportedFormats.textContent = `@T["Supported formats:"] ${supportedText}`;
+            }
+        }
+
+        function syncSupportedFormatsFromDeployment() {
+            const selectedOption = chatDeploymentSelect?.selectedOptions?.[0];
+            const supportsVision = selectedOption?.dataset.supportsVision === 'true';
+
+            setSupportedFormats(supportsVision);
+        }
 
         function showUploadAlert(html) {
             if (!uploadAlert || !uploadAlertMessage) return;
@@ -243,6 +277,12 @@ else if (!Model.HasVectorSearchService)
                 fileInput.value = '';
             });
         }
+
+        if (chatDeploymentSelect) {
+            chatDeploymentSelect.addEventListener('change', syncSupportedFormatsFromDeployment);
+        }
+
+        syncSupportedFormatsFromDeployment();
 
         async function uploadFiles(files) {
             // Auto-dismiss any prior error when a new upload starts

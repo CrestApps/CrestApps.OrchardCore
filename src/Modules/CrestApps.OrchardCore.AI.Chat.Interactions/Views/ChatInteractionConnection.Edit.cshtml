@@ -6,6 +6,12 @@
 
 @model EditChatInteractionConnectionViewModel
 
+@{
+    var groupedChatDeployments = Model.ChatDeployments
+        .GroupBy(item => item.Group?.Name)
+        .OrderBy(group => group.Key ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+}
+
 @if (Model.ShowMissingDefaultChatDeploymentWarning)
 {
     <div class="alert alert-warning orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)" role="alert">
@@ -20,8 +26,47 @@
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select setting-input" data-setting="deploymentName">
-        <option value="">@T["Default"]</option>
+    <select asp-for="ChatDeploymentName" class="form-select setting-input" data-setting="deploymentName">
+        <option value="" data-supports-vision="@Model.DefaultChatDeploymentSupportsVision.ToString().ToLowerInvariant()">@T["Default"]</option>
+        @foreach (var group in groupedChatDeployments)
+        {
+            if (string.IsNullOrEmpty(group.Key))
+            {
+                foreach (var deployment in group)
+                {
+                    var supportsVision = Model.DeploymentVisionSupport.TryGetValue(deployment.Value, out var deploymentSupportsVision) &&
+                        deploymentSupportsVision;
+                    var isSelected = string.Equals(deployment.Value, Model.ChatDeploymentName, StringComparison.Ordinal);
+                    if (isSelected)
+                    {
+                        <option value="@deployment.Value" selected="selected" data-supports-vision="@supportsVision.ToString().ToLowerInvariant()">@deployment.Text</option>
+                    }
+                    else
+                    {
+                        <option value="@deployment.Value" data-supports-vision="@supportsVision.ToString().ToLowerInvariant()">@deployment.Text</option>
+                    }
+                }
+            }
+            else
+            {
+                <optgroup label="@group.Key">
+                    @foreach (var deployment in group)
+                    {
+                        var supportsVision = Model.DeploymentVisionSupport.TryGetValue(deployment.Value, out var deploymentSupportsVision) &&
+                            deploymentSupportsVision;
+                        var isSelected = string.Equals(deployment.Value, Model.ChatDeploymentName, StringComparison.Ordinal);
+                        if (isSelected)
+                        {
+                            <option value="@deployment.Value" selected="selected" data-supports-vision="@supportsVision.ToString().ToLowerInvariant()">@deployment.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@deployment.Value" data-supports-vision="@supportsVision.ToString().ToLowerInvariant()">@deployment.Text</option>
+                        }
+                    }
+                </optgroup>
+            }
+        }
     </select>
     <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
 </div>
