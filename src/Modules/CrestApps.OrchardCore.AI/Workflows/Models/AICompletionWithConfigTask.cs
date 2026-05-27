@@ -175,7 +175,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         try
         {
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentType.Chat,
+                AIDeploymentPurpose.Chat,
                 deploymentName: DeploymentName);
 
             if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))

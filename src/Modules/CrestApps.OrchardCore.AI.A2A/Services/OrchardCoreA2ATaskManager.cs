@@ -144,7 +144,7 @@ internal static class A2ATaskManagerFactory
 
             context.DisableTools = true;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
 
             var messages = new List<ChatMessage>

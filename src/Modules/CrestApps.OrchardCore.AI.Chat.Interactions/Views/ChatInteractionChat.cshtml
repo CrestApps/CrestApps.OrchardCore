@@ -32,12 +32,14 @@
     var site = await SiteService.GetSiteSettingsAsync();
     var chatModeSettings = site.GetOrCreate<ChatInteractionChatModeSettings>();
     var chatMode = chatModeSettings.ChatMode;
-    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
-    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
+    var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
     var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings.EnableTextToSpeechPlayback)
         && textToSpeechDeployment != null;
+    var visionEnabled = visionDeployment != null;
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }
@@ -184,6 +186,7 @@
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
         ["saveIndicatorElementSelector"] = "#settings-save-indicator",
         ["textToSpeechEnabled"] = textToSpeechEnabled,
+        ["visionEnabled"] = visionEnabled,
     };
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

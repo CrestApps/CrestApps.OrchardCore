@@ -58,12 +58,12 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             {
                 model.Name = deployment.Name;
                 model.ModelName = deployment.ModelName;
-                model.SelectedTypes = deployment.Type.GetSupportedTypes().Select(static type => type.ToString()).ToArray();
+                model.SelectedPurposes = deployment.Purpose.GetSupportedPurposes().Select(static purpose => purpose.ToString()).ToArray();
                 model.IsNew = context.IsNew;
 
-                model.Types = Enum.GetValues<AIDeploymentType>()
-                .Where(static type => type != AIDeploymentType.None)
-                .Select(t => new SelectListItem(t.ToString(), t.ToString()))
+                model.Purposes = Enum.GetValues<AIDeploymentPurpose>()
+                .Where(static purpose => purpose != AIDeploymentPurpose.None)
+                .Select(p => new SelectListItem(p.ToString(), p.ToString()))
                 .ToList();
             }).Location("Content:1"),
         };
@@ -108,13 +108,13 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             deployment.ModelName = modelName;
         }
 
-        if (!TryGetSelectedTypes(model.SelectedTypes, out var deploymentTypes))
+        if (!TryGetSelectedPurposes(model.SelectedPurposes, out var deploymentPurpose))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedTypes), S["At least one deployment type is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedPurposes), S["At least one deployment purpose is required."]);
         }
         else
         {
-            deployment.Type = deploymentTypes;
+            deployment.Purpose = deploymentPurpose;
         }
 
         if (HasContainedConnection(deployment.ClientName))
@@ -193,27 +193,27 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     private bool HasContainedConnection(string providerName)
         => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.UseContainedConnection;
 
-    private static bool TryGetSelectedTypes(IEnumerable<string> selectedTypes, out AIDeploymentType deploymentTypes)
+    private static bool TryGetSelectedPurposes(IEnumerable<string> selectedPurposes, out AIDeploymentPurpose deploymentPurpose)
     {
-        deploymentTypes = AIDeploymentType.None;
+        deploymentPurpose = AIDeploymentPurpose.None;
 
-        if (selectedTypes is null)
+        if (selectedPurposes is null)
         {
             return false;
         }
 
-        foreach (var typeName in selectedTypes.Where(static value => !string.IsNullOrWhiteSpace(value)))
+        foreach (var purposeName in selectedPurposes.Where(static value => !string.IsNullOrWhiteSpace(value)))
         {
-            if (!Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var parsedType) ||
-                parsedType == AIDeploymentType.None)
+            if (!Enum.TryParse<AIDeploymentPurpose>(purposeName, ignoreCase: true, out var parsedPurpose) ||
+                parsedPurpose == AIDeploymentPurpose.None)
             {
-                deploymentTypes = AIDeploymentType.None;
+                deploymentPurpose = AIDeploymentPurpose.None;
                 return false;
             }
 
-            deploymentTypes |= parsedType;
+            deploymentPurpose |= parsedPurpose;
         }
 
-        return deploymentTypes.IsValidSelection();
+        return deploymentPurpose.IsValidSelection();
     }
 }

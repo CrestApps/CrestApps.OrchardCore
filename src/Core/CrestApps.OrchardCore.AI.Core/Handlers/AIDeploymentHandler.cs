@@ -70,9 +70,9 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Model name is required."], [nameof(AIDeployment.ModelName)]));
         }
 
-        if (!context.Model.Type.IsValidSelection())
+        if (!context.Model.Purpose.IsValidSelection())
         {
-            context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
+            context.Result.Fail(new ValidationResult(S["The deployment purpose '{0}' is not valid.", context.Model.Purpose], [nameof(AIDeployment.Purpose)]));
         }
 
         var requiresConnection = !HasContainedConnection(context.Model.ClientName);
@@ -160,10 +160,16 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         PopulateContainedConnectionAliases(deployment, data);
 
-        if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
+        if (TryGetDeploymentPurpose(data[nameof(AIDeployment.Purpose)], out var purpose))
+        {
+            deployment.Purpose = purpose;
+        }
+#pragma warning disable CS0618 // Type or member is obsolete
+        else if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
         {
             deployment.Type = type;
         }
+#pragma warning restore CS0618
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
 
@@ -200,6 +206,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         deployment.Properties[propertyName] = propertyValue;
     }
 
+#pragma warning disable CS0618 // Type or member is obsolete
     private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
     {
         type = AIDeploymentType.None;
@@ -232,6 +239,41 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         return !string.IsNullOrEmpty(typeValue) &&
             Enum.TryParse(typeValue, ignoreCase: true, out type) &&
                 type.IsValidSelection();
+    }
+#pragma warning restore CS0618
+
+    private static bool TryGetDeploymentPurpose(JsonNode purposeNode, out AIDeploymentPurpose purpose)
+    {
+        purpose = AIDeploymentPurpose.None;
+
+        if (purposeNode is null)
+        {
+            return false;
+        }
+
+        if (purposeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<AIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
+                        parsedPurpose == AIDeploymentPurpose.None)
+                {
+                    purpose = AIDeploymentPurpose.None;
+                    return false;
+                }
+
+                purpose |= parsedPurpose;
+            }
+
+            return purpose.IsValidSelection();
+        }
+
+        var purposeValue = purposeNode.GetValue<string>();
+
+        return !string.IsNullOrEmpty(purposeValue) &&
+            Enum.TryParse(purposeValue, ignoreCase: true, out purpose) &&
+                purpose.IsValidSelection();
     }
 
     private bool HasContainedConnection(string clientName)

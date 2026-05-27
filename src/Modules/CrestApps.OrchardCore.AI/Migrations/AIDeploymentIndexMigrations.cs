@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Deployments;
@@ -157,11 +159,9 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
                 var connectionName = deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
 
-#pragma warning disable CS0618 // Type or member is obsolete
                 var sourceName = deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>()
                     ?? deploymentObject[nameof(AIDeployment.ProviderName)]?.GetValue<string>()
                     ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>();
-#pragma warning restore CS0618 // Type or member is obsolete
                 var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
                 var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
 
@@ -409,9 +409,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
                 connectionObject[nameof(AIProviderConnection.ItemId)] ??= record.Key;
 
-#pragma warning disable CS0618 // Type or member is obsolete
                 connectionObject[nameof(AIProviderConnection.ClientName)] ??= connectionObject[nameof(AIProviderConnection.Source)]?.DeepClone();
-#pragma warning restore CS0618 // Type or member is obsolete
 
                 if (JsonSerializer.Deserialize<AIProviderConnection>(connectionObject.ToJsonString()) is { } connectionModel)
                 {

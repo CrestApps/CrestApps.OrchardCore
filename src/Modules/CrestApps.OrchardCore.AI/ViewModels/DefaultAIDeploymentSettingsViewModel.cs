@@ -29,6 +29,11 @@ public class DefaultAIDeploymentSettingsViewModel
     public string DefaultImageDeploymentName { get; set; }
 
     /// <summary>
+    /// Gets or sets the default vision deployment name.
+    /// </summary>
+    public string DefaultVisionDeploymentName { get; set; }
+
+    /// <summary>
     /// Gets or sets the default speech to text deployment name.
     /// </summary>
     public string DefaultSpeechToTextDeploymentName { get; set; }
@@ -66,6 +71,12 @@ public class DefaultAIDeploymentSettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> ImageDeployments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the vision deployments.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> VisionDeployments { get; set; }
 
     /// <summary>
     /// Gets or sets the speech to text deployments.

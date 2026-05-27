@@ -59,7 +59,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 return false;
             }
 
-            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
+            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
         });
     }
 

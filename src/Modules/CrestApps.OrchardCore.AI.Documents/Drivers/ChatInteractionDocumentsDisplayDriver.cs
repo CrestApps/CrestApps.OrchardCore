@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -22,6 +23,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 {
     private readonly ISiteService _siteService;
     private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
@@ -31,16 +33,19 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
     /// </summary>
     /// <param name="siteService">The site service.</param>
     /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="deploymentManager">The AI deployment manager.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionDocumentsDisplayDriver(
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
+        IAIDeploymentManager deploymentManager,
         IServiceProvider serviceProvider,
         IStringLocalizer<ChatInteractionDocumentsDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
         _indexProfileStore = indexProfileStore;
+        _deploymentManager = deploymentManager;
         _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
@@ -53,6 +58,10 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
             model.Documents = interaction.Documents ?? [];
             model.DocumentRetrievalMode = interaction.GetOrCreate<DocumentsMetadata>().RetrievalMode;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
+
+            // Determine if the chat deployment supports vision for image uploads
+            var chatDeployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: interaction.ChatDeploymentName);
+            model.VisionEnabled = chatDeployment?.SupportsPurpose(AIDeploymentPurpose.Vision) == true;
 
             // Check if index profile is configured
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();

@@ -47,26 +47,30 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultUtilityDeploymentName);
             model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultEmbeddingDeploymentName);
             model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultImageDeploymentName);
+            model.DefaultVisionDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultVisionDeploymentName);
             model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
-            var chatModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat);
+            var chatModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat);
             model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
 
-            var utilities = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility);
+            var utilities = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility);
             model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
 
-            var embeddingModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
+            var embeddingModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
             model.EmbeddingDeployments = BuildGroupedDeploymentItems(embeddingModels);
 
-            var imageModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Image);
+            var imageModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Image);
             model.ImageDeployments = BuildGroupedDeploymentItems(imageModels);
 
-            var speechToTextModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText);
+            var visionModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Vision);
+            model.VisionDeployments = BuildGroupedDeploymentItems(visionModels);
+
+            var speechToTextModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText);
             model.SpeechToTextDeployments = BuildGroupedDeploymentItems(speechToTextModels);
 
-            var textToSpeechModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech);
+            var textToSpeechModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.TextToSpeech);
             model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
         }).Location("Content:2%Default Deployments;1")
         .OnGroup(SettingsGroupId)
@@ -88,6 +92,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
         settings.DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName;
         settings.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
         settings.DefaultImageDeploymentName = model.DefaultImageDeploymentName;
+        settings.DefaultVisionDeploymentName = model.DefaultVisionDeploymentName;
         settings.DefaultSpeechToTextDeploymentName = model.DefaultSpeechToTextDeploymentName;
         settings.DefaultTextToSpeechDeploymentName = model.DefaultTextToSpeechDeploymentName;
         settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();

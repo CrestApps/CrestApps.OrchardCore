@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
@@ -103,11 +105,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                         var itemId = deploymentObject[nameof(AIDeployment.ItemId)]?.GetValue<string>();
                         var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
                         var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
-#pragma warning disable CS0618 // Type or member is obsolete
                         var sourceName = deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
                             ?? deploymentObject[nameof(AIDeployment.ProviderName)]?.GetValue<string>()?.Trim()
                             ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>()?.Trim();
-#pragma warning restore CS0618 // Type or member is obsolete
                         var connectionName = deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
 
                         if (string.IsNullOrWhiteSpace(itemId) &&
@@ -298,9 +298,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
 
         var connection = FindMatchingConnection(
             deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>(),
-#pragma warning disable CS0618 // Type or member is obsolete
             deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>()
-#pragma warning restore CS0618 // Type or member is obsolete
             ?? deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>(),
             connections);
 
@@ -313,9 +311,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         }
         else
         {
-#pragma warning disable CS0618 // Type or member is obsolete
             deploymentObject[nameof(AIDeployment.ClientName)] ??= deploymentObject[nameof(AIDeployment.Source)]?.DeepClone();
-#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         if (!TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out _))
@@ -396,9 +392,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
     private static JsonNode CreateTypeNode(AIDeploymentType deploymentType)
     {
         var supportedTypes = Enum.GetValues<AIDeploymentType>()
-            .Where(type =>
-                type != AIDeploymentType.None &&
-                deploymentType.HasFlag(type))
+            .Where(purpose =>
+                purpose != AIDeploymentType.None &&
+                deploymentType.HasFlag(purpose))
             .Select(type => (JsonNode)type.ToString())
             .ToList();
 
@@ -415,9 +411,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         return LegacyAIDeploymentMigrationHelper.TryPopulateDefaultDeploymentSettings(settings, connections, deployments);
     }
 
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType purpose)
     {
-        type = AIDeploymentType.None;
+        purpose = AIDeploymentType.None;
 
         if (typeNode is null)
         {
@@ -432,21 +428,21 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                     !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
                     parsedType == AIDeploymentType.None)
                 {
-                    type = AIDeploymentType.None;
+                    purpose = AIDeploymentType.None;
 
                     return false;
                 }
 
-                type |= parsedType;
+                purpose |= parsedType;
             }
 
-            return type.IsValidSelection();
+            return purpose.IsValidSelection();
         }
 
         var typeValue = typeNode.GetValue<string>();
 
         return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-            type.IsValidSelection();
+            Enum.TryParse(typeValue, ignoreCase: true, out purpose) &&
+            purpose.IsValidSelection();
     }
 }

@@ -52,10 +52,10 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
         }).Location("Parameters:3#Settings;1");
 
         return connectionResult;

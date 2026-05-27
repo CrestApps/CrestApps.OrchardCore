@@ -71,7 +71,7 @@ internal static class ApiAIUtilityCompletionEndpoint
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName);
 
         if (deployment is null)
         {

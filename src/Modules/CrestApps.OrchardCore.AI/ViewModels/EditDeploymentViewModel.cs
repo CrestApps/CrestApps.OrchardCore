@@ -19,9 +19,9 @@ public class EditDeploymentViewModel
     public string ModelName { get; set; }
 
     /// <summary>
-    /// Gets or sets the selected types.
+    /// Gets or sets the selected purposes.
     /// </summary>
-    public string[] SelectedTypes { get; set; }
+    public string[] SelectedPurposes { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether is new.
@@ -30,8 +30,8 @@ public class EditDeploymentViewModel
     public bool IsNew { get; set; }
 
     /// <summary>
-    /// Gets or sets the types.
+    /// Gets or sets the available purposes.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> Types { get; set; }
+    public IList<SelectListItem> Purposes { get; set; }
 }

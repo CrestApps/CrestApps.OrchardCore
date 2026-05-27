@@ -7,7 +7,8 @@
 
 @inject IOptions<ChatDocumentsOptions> ChatInteractionOptions
 @{
-    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.AllowedFileExtensions);
+    var allowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(Model.VisionEnabled);
+    var supportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(Model.VisionEnabled);
 }
 
 @if (!Model.HasIndexProfile)
@@ -78,7 +79,7 @@ else if (!Model.HasVectorSearchService)
                accept="@allowedExtensions"
                multiple />
         <div class="form-text mb-3">
-            @T["Supported formats: {0}", allowedExtensions]
+            @T["Supported formats: {0}", supportedExtensionsText]
         </div>
 
         <div id="documentsList-@Model.ItemId" class="document-list">

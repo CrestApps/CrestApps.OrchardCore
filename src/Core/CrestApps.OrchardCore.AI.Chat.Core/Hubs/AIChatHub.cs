@@ -333,8 +333,8 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }, cancellationToken);
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName, cancellationToken: cancellationToken)
-        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: completionContext.ChatDeploymentName, cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         using var builder = ZString.CreateStringBuilder();
         var references = new Dictionary<string, AICompletionReference>();

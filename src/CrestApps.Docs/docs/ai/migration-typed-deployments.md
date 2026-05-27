@@ -15,9 +15,11 @@ Current CrestApps.Core builds now persist that legacy compatibility data in the 
 
 In the new architecture, **AIDeployment** is a first-class typed entity with:
 
-- **`Type`** — One or more deployment purposes: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, or `TextToSpeech`
-- **`IsDefault`** — Whether this deployment is the default for each selected type within its connection
+- **`Purpose`** — One or more deployment purposes (flags enum): `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, `TextToSpeech`, or `Vision`
+- **`IsDefault`** — Whether this deployment is the default for each selected purpose within its connection
 - **Independent identity** — Each deployment has its own record and can be referenced by ID
+
+> **Note:** The `Type` property is obsolete and will be removed in a future release. Use `Purpose` instead.
 
 AI Profiles and Chat Interactions now reference deployments by ID (`ChatDeploymentId`, `UtilityDeploymentId`) rather than relying on a connection name to resolve deployment names.
 
@@ -217,9 +219,11 @@ var embeddingDeployment = connection.EmbeddingDeploymentName;
 
 // New (recommended) — use IAIDeploymentManager
 var chatDeployment = await deploymentManager.ResolveAsync(
-    AIDeploymentType.Chat, connectionName: connectionName);
+    AIDeploymentPurpose.Chat,
+    clientName: connection.ClientName);
 var embeddingDeployment = await deploymentManager.ResolveAsync(
-    AIDeploymentType.Embedding, connectionName: connectionName);
+    AIDeploymentPurpose.Embedding,
+    clientName: connection.ClientName);
 ```
 
 ### AI Profile DeploymentId

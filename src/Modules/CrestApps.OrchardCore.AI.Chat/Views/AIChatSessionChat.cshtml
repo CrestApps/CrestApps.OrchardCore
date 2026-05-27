@@ -46,13 +46,16 @@
         && Model.Profile != null
         && Model.Profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
 
+    var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
+    var visionEnabled = visionDeployment != null;
+
     var allowedExtensions = string.Empty;
 
     if (sessionDocumentsEnabled)
     {
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
 
-        allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
+        allowedExtensions = string.Join(", ", chatDocOptions.Value.GetAllowedFileExtensions(visionEnabled));
     }
 
     var metricsEnabled = Model.Profile != null
@@ -71,8 +74,8 @@
 
         : ChatMode.TextInput;
 
-    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
-    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
     var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
@@ -251,6 +254,7 @@
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
         ["textToSpeechEnabled"] = textToSpeechEnabled,
+        ["visionEnabled"] = visionEnabled,
         ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
     };

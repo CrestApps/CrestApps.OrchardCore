@@ -46,6 +46,16 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultVisionDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default vision deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultVisionDeploymentName" asp-items="Model.VisionDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for image-aware chat interactions when no specific vision-capable deployment is configured."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DefaultSpeechToTextDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default speech-to-text deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">

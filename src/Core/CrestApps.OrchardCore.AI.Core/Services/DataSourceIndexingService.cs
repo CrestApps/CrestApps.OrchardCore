@@ -871,7 +871,7 @@ public sealed class DataSourceIndexingService
 
         var configuredDeployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
 
-        if (configuredDeployment?.SupportsType(AIDeploymentType.Embedding) == true)
+        if (configuredDeployment?.SupportsPurpose(AIDeploymentPurpose.Embedding) == true)
         {
             return configuredDeployment;
         }
@@ -908,7 +908,7 @@ public sealed class DataSourceIndexingService
             return null;
         }
 
-        var deployments = (await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding, cancellationToken) ?? [])
+        var deployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding, cancellationToken) ?? [])
             .Where(deployment => MatchesEmbeddingSelector(deployment, selectorCandidates))
             .ToArray();
 
@@ -986,7 +986,7 @@ public sealed class DataSourceIndexingService
         ArgumentNullException.ThrowIfNull(deployment);
         ArgumentNullException.ThrowIfNull(selectorCandidates);
 
-        return deployment.SupportsType(AIDeploymentType.Embedding) &&
+        return deployment.SupportsPurpose(AIDeploymentPurpose.Embedding) &&
             (selectorCandidates.Contains(deployment.Name) ||
                 selectorCandidates.Contains(deployment.ModelName));
     }

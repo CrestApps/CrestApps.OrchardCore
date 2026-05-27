@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 

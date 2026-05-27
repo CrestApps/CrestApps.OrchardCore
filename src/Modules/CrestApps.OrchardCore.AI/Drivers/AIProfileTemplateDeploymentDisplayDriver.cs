@@ -52,10 +52,10 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
         }).Location("Content:1%Deployments;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
