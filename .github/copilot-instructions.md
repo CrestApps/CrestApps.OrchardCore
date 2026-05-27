@@ -104,6 +104,7 @@ dotnet run
 * When an object initializer spans multiple lines, place each property assignment on its own line.
 * Format conditional (`?:`) operators across multiple lines with the condition, `?`, and `:` each on their own properly indented lines.
 * Always keep exactly one trailing newline at the end of each file.
+* In `.cshtml` files, never introduce stray carriage returns (`^M`) or CRCRLF line endings; keep view files normalized so they do not render with artificial blank lines.
 
 #### `#pragma` Rules
 
@@ -159,6 +160,7 @@ dotnet run
 #### JavaScript in `.cshtml`
 
 * Ensure proper indentation for all JavaScript inside `.cshtml` files.
+* When editing `.cshtml` files, preserve normalized line endings and remove any stray `^M`/CRCRLF formatting damage instead of leaving it in place.
 
 #### Architecture & Design
 
@@ -397,6 +399,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
 - **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
+- **Select lists from enums**: Do not build Orchard `SelectListItem` collections by iterating enums with `Enum.GetValues(...)` and piping `ToString()` into the text. Define each item explicitly so the title uses `S["..."]` for extraction and multi-word labels can use the correct spacing.
 - **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
 - **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
 - **Deferred third-party work**: When a catalog handler must call indexing systems, external APIs, or other third-party/background-style services, follow the deferred task pattern used by `ChatInteractionHandler` and `AIMemoryEntryHandler`: capture the affected models/IDs in the scoped handler and schedule the work with `ShellScope.AddDeferredTask(...)` so the external work runs later instead of inline during the catalog event.
