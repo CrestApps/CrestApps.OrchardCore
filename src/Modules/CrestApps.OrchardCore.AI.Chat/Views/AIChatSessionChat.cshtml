@@ -41,13 +41,13 @@
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
-    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
-
-        && Model.Profile != null
-        && Model.Profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var sessionDocumentMetadata = Model.Profile?.GetOrCreate<AIProfileSessionDocumentsMetadata>();
+    var allowSessionDocuments = sessionDocumentMetadata?.AllowSessionDocuments == true;
 
     var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
     var visionEnabled = visionDeployment != null;
+    var allowSessionImageUploads = sessionDocumentMetadata?.AllowSessionImageUploads == true && visionEnabled;
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && (allowSessionDocuments || allowSessionImageUploads);
 
     var allowedExtensions = string.Empty;
     var supportedExtensionsText = string.Empty;
@@ -56,8 +56,8 @@
     {
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
 
-        allowedExtensions = chatDocOptions.Value.GetAllowedFileExtensionsAcceptValue(visionEnabled);
-        supportedExtensionsText = chatDocOptions.Value.GetAllowedFileExtensionsDisplayValue(visionEnabled);
+        allowedExtensions = chatDocOptions.Value.GetAllowedFileExtensionsAcceptValue(allowSessionImageUploads, allowSessionDocuments);
+        supportedExtensionsText = chatDocOptions.Value.GetAllowedFileExtensionsDisplayValue(allowSessionImageUploads, allowSessionDocuments);
     }
 
     var metricsEnabled = Model.Profile != null

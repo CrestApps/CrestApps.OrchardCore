@@ -5,18 +5,33 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
 internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
+    private readonly ISiteService _siteService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateSessionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    public AIProfileTemplateSessionDocumentsDisplayDriver(ISiteService siteService)
+    {
+        _siteService = siteService;
+    }
+
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        return Initialize<EditAIProfileSessionDocumentsViewModel>("AIProfileSessionDocuments_Edit", model =>
+        return Initialize<EditAIProfileSessionDocumentsViewModel>("AIProfileSessionDocuments_Edit", async model =>
         {
             var metadata = template.GetOrCreate<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
-            model.HasIndexProfile = true;
+            model.AllowSessionImageUploads = metadata.AllowSessionImageUploads;
+
+            var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+            model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
         }).Location("Content:2#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -34,6 +49,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
 
         var metadata = template.GetOrCreate<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
+        metadata.AllowSessionImageUploads = model.AllowSessionImageUploads;
         template.Put(metadata);
 
         return Edit(template, context);

@@ -31,7 +31,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 - Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
-- Vision-aware knowledge uploads — the Knowledge tab updates its supported formats immediately when you switch the chat deployment, so image-capable models expose image upload extensions without reloading the page
+- Upload controls driven by site settings — the Knowledge tab only exposes document and image extensions that are enabled in **Settings > Artificial Intelligence**, and image uploads also require a configured vision deployment
 
 ## Getting Started
 
@@ -48,7 +48,7 @@ When a response cites uploaded or indexed content, the interaction UI renders `[
 
 The admin **Chat Interactions** list includes integrated search, multi-select, and bulk actions through the shared list management resource used across CrestApps admin catalogs.
 
-When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. That list refreshes immediately when you change the selected chat deployment, including the **Default** option when the tenant default chat deployment supports vision.
+When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions now follow the site-level **Allow document uploads** and **Allow image uploads** settings, and image formats only appear when a vision deployment is configured.
 
 ## Orchestration
 

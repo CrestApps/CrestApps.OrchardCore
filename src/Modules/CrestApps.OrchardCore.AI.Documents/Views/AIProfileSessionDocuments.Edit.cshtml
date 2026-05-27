@@ -18,8 +18,18 @@
     <div class="@Orchard.GetEndClasses(true)">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
-            <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow documents & attachments"]</label>
-            <span class="hint">@T["When enabled, users can upload and attach documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
+            <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow session document uploads"]</label>
+            <span class="hint">@T["When enabled, users can upload documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowSessionImageUploads" />
+            <label class="form-check-label" asp-for="AllowSessionImageUploads">@T["Allow session image uploads"]</label>
+            <span class="hint">@T["When enabled, users can upload images to chat sessions using this profile. Requires a vision deployment to be configured in the global AI settings."]</span>
         </div>
     </div>
 </div>

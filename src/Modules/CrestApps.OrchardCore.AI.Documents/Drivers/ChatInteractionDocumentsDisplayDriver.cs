@@ -59,14 +59,12 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
             model.DocumentRetrievalMode = interaction.GetOrCreate<DocumentsMetadata>().RetrievalMode;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
 
-            // Determine if the chat deployment supports vision for image uploads
-            var chatDeployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: interaction.ChatDeploymentName);
-            model.VisionEnabled = chatDeployment?.SupportsPurpose(AIDeploymentPurpose.Vision) == true;
-
-            // Check if index profile is configured
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+            model.AllowDocumentUploads = settings.AllowDocumentUploads;
+            model.AllowImageUploads = settings.AllowImageUploads;
             model.IndexProfileName = settings.IndexProfileName;
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
+            model.VisionEnabled = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision) != null;
 
             if (model.HasIndexProfile)
             {

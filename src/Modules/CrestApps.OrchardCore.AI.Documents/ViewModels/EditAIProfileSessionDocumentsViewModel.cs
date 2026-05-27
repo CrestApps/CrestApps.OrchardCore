@@ -11,6 +11,11 @@ public class EditAIProfileSessionDocumentsViewModel
     public bool AllowSessionDocuments { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether session image uploads are allowed.
+    /// </summary>
+    public bool AllowSessionImageUploads { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether has index profile.
     /// </summary>
     public bool HasIndexProfile { get; set; }

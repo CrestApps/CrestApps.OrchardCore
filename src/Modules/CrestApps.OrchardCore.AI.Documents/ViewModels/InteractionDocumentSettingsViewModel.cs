@@ -26,6 +26,16 @@ public class InteractionDocumentSettingsViewModel
     public DocumentRetrievalMode RetrievalMode { get; set; } = DocumentRetrievalMode.Chunk;
 
     /// <summary>
+    /// Gets or sets a value indicating whether document uploads are allowed for chat interactions.
+    /// </summary>
+    public bool AllowDocumentUploads { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether image uploads are allowed for chat interactions.
+    /// </summary>
+    public bool AllowImageUploads { get; set; }
+
+    /// <summary>
     /// Gets or sets the document retrieval mode options.
     /// </summary>
     [BindNever]

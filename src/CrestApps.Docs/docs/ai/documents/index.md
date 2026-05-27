@@ -176,14 +176,14 @@ Unlike profile documents (which persist across all sessions), chat session docum
 - **Drag-and-Drop Highlight**: The input area highlights when files are dragged over it
 - **Text Extraction & Embedding**: Uploaded documents are automatically extracted, chunked, and embedded for vector search
 - **RAG Integration**: Relevant chunks are retrieved and used as context for AI responses
-- **Per-Profile Opt-In**: Each AI Profile has an **Allow Documents & Attachments** checkbox (unchecked by default) to control whether document upload is available
+- **Per-Profile Opt-In**: Each AI Profile has separate **Allow session document uploads** and **Allow session image uploads** options to control which file types are available in chat sessions
 
 ### Per-Profile Opt-In
 
 Because document processing is resource-intensive, document upload is **not enabled by default** even when the feature is active. Administrators must explicitly opt in for each AI Profile:
 
 1. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-2. In the **Documents** section, check **Allow Documents & Attachments**.
+2. In the **Documents** section, enable **Allow session document uploads**, **Allow session image uploads**, or both, depending on the experience you want to allow.
 3. Save the profile.
 
 For **AI Chat Widget** content items, the same checkbox appears on the widget editor under the AI profile part settings.
@@ -200,10 +200,10 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index and default document retrieval mode. Use **Allow document uploads** and **Allow image uploads** to control which file types chat interactions can accept. After the index is configured in production, avoid changing it to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
-5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
-6. Open a chat session. The attach button and drag-and-drop zone are available.
+5. **Opt in per profile**: Edit the desired AI Profile and enable **Allow session document uploads**, **Allow session image uploads**, or both.
+6. Open a chat session. The attach button and drag-and-drop zone are available when at least one upload type is enabled for the profile. Image uploads also require a configured vision deployment.
 
 ## Supported Document Formats
 
@@ -230,6 +230,8 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
+| Allow document uploads | Enables document uploads for chat interactions | True |
+| Allow image uploads | Enables image uploads for chat interactions when a vision deployment is configured | False |
 
 ### File storage providers
 

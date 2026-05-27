@@ -60,6 +60,8 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         {
             viewModel.IndexProfileName = section.IndexProfileName;
             viewModel.RetrievalMode = section.RetrievalMode;
+            viewModel.AllowDocumentUploads = section.AllowDocumentUploads;
+            viewModel.AllowImageUploads = section.AllowImageUploads;
             viewModel.RetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, section.RetrievalMode);
 
             var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
@@ -86,10 +88,14 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
             : model.IndexProfileName;
         var settingsChanged =
             !string.Equals(settings.IndexProfileName, indexProfileName, StringComparison.Ordinal) ||
-            settings.RetrievalMode != model.RetrievalMode;
+            settings.RetrievalMode != model.RetrievalMode ||
+            settings.AllowDocumentUploads != model.AllowDocumentUploads ||
+            settings.AllowImageUploads != model.AllowImageUploads;
 
         settings.IndexProfileName = indexProfileName;
         settings.RetrievalMode = model.RetrievalMode;
+        settings.AllowDocumentUploads = model.AllowDocumentUploads;
+        settings.AllowImageUploads = model.AllowImageUploads;
 
         if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {
