@@ -7,15 +7,13 @@
 
 @inject IOptions<ChatDocumentsOptions> ChatInteractionOptions
 @{
-    var allowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(Model.VisionEnabled);
-    var supportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(Model.VisionEnabled);
-    var defaultAllowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue();
-    var defaultSupportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue();
-    var visionAllowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(includeVisionImages: true);
-    var visionSupportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(includeVisionImages: true);
+    var allowImageUploads = Model.AllowImageUploads && Model.VisionEnabled;
+    var allowUploads = Model.AllowDocumentUploads || allowImageUploads;
+    var allowedExtensions = ChatInteractionOptions.Value.GetAllowedFileExtensionsAcceptValue(allowImageUploads, Model.AllowDocumentUploads);
+    var supportedExtensionsText = ChatInteractionOptions.Value.GetAllowedFileExtensionsDisplayValue(allowImageUploads, Model.AllowDocumentUploads);
 }
 
-@if (!Model.HasIndexProfile)
+@if (Model.AllowDocumentUploads && !Model.HasIndexProfile)
 {
     <div class="alert alert-warning" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
@@ -25,7 +23,7 @@
         </p>
     </div>
 }
-else if (!Model.HasVectorSearchService)
+else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
 {
     <div class="alert alert-warning" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
@@ -46,29 +44,49 @@ else if (!Model.HasVectorSearchService)
 
 <div class="mb-3">
     <label class="form-label">
-        @T["Attached documents"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Attached documents explanation"]">
+        @T["Attached files"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload supported files to chat against your own data. Document content is extracted for AI context, and image files use the configured vision deployment."]" aria-label="@T["Attached files explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
 
     <div class="border rounded p-3 bg-light">
-        <!-- Drag and drop zone -->
-        <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
-            <div class="drop-zone-content d-flex flex-column align-items-center" id="dropZoneContent-@Model.ItemId">
-                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
-                <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
-                <div class="text-muted mb-2">@T["or"]</div>
-                <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
-                    <i class="fa-solid fa-folder-open me-1"></i>
-                    @T["Browse Files"]
-                </button>
+        @if (!allowUploads)
+        {
+            if (Model.AllowImageUploads && !Model.VisionEnabled)
+            {
+                <div class="alert alert-warning mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                    @T["Image uploads require a configured vision deployment in the global AI settings."]
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mb-3" role="alert">
+                    <i class="fa-solid fa-circle-info me-2"></i>
+                    @T["File uploads are currently disabled in site settings."]
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Drag and drop zone -->
+            <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+                <div class="drop-zone-content d-flex flex-column align-items-center" id="dropZoneContent-@Model.ItemId">
+                    <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
+                    <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
+                    <div class="text-muted mb-2">@T["or"]</div>
+                    <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
+                        <i class="fa-solid fa-folder-open me-1"></i>
+                        @T["Browse files"]
+                    </button>
+                </div>
+                <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
+                    <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
+                    <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
+                </div>
             </div>
-            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
-                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
-                <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
-            </div>
-        </div>
+        }
 
         <div id="uploadAlert-@Model.ItemId" class="alert alert-danger d-none" role="alert">
             <div class="d-flex justify-content-between align-items-start">
@@ -77,19 +95,17 @@ else if (!Model.HasVectorSearchService)
             </div>
         </div>
 
-        <input type="file"
-               class="d-none"
-               id="documentUpload-@Model.ItemId"
-               accept="@allowedExtensions"
-               data-default-accept="@defaultAllowedExtensions"
-               data-vision-accept="@visionAllowedExtensions"
-               multiple />
-        <div id="supportedFormats-@Model.ItemId"
-             class="form-text mb-3"
-             data-default-supported-text="@defaultSupportedExtensionsText"
-             data-vision-supported-text="@visionSupportedExtensionsText">
-            @T["Supported formats: {0}", supportedExtensionsText]
-        </div>
+        @if (allowUploads)
+        {
+            <input type="file"
+                   class="d-none"
+                   id="documentUpload-@Model.ItemId"
+                   accept="@allowedExtensions"
+                   multiple />
+            <div id="supportedFormats-@Model.ItemId" class="form-text mb-3">
+                @T["Supported formats: {0}", supportedExtensionsText]
+            </div>
+        }
 
         <div id="documentsList-@Model.ItemId" class="document-list">
             @if (Model.Documents != null && Model.Documents.Any())
@@ -100,7 +116,7 @@ else if (!Model.HasVectorSearchService)
                         <button type="button"
                                 class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
                                 data-document-id="@doc.DocumentId"
-                                title="@T["Remove document"]">
+                                title="@T["Remove file"]">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                         <div class="text-truncate">
@@ -116,7 +132,7 @@ else if (!Model.HasVectorSearchService)
             {
                 <div class="text-center text-muted py-3 no-documents">
                     <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
-                    <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                    <div>@T["No files attached. Upload files to chat against your own data."]</div>
                 </div>
             }
         </div>
@@ -147,33 +163,8 @@ else if (!Model.HasVectorSearchService)
         const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
         const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
         const browseBtn = document.getElementById('browseBtn-' + itemId);
-        const supportedFormats = document.getElementById('supportedFormats-' + itemId);
-        const chatDeploymentSelect = document.querySelector('.setting-input[data-setting="deploymentName"]');
         const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
         const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
-
-        function setSupportedFormats(supportsVision) {
-            if (fileInput) {
-                fileInput.accept = supportsVision
-                    ? fileInput.dataset.visionAccept || ''
-                    : fileInput.dataset.defaultAccept || '';
-            }
-
-            if (supportedFormats) {
-                const supportedText = supportsVision
-                    ? supportedFormats.dataset.visionSupportedText || ''
-                    : supportedFormats.dataset.defaultSupportedText || '';
-
-                supportedFormats.textContent = `@T["Supported formats:"] ${supportedText}`;
-            }
-        }
-
-        function syncSupportedFormatsFromDeployment() {
-            const selectedOption = chatDeploymentSelect?.selectedOptions?.[0];
-            const supportsVision = selectedOption?.dataset.supportsVision === 'true';
-
-            setSupportedFormats(supportsVision);
-        }
 
         function showUploadAlert(html) {
             if (!uploadAlert || !uploadAlertMessage) return;
@@ -278,12 +269,6 @@ else if (!Model.HasVectorSearchService)
             });
         }
 
-        if (chatDeploymentSelect) {
-            chatDeploymentSelect.addEventListener('change', syncSupportedFormatsFromDeployment);
-        }
-
-        syncSupportedFormatsFromDeployment();
-
         async function uploadFiles(files) {
             // Auto-dismiss any prior error when a new upload starts
             hideUploadAlert();
@@ -382,7 +367,7 @@ else if (!Model.HasVectorSearchService)
             <button type="button"
             class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
             data-document-id="${doc.documentId}"
-            title="@T["Remove document"]">
+            title="@T["Remove file"]">
             <i class="fa-solid fa-trash-can"></i>
             </button>
             <div class="text-truncate">
@@ -441,7 +426,7 @@ else if (!Model.HasVectorSearchService)
             if (!removeBtn) return;
 
             const documentId = removeBtn.getAttribute('data-document-id');
-            if (!confirm('@T["Are you sure you want to remove this document?"]')) return;
+            if (!confirm('@T["Are you sure you want to remove this file?"]')) return;
 
             try {
                 const response = await fetch(removeUrl, {
@@ -461,16 +446,16 @@ else if (!Model.HasVectorSearchService)
                         documentsList.innerHTML = `
                         <div class="text-center text-muted py-3 no-documents">
                         <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
-                        <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                        <div>@T["No files attached. Upload files to chat against your own data."]</div>
                         </div>
                         `;
                     }
                 } else {
-                    alert('@T["Failed to remove document"]');
+                    alert('@T["Failed to remove file"]');
                 }
             } catch (error) {
                 console.error('Remove failed:', error);
-                alert('@T["Failed to remove document"]');
+                alert('@T["Failed to remove file"]');
             }
         });
     })();

@@ -16,6 +16,8 @@ public sealed class InteractionDocumentOptionsRegistrationTests
             IndexProfileName = "docs-index",
             TopN = 7,
             RetrievalMode = DocumentRetrievalMode.Hierarchical,
+            AllowDocumentUploads = false,
+            AllowImageUploads = true,
         };
 
         var services = new ServiceCollection();
@@ -29,6 +31,8 @@ public sealed class InteractionDocumentOptionsRegistrationTests
         Assert.Equal("docs-index", options.IndexProfileName);
         Assert.Equal(7, options.TopN);
         Assert.Equal(DocumentRetrievalMode.Hierarchical, options.RetrievalMode);
+        Assert.False(options.AllowDocumentUploads);
+        Assert.True(options.AllowImageUploads);
     }
 
     private static ISiteService CreateSiteService(InteractionDocumentSettings settings)

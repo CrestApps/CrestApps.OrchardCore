@@ -26,9 +26,19 @@ public class ChatInteractionDocumentsViewModel
     public bool HasIndexProfile { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the chat deployment supports vision (image uploads).
+    /// Gets or sets whether a vision deployment is available for image uploads.
     /// </summary>
     public bool VisionEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether document uploads are allowed.
+    /// </summary>
+    public bool AllowDocumentUploads { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether image uploads are allowed.
+    /// </summary>
+    public bool AllowImageUploads { get; set; }
 
     /// <summary>
     /// Gets or sets the document retrieval mode override for the interaction.

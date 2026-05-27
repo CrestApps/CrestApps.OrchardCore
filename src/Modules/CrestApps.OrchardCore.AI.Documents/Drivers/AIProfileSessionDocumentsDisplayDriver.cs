@@ -27,6 +27,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
         {
             var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
+            model.AllowSessionImageUploads = metadata.AllowSessionImageUploads;
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
@@ -40,6 +41,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
 
         var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
+        metadata.AllowSessionImageUploads = model.AllowSessionImageUploads;
         profile.Put(metadata);
 
         return Edit(profile, context);

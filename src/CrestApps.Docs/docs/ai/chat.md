@@ -138,11 +138,11 @@ TTS playback can be enabled at two levels:
 
 ### Session document uploads
 
-If a profile allows session documents, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
+If a profile allows session document uploads or session image uploads, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
 
 The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
-The admin session chat now shows the same compact **Supported formats** note above the input attachment bar that the widgets already expose, so users can see the exact upload extensions allowed for the current profile and vision capability.
+The admin session chat now shows the same compact **Supported formats** note above the input attachment bar that the widgets already expose, so users can see the exact upload extensions allowed for the current profile. Document extensions follow the profile's **Allow session document uploads** setting, and image extensions only appear when **Allow session image uploads** is enabled and a vision deployment is available.
 
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 
@@ -179,7 +179,7 @@ Provides a floating AI chat widget on every admin page, allowing users to intera
 
 The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core admin dashboard. This allows administrators to interact with AI directly from any admin page without navigating away.
 
-When session documents are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved, each attachment keeps a visible remove button, and the supported-formats note stays compact instead of dominating the widget.
+When session uploads are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved, each attachment keeps a visible remove button, and the supported-formats note stays compact instead of dominating the widget.
 
 Referenced responses use the same citation rendering as the main admin chat UI, so `[doc:N]` markers are shown as superscript links with a matching reference list instead of raw marker text.
 
@@ -207,7 +207,7 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 
 A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. This allows site visitors to interact with AI chat directly on the frontend.
 
-When the widget's profile allows session documents, file attachments are rendered above the input row instead of beside it, matching the admin widget layout, keeping the remove button visible for each attached file, and reducing the visual weight of the supported-formats note.
+When the widget's profile allows session document uploads or session image uploads, file attachments are rendered above the input row instead of beside it, matching the admin widget layout, keeping the remove button visible for each attached file, and reducing the visual weight of the supported-formats note.
 
 When the response contains references, the widget also renders `[doc:N]` markers as superscript citations with linked references beneath the assistant message.
 

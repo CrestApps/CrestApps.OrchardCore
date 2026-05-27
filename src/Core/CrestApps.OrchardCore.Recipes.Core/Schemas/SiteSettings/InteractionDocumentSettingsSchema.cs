@@ -22,6 +22,8 @@ public sealed class InteractionDocumentSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("IndexProfileName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The name of the index profile used for document retrieval.")),
                 ("TopN", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The maximum number of document chunks to retrieve per query.")),
-                ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("The document retrieval mode.")))
+                ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("The document retrieval mode.")),
+                ("AllowDocumentUploads", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether users can upload document files in chat interactions.")),
+                ("AllowImageUploads", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether users can upload image files in chat interactions.")))
             .AdditionalProperties(false);
 }
