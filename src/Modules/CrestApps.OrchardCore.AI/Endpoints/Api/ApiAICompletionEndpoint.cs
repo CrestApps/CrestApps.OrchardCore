@@ -151,7 +151,7 @@ internal static class ApiAICompletionEndpoint
         {
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
 
-            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName);
+            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: contextForTemplate.ChatDeploymentName);
 
             if (templateDeployment is null)
             {
@@ -354,7 +354,7 @@ internal static class ApiAICompletionEndpoint
     {
         var context = await completionContextBuilder.BuildAsync(profile);
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName);
 
         if (deployment is null)
         {

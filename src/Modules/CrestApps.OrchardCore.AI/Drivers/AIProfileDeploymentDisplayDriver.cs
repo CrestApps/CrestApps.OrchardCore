@@ -44,10 +44,10 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
         }).Location("Content:1%Deployments;2");
     }
 

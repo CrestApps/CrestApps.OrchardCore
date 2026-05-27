@@ -1,11 +1,10 @@
 @using CrestApps.Core.AI.Models
-@using CrestApps.OrchardCore.AI.Core
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIDeployment>
 
-<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Type"]">
-    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Type
+<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Purposes"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Purpose
 </span>
 
 <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">

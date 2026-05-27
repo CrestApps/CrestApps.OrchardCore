@@ -50,7 +50,7 @@ public sealed class DataSourceIndexingServiceTests
         {
             ItemId = "deployment-1",
             Name = "text-embedding-3-small",
-            DeploymentType = AIDeploymentType.Embedding,
+            DeploymentType = AIDeploymentPurpose.Embedding,
         };
 
         indexProfileStore
@@ -107,7 +107,7 @@ public sealed class DataSourceIndexingServiceTests
             ItemId = "deployment-1",
             Name = "Azure-text-embedding-3-small",
             ModelName = "text-embedding-3-small",
-            Type = AIDeploymentType.Embedding,
+            Purpose = AIDeploymentPurpose.Embedding,
         };
 
         indexProfileStore
@@ -118,7 +118,7 @@ public sealed class DataSourceIndexingServiceTests
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByTypeAsync(AIDeploymentType.Embedding, It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetByPurposeAsync(AIDeploymentPurpose.Embedding, It.IsAny<CancellationToken>()))
             .ReturnsAsync([deployment]);
 
         var service = new DataSourceIndexingService(

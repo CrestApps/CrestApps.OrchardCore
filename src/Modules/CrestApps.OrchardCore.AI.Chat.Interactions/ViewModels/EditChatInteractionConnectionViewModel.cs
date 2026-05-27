@@ -37,6 +37,18 @@ public class EditChatInteractionConnectionViewModel
     public IEnumerable<SelectListItem> ChatDeployments { get; set; }
 
     /// <summary>
+    /// Gets or sets the chat deployment vision support lookup keyed by deployment name.
+    /// </summary>
+    [BindNever]
+    public Dictionary<string, bool> DeploymentVisionSupport { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the resolved default chat deployment supports vision.
+    /// </summary>
+    [BindNever]
+    public bool DefaultChatDeploymentSupportsVision { get; set; }
+
+    /// <summary>
     /// Gets or sets the utility deployments.
     /// </summary>
     [BindNever]

@@ -131,16 +131,17 @@ services.AddAIDeploymentProvider("CustomProvider", options =>
 
 ### Typed Deployments
 
-Deployments are typed entities. Each deployment has a `Type` property that indicates its purpose:
+Deployments are typed entities. Each deployment has a `Purpose` property (a flags enum) that indicates its capabilities:
 
-| Type | Purpose |
-|------|---------|
+| Purpose | Description |
+|---------|-------------|
 | `Chat` | Primary chat completions |
 | `Utility` | Lightweight auxiliary tasks (query rewriting, planning) |
 | `Embedding` | Vector embeddings for RAG / semantic search |
 | `Image` | Image generation |
 | `SpeechToText` | Speech-to-text transcription |
 | `TextToSpeech` | Text-to-speech synthesis |
+| `Vision` | Vision / image understanding |
 
 When configuring connections via `appsettings.json`, deployments are defined as a `Deployments` array on each connection:
 
@@ -159,9 +160,11 @@ When configuring connections via `appsettings.json`, deployments are defined as 
 }
 ```
 
-The `Type` property can be either a single value or an array of values when one deployment supports multiple capabilities. In the admin UI, the same concept is exposed as per-type checkboxes on a single deployment record.
+> **Note:** In `appsettings.json`, the property is still called `Type` for backward compatibility. In the admin UI and code, use `Purpose` (the new property). The `Type` property is obsolete and will be removed in a future release.
 
-The `IsDefault` flag marks a deployment as the default for each selected type within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for type → global default → null/error.
+The `Type`/`Purpose` property can be either a single value or an array of values when one deployment supports multiple capabilities. In the admin UI, the same concept is exposed as per-purpose checkboxes on a single deployment record.
+
+The `IsDefault` flag marks a deployment as the default for each selected purpose within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for purpose → global default → null/error.
 
 Global defaults can be configured under **Settings → Artificial Intelligence → Default AI Deployment Settings**.
 

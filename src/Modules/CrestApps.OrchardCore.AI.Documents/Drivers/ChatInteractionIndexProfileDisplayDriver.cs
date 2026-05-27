@@ -46,7 +46,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
             var selectedDeployment = string.IsNullOrWhiteSpace(embeddingDeploymentName)
                 ? null
                 : await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
-            var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
+            var deployments = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
 
             model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
             model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
@@ -72,7 +72,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
         var deployment = await _deploymentManager.FindByNameAsync(model.EmbeddingDeploymentName);
 
-        if (deployment == null || !deployment.SupportsType(AIDeploymentType.Embedding))
+        if (deployment == null || !deployment.SupportsPurpose(AIDeploymentPurpose.Embedding))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["The selected embedding deployment could not be found."]);
             return Edit(indexProfile, context);

@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;

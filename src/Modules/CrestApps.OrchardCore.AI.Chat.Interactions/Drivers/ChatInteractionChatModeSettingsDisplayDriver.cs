@@ -77,8 +77,8 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableModesAsync()
     {
-        var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
-        var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech) != null;
+        var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+        var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech) != null;
 
         var modes = new List<SelectListItem>
         {

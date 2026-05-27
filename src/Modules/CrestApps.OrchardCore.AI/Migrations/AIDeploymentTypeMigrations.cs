@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -250,6 +252,46 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         });
 
         return 6;
+    }
+
+    /// <summary>
+    /// Migrates deployments from legacy Type property to the new Purpose property.
+    /// This ensures all stored deployment documents use the Purpose representation
+    /// for backward compatibility with the updated AIDeployment model.
+    /// </summary>
+    public static int UpdateFrom6()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+
+            var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
+            var needsSave = false;
+
+            foreach (var deployment in deploymentDoc.Records.Values)
+            {
+                // The AIDeployment model now handles legacy Type → Purpose conversion
+                // via its JSON deserialization. Re-saving the document will persist
+                // the Purpose property and drop the obsolete Type field.
+                if (deployment.Purpose != AIDeploymentPurpose.None)
+                {
+                    // If Purpose is still None after deserialization, the legacy Type
+                    // was also None — nothing to migrate for this deployment.
+                    continue;
+                }
+
+                deployment.Purpose = deployment.Type.ToPurpose();
+
+                needsSave = true;
+            }
+
+            if (needsSave)
+            {
+                await deploymentDocManager.UpdateAsync(deploymentDoc);
+            }
+        });
+
+        return 7;
     }
 
     private static bool TryCreateDeployment(

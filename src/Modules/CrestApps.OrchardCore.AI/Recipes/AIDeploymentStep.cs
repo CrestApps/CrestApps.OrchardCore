@@ -115,15 +115,16 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
             }
 
-            if (TryGetDeploymentType(token[nameof(AIDeployment.Type)], out var deploymentType))
+            if (TryGetDeploymentPurpose(token[nameof(AIDeployment.Purpose)], out var deploymentPurpose) ||
+                TryGetDeploymentPurpose(token["Type"], out deploymentPurpose))
             {
-                deployment.Type = deploymentType;
+                deployment.Purpose = deploymentPurpose;
             }
             else
             {
                 // Default to Chat for backward compatibility with recipes
-                // that do not include the Type property.
-                deployment.Type = AIDeploymentType.Chat;
+                // that do not include the purpose property.
+                deployment.Purpose = AIDeploymentPurpose.Chat;
             }
 
             var validationResult = await _manager.ValidateAsync(deployment);
@@ -150,9 +151,9 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         public JsonArray Deployments { get; set; }
     }
 
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    private static bool TryGetDeploymentPurpose(JsonNode typeNode, out AIDeploymentPurpose purpose)
     {
-        type = AIDeploymentType.None;
+        purpose = AIDeploymentPurpose.None;
 
         if (typeNode is null)
         {
@@ -164,23 +165,23 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
             foreach (var item in array)
             {
                 if (item is null ||
-                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                        parsedType == AIDeploymentType.None)
+                    !Enum.TryParse<AIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
+                        parsedPurpose == AIDeploymentPurpose.None)
                 {
-                    type = AIDeploymentType.None;
+                    purpose = AIDeploymentPurpose.None;
                     return false;
                 }
 
-                type |= parsedType;
+                purpose |= parsedPurpose;
             }
 
-            return type.IsValidSelection();
+            return purpose.IsValidSelection();
         }
 
         var typeValue = typeNode.GetValue<string>();
 
         return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-                type.IsValidSelection();
+            Enum.TryParse(typeValue, ignoreCase: true, out purpose) &&
+                purpose.IsValidSelection();
     }
 }

@@ -142,6 +142,8 @@ If a profile allows session documents, the chat UI keeps restored widget session
 
 The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
+The admin session chat now shows the same compact **Supported formats** note above the input attachment bar that the widgets already expose, so users can see the exact upload extensions allowed for the current profile and vision capability.
+
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 
 ### Citations and references

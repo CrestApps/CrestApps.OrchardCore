@@ -200,7 +200,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             {
                 var deployment = await ResolveDeploymentAsync(profile);
                 var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentType.Embedding,
+                    AIDeploymentPurpose.Embedding,
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
@@ -361,10 +361,10 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private async Task<AIDeployment> ResolveDeploymentAsync(AIProfile profile)
     {
         return await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentType.Chat,
+            AIDeploymentPurpose.Chat,
             deploymentName: profile.ChatDeploymentName)
         ?? await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentType.Utility,
+            AIDeploymentPurpose.Utility,
             deploymentName: profile.UtilityDeploymentName);
     }
 

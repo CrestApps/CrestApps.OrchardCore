@@ -119,7 +119,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         try
         {
             var context = await _completionContextBuilder.BuildAsync(profile);
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName)
 
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 

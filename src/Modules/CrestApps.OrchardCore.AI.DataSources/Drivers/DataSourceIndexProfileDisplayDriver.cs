@@ -48,7 +48,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
             var selectedDeployment = string.IsNullOrWhiteSpace(embeddingDeploymentName)
                 ? null
                 : await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
-            var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
+            var deployments = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
 
             model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
             model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentName;
@@ -86,7 +86,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
 
         var deployment = await _deploymentManager.FindByNameAsync(model.EmbeddingDeploymentName);
 
-        if (deployment == null || !deployment.SupportsType(AIDeploymentType.Embedding))
+        if (deployment == null || !deployment.SupportsPurpose(AIDeploymentPurpose.Embedding))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["The selected embedding deployment could not be found."]);
             return Edit(indexProfile, context);

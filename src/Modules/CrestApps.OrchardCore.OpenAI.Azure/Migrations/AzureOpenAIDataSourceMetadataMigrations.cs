@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
+
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
@@ -219,12 +221,10 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 return;
             }
 
-#pragma warning disable CS0618 // Type or member is obsolete
             var first = dataSources
                 .Where(x => x.ProfileSource.StartsWith("Azure", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(x => x.Type == "elasticsearch" ? 0 : 1)
                 .FirstOrDefault();
-#pragma warning restore CS0618 // Type or member is obsolete
 
             if (first == null)
             {
@@ -233,7 +233,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 return;
             }
 
-#pragma warning disable CS0618 // Type or member is obsolete
             var firstProviderName = first.ProfileSource;
 
             if (firstProviderName == "Azure" || firstProviderName == "AzureOpenAIOwnData")
@@ -245,8 +244,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             {
                 firstProviderName = "Elasticsearch";
             }
-
-#pragma warning restore CS0618 // Type or member is obsolete
 
             var masterIndexUniqueName = "AI Knowledge Base Warehouse";
 
@@ -290,16 +287,13 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     continue;
                 }
 
-#pragma warning disable CS0618 // Type or member is obsolete
                 var providerName = dataSource.ProfileSource;
-#pragma warning restore CS0618 // Type or member is obsolete
 
                 if (string.IsNullOrEmpty(providerName))
                 {
                     continue;
                 }
 
-#pragma warning disable CS0618 // Type or member is obsolete
                 if (providerName == "Azure" || providerName == "AzureOpenAIOwnData")
                 {
                     dataSource.ProfileSource = "AzureAISearch";
@@ -309,8 +303,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 {
                     providerName = "Elasticsearch";
                 }
-
-#pragma warning restore CS0618 // Type or member is obsolete
 
                 var azureIndexName = ToJsonObject(dataSource.Properties)?[LegacyAISearchMetadataName]?["IndexName"]?.ToString();
 

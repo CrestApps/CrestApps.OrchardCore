@@ -68,7 +68,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : activity.PresencePenalty;
             model.SystemMessage = activity.SystemMessage;
             model.DeploymentNames = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
         }).Location("Content");
 
         if (_toolDefinitions.Tools.Count == 0)

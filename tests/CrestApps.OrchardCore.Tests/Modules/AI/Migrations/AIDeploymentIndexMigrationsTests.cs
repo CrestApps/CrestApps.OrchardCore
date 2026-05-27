@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - Tests cover legacy migration logic
+
 using System.Reflection;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI;

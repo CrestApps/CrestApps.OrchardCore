@@ -70,9 +70,9 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Model name is required."], [nameof(AIDeployment.ModelName)]));
         }
 
-        if (!context.Model.Type.IsValidSelection())
+        if (!context.Model.Purpose.IsValidSelection())
         {
-            context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
+            context.Result.Fail(new ValidationResult(S["The deployment purpose '{0}' is not valid.", context.Model.Purpose], [nameof(AIDeployment.Purpose)]));
         }
 
         var requiresConnection = !HasContainedConnection(context.Model.ClientName);
@@ -160,9 +160,10 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         PopulateContainedConnectionAliases(deployment, data);
 
-        if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
+        if (TryGetDeploymentPurpose(data[nameof(AIDeployment.Purpose)], out var purpose) ||
+            TryGetDeploymentPurpose(data["Type"], out purpose))
         {
-            deployment.Type = type;
+            deployment.Purpose = purpose;
         }
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
@@ -200,38 +201,38 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         deployment.Properties[propertyName] = propertyValue;
     }
 
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    private static bool TryGetDeploymentPurpose(JsonNode purposeNode, out AIDeploymentPurpose purpose)
     {
-        type = AIDeploymentType.None;
+        purpose = AIDeploymentPurpose.None;
 
-        if (typeNode is null)
+        if (purposeNode is null)
         {
             return false;
         }
 
-        if (typeNode is JsonArray array)
+        if (purposeNode is JsonArray array)
         {
             foreach (var item in array)
             {
                 if (item is null ||
-                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                        parsedType == AIDeploymentType.None)
+                    !Enum.TryParse<AIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
+                        parsedPurpose == AIDeploymentPurpose.None)
                 {
-                    type = AIDeploymentType.None;
+                    purpose = AIDeploymentPurpose.None;
                     return false;
                 }
 
-                type |= parsedType;
+                purpose |= parsedPurpose;
             }
 
-            return type.IsValidSelection();
+            return purpose.IsValidSelection();
         }
 
-        var typeValue = typeNode.GetValue<string>();
+        var purposeValue = purposeNode.GetValue<string>();
 
-        return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-                type.IsValidSelection();
+        return !string.IsNullOrEmpty(purposeValue) &&
+            Enum.TryParse(purposeValue, ignoreCase: true, out purpose) &&
+                purpose.IsValidSelection();
     }
 
     private bool HasContainedConnection(string clientName)
