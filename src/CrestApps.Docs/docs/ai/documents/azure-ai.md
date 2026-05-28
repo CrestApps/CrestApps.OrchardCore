@@ -24,3 +24,8 @@ This module integrates Azure AI Search as an embedding and search provider for t
 1. Enable the `AI Documents indexing using Azure AI Search` feature in Orchard Core admin.
 2. Configure an Azure AI Search connection and create an index via **Search > Indexing**.
 3. Select the index in **Settings > Chat Interaction**.
+
+## Operational notes
+
+- Reopening and saving an **AI Documents (Azure AI Search)** index now keeps the built-in `ChunkId`, `DocumentId`, `Content`, `FileName`, `ReferenceId`, `ReferenceType`, `ChunkIndex`, and `Embedding` mappings stable instead of appending duplicate managed fields on each edit.
+- Existing duplicate managed mappings are normalized when Orchard loads the index profile, while any custom Azure AI Search fields you added remain intact.

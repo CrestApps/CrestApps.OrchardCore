@@ -14,7 +14,7 @@
         <div class="alert alert-warning" role="alert">
             <strong>@T["Danger zone"]</strong>
             <div>@T["You currently have {0} saved AI memories linked to your account.", Model.MemoryCount]</div>
-            <div>@T["Clearing memory permanently removes all saved preferences and other remembered details for your account. Review the confirmation page before you continue."]</div>
+            <div>@T["Clearing memory permanently removes all saved preferences and other remembered details for your account, including the indexed AI memory documents used for retrieval."]</div>
 
             <div class="mt-3">
                 <a
@@ -22,7 +22,12 @@
                     asp-action="Clear"
                     asp-route-userId="@Model.UserId"
                     asp-route-returnUrl="@Model.ReturnUrl"
-                    class="btn btn-danger">
+                    class="btn btn-danger"
+                    data-title="@T["Clear saved AI memory"]"
+                    data-message="@T["Are you sure you want to permanently remove all saved AI memories for your account? This action cannot be undone."]"
+                    data-ok-text="@T["Clear"]"
+                    data-cancel-text="@T["Cancel"]"
+                    itemprop="RemoveUrl UnsafeUrl">
                     @T["Clear saved AI memory"]
                 </a>
             </div>

@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// </summary>
 public sealed class DataSourceIndexingService
 {
-    private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IIndexProfileManager _indexProfileManager;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
@@ -41,7 +41,7 @@ public sealed class DataSourceIndexingService
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSourceIndexingService"/> class.
     /// </summary>
-    /// <param name="indexProfileStore">The store for index profile documents.</param>
+    /// <param name="indexProfileManager">The index profile manager.</param>
     /// <param name="dataSourceStore">The store for AI data source definitions.</param>
     /// <param name="deploymentManager">The deployment manager for resolving embedding deployments.</param>
     /// <param name="aiClientFactory">The factory for creating AI clients.</param>
@@ -52,7 +52,7 @@ public sealed class DataSourceIndexingService
     /// <param name="clock">The clock for UTC timestamps.</param>
     /// <param name="logger">The logger instance.</param>
     public DataSourceIndexingService(
-        IIndexProfileStore indexProfileStore,
+        IIndexProfileManager indexProfileManager,
         IAIDataSourceStore dataSourceStore,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
@@ -63,7 +63,7 @@ public sealed class DataSourceIndexingService
         IClock clock,
         ILogger<DataSourceIndexingService> logger)
     {
-        _indexProfileStore = indexProfileStore;
+        _indexProfileManager = indexProfileManager;
         _dataSourceStore = dataSourceStore;
         _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
@@ -90,7 +90,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var masterProfile = await _indexProfileStore.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName);
+        var masterProfile = await _indexProfileManager.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName);
 
         if (masterProfile == null)
         {
@@ -137,7 +137,7 @@ public sealed class DataSourceIndexingService
     /// </summary>
     public async Task SyncAllAsync(CancellationToken cancellationToken = default)
     {
-        var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
+        var masterIndexProfiles = await GetMasterIndexProfilesAsync();
 
         if (masterIndexProfiles.Count == 0)
         {
@@ -171,7 +171,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType))
+        var masterIndexProfiles = (await GetMasterIndexProfilesAsync())
             .Where(x => idList.Contains(x.Id))
             .ToList();
 
@@ -203,7 +203,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var masterIndexProfiles = await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType);
+        var masterIndexProfiles = await GetMasterIndexProfilesAsync();
 
         var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
         string.Equals(p.Name, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
@@ -270,7 +270,7 @@ public sealed class DataSourceIndexingService
         }
 
         var allDataSources = await GetMatchingDataSourcesAsync(sourceIndexProfileName);
-        var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
+        var masterIndexProfiles = await GetMasterIndexProfilesAsync();
 
         if (masterIndexProfiles.Count == 0)
         {
@@ -298,7 +298,7 @@ public sealed class DataSourceIndexingService
                 continue;
             }
 
-            var sourceProfile = await _indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
+            var sourceProfile = await _indexProfileManager.FindByNameAsync(dataSource.SourceIndexProfileName);
 
             if (sourceProfile == null)
             {
@@ -346,7 +346,7 @@ public sealed class DataSourceIndexingService
         }
 
         var allDataSources = await GetMatchingDataSourcesAsync(sourceIndexProfileName);
-        var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
+        var masterIndexProfiles = await GetMasterIndexProfilesAsync();
 
         if (masterIndexProfiles.Count == 0)
         {
@@ -700,7 +700,7 @@ public sealed class DataSourceIndexingService
         }
 
         // Look up the source index profile to determine its provider name.
-        var sourceProfile = await _indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
+        var sourceProfile = await _indexProfileManager.FindByNameAsync(dataSource.SourceIndexProfileName);
 
         if (sourceProfile == null)
         {
@@ -933,7 +933,7 @@ public sealed class DataSourceIndexingService
         {
             metadata.SetEmbeddingDeploymentName(resolvedDeployment.Name);
             IndexProfileEmbeddingMetadataAccessor.StoreMetadata(resolvedProfile, metadata);
-            await _indexProfileStore.UpdateAsync(resolvedProfile);
+            await _indexProfileManager.UpdateAsync(resolvedProfile);
         }
 
         if (_logger.IsEnabled(LogLevel.Information))
@@ -961,13 +961,13 @@ public sealed class DataSourceIndexingService
 
         if (!string.IsNullOrWhiteSpace(masterProfile.Id))
         {
-            reloadedProfile = await _indexProfileStore.FindByIdAsync(masterProfile.Id);
+            reloadedProfile = await _indexProfileManager.FindByIdAsync(masterProfile.Id);
         }
 
         if (reloadedProfile == null &&
             !string.IsNullOrWhiteSpace(masterProfile.Name))
         {
-            reloadedProfile = await _indexProfileStore.FindByNameAsync(masterProfile.Name);
+            reloadedProfile = await _indexProfileManager.FindByNameAsync(masterProfile.Name);
         }
 
         return reloadedProfile ?? masterProfile;
@@ -979,6 +979,13 @@ public sealed class DataSourceIndexingService
 
         return !string.IsNullOrWhiteSpace(
             IndexProfileEmbeddingMetadataAccessor.GetMetadata(profile).GetEmbeddingDeploymentName());
+    }
+
+    private async Task<List<IndexProfile>> GetMasterIndexProfilesAsync()
+    {
+        return (await _indexProfileManager.GetAllAsync())
+            .Where(profile => string.Equals(profile.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private static bool MatchesEmbeddingSelector(AIDeployment deployment, HashSet<string> selectorCandidates)

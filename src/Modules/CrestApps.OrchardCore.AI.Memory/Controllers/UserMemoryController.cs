@@ -50,11 +50,12 @@ public sealed class UserMemoryController : Controller
     }
 
     /// <summary>
-    /// Displays the confirmation page for clearing all saved AI memory for the current user.
+    /// Clears all saved AI memory for the current user after confirmation.
     /// </summary>
     /// <param name="userId">The user identifier.</param>
     /// <param name="returnUrl">The local return URL.</param>
-    [HttpGet]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("ai/memory/user/{userId}/clear", "AIUserMemoryClear")]
     public async Task<IActionResult> Clear(string userId, string returnUrl = null)
     {
@@ -64,7 +65,6 @@ public sealed class UserMemoryController : Controller
         }
 
         var safeReturnUrl = GetSafeReturnUrl(returnUrl);
-
         var memoryCount = await _memoryStore.CountByUserAsync(userId);
 
         if (memoryCount == 0)
@@ -74,46 +74,41 @@ public sealed class UserMemoryController : Controller
             return Redirect(safeReturnUrl);
         }
 
-        return View(new ClearUserMemoryViewModel
-        {
-            UserId = userId,
-            MemoryCount = memoryCount,
-            ReturnUrl = safeReturnUrl,
-        });
-    }
+        var memories = (await _memoryStore.GetAllAsync())
+            .Where(memory => string.Equals(memory.UserId, userId, StringComparison.Ordinal))
+            .ToArray();
 
-    /// <summary>
-    /// Clears all saved AI memory for the current user after confirmation.
-    /// </summary>
-    /// <param name="userId">The user identifier.</param>
-    /// <param name="returnUrl">The local return URL.</param>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Admin("ai/memory/user/{userId}/clear/confirm", "AIUserMemoryClearConfirm")]
-    public async Task<IActionResult> ConfirmClear(string userId, string returnUrl = null)
-    {
-        if (!IsCurrentUser(userId))
-        {
-            return Forbid();
-        }
-
-        var memories = await _memoryStore.GetByUserAsync(userId, 0);
-
-        if (memories.Count == 0)
+        if (memories.Length == 0)
         {
             await _notifier.WarningAsync(H["No saved AI memory was found for your account."]);
 
-            return RedirectToLocal(returnUrl);
+            return Redirect(safeReturnUrl);
         }
+
+        var removedCount = 0;
 
         foreach (var memory in memories)
         {
-            await _memoryManager.DeleteAsync(memory);
+            if (await _memoryManager.DeleteAsync(memory))
+            {
+                removedCount++;
+            }
         }
 
-        await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
+        if (removedCount == 0)
+        {
+            await _notifier.ErrorAsync(H["Unable to remove the saved AI memory for your account."]);
+        }
+        else if (removedCount == memories.Length)
+        {
+            await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
+        }
+        else
+        {
+            await _notifier.WarningAsync(H["Some saved AI memory entries could not be removed from your account."]);
+        }
 
-        return RedirectToLocal(returnUrl);
+        return Redirect(safeReturnUrl);
     }
 
     private bool IsCurrentUser(string userId)

@@ -163,7 +163,7 @@ Users can clear their own saved AI memory from their user profile editor.
 
 - The clear option is only shown when a user is editing their **own** profile
 - The profile editor shows a **Danger zone** warning with a dedicated **Clear saved AI memory** button
-- Clicking the button opens a separate confirmation page before memory is removed
+- Clicking the button uses Orchard Core's standard admin confirmation dialog before memory is removed
 - Clearing memory removes the user's stored memory records and deletes their indexed memory documents from the configured master memory index
 
 ## Related Features

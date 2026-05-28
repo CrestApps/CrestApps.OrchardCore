@@ -38,6 +38,8 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 
 When selecting a **Source Index**, the admin UI excludes internal AI-managed index types such as **AI Documents**, **AI Memory**, and other **Data Source** knowledge-base indexes so only valid source indexes appear in the selector.
 
+The **Source Index** and **Knowledge Base Index** selectors group profiles by the provider's localized display name (for example **Azure AI Search** instead of the internal provider key) so multi-provider setups are easier to scan.
+
 :::tip
 When upgrading older tenants, the data-source migrations now backfill missing **Source Index**, **Knowledge Base Index**, and default key/title/content field mappings from the current index-profile configuration when those values were not stored in the original legacy document payload.
 :::
@@ -170,6 +172,8 @@ For manual recovery or one-off reprocessing of a single mapping, use the **Sync*
 When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. Cleanup is queued asynchronously so it does not block the admin UI.
 
 When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
+
+For Azure AI Search knowledge-base indexes created through the Data Sources feature, the generated field mappings now stamp explicit Orchard indexing keys alongside Azure field names so the initial sync can upsert chunks without null-key mapping failures, and older stored profiles backfill those keys when Orchard loads them for indexing.
 
 ## Knowledge base indexing requirements
 

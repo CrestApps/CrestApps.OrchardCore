@@ -42,6 +42,8 @@ This module depends on:
 - The embedding deployment is chosen when the memory index is created and then treated as stable so the stored vectors keep the expected dimensions.
 - Changing the master memory index after production data exists usually requires a full re-index or data migration plan.
 - All reads and writes remain scoped to the current authenticated user even though the vectors are stored in a shared search service.
+- Reopening and saving an **AI Memory (Azure AI Search)** index now keeps the built-in `MemoryId`, `UserId`, `Name`, `Description`, `Content`, `UpdatedUtc`, and `Embedding` mappings stable instead of appending duplicate managed fields on each edit.
+- Existing duplicate managed mappings are normalized when Orchard loads the index profile, while any custom Azure AI Search fields you added remain intact.
 
 ## Related docs
 
