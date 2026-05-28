@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.Deployments.ViewModels
-@using OrchardCore
 
 @model AIProfileDeploymentStepViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetLabelClasses()">@T["AI Profiles"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["AI Profiles"]</div>
+    <div class="ocat-end">
         <div class="form-check mb-3">
             <label class="form-check-label">
                 <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" role="button" data-bs-target="#profiles-list" aria-expanded="false" aria-controls="profiles-list" />

@@ -3,7 +3,6 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 
 @model OmnichannelActivityBatchViewModel
 
@@ -28,17 +27,17 @@
     </div>
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+    <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
             <option value="">@T["Select a campaign"]</option>
         </select>
@@ -46,9 +45,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SubjectContentType" class="@Orchard.GetLabelClasses()">@T["Subject content type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
+    <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Select a subject content type"]</option>
         </select>
@@ -56,9 +55,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ContactContentType" class="@Orchard.GetLabelClasses()">@T["Contact content type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ContactContentType" class="ocat-label">@T["Contact content type"]</label>
+    <div class="ocat-end">
         <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
             <option value="">@T["Select a contact content type"]</option>
         </select>
@@ -66,9 +65,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ScheduleAt" class="@Orchard.GetLabelClasses()">@T["Schedule at"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>
+    <div class="ocat-end">
         <input type="text"
                id="@Html.IdFor(m => m.ScheduleAt)"
                name="@Html.NameFor(m => m.ScheduleAt)"
@@ -79,9 +78,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="UserIds" class="@Orchard.GetLabelClasses()">@T["User(s) to assign activities to"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="UserIds" class="ocat-label">@T["User(s) to assign activities to"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = $"{Html.IdFor(m => m.UserIds)}_Selector",
@@ -109,17 +108,17 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
+    <div class="ocat-end">
         <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
         <span asp-validation-for="UrgencyLevel" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="LeadCreatedFrom" class="@Orchard.GetLabelClasses()">@T["Lead created from"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="LeadCreatedFrom" class="ocat-label">@T["Lead created from"]</label>
+    <div class="ocat-end">
         <input type="text"
                id="@leadCreatedFromId"
                name="@Html.NameFor(m => m.LeadCreatedFrom)"
@@ -131,9 +130,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="LeadCreatedTo" class="@Orchard.GetLabelClasses()">@T["Lead created to"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="LeadCreatedTo" class="ocat-label">@T["Lead created to"]</label>
+    <div class="ocat-end">
         <input type="text"
                id="@leadCreatedToId"
                name="@Html.NameFor(m => m.LeadCreatedTo)"
@@ -195,17 +194,17 @@
     });
 </script>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Instructions" class="form-control"></textarea>
         <span asp-validation-for="Instructions" class="text-danger"></span>
         <span class="hint">@T["Optionally, specify any instructions the user should know or be aware of before completing this activity."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="OnlyPublishedLeads">
             <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published leads"]</label>
@@ -214,8 +213,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="PreventDuplicates">
             <label class="form-check-label" asp-for="PreventDuplicates">@T["Prevent duplicate activity with the same subject"]</label>
@@ -224,8 +223,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoCalls">
             <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include do not call contacts"]</label>
@@ -234,8 +233,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoEmail">
             <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include do not email contacts"]</label>
@@ -244,8 +243,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoSms">
             <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include do not SMS contacts"]</label>

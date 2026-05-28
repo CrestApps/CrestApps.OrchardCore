@@ -1,12 +1,11 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model AIProfileTemplateProfileFieldsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ProfileType" class="ocat-label">@T["Profile type"]</label>
+    <div class="ocat-end">
         <select asp-for="ProfileType" class="form-select">
             <option value="">@T["Select a type"]</option>
             @foreach (var item in Model.ProfileTypes)
@@ -19,18 +18,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
         <span class="hint">@T["A description of what this agent does. This is used by the AI model to determine when to invoke this agent."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="AgentAvailability" class="@Orchard.GetLabelClasses()">@T["Availability"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="AgentAvailability" class="ocat-label">@T["Availability"]</label>
+    <div class="ocat-end">
         <select asp-for="AgentAvailability" class="form-select">
             <option value="">@T["Not set"]</option>
             @foreach (var item in Model.AvailabilityTypes)

@@ -35,7 +35,10 @@ public sealed class AIMemoryElasticsearchDocumentIndexHandler : IDocumentIndexHa
         context.DocumentIndex.Set(MemoryConstants.ColumnNames.Description, memory.Description, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(MemoryConstants.ColumnNames.Content, memory.Content, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(MemoryConstants.ColumnNames.UpdatedUtc, memory.UpdatedUtc, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(MemoryConstants.ColumnNames.Embedding, memory.Embedding, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(MemoryConstants.ColumnNames.Embedding, memory.Embedding, memory.Embedding?.Length ?? 0, DocumentIndexOptions.Store, new Dictionary<string, object>
+        {
+            ["VectorSearchConfiguration"] = "default",
+        });
 
         return Task.CompletedTask;
     }

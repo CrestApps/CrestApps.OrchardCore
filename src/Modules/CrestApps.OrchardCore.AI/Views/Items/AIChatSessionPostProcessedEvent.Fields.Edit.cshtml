@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
-@using OrchardCore
 
 @model AIChatSessionPostProcessedEventViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label class="@Orchard.GetLabelClasses()" asp-for="ProfileId">@T["Profile"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="ProfileId">@T["Profile"]</label>
+    <div class="ocat-end">
         <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
             <option value="">@T["Any profile"]</option>
         </select>

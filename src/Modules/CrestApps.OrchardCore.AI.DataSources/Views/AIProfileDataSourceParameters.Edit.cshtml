@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.DataSources.ViewModels
-@using OrchardCore
 
 @model EditProfileDataSourcesViewModel
 
-<div class="@Orchard.GetWrapperClasses("data-source-filter-dependent")">
-    <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper data-source-filter-dependent">
+    <label asp-for="Filter" class="ocat-label">@T["Filter"]</label>
+    <div class="ocat-end">
         <input type="text" class="form-control" asp-for="Filter">
         <span class="hint">@T["Optional OData filter expression to narrow search results. The filter is applied to the knowledge base index before retrieval. Example: status eq 'active' and category eq 'docs'"]</span>
     </div>

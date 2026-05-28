@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.DataSources.ViewModels
-@using OrchardCore
 
 @model EditProfileDataSourcesViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">@T["Data source"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DataSourceId" class="ocat-label">@T["Data source"]</label>
+    <div class="ocat-end">
         <select asp-for="DataSourceId" class="form-select">
             <option value="">@T["No data source"]</option>
             @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))

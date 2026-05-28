@@ -1,6 +1,5 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model EditProfileAgentsViewModel
 
@@ -9,9 +8,9 @@
     return;
 }
 
-<div class="@Orchard.GetWrapperClasses("border-bottom pb-2")">
-    <div class="@Orchard.GetLabelClasses()">@T["Agents"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper border-bottom pb-2">
+    <div class="ocat-label">@T["Agents"]</div>
+    <div class="ocat-end">
         @if (Model.AlwaysAvailableAgentCount > 0)
         {
             <div class="alert alert-info small">

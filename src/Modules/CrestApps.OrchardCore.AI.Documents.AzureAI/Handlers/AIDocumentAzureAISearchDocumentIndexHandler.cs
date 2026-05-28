@@ -36,7 +36,11 @@ public sealed class AIDocumentAzureAISearchDocumentIndexHandler : IDocumentIndex
         context.DocumentIndex.Set(AIConstants.ColumnNames.ReferenceId, chunk.ReferenceId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(AIConstants.ColumnNames.ReferenceType, chunk.ReferenceType, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(AIConstants.ColumnNames.ChunkIndex, chunk.ChunkIndex, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(AIConstants.ColumnNames.Embedding, chunk.Embedding, DocumentIndexOptions.Store);
+
+        context.DocumentIndex.Set(AIConstants.ColumnNames.Embedding, chunk.Embedding, chunk.Embedding?.Length ?? 0, DocumentIndexOptions.Store, new Dictionary<string, object>
+        {
+            ["VectorSearchConfiguration"] = "default",
+        });
 
         return Task.CompletedTask;
     }

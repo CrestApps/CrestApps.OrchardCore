@@ -1,12 +1,11 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
-@using OrchardCore
 
 @model InteractionDocumentSettingsViewModel
 
 @if (!Model.IndexProfiles.Any())
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <div class="@Orchard.GetEndClasses(true)">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             <div class="alert alert-warning" role="alert">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
                 <strong>@T["No index profiles configured"]</strong>
@@ -18,9 +17,9 @@
     </div>
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="IndexProfileName" class="@Orchard.GetLabelClasses()">@T["Index profile"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="IndexProfileName" class="ocat-label">@T["Index profile"]</label>
+    <div class="ocat-end">
         <select asp-for="IndexProfileName" asp-items="Model.IndexProfiles" class="form-select">
             <option value="">@T["Select a profile"]</option>
         </select>
@@ -28,16 +27,16 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="RetrievalMode" class="@Orchard.GetLabelClasses()">@T["Document retrieval mode"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="RetrievalMode" class="ocat-label">@T["Document retrieval mode"]</label>
+    <div class="ocat-end">
         <select asp-for="RetrievalMode" asp-items="Model.RetrievalModes" class="form-select"></select>
         <span class="hint">@T["Choose the default retrieval behavior for uploaded document knowledge. Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowDocumentUploads" />
             <label class="form-check-label" asp-for="AllowDocumentUploads">@T["Allow document uploads in chat interactions"]</label>
@@ -46,8 +45,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowImageUploads" />
             <label class="form-check-label" asp-for="AllowImageUploads">@T["Allow image uploads in chat interactions"]</label>

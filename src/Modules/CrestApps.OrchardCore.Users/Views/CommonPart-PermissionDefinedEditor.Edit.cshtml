@@ -2,7 +2,6 @@
 @using CrestApps.OrchardCore.Users
 @using CrestApps.OrchardCore.Users.Core
 @using Microsoft.AspNetCore.Mvc.Rendering
-@using OrchardCore
 @using OrchardCore.ContentManagement
 @using OrchardCore.Contents.ViewModels
 @using OrchardCore.Users
@@ -33,9 +32,9 @@
     }
 }
 
-<div class="@Orchard.GetWrapperClasses("field-wrapper")">
-    <label asp-for="OwnerName" class="@Orchard.GetLabelClasses()">@T["Owner Name"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper field-wrapper">
+    <label asp-for="OwnerName" class="ocat-label">@T["Owner Name"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = $"{Html.IdFor(m => m.OwnerName)}_Selector",

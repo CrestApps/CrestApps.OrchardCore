@@ -1,38 +1,37 @@
 @using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels
-@using OrchardCore
 
 @model FtpConnectionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Host" class="@Orchard.GetLabelClasses()">@T["Host"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label">@T["Host"]</label>
+    <div class="ocat-end">
         <input asp-for="Host" class="form-control" />
         <span asp-validation-for="Host" class="text-danger"></span>
         <span class="hint">@T["The FTP server hostname (e.g., ftp.example.com)."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Port" class="@Orchard.GetLabelClasses()">@T["Port"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
         <input asp-for="Port" type="number" class="form-control" placeholder="21" />
         <span asp-validation-for="Port" class="text-danger"></span>
         <span class="hint">@T["The FTP server port. Default is 21 for FTP or 990 for implicit FTPS."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Username" class="@Orchard.GetLabelClasses()">@T["Username"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+    <div class="ocat-end">
         <input asp-for="Username" class="form-control" />
         <span asp-validation-for="Username" class="text-danger"></span>
         <span class="hint">@T["The username for FTP authentication."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Password" class="@Orchard.GetLabelClasses()">@T["Password"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+    <div class="ocat-end">
         @if (Model.HasPassword)
         {
             <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
@@ -46,9 +45,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="EncryptionMode" class="@Orchard.GetLabelClasses()">@T["Encryption Mode"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="EncryptionMode" class="ocat-label">@T["Encryption Mode"]</label>
+    <div class="ocat-end">
         <select asp-for="EncryptionMode" class="form-select">
             <option value="">@T["None (Plain FTP)"]</option>
             <option value="Explicit">@T["Explicit (STARTTLS)"]</option>
@@ -60,9 +59,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DataConnectionType" class="@Orchard.GetLabelClasses()">@T["Data Connection Type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DataConnectionType" class="ocat-label">@T["Data Connection Type"]</label>
+    <div class="ocat-end">
         <select asp-for="DataConnectionType" class="form-select">
             <option value="">@T["Auto Passive (Default)"]</option>
             <option value="PASV">@T["PASV"]</option>
@@ -77,8 +76,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="ValidateAnyCertificate" class="form-check-input" />
             <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept Any Certificate"]</label>
@@ -87,25 +86,25 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ConnectTimeout" class="@Orchard.GetLabelClasses()">@T["Connect Timeout (seconds)"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ConnectTimeout" class="ocat-label">@T["Connect Timeout (seconds)"]</label>
+    <div class="ocat-end">
         <input asp-for="ConnectTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
         <span asp-validation-for="ConnectTimeout" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ReadTimeout" class="@Orchard.GetLabelClasses()">@T["Read Timeout (seconds)"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ReadTimeout" class="ocat-label">@T["Read Timeout (seconds)"]</label>
+    <div class="ocat-end">
         <input asp-for="ReadTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
         <span asp-validation-for="ReadTimeout" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="RetryAttempts" class="@Orchard.GetLabelClasses()">@T["Retry Attempts"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="RetryAttempts" class="ocat-label">@T["Retry Attempts"]</label>
+    <div class="ocat-end">
         <input asp-for="RetryAttempts" type="number" class="form-control" placeholder="@T["Default"]" />
         <span asp-validation-for="RetryAttempts" class="text-danger"></span>
     </div>

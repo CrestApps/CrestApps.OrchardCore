@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 
 @model CampaignActionViewModel
 
@@ -8,9 +7,9 @@
     var panelId = $"{toggleId}_Panel";
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetLabelClasses()">@T["Communication preferences"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Communication preferences"]</div>
+    <div class="ocat-end">
         <span class="hint d-block mb-2">@T["Optionally update contact communication preferences when this action executes."]</span>
 
         <div class="form-check mb-3">

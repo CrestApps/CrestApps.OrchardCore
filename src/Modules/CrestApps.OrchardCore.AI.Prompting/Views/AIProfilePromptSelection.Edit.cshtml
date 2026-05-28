@@ -8,14 +8,14 @@
     return;
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SelectedPromptId" class="@Orchard.GetLabelClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="SelectedPromptId" class="ocat-label">
         @T["Prompt template"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a reusable prompt template for system instructions. The template output is combined with any custom system message you provide."]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-end">
         <select asp-for="SelectedPromptId" asp-items="Model.AvailablePromptItems" class="form-select" data-ci-prompt-selector data-json="@JsonSerializer.Serialize(Model.PromptDescriptions)" data-params="@JsonSerializer.Serialize(Model.PromptParameterDescriptors)">
             <option value="">@T["No prompt template"]</option>
         </select>
@@ -23,9 +23,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
-    <label asp-for="PromptParameters" class="@Orchard.GetLabelClasses()">@T["Template parameters"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper@(string.IsNullOrEmpty(Model.SelectedPromptId) ? " d-none" : string.Empty)" data-ci-prompt-parameters-wrapper>
+    <label asp-for="PromptParameters" class="ocat-label">@T["Template parameters"]</label>
+    <div class="ocat-end">
         <div class="mb-1 d-none" data-ci-prompt-parameters-info>
             <small class="text-muted">@T["Expected parameters:"]</small>
             <ul class="mb-0 small text-muted" data-ci-prompt-parameters-list></ul>

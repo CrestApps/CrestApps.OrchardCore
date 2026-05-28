@@ -1,23 +1,20 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using CrestApps.Core.AI.Orchestration
-@using OrchardCore
 
 @model OrchestratorViewModel
 
 @if (Model.Orchestrators?.Count > 1)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="OrchestratorName" class="@Orchard.GetLabelClasses()">
+    <div class="mb-3">
+        <label asp-for="OrchestratorName" class="form-label">
             @T["Orchestrator"]
             <span class="text-muted" data-bs-toggle="tooltip" title="@T["The orchestrator to use for this chat interaction. The orchestrator controls how tools are selected and how the AI execution loop is managed."]">
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select setting-input" data-setting="orchestratorName">
-            </select>
-            <span asp-validation-for="OrchestratorName" class="text-danger"></span>
-        </div>
+        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select setting-input" data-setting="orchestratorName">
+        </select>
+        <span asp-validation-for="OrchestratorName" class="text-danger"></span>
     </div>
 }
 else

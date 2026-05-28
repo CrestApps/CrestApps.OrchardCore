@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model EditProfileToolsViewModel
 
@@ -8,9 +7,9 @@
     return;
 }
 
-<div class="@Orchard.GetWrapperClasses("border-bottom pb-2")">
-    <div class="@Orchard.GetLabelClasses()">@T["Tools"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper border-bottom pb-2">
+    <div class="ocat-label">@T["Tools"]</div>
+    <div class="ocat-end">
         <div class="mb-3">
             <input type="text"
                    class="form-control form-control-sm tool-search-input"

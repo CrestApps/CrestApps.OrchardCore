@@ -103,12 +103,34 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.Embedding,
-            Type = DocumentIndex.Types.Number,
+            Type = DocumentIndex.Types.Vector,
+            IsSearchable = true,
             VectorInfo = new AzureAISearchIndexMapVectorInfo
             {
                 Dimensions = embeddingDimensions,
+                VectorSearchConfiguration = "default",
             },
         });
+
+        metadata.VectorSearchMappings = new VectorSearchMappings
+        {
+            Profiles =
+            [
+                new VectorSearchProfileMap
+                {
+                    Name = "default",
+                    AlgorithmConfigurationName = "default-hnsw",
+                },
+            ],
+            Algorithms =
+            [
+                new VectorSearchAlgorithmMap
+                {
+                    Name = "default-hnsw",
+                    Kind = VectorSearchAlgorithmMap.HnswKind,
+                },
+            ],
+        };
 
         indexProfile.Put(metadata);
     }

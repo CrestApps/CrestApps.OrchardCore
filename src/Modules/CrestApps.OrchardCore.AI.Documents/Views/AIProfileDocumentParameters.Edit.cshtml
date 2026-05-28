@@ -1,24 +1,23 @@
-@using OrchardCore
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 
 @model EditAIProfileDocumentsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="TopN" class="@Orchard.GetLabelClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="TopN" class="ocat-label">
         @T["Document Top N"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Document Top N explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-end">
         <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
         <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DocumentRetrievalMode" class="@Orchard.GetLabelClasses()">@T["Document retrieval mode"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DocumentRetrievalMode" class="ocat-label">@T["Document retrieval mode"]</label>
+    <div class="ocat-end">
         <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select">
             <option value="">@T["Default setting"]</option>
         </select>

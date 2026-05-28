@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Resources;

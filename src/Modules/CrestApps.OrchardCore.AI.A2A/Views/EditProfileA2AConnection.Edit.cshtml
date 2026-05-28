@@ -1,13 +1,12 @@
 @using CrestApps.OrchardCore.AI.A2A.ViewModels
-@using OrchardCore
 
 @model EditProfileA2AConnectionsViewModel
 
 @if (Model.Connections is not null && Model.Connections.Length > 0)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <div class="@Orchard.GetLabelClasses()">@T["A2A Connections"]</div>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <div class="ocat-label">@T["A2A Connections"]</div>
+        <div class="ocat-end">
             @for (var i = 0; i < Model.Connections.Length; i++)
             {
                 <div class="form-check">

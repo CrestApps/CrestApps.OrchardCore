@@ -1,13 +1,12 @@
 @using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 
 @model NewActivityCampaignActionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Target campaign"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="CampaignId" class="ocat-label">@T["Target campaign"]</label>
+    <div class="ocat-end">
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
             <option value="">@T["Use the same campaign"]</option>
         </select>
@@ -15,9 +14,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SubjectContentType" class="@Orchard.GetLabelClasses()">@T["Subject content type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
+    <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Use the same subject type"]</option>
         </select>
@@ -25,9 +24,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
+    <div class="ocat-end">
         <select asp-for="UrgencyLevel" class="form-select">
             <option value="">@T["Use original activity's urgency level"]</option>
             <option value="@nameof(ActivityUrgencyLevel.VeryLow)">@T["Very low"]</option>
@@ -41,9 +40,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="NormalizedUserName" class="@Orchard.GetLabelClasses()">@T["Assign to user"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="NormalizedUserName" class="ocat-label">@T["Assign to user"]</label>
+    <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
         {
             id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
@@ -69,9 +68,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultScheduleHours" class="@Orchard.GetLabelClasses()">@T["Default schedule hours"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultScheduleHours" class="ocat-label">@T["Default schedule hours"]</label>
+    <div class="ocat-end">
         <input asp-for="DefaultScheduleHours" class="form-control" type="number" min="1" />
         <span class="hint">@T["Default hours ahead to schedule the new activity. Used when no schedule date is provided during completion. Defaults to 24 hours."]</span>
     </div>

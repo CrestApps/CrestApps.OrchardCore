@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.Infrastructure;
@@ -108,12 +108,34 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = DataSourceConstants.ColumnNames.Embedding,
-            Type = DocumentIndex.Types.Number,
+            Type = DocumentIndex.Types.Vector,
+            IsSearchable = true,
             VectorInfo = new AzureAISearchIndexMapVectorInfo
             {
                 Dimensions = embeddingDimensions,
+                VectorSearchConfiguration = "default",
             },
         });
+
+        metadata.VectorSearchMappings = new VectorSearchMappings
+        {
+            Profiles =
+            [
+                new VectorSearchProfileMap
+                {
+                    Name = "default",
+                    AlgorithmConfigurationName = "default-hnsw",
+                },
+            ],
+            Algorithms =
+            [
+                new VectorSearchAlgorithmMap
+                {
+                    Name = "default-hnsw",
+                    Kind = VectorSearchAlgorithmMap.HnswKind,
+                },
+            ],
+        };
 
         indexProfile.Put(metadata);
     }

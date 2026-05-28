@@ -1,14 +1,12 @@
 @using CrestApps.Core.AI.Copilot.Models
 @using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
-@using OrchardCore
-@using CrestApps.OrchardCore.AI.Chat.Copilot
 
 @model EditCopilotProfileViewModel
 
 <div class="d-none orchestrator-dependent orchestrator-dependent-copilot">
-    <fieldset class="@Orchard.GetWrapperClasses()">
-        <legend class="@Orchard.GetLabelClasses()">@T["Copilot Configuration"]</legend>
-        <div class="@Orchard.GetEndClasses()">
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["Copilot Configuration"]</legend>
+        <div class="ocat-end">
             @if (!Model.IsCopilotConfigured)
             {
                 <div class="alert alert-warning">

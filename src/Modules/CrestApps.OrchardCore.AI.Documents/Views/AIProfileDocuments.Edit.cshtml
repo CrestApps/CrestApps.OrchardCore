@@ -1,7 +1,6 @@
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 @using Microsoft.Extensions.Options
-@using OrchardCore
 
 @model EditAIProfileDocumentsViewModel
 
@@ -11,10 +10,10 @@
     var uniqueId = Guid.NewGuid().ToString("N")[..8];
 }
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="ocat-wrapper">
     @if (!Model.HasIndexProfile)
     {
-        <div class="@Orchard.GetEndClasses(true)">
+        <div class="ocat-end-offset">
             <div class="alert alert-warning" role="alert">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
                 <strong>@T["Index not configured"]</strong>
@@ -26,7 +25,7 @@
     }
     else if (!Model.HasVectorSearchService)
     {
-        <div class="@Orchard.GetEndClasses(true)">
+        <div class="ocat-end-offset">
             <div class="alert alert-warning" role="alert">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
                 <strong>@T["Vector Search Service Not Available"]</strong>
@@ -36,7 +35,7 @@
             </div>
         </div>
     }
-    <div class="@Orchard.GetEndClasses(true)">
+    <div class="ocat-end-offset">
         <div class="border rounded p-3 bg-light">
             <!-- Drag and drop zone -->
             <div id="profileDropZone-@uniqueId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">

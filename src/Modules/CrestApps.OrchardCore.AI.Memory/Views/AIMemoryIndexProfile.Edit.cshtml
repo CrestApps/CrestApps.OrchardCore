@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.Memory.ViewModels
-@using OrchardCore
 
 @model AIMemoryIndexProfileViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="EmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Embedding deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="EmbeddingDeploymentName" class="ocat-label">@T["Embedding deployment"]</label>
+    <div class="ocat-end">
         @if (Model.IsLocked)
         {
             <input type="text" class="form-control" value="@Model.EmbeddingDeploymentText" readonly />

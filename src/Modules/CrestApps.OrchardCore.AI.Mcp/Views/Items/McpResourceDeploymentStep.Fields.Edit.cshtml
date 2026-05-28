@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
-@using OrchardCore
 
 @model McpResourceStepViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetLabelClasses()">@T["MCP Resources"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["MCP Resources"]</div>
+    <div class="ocat-end">
         <div class="form-check mb-3">
             <label class="form-check-label">
                 <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" role="button" data-bs-target="#resources-list" aria-expanded="false" aria-controls="resources-list" />

@@ -4,18 +4,18 @@
 
 @model StdioConnectionFieldsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Command" class="@Orchard.GetLabelClasses()">@T["Command"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Command" class="ocat-label">@T["Command"]</label>
+    <div class="ocat-end">
         <input type="text" asp-for="Command" class="form-control" />
         <span asp-validation-for="Command" class="text-danger"></span>
         <span class="hint">@T["The command to invoke to connect to the server."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Arguments" class="@Orchard.GetLabelClasses()">@T["Command arguments"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Arguments" class="ocat-label">@T["Command arguments"]</label>
+    <div class="ocat-end">
         <div class="form-control">
             <div id="@Html.IdFor(x => x.Arguments)_editor" asp-for="Arguments" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.ArgumentsSchema"></div>
         </div>
@@ -25,18 +25,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="WorkingDirectory" class="@Orchard.GetLabelClasses()">@T["Working directory"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="WorkingDirectory" class="ocat-label">@T["Working directory"]</label>
+    <div class="ocat-end">
         <input type="text" asp-for="WorkingDirectory" class="form-control" />
         <span asp-validation-for="WorkingDirectory" class="text-danger"></span>
         <span class="hint">@T["If applicable, specify the working directory."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="EnvironmentVariables" class="@Orchard.GetLabelClasses()">@T["Environment variables"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="EnvironmentVariables" class="ocat-label">@T["Environment variables"]</label>
+    <div class="ocat-end">
         <div class="form-control">
             <div id="@Html.IdFor(x => x.EnvironmentVariables)_editor" asp-for="EnvironmentVariables" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.EnvironmentVariablesSchema"></div>
         </div>

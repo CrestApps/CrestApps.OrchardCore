@@ -1,6 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
 @using CrestApps.Core.AI.Models
-@using OrchardCore
 
 @model AIProfilePostSessionViewModel
 
@@ -17,8 +16,8 @@
     var tabContentId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_tabContent";
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" />
             <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable post-session processing"]</label>
@@ -28,9 +27,13 @@
 </div>
 
 <div id="@postSessionSettingsId" class="@(Model.EnablePostSessionProcessing ? "" : "d-none")">
-    <div class="alert alert-info mb-3">
-        <i class="fa-solid fa-circle-info me-1"></i>
-        @T["Post-session processing runs after a chat session is closed (either due to inactivity or natural conversation ending). The AI model analyzes the complete conversation transcript to produce the configured results."]
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info mb-0">
+                <i class="fa-solid fa-circle-info me-1"></i>
+                @T["Post-session processing runs after a chat session is closed (either due to inactivity or natural conversation ending). The AI model analyzes the complete conversation transcript to produce the configured results."]
+            </div>
+        </div>
     </div>
 
     <ul class="nav nav-tabs" id="@tabsId" role="tablist">
@@ -52,85 +55,86 @@
     <div class="tab-content border border-top-0 rounded-bottom p-3" id="@tabContentId">
         <!-- Tasks Tab -->
         <div class="tab-pane fade show active" id="@tasksPaneId" role="tabpanel" aria-labelledby="@tasksTabId">
-            <div class="mb-3">
-                <label class="form-label">@T["Post-session tasks"]</label>
-                <span class="hint dashed d-block mb-2">@T["Define the tasks to run when a session closes. Each task produces a structured result stored on the session."]</span>
-
-                <div id="@tasksContainerId">
-                    @for (var i = 0; i < Model.Tasks.Count; i++)
-                    {
-                        var task = Model.Tasks[i];
-                        <div class="card mb-2 post-session-task-card">
-                            <div class="card-header d-flex justify-content-between align-items-center py-2">
-                                <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#@(tasksContainerId)_collapse_@i" role="button" aria-expanded="true">
-                                    <i class="fa-solid fa-chevron-down me-1"></i>
-                                    <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(task.Name) ? T["New Task"] : task.Name)</span>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                            <div id="@(tasksContainerId)_collapse_@i" class="collapse show">
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">@T["Name"]</label>
-                                        <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@task.Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
-                                        <span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">@T["Type"]</label>
-                                        <select class="form-select task-type-select" name="@Html.NameFor(m => m.Tasks[i].Type)">
-                                            <option value="Semantic" selected="@(task.Type == PostSessionTaskType.Semantic)">@T["Semantic"]</option>
-                                            <option value="PredefinedOptions" selected="@(task.Type == PostSessionTaskType.PredefinedOptions)">@T["Predefined Options"]</option>
-                                        </select>
-                                        <span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">@T["Instructions"]</label>
-                                        <textarea class="form-control post-session-instructions-editor" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
-                                        <span class="hint">@T["Additional instructions for the AI model when processing this task."]</span>
-                                    </div>
-                                    <div class="task-options-group @(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "d-none")">
-                                        <div class="form-check mb-3">
-                                            <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].AllowMultipleValues)" value="true" @(task.AllowMultipleValues ? "checked" : "") />
-                                            <label class="form-check-label">@T["Allow multiple values"]</label>
-                                            <span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span>
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Post-session tasks"]</label>
+                <div class="ocat-end">
+                    <span class="hint dashed d-block mb-2">@T["Define the tasks to run when a session closes. Each task produces a structured result stored on the session."]</span>
+                    <div id="@tasksContainerId">
+                        @for (var i = 0; i < Model.Tasks.Count; i++)
+                        {
+                            var task = Model.Tasks[i];
+                            <div class="card mb-2 post-session-task-card">
+                                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                    <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#@(tasksContainerId)_collapse_@i" role="button" aria-expanded="true">
+                                        <i class="fa-solid fa-chevron-down me-1"></i>
+                                        <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(task.Name) ? T["New Task"] : task.Name)</span>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div id="@(tasksContainerId)_collapse_@i" class="collapse show">
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">@T["Name"]</label>
+                                            <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@task.Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
+                                            <span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">@T["Options"]</label>
-                                            <span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from. Each option has a value and an optional description to guide the AI."]</span>
-                                            <div class="task-options-container">
-                                                @for (var j = 0; j < task.Options.Count; j++)
-                                                {
-                                                    <div class="card mb-2 task-option-card">
-                                                        <div class="card-header d-flex justify-content-between align-items-center py-1">
-                                                            <span class="option-value-display fw-semibold small">@(string.IsNullOrWhiteSpace(task.Options[j].Value) ? T["New Option"] : task.Options[j].Value)</span>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]">
-                                                                <i class="fa-solid fa-trash"></i>
-                                                            </button>
-                                                        </div>
-                                                        <div class="card-body py-2">
-                                                            <div class="mb-2">
-                                                                <label class="form-label small">@T["Value"]</label>
-                                                                <input type="text" class="form-control form-control-sm option-value-input" name="@Html.NameFor(m => m.Tasks[i].Options[j].Value)" value="@task.Options[j].Value" required placeholder="@T["e.g., Resolved"]" />
-                                                            </div>
-                                                            <div class="mb-1">
-                                                                <label class="form-label small">@T["Description"]</label>
-                                                                <input type="text" class="form-control form-control-sm" name="@Html.NameFor(m => m.Tasks[i].Options[j].Description)" value="@task.Options[j].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                }
+                                            <label class="form-label">@T["Type"]</label>
+                                            <select class="form-select task-type-select" name="@Html.NameFor(m => m.Tasks[i].Type)">
+                                                <option value="Semantic" selected="@(task.Type == PostSessionTaskType.Semantic)">@T["Semantic"]</option>
+                                                <option value="PredefinedOptions" selected="@(task.Type == PostSessionTaskType.PredefinedOptions)">@T["Predefined Options"]</option>
+                                            </select>
+                                            <span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">@T["Instructions"]</label>
+                                            <textarea class="form-control post-session-instructions-editor" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
+                                            <span class="hint">@T["Additional instructions for the AI model when processing this task."]</span>
+                                        </div>
+                                        <div class="task-options-group @(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "d-none")">
+                                            <div class="form-check mb-3">
+                                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].AllowMultipleValues)" value="true" @(task.AllowMultipleValues ? "checked" : "") />
+                                                <label class="form-check-label">@T["Allow multiple values"]</label>
+                                                <span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button>
+                                            <div class="mb-3">
+                                                <label class="form-label">@T["Options"]</label>
+                                                <span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from. Each option has a value and an optional description to guide the AI."]</span>
+                                                <div class="task-options-container">
+                                                    @for (var j = 0; j < task.Options.Count; j++)
+                                                    {
+                                                        <div class="card mb-2 task-option-card">
+                                                            <div class="card-header d-flex justify-content-between align-items-center py-1">
+                                                                <span class="option-value-display fw-semibold small">@(string.IsNullOrWhiteSpace(task.Options[j].Value) ? T["New Option"] : task.Options[j].Value)</span>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]">
+                                                                    <i class="fa-solid fa-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="card-body py-2">
+                                                                <div class="mb-2">
+                                                                    <label class="form-label small">@T["Value"]</label>
+                                                                    <input type="text" class="form-control form-control-sm option-value-input" name="@Html.NameFor(m => m.Tasks[i].Options[j].Value)" value="@task.Options[j].Value" required placeholder="@T["e.g., Resolved"]" />
+                                                                </div>
+                                                                <div class="mb-1">
+                                                                    <label class="form-label small">@T["Description"]</label>
+                                                                    <input type="text" class="form-control form-control-sm" name="@Html.NameFor(m => m.Tasks[i].Options[j].Description)" value="@task.Options[j].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-success" id="@addTaskBtnId"><i class="fa-solid fa-plus"></i> @T["Add Task"]</button>
                 </div>
-                <button type="button" class="btn btn-sm btn-success" id="@addTaskBtnId"><i class="fa-solid fa-plus"></i> @T["Add Task"]</button>
             </div>
         </div>
 

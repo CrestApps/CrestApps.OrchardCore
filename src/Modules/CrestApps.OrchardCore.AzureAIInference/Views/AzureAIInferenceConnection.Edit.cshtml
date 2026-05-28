@@ -1,43 +1,41 @@
 @using CrestApps.Core.Azure.Models
 @using CrestApps.OrchardCore.AzureAIInference.ViewModels
-@using OrchardCore
-
 @model AzureAIInferenceConnectionViewModel
 @{
     var apiKeyWrapperId = Html.IdFor(m => m.ApiKey) + "_wrapper";
     var identityIdWrapperId = Html.IdFor(m => m.IdentityId) + "_wrapper";
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Endpoint" class="@Orchard.GetLabelClasses()">@T["Endpoint"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
+    <div class="ocat-end">
         <input type="url" asp-for="Endpoint" class="form-control" />
         <span asp-validation-for="Endpoint" class="text-danger"></span>
         <span class="hint">@T["The provider's API endpoint."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="AuthenticationType" class="@Orchard.GetLabelClasses()">@T["Authentication type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+    <div class="ocat-end">
         <select type="url" asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select"></select>
         <span asp-validation-for="AuthenticationType" class="text-danger"></span>
         <span class="hint">@T["The authentication type to use."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : "d-none")" id="@apiKeyWrapperId">
-    <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper@(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : " d-none")" id="@apiKeyWrapperId">
+    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <div class="ocat-end">
         <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
         <span class="hint">@T["The provider's API key."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ManagedIdentity ? string.Empty : "d-none")" id="@identityIdWrapperId">
-    <label asp-for="IdentityId" class="@Orchard.GetLabelClasses()">@T["Identity client ID"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper@(Model.AuthenticationType == AzureAuthenticationType.ManagedIdentity ? string.Empty : " d-none")" id="@identityIdWrapperId">
+    <label asp-for="IdentityId" class="ocat-label">@T["Identity client ID"]</label>
+    <div class="ocat-end">
         <input asp-for="IdentityId" class="form-control" />
         <span asp-validation-for="IdentityId" class="text-danger"></span>
         <span class="hint">@T["The client ID of a user-assigned managed identity. If not provided, the system-assigned managed identity will be used."]</span>

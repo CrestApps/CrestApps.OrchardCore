@@ -22,7 +22,10 @@
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Content)
 
-    <button class="btn btn-primary" type="submit">@T["Save"]</button>
-
-    <a class="btn btn-secondary cancel" role="button" asp-route-action="List" asp-route-contentItemId="@contentItemId">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="List" asp-route-contentItemId="@contentItemId">@T["Cancel"]</a>
+        </div>
+    </div>
 </form>

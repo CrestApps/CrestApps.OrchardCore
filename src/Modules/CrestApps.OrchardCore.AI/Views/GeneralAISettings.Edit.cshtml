@@ -1,10 +1,9 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model GeneralAISettingsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnableAIUsageTracking" />
             <label class="form-check-label" asp-for="EnableAIUsageTracking">
@@ -15,8 +14,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnablePreemptiveMemoryRetrieval" />
             <label class="form-check-label" asp-for="EnablePreemptiveMemoryRetrieval">
@@ -27,16 +26,16 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="MaximumIterationsPerRequest" class="@Orchard.GetLabelClasses()">@T["Maximum iterations per request"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="MaximumIterationsPerRequest" class="ocat-label">@T["Maximum iterations per request"]</label>
+    <div class="ocat-end">
         <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="@Model.AbsoluteMaximumIterationsPerRequest" />
         <span class="hint">@T["This value is used directly and is always capped at {0}.", Model.AbsoluteMaximumIterationsPerRequest]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnableDistributedCaching" />
             <label class="form-check-label" asp-for="EnableDistributedCaching">
@@ -47,8 +46,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnableOpenTelemetry" />
             <label class="form-check-label" asp-for="EnableOpenTelemetry">

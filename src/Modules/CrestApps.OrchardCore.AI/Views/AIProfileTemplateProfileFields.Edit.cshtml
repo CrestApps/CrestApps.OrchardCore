@@ -1,12 +1,11 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model AIProfileTemplateProfileFieldsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ProfileType" class="ocat-label">@T["Profile type"]</label>
+    <div class="ocat-end">
         <select asp-for="ProfileType" class="form-select">
             <option value="">@T["Select a type"]</option>
             @foreach (var item in Model.ProfileTypes)
@@ -19,18 +18,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
         <span class="hint">@T["A description of what this agent does. This is used by the AI model to determine when to invoke this agent."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="AgentAvailability" class="@Orchard.GetLabelClasses()">@T["Availability"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="AgentAvailability" class="ocat-label">@T["Availability"]</label>
+    <div class="ocat-end">
         <select asp-for="AgentAvailability" class="form-select">
             <option value="">@T["Not set"]</option>
             @foreach (var item in Model.AvailabilityTypes)
@@ -47,17 +46,17 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
-    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-template-prompt@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
+    <label asp-for="PromptTemplate" class="ocat-label">@T["Prompt template"]</label>
+    <div class="ocat-end">
         <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
         <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> and <code>{1}</code> variables.", "session", "profile"]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
-    <label asp-for="TitleType" class="@Orchard.GetLabelClasses()">@T["Title type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-chat">
+    <label asp-for="TitleType" class="ocat-label">@T["Title type"]</label>
+    <div class="ocat-end">
         <select asp-for="TitleType" class="form-select">
             <option value="">@T["Select a session title type"]</option>
             @foreach (var item in Model.TitleTypes)
@@ -70,18 +69,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
-    <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-chat">
+    <label asp-for="WelcomeMessage" class="ocat-label">@T["Welcome message"]</label>
+    <div class="ocat-end">
         <input asp-for="WelcomeMessage" class="form-control" />
         <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
         <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="PromptSubject" class="ocat-label">@T["Prompt subject"]</label>
+    <div class="ocat-end">
         <input asp-for="PromptSubject" class="form-control" />
         <span asp-validation-for="PromptSubject" class="text-danger"></span>
         <span class="hint">@T["When set, this title will be displayed as the response header for each message from the model."]</span>
