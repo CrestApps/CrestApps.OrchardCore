@@ -28,8 +28,8 @@ This assumes `CrestApps.OrchardCore` and `CrestApps.AgentSkills` are checked out
 From the `CrestApps.OrchardCore` repository root:
 
 ```powershell
-dotnet build .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --no-restore -warnaserror -v minimal
-dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
+dotnet build .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --no-restore -warnaserror -v minimal
+dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
 ```
 
 ## Custom output path
@@ -37,7 +37,7 @@ dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApp
 You can also pass an explicit output directory as the first argument:
 
 ```powershell
-dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build -- "C:\Some\Other\Path"
+dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build -- "C:\Some\Other\Path"
 ```
 
 ## If the default path cannot be resolved

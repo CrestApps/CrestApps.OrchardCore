@@ -82,4 +82,7 @@
     <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
   </Folder>
+  <Folder Name="/utilities/">
+    <Project Path="utilities/CrestApps.OrchardCore.RecipeSchemaExporter/CrestApps.OrchardCore.RecipeSchemaExporter.csproj" />
+  </Folder>
 </Solution>
