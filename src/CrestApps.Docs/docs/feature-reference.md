@@ -54,6 +54,7 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 
 | Manifest ID | Name | Kind | Docs |
 | --- | --- | --- | --- |
+| `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | Module | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.SignalR` | SignalR | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.Users` | Users Core Components | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | Feature | [Users](./modules/users) |
