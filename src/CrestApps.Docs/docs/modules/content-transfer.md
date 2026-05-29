@@ -14,11 +14,11 @@ Bulk import and export Orchard Core content by using Excel workbook files (`.xls
 
 ## Getting started
 
-1. Enable **Content Transfer** under **Configuration** -> **Features**.
-2. Edit the content type you want to transfer and enable **Allow Bulk Import** and/or **Allow Bulk Export**.
+1. Enable **Content Transfer** under **Tools** -> **Features**.
+2. Edit the content type only if you want to opt-out of transfer for that type. **Allow Bulk Import** and **Allow Bulk Export** are enabled by default.
 3. Open **Content** -> **Bulk Import** or **Content** -> **Bulk Export**.
 
-Only content types with bulk transfer enabled appear in the import and export screens.
+By default, content types appear in the import and export screens automatically. Set **Allow Bulk Import** or **Allow Bulk Export** to `false` on a content type when that type should opt out.
 
 ## Supported file format
 
