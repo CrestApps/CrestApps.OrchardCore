@@ -1,11 +1,14 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Memory.Controllers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Admin;
@@ -23,15 +26,6 @@ public sealed class UserMemoryControllerTests
         const string returnUrl = "/Admin/Users/Edit/user-1";
 
         var deletedMemories = new List<AIMemoryEntry>();
-        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
-        memoryManager
-            .Setup(manager => manager.DeleteAsync(It.IsAny<AIMemoryEntry>(), It.IsAny<CancellationToken>()))
-            .Returns<AIMemoryEntry, CancellationToken>((memory, _) =>
-            {
-                deletedMemories.Add(memory);
-                return ValueTask.FromResult(true);
-            });
-
         var memoryStore = new Mock<IAIMemoryStore>();
         memoryStore
             .Setup(store => store.CountByUserAsync(userId))
@@ -45,8 +39,17 @@ public sealed class UserMemoryControllerTests
                 new AIMemoryEntry { ItemId = "memory-3", UserId = "another-user" },
             ]);
 
+        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
+        memoryManager
+            .Setup(manager => manager.DeleteAsync(It.IsAny<AIMemoryEntry>(), It.IsAny<CancellationToken>()))
+            .Returns<AIMemoryEntry, CancellationToken>((memory, _) =>
+            {
+                deletedMemories.Add(memory);
+                return ValueTask.FromResult(true);
+            });
+
         var notifier = CreateNotifier();
-        var controller = CreateController(memoryManager.Object, memoryStore.Object, notifier.Object, userId);
+        var controller = CreateController(memoryStore.Object, memoryManager.Object, notifier.Object, userId);
 
         // Act
         var result = await controller.Clear(userId, returnUrl);
@@ -55,7 +58,7 @@ public sealed class UserMemoryControllerTests
         var redirectResult = Assert.IsType<RedirectResult>(result);
         Assert.Equal(returnUrl, redirectResult.Url);
         Assert.Equal(["memory-1", "memory-2"], deletedMemories.Select(memory => memory.ItemId));
-        memoryStore.Verify(store => store.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        memoryManager.Verify(manager => manager.DeleteAsync(It.IsAny<AIMemoryEntry>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         notifier.Verify(
             service => service.AddAsync(NotifyType.Success, It.IsAny<LocalizedHtmlString>(), It.IsAny<NotifyContext>()),
             Times.Once);
@@ -68,14 +71,14 @@ public sealed class UserMemoryControllerTests
         const string userId = "user-1";
         const string returnUrl = "/Admin/Users/Edit/user-1";
 
-        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
         var memoryStore = new Mock<IAIMemoryStore>();
         memoryStore
             .Setup(store => store.CountByUserAsync(userId))
             .ReturnsAsync(0);
 
+        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
         var notifier = CreateNotifier();
-        var controller = CreateController(memoryManager.Object, memoryStore.Object, notifier.Object, userId);
+        var controller = CreateController(memoryStore.Object, memoryManager.Object, notifier.Object, userId);
 
         // Act
         var result = await controller.Clear(userId, returnUrl);
@@ -97,7 +100,6 @@ public sealed class UserMemoryControllerTests
         const string userId = "user-1";
         const string returnUrl = "/Admin/Users/Edit/user-1";
 
-        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
         var memoryStore = new Mock<IAIMemoryStore>();
         memoryStore
             .Setup(store => store.CountByUserAsync(userId))
@@ -109,8 +111,9 @@ public sealed class UserMemoryControllerTests
                 new AIMemoryEntry { ItemId = "memory-3", UserId = "another-user" },
             ]);
 
+        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
         var notifier = CreateNotifier();
-        var controller = CreateController(memoryManager.Object, memoryStore.Object, notifier.Object, userId);
+        var controller = CreateController(memoryStore.Object, memoryManager.Object, notifier.Object, userId);
 
         // Act
         var result = await controller.Clear(userId, returnUrl);
@@ -121,6 +124,81 @@ public sealed class UserMemoryControllerTests
         memoryManager.Verify(manager => manager.DeleteAsync(It.IsAny<AIMemoryEntry>(), It.IsAny<CancellationToken>()), Times.Never);
         notifier.Verify(
             service => service.AddAsync(NotifyType.Warning, It.IsAny<LocalizedHtmlString>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Clear_WhenOtherUserWithoutPermission_ShouldForbid()
+    {
+        // Arrange
+        const string currentUserId = "admin-1";
+        const string targetUserId = "user-1";
+        const string returnUrl = "/Admin/Users/Edit/user-1";
+
+        var memoryStore = new Mock<IAIMemoryStore>();
+        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
+        var notifier = CreateNotifier();
+
+        var authorizationService = new Mock<IAuthorizationService>();
+        authorizationService
+            .Setup(service => service.AuthorizeAsync(
+                It.IsAny<ClaimsPrincipal>(),
+                It.IsAny<object>(),
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var controller = CreateController(memoryStore.Object, memoryManager.Object, notifier.Object, currentUserId, authorizationService.Object);
+
+        // Act
+        var result = await controller.Clear(targetUserId, returnUrl);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task Clear_WhenOtherUserWithPermission_ShouldDeleteMemories()
+    {
+        // Arrange
+        const string currentUserId = "admin-1";
+        const string targetUserId = "user-1";
+        const string returnUrl = "/Admin/Users/Edit/user-1";
+
+        var deletedMemories = new List<AIMemoryEntry>();
+        var memoryStore = new Mock<IAIMemoryStore>();
+        memoryStore
+            .Setup(store => store.CountByUserAsync(targetUserId))
+            .ReturnsAsync(1);
+        memoryStore
+            .Setup(store => store.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new AIMemoryEntry { ItemId = "memory-1", UserId = targetUserId },
+            ]);
+
+        var memoryManager = new Mock<ICatalogManager<AIMemoryEntry>>();
+        memoryManager
+            .Setup(manager => manager.DeleteAsync(It.IsAny<AIMemoryEntry>(), It.IsAny<CancellationToken>()))
+            .Returns<AIMemoryEntry, CancellationToken>((memory, _) =>
+            {
+                deletedMemories.Add(memory);
+                return ValueTask.FromResult(true);
+            });
+
+        var notifier = CreateNotifier();
+        var authorizationService = CreateAlwaysAuthorized();
+        var controller = CreateController(memoryStore.Object, memoryManager.Object, notifier.Object, currentUserId, authorizationService);
+
+        // Act
+        var result = await controller.Clear(targetUserId, returnUrl);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Equal(returnUrl, redirectResult.Url);
+        Assert.Single(deletedMemories);
+        Assert.Equal("memory-1", deletedMemories[0].ItemId);
+        notifier.Verify(
+            service => service.AddAsync(NotifyType.Success, It.IsAny<LocalizedHtmlString>(), It.IsAny<NotifyContext>()),
             Times.Once);
     }
 
@@ -137,17 +215,34 @@ public sealed class UserMemoryControllerTests
         return notifier;
     }
 
-    private static UserMemoryController CreateController(
-        ICatalogManager<AIMemoryEntry> memoryManager,
-        IAIMemoryStore memoryStore,
-        INotifier notifier,
-        string currentUserId)
+    private static IAuthorizationService CreateAlwaysAuthorized()
     {
+        var authorizationService = new Mock<IAuthorizationService>();
+        authorizationService
+            .Setup(service => service.AuthorizeAsync(
+                It.IsAny<ClaimsPrincipal>(),
+                It.IsAny<object>(),
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        return authorizationService.Object;
+    }
+
+    private static UserMemoryController CreateController(
+        IAIMemoryStore memoryStore,
+        ICatalogManager<AIMemoryEntry> memoryManager,
+        INotifier notifier,
+        string currentUserId,
+        IAuthorizationService authorizationService = null)
+    {
+        authorizationService ??= CreateAlwaysAuthorized();
+
         var controller = new UserMemoryController(
-            memoryManager,
             memoryStore,
+            memoryManager,
+            authorizationService,
             notifier,
-            Mock.Of<IHtmlLocalizer<UserMemoryController>>(),
+            new TestHtmlLocalizer<UserMemoryController>(),
             Options.Create(new AdminOptions()))
         {
             ControllerContext = new ControllerContext
@@ -174,4 +269,27 @@ public sealed class UserMemoryControllerTests
 
         return controller;
     }
+
+#pragma warning disable CA1859
+    private sealed class TestHtmlLocalizer<T> : IHtmlLocalizer<T>
+    {
+        public LocalizedHtmlString this[string name]
+            => new(name, name);
+
+        public LocalizedHtmlString this[string name, params object[] arguments]
+            => new(name, name, false, arguments);
+
+        public LocalizedString GetString(string name)
+            => new(name, name, false, null);
+
+        public LocalizedString GetString(string name, params object[] arguments)
+            => new(name, string.Format(name, arguments), false, null);
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
+
+        public IHtmlLocalizer WithCulture(CultureInfo culture)
+            => this;
+    }
+#pragma warning restore CA1859
 }

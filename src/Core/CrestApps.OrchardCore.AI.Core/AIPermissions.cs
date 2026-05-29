@@ -83,6 +83,16 @@ public static class AIPermissions
     public static readonly Permission DeleteOwnChatInteraction = new("DeleteOwnChatInteraction", "Delete own chat interaction", [DeleteChatInteraction]);
 
     /// <summary>
+    /// Gets the permission to clear AI memory for any user.
+    /// </summary>
+    public static readonly Permission ClearAIMemoryForOthers = new("ClearAIMemoryForOthers", "Clear AI memory for other users");
+
+    /// <summary>
+    /// Gets the permission to clear AI memory.
+    /// </summary>
+    public static readonly Permission ClearAIMemory = new("ClearAIMemory", "Clear AI memory", [ClearAIMemoryForOthers]);
+
+    /// <summary>
     /// Gets the security-critical permission to access any AI tool.
     /// </summary>
     public static readonly Permission AccessAnyAITool = new("AccessAnyAITool", "Access any AI tool", [], isSecurityCritical: true);

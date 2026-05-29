@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Memory.ViewModels;
+namespace CrestApps.OrchardCore.AI.Memory.ViewModels;
 
 /// <summary>
 /// Represents the view model for edit user memory.
@@ -6,9 +6,14 @@
 public class EditUserMemoryViewModel
 {
     /// <summary>
-    /// Gets or sets the memory count.
+    /// Gets or sets a value indicating whether the user has any saved memories.
     /// </summary>
-    public int MemoryCount { get; set; }
+    public bool HasMemories { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current viewer is managing another user's memory.
+    /// </summary>
+    public bool IsOtherUser { get; set; }
 
     /// <summary>
     /// Gets or sets the current user identifier.
