@@ -18,7 +18,7 @@ public sealed class RecipesStartupTests
 
         services.AddSingleton<GlobalMethodProviderConsumer>();
 
-        var providerDescriptor = Assert.Single(services.Where(service => service.ServiceType == typeof(IGlobalMethodProvider)));
+        var providerDescriptor = Assert.Single(services, service => service.ServiceType == typeof(IGlobalMethodProvider));
         Assert.Equal(ServiceLifetime.Singleton, providerDescriptor.Lifetime);
 
         using var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions
