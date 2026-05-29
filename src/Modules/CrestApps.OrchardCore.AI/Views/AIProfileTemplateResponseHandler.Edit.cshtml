@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model AIProfileTemplateConnectionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="InitialResponseHandlerName" class="@Orchard.GetLabelClasses()">@T["Initial response handler"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="InitialResponseHandlerName" class="ocat-label">@T["Initial response handler"]</label>
+    <div class="ocat-end">
         <select asp-for="InitialResponseHandlerName" class="form-select">
             <option value="">@T["Default (AI)"]</option>
             @foreach (var handler in Model.ResponseHandlers)

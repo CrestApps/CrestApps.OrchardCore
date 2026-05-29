@@ -1,13 +1,12 @@
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model DefaultAIDeploymentSettingsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultChatDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default chat deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultChatDeploymentName" class="ocat-label">@T["Default chat deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -15,9 +14,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultUtilityDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default utility deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultUtilityDeploymentName" class="ocat-label">@T["Default utility deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultUtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -25,9 +24,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultEmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default embedding deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultEmbeddingDeploymentName" class="ocat-label">@T["Default embedding deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultEmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -35,9 +34,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultImageDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default image deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultImageDeploymentName" class="ocat-label">@T["Default image deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultImageDeploymentName" asp-items="Model.ImageDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -45,9 +44,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultVisionDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default vision deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultVisionDeploymentName" class="ocat-label">@T["Default vision deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultVisionDeploymentName" asp-items="Model.VisionDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -55,9 +54,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultSpeechToTextDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default speech-to-text deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultSpeechToTextDeploymentName" class="ocat-label">@T["Default speech-to-text deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">
             <option value="">@T["None"]</option>
         </select>
@@ -65,9 +64,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultTextToSpeechDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default text-to-speech deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultTextToSpeechDeploymentName" class="ocat-label">@T["Default text-to-speech deployment"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultTextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
@@ -75,9 +74,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultTextToSpeechVoiceId" class="@Orchard.GetLabelClasses()">@T["Default text-to-speech voice"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DefaultTextToSpeechVoiceId" class="ocat-label">@T["Default text-to-speech voice"]</label>
+    <div class="ocat-end">
         <select asp-for="DefaultTextToSpeechVoiceId" class="form-select">
             <option value="">@T["Default voice"]</option>
         </select>

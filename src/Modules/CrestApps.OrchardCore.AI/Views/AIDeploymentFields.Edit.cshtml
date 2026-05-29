@@ -1,20 +1,19 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model EditDeploymentViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ModelName" class="@Orchard.GetLabelClasses()">@T["Model name"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ModelName" class="ocat-label">@T["Model name"]</label>
+    <div class="ocat-end">
         <input asp-for="ModelName" class="form-control" />
         <span asp-validation-for="ModelName" class="text-danger"></span>
         <span class="hint">@T["The provider-facing model or deployment name to send when this deployment is used. This value does not need to be unique."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Technical name"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-end">
         <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
         <span asp-validation-for="Name" class="text-danger"></span>
         @if (Model.IsNew)
@@ -36,8 +35,8 @@
     </script>
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <h6>@T["Purposes"]</h6>
         <div>
             @foreach (var purpose in Model.Purposes)

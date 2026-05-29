@@ -58,16 +58,56 @@
             </div>
 
             @* Copilot Model Selection — dropdown, toggled by JS *@
-            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
-                <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-                <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select setting-input" data-setting="copilotModel">
-                </select>
-                <span asp-validation-for="CopilotModel" class="text-danger"></span>
-                <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+            <div class="ocat-limited-wrapper @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
+                <label asp-for="CopilotModel" class="ocat-label">@T["Copilot Model"]</label>
+                <div class="ocat-limited">
+                    <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select setting-input" data-setting="copilotModel">
+                    </select>
+                    <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                    <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+                </div>
             </div>
 
-            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-effort-group">
-                <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
+            <div class="ocat-limited-wrapper @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-effort-group">
+                <label asp-for="CopilotReasoningEffort" class="ocat-label">@T["Effort level"]</label>
+                <div class="ocat-limited">
+                    <select asp-for="CopilotReasoningEffort" class="form-select setting-input" data-setting="copilotReasoningEffort">
+                        <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
+                        <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
+                        <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
+                        <option value="@CopilotReasoningEffort.High">@T["High"]</option>
+                    </select>
+                    <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
+                </div>
+            </div>
+
+            @* Allow All — toggled by JS *@
+            <div class="ocat-wrapper @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
+                        <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+                    </div>
+                    <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
+                </div>
+            </div>
+        }
+    }
+    else if (Model.AuthenticationType == CopilotAuthenticationType.ApiKey)
+    {
+        @* BYOK mode — no GitHub sign-in needed *@
+        <div class="ocat-wrapper" asp-validation-class-for="CopilotModel">
+            <label asp-for="CopilotModel" class="ocat-label">@T["Model Override"]</label>
+            <div class="ocat-end">
+                <input asp-for="CopilotModel" class="form-control setting-input" data-setting="copilotModel" placeholder="@T["Leave empty to use the default model from settings"]" />
+                <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                <span class="hint">@T["Optionally override the model name for this interaction. Leave empty to use the default model configured in Copilot settings."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="CopilotReasoningEffort" class="ocat-label">@T["Effort level"]</label>
+            <div class="ocat-limited">
                 <select asp-for="CopilotReasoningEffort" class="form-select setting-input" data-setting="copilotReasoningEffort">
                     <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
                     <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
@@ -76,44 +116,16 @@
                 </select>
                 <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
             </div>
+        </div>
 
-            @* Allow All — toggled by JS *@
-            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
                 <div class="form-check">
                     <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
                     <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
                 </div>
                 <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
             </div>
-        }
-    }
-    else if (Model.AuthenticationType == CopilotAuthenticationType.ApiKey)
-    {
-        @* BYOK mode — no GitHub sign-in needed *@
-        <div class="mb-3">
-            <label asp-for="CopilotModel" class="form-label">@T["Model Override"]</label>
-            <input asp-for="CopilotModel" class="form-control setting-input" data-setting="copilotModel" placeholder="@T["Leave empty to use the default model from settings"]" />
-            <span asp-validation-for="CopilotModel" class="text-danger"></span>
-            <span class="hint">@T["Optionally override the model name for this interaction. Leave empty to use the default model configured in Copilot settings."]</span>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
-            <select asp-for="CopilotReasoningEffort" class="form-select setting-input" data-setting="copilotReasoningEffort">
-                <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
-                <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
-                <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
-                <option value="@CopilotReasoningEffort.High">@T["High"]</option>
-            </select>
-            <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
-        </div>
-
-        <div class="mb-3">
-            <div class="form-check">
-                <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
-                <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
-            </div>
-            <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
         </div>
     }
 </div>

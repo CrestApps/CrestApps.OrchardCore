@@ -1,21 +1,22 @@
 @model CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels.ChatInteractionIndexProfileViewModel
 
-<div class="mb-3">
-    <label asp-for="EmbeddingDeploymentName" class="form-label">@T["Embedding deployment"]</label>
+<div class="ocat-limited-wrapper">
+    <label asp-for="EmbeddingDeploymentName" class="ocat-label">@T["Embedding deployment"]</label>
+    <div class="ocat-limited">
+        @if (Model.EmbeddingDeployments.Count == 0)
+        {
+            <div class="alert alert-warning">
+                <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
+                @T["No embedding deployments are available. Please configure at least one embedding deployment before creating this index."]
+            </div>
+        }
+        else
+        {
+            <select asp-for="EmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
+                <option value="">@T["Select an embedding deployment"]</option>
+            </select>
 
-    @if (Model.EmbeddingDeployments.Count == 0)
-    {
-        <div class="alert alert-warning">
-            <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
-            @T["No embedding deployments are available. Please configure at least one embedding deployment before creating this index."]
-        </div>
-    }
-    else
-    {
-        <select asp-for="EmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
-            <option value="">@T["Select an embedding deployment"]</option>
-        </select>
-
-        <span class="hint">@T["Select the embedding deployment to use for generating document embeddings. This determines the vector dimensions for the index."]</span>
-    }
+            <span class="hint">@T["Select the embedding deployment to use for generating document embeddings. This determines the vector dimensions for the index."]</span>
+        }
+    </div>
 </div>

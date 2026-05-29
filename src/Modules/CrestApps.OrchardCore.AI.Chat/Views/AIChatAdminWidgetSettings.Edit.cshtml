@@ -1,12 +1,11 @@
 @using CrestApps.OrchardCore.AI.Chat.Settings
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
-@using OrchardCore
 
 @model AIChatAdminWidgetSettingsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["Chat profile"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ProfileId" class="ocat-label">@T["Chat profile"]</label>
+    <div class="ocat-end">
         <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select" data-ai-chat-widget-profile-select="true">
             <option value="">@T["No profile (disabled)"]</option>
         </select>
@@ -15,9 +14,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()" data-ai-chat-widget-options="true">
-    <label asp-for="MaxSessions" class="@Orchard.GetLabelClasses()">@T["Max history sessions"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" data-ai-chat-widget-options="true">
+    <label asp-for="MaxSessions" class="ocat-label">@T["Max history sessions"]</label>
+    <div class="ocat-end">
         <input type="number" class="form-control" asp-for="MaxSessions"
                min="@AIChatAdminWidgetSettings.MinMaxSessions"
                max="@AIChatAdminWidgetSettings.MaxMaxSessions"
@@ -27,9 +26,9 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()" data-ai-chat-widget-options="true">
-    <label asp-for="PrimaryColor" class="@Orchard.GetLabelClasses()">@T["Primary color"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" data-ai-chat-widget-options="true">
+    <label asp-for="PrimaryColor" class="ocat-label">@T["Primary color"]</label>
+    <div class="ocat-end">
         <div class="input-group">
             <input type="color" class="form-control form-control-color" asp-for="PrimaryColor" />
             <input type="text" class="form-control" value="@Model.PrimaryColor"

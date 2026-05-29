@@ -36,10 +36,12 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
 
 <div class="mb-3">
     <label asp-for="DocumentRetrievalMode" class="form-label">@T["Document retrieval mode"]</label>
-    <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select setting-input" data-setting="documentRetrievalMode">
-        <option value="">@T["Use site default"]</option>
-    </select>
-    <div class="form-text">@T["Overrides the site default when this interaction searches uploaded document knowledge."]</div>
+    <div>
+        <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select setting-input" data-setting="documentRetrievalMode">
+            <option value="">@T["Use site default"]</option>
+        </select>
+        <div class="form-text">@T["Overrides the site default when this interaction searches uploaded document knowledge."]</div>
+    </div>
 </div>
 
 <div class="mb-3">
@@ -49,8 +51,8 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-
-    <div class="border rounded p-3 bg-light">
+    <div>
+        <div class="border rounded p-3 bg-light">
         @if (!allowUploads)
         {
             if (Model.AllowImageUploads && !Model.VisionEnabled)
@@ -146,6 +148,7 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             <small class="text-muted upload-status">@T["Uploading..."]</small>
         </div>
     </div>
+</div>
 </div>
 
 <style asp-name="document-drop-zone" at="Head"></style>

@@ -1,46 +1,45 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 @using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.Core
 
 @model OmnichannelCampaignViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Description" class="form-control"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="InteractionType" class="@Orchard.GetLabelClasses()">@T["Interaction type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
+    <div class="ocat-end">
         <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select"></select>
         <span asp-validation-for="InteractionType" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Channel" class="@Orchard.GetLabelClasses()">@T["Channel"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
         <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
         <span asp-validation-for="Channel" class="text-danger"></span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
-    <label asp-for="ChannelEndpointId" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper automated-interaction-type@(Model.InteractionType == ActivityInteractionType.Manual ? " d-none" : string.Empty)">
+    <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+    <div class="ocat-end">
         <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
             <option value="">@T["Select an endpoint"]</option>
         </select>
@@ -52,94 +51,100 @@
 <div class="automated-interaction-type @(Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
     <h4 class="border-bottom pb-2 mt-4">@T["AI configuration"]</h4>
 
-    <div class="mb-3" asp-validation-class-for="ProviderName">
-        <label asp-for="ProviderName" class="form-label">@T["Provider"]</label>
-        <select asp-for="ProviderName" class="form-select" asp-items="Model.Providers">
-            <option value="">@T["Select a provider"]</option>
-        </select>
-        <span asp-validation-for="ProviderName"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+        <label asp-for="ProviderName" class="ocat-label">@T["Provider"]</label>
+        <div class="ocat-end">
+            <select asp-for="ProviderName" class="form-select" asp-items="Model.Providers">
+                <option value="">@T["Select a provider"]</option>
+            </select>
+            <span asp-validation-for="ProviderName"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="ConnectionName">
-        <label asp-for="ConnectionName" class="form-label">@T["Connection"]</label>
-        <select asp-for="ConnectionName" class="form-select" asp-items="Model.ConnectionNames">
-            <option value="">@T["Default connection"]</option>
-        </select>
-        <span asp-validation-for="ConnectionName"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="ConnectionName">
+        <label asp-for="ConnectionName" class="ocat-label">@T["Connection"]</label>
+        <div class="ocat-end">
+            <select asp-for="ConnectionName" class="form-select" asp-items="Model.ConnectionNames">
+                <option value="">@T["Default connection"]</option>
+            </select>
+            <span asp-validation-for="ConnectionName"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="DeploymentName">
-        <label asp-for="DeploymentName" class="form-label">@T["Deployment"]</label>
-        <select asp-for="DeploymentName" class="form-select" asp-items="Model.DeploymentNames">
-            <option value="">@T["Default deployment"]</option>
-        </select>
-        <span asp-validation-for="DeploymentName"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="DeploymentName">
+        <label asp-for="DeploymentName" class="ocat-label">@T["Deployment"]</label>
+        <div class="ocat-end">
+            <select asp-for="DeploymentName" class="form-select" asp-items="Model.DeploymentNames">
+                <option value="">@T["Default deployment"]</option>
+            </select>
+            <span asp-validation-for="DeploymentName"></span>
+        </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
-        <label asp-for="InitialOutboundPromptPattern" class="@Orchard.GetLabelClasses()">@T["Initial outbound prompt pattern"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper automated-interaction-type@(Model.InteractionType == ActivityInteractionType.Manual ? " d-none" : string.Empty)">
+        <label asp-for="InitialOutboundPromptPattern" class="ocat-label">@T["Initial outbound prompt pattern"]</label>
+        <div class="ocat-end">
             <textarea asp-for="InitialOutboundPromptPattern" rows="5" class="form-control"></textarea>
             <span class="hint">@T["This is the first message sent to the contact to initiate the conversation. Supports Liquid syntax. You can use the following variables to generate the message: <code>{0}</code>, <code>{1}</code>, <code>{2}</code>, and <code>{3}</code>.", "Contact", "Campaign", "Profile", "Session"]</span>
             <span asp-validation-for="InitialOutboundPromptPattern" class="text-danger"></span>
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
-        <label asp-for="CampaignGoal" class="@Orchard.GetLabelClasses()">@T["Campaign goal"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper automated-interaction-type@(Model.InteractionType == ActivityInteractionType.Manual ? " d-none" : string.Empty)">
+        <label asp-for="CampaignGoal" class="ocat-label">@T["Campaign goal"]</label>
+        <div class="ocat-end">
             <textarea asp-for="CampaignGoal" rows="3" class="form-control"></textarea>
             <span asp-validation-for="CampaignGoal" class="text-danger"></span>
             <span class="hint">@T["Describe the goal of this campaign. The AI uses this to determine when to disposition the activity and end the converation."]</span>
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System instructions"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="SystemMessage" class="ocat-label">@T["System instructions"]</label>
+        <div class="ocat-end">
             <div class="hint mb-1">@T["Set the AI's behavior and response style."]</div>
             <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="MaxTokens" class="@Orchard.GetLabelClasses()">@T["Max response"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="MaxTokens" class="ocat-label">@T["Max response"]</label>
+        <div class="ocat-end">
             <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4">
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">@T["Temperature"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="Temperature" class="ocat-label">@T["Temperature"]</label>
+        <div class="ocat-end">
             <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="1">
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="TopP" class="ocat-label">@T["Top P"]</label>
+        <div class="ocat-end">
             <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency penalty"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="FrequencyPenalty" class="ocat-label">@T["Frequency penalty"]</label>
+        <div class="ocat-end">
             <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="1">
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence penalty"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="PresencePenalty" class="ocat-label">@T["Presence penalty"]</label>
+        <div class="ocat-end">
             <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label class="@Orchard.GetLabelClasses()">@T["Permissions"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Permissions"]</label>
+        <div class="ocat-end">
             <div class="form-check">
                 <input asp-for="AllowAIToUpdateContact" class="form-check-input" type="checkbox" id="@Html.IdFor(x => x.AllowAIToUpdateContact)" />
                 <label class="form-check-label" for="@Html.IdFor(x => x.AllowAIToUpdateContact)">
@@ -158,7 +163,7 @@
     @if (Model.Tools is not null && Model.Tools.Count > 0)
     {
         <h4 class="border-bottom pb-2 mt-4">@T["System Defined Tools"]</h4>
-        <div class="mb-3">
+        <div>
             @foreach (var tools in Model.Tools)
             {
                 var groupKey = tools.Key;
@@ -262,8 +267,8 @@
         const deploymentElement = document.getElementById('@Html.IdFor(m => m.DeploymentName)');
 
         if (providerElement && connectionElement && deploymentElement) {
-            const connectionContainer = connectionElement.closest('.mb-3');
-            const deploymentContainer = deploymentElement.closest('.mb-3');
+            const connectionContainer = connectionElement.closest('.ocat-wrapper');
+            const deploymentContainer = deploymentElement.closest('.ocat-wrapper');
 
             if (connectionContainer) connectionContainer.style.display = 'none';
             if (deploymentContainer) deploymentContainer.style.display = 'none';

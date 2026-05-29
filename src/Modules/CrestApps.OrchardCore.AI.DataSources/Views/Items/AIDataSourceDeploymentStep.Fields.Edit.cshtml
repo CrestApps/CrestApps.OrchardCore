@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.DataSources.Deployments
-@using OrchardCore
 
 @model AIDataSourceDeploymentStepViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetLabelClasses()">@T["AI Data Sources"]</div>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["AI Data Sources"]</div>
+    <div class="ocat-end">
         <div class="form-check mb-3">
             <label class="form-check-label">
                 <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" role="button" data-bs-target="#data-source-list" aria-expanded="false" aria-controls="data-source-list" />

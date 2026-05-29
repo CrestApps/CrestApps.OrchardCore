@@ -3,21 +3,27 @@
 @model ChatInteractionMemorySettingsViewModel
 
 @if (!Model.HasIndexProfile)
-{
-    <div id="chatInteractionMemoryIndexWarning" class="alert alert-warning @(Model.EnableUserMemory ? string.Empty : "d-none")" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i>
-        <strong>@T["Index not configured"]</strong>
-        <p class="mb-0">
-            @T["No AI memory index is configured. Choose an index profile in the Memory section above before enabling user memory for chat interactions."]
-        </p>
+{ 
+    <div id="chatInteractionMemoryIndexWarning" class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning @(Model.EnableUserMemory ? string.Empty : "d-none")" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Index not configured"]</strong>
+                <p class="mb-0">
+                    @T["No AI memory index is configured. Choose an index profile in the Memory section above before enabling user memory for chat interactions."]
+                </p>
+            </div>
+        </div>
     </div>
 }
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnableUserMemory" />
-        <label class="form-check-label" asp-for="EnableUserMemory">@T["Enable user memory"]</label>
-        <span class="hint">@T["When enabled, authenticated users can build private AI memory across chat interactions. Anonymous users never get memory access."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableUserMemory" />
+            <label class="form-check-label" asp-for="EnableUserMemory">@T["Enable user memory"]</label>
+            <span class="hint">@T["When enabled, authenticated users can build private AI memory across chat interactions. Anonymous users never get memory access."]</span>
+        </div>
     </div>
 </div>
 

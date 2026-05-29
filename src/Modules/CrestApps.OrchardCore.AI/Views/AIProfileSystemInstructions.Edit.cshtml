@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model ProfileMetadataViewModel
 
-<div class="@Orchard.GetWrapperClasses()" data-ci-system-message-wrapper>
-    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System instructions"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" data-ci-system-message-wrapper>
+    <label asp-for="SystemMessage" class="ocat-label">@T["System instructions"]</label>
+    <div class="ocat-end">
         <div class="hint mb-1">@T["The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
         <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
     </div>

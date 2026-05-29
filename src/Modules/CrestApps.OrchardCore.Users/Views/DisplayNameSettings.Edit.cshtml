@@ -3,40 +3,52 @@
 
 @model EditDisplayNameSettingPartViewModel
 
-<div class="mb-3">
-    <label asp-for="Type">@T["Display name format"]</label>
-    <select asp-for="Type" class="form-select" asp-items="Model.Types"></select>
-    <span asp-validation-for="Type" class="text-danger"></span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Type" class="ocat-label">@T["Display name format"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Type" class="form-select" asp-items="Model.Types"></select>
+        <span asp-validation-for="Type" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3" id="TemplateWrapper">
-    <label asp-for="Template">@T["Liquid format"]</label>
-    <input type="text" asp-for="Template" class="form-control" />
-    <span asp-validation-for="Template" class="text-danger"></span>
+<div class="ocat-limited-wrapper" id="TemplateWrapper">
+    <label asp-for="Template" class="ocat-label">@T["Liquid format"]</label>
+    <div class="ocat-limited">
+        <input type="text" asp-for="Template" class="form-control" />
+        <span asp-validation-for="Template" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="DisplayName">@T["Display name"]</label>
-    <select asp-for="DisplayName" class="form-select" asp-items="Model.PropertyTypes"></select>
-    <span asp-validation-for="DisplayName" class="text-danger"></span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="DisplayName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="FirstName">@T["First name"]</label>
-    <select asp-for="FirstName" class="form-select" asp-items="Model.PropertyTypes"></select>
-    <span asp-validation-for="FirstName" class="text-danger"></span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="FirstName" class="ocat-label">@T["First name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="FirstName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="MiddleName">@T["Middle name"]</label>
-    <select asp-for="MiddleName" class="form-select" asp-items="Model.PropertyTypes"></select>
-    <span asp-validation-for="MiddleName" class="text-danger"></span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="MiddleName" class="ocat-label">@T["Middle name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="MiddleName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="MiddleName" class="text-danger"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="LastName">@T["Last name"]</label>
-    <select asp-for="LastName" class="form-select" asp-items="Model.PropertyTypes"></select>
-    <span asp-validation-for="LastName" class="text-danger"></span>
+<div class="ocat-limited-wrapper">
+    <label asp-for="LastName" class="ocat-label">@T["Last name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="LastName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
 </div>
 
 <script asp-name="display-name-settings" at="Foot">

@@ -1,20 +1,19 @@
 @using CrestApps.OrchardCore.OpenAI.ViewModels
-@using OrchardCore
 
 @model OpenAIConnectionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Endpoint" class="@Orchard.GetLabelClasses()">@T["Endpoint"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
+    <div class="ocat-end">
         <input type="url" asp-for="Endpoint" class="form-control" />
         <span asp-validation-for="Endpoint" class="text-danger"></span>
         <span class="hint">@T["The provider's API endpoint."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <div class="ocat-end">
         <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
         <span class="hint">@T["The provider's API key."]</span>

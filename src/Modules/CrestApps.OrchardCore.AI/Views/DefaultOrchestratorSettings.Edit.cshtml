@@ -1,10 +1,9 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model DefaultOrchestratorSettingsViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="EnablePreemptiveRag" />
             <label class="form-check-label" asp-for="EnablePreemptiveRag">

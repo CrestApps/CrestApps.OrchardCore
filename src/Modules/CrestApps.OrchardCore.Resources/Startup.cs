@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Resources;

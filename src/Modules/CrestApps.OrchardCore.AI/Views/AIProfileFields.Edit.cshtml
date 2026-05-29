@@ -1,31 +1,30 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model EditProfileViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ProfileType" class="ocat-label">@T["Profile type"]</label>
+    <div class="ocat-end">
         <select asp-for="ProfileType" asp-items="Model.ProfileTypes" class="form-select"></select>
         <span asp-validation-for="ProfileType" class="text-danger"></span>
         <span class="hint">@T["Choose how the type of the profile."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
         <span class="hint">@T["A description of what this agent does. This is used by the AI model to determine when to invoke this agent."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
-    <label asp-for="AgentAvailability" class="@Orchard.GetLabelClasses()">@T["Availability"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper profile-type profile-type-agent@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="AgentAvailability" class="ocat-label">@T["Availability"]</label>
+    <div class="ocat-end">
         <select asp-for="AgentAvailability" asp-items="Model.AvailabilityTypes" class="form-select"></select>
         <span asp-validation-for="AgentAvailability" class="text-danger"></span>
         <span class="hint">@T["Controls how this agent is included in AI requests. On demand agents are only included when matched by relevance scoring. Always available agents are automatically included in every request."]</span>

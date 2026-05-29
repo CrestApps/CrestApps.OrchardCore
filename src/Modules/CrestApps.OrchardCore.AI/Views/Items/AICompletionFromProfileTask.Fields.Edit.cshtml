@@ -1,12 +1,11 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
 @using CrestApps.Core.AI.Models
-@using OrchardCore
 
 @model AICompletionFromProfileTaskViewModel
 
-<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="ProfileId">
-    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["Profiles"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" asp-validation-class-for="ProfileId">
+    <label asp-for="ProfileId" class="ocat-label">@T["Profiles"]</label>
+    <div class="ocat-end">
         <select asp-for="ProfileId" class="form-select" asp-items="Model.Profiles">
             <option value="">@T["Select a profile"]</option>
         </select>
@@ -15,18 +14,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="ResultPropertyName">
-    <label asp-for="ResultPropertyName" class="@Orchard.GetLabelClasses()">@T["Result property name"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" asp-validation-class-for="ResultPropertyName">
+    <label asp-for="ResultPropertyName" class="ocat-label">@T["Result property name"]</label>
+    <div class="ocat-end">
         <input asp-for="ResultPropertyName" class="form-control" autofocus="autofocus" />
         <span asp-validation-for="ResultPropertyName"></span>
         <span class="hint">@T["Specifies where the result will be stored. Prefix the Result Property Name with AI- to avoid conflicts. This allows access to the AI Chat Response in subsequent workflow tasks."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="PromptTemplate">
-    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" asp-validation-class-for="PromptTemplate">
+    <label asp-for="PromptTemplate" class="ocat-label">@T["Prompt template"]</label>
+    <div class="ocat-end">
         <input type="text" asp-for="PromptTemplate" class="form-control code" />
         <span asp-validation-for="PromptTemplate"></span>
         <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax and seamlessly combine existing variables with placeholders like <code>{0}</code>.", "profile"]</span>

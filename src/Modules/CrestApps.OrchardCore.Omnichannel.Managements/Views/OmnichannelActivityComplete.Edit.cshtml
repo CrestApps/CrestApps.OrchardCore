@@ -1,34 +1,33 @@
 @using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 
 @model OmnichannelActivityViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="InteractionType" class="@Orchard.GetLabelClasses()">@T["Interaction type"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
+    <div class="ocat-end">
         <input asp-for="InteractionType" class="form-control-plaintext" />
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Channel" class="@Orchard.GetLabelClasses()">@T["Channel"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
         <input asp-for="Channel" class="form-control-plaintext" />
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="CampaignTitle" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
         <input asp-for="CampaignTitle" class="form-control-plaintext" />
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
+    <div class="ocat-end">
         @{
             var value = Model.UrgencyLevel switch
             {
@@ -44,56 +43,56 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="AssignedToName" class="@Orchard.GetLabelClasses()">@T["Assigned to"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
+    <div class="ocat-end">
         <input asp-for="AssignedToName" class="form-control-plaintext" />
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ScheduledLocal" class="@Orchard.GetLabelClasses()">@T["Scheduled at"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="ScheduledLocal" class="ocat-label">@T["Scheduled at"]</label>
+    <div class="ocat-end">
         <input asp-for="ScheduledLocal" class="form-control-plaintext" />
     </div>
 </div>
 
 @if (Model.CompletedLocal.HasValue)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="CompletedByName" class="@Orchard.GetLabelClasses()">@T["Completed by"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
+        <div class="ocat-end">
             <input asp-for="CompletedByName" class="form-control-plaintext" />
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="CompletedLocal" class="@Orchard.GetLabelClasses()">@T["Completed at"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="CompletedLocal" class="ocat-label">@T["Completed at"]</label>
+        <div class="ocat-end">
             <input asp-for="CompletedLocal" class="form-control-plaintext" />
         </div>
     </div>
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
+    <div class="ocat-end">
         <input asp-for="Instructions" class="form-control-plaintext" />
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Notes" class="@Orchard.GetLabelClasses()">@T["Notes"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
         <textarea asp-for="Notes" class="form-control"></textarea>
         <span asp-validation-for="Notes" class="text-danger"></span>
     </div>
 </div>
 
 <div class="activity-wrapper">
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="DispositionId" class="@Orchard.GetLabelClasses()">@T["Disposition"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+        <div class="ocat-end">
             <select asp-for="DispositionId" class="form-select">
                 <option value="">@T["Select a disposition"]</option>
                 @foreach (var disposition in Model.Dispositions)

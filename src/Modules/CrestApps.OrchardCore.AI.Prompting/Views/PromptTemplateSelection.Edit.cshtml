@@ -31,15 +31,15 @@
     }));
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label class="@Orchard.GetLabelClasses()">
+<div class="ocat-wrapper">
+    <label class="ocat-label">
         @T["Prompt templates"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Add one or more reusable prompt templates that will be rendered in order before the custom system instructions."]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
 
-    <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-end">
         <div class="dropdown mb-3">
             <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="@addButtonId" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fa-solid fa-plus"></i> @T["Add prompt template"]

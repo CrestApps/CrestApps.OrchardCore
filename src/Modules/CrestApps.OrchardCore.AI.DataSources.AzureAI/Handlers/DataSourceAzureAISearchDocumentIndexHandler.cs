@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using OrchardCore.AzureAI;
 using OrchardCore.Indexing;
@@ -39,10 +39,10 @@ internal sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentInd
             context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Timestamp, embeddingDocument.Timestamp.Value, DocumentIndexOptions.Store);
         }
 
-        if (embeddingDocument.Embedding != null)
+        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Embedding, embeddingDocument.Embedding, embeddingDocument.Embedding?.Length ?? 0, DocumentIndexOptions.Store, new Dictionary<string, object>
         {
-            context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Embedding, embeddingDocument.Embedding, DocumentIndexOptions.Store);
-        }
+            ["VectorSearchConfiguration"] = "default",
+        });
 
         if (embeddingDocument.Filters != null)
         {

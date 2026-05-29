@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.AI.ViewModels
-@using OrchardCore
 
 @model AIProfileTemplateSelectionViewModel
 
@@ -8,9 +7,9 @@
     var selectId = Html.IdFor(m => m.TemplateId);
     var buttonId = $"{selectId}_apply";
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="TemplateId" class="@Orchard.GetLabelClasses()">@T["Template"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="TemplateId" class="ocat-label">@T["Template"]</label>
+        <div class="ocat-end">
             <div class="input-group">
                 <select asp-for="TemplateId" asp-items="Model.Templates" class="form-select">
                     <option value="">@T["Select a template"]</option>

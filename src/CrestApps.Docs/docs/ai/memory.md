@@ -157,13 +157,26 @@ AI Memory is only available to authenticated users.
 - Anonymous users cannot search, list, or save memories
 - All memory reads and writes are filtered by the current `ClaimTypes.NameIdentifier`
 
-## Clearing Your Memory
+## Clearing User Memory
 
-Users can clear their own saved AI memory from their user profile editor.
+Users can clear saved AI memory from the user profile editor. Access is controlled by an authorization handler that evaluates two permissions:
 
-- The clear option is only shown when a user is editing their **own** profile
-- The profile editor shows a **Danger zone** warning with a dedicated **Clear saved AI memory** button
-- Clicking the button opens a separate confirmation page before memory is removed
+| Permission | Description | Default |
+| --- | --- | --- |
+| **Clear AI memory** (`ClearAIMemory`) | Allows a user to clear their own saved AI memories | Granted automatically by the handler when the target is the current user |
+| **Clear AI memory for other users** (`ClearAIMemoryForOthers`) | Allows clearing AI memories on behalf of another user | Granted to Administrators |
+
+The authorization handler receives the target `userId` as a resource and checks:
+
+- If the target user matches the current user → grants access via `ClearAIMemory`
+- If the target is a different user → requires `ClearAIMemoryForOthers`
+
+This ensures the same authorization logic is applied uniformly throughout the system.
+
+- The **Danger zone** warning with the **Clear saved AI memory** button appears on the user profile editor when the current viewer has the appropriate permission
+- When editing your own profile, the messaging addresses "your account"
+- When an administrator edits another user's profile, the messaging indicates the action is being performed on behalf of that user
+- Clicking the button uses Orchard Core's standard admin confirmation dialog before memory is removed
 - Clearing memory removes the user's stored memory records and deletes their indexed memory documents from the configured master memory index
 
 ## Related Features

@@ -1,15 +1,14 @@
 @using CrestApps.OrchardCore.Users.Core.Models
 @using CrestApps.OrchardCore.Users.Core.ViewModels
 @using CrestApps.OrchardCore.Users.Models
-@using OrchardCore
 
 @model UserFullNamePartViewModel
 
 @if (Model.Settings.DisplayName != DisplayNamePropertyType.None)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="DisplayName" class="@Orchard.GetLabelClasses()">@T["Display Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayName" class="ocat-label">@T["Display Name"]</label>
+        <div class="ocat-end">
             <input asp-for="DisplayName" class="form-control" />
             <span asp-validation-for="DisplayName" class="text-danger"></span>
         </div>
@@ -18,9 +17,9 @@
 
 @if (Model.Settings.FirstName != DisplayNamePropertyType.None)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="FirstName" class="@Orchard.GetLabelClasses()">@T["First Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="FirstName" class="ocat-label">@T["First Name"]</label>
+        <div class="ocat-end">
             <input asp-for="FirstName" class="form-control" />
             <span asp-validation-for="FirstName" class="text-danger"></span>
         </div>
@@ -29,9 +28,9 @@
 
 @if (Model.Settings.MiddleName != DisplayNamePropertyType.None)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="MiddleName" class="@Orchard.GetLabelClasses()">@T["Middle Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="MiddleName" class="ocat-label">@T["Middle Name"]</label>
+        <div class="ocat-end">
             <input asp-for="MiddleName" class="form-control" />
             <span asp-validation-for="MiddleName" class="text-danger"></span>
         </div>
@@ -40,9 +39,9 @@
 
 @if (Model.Settings.LastName != DisplayNamePropertyType.None)
 {
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="LastName" class="@Orchard.GetLabelClasses()">@T["Last Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
+    <div class="ocat-wrapper">
+        <label asp-for="LastName" class="ocat-label">@T["Last Name"]</label>
+        <div class="ocat-end">
             <input asp-for="LastName" class="form-control" />
             <span asp-validation-for="LastName" class="text-danger"></span>
         </div>

@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
 
 @model CampaignActionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DispositionId" class="@Orchard.GetLabelClasses()">@T["Disposition"]</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper">
+    <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+    <div class="ocat-end">
         <select asp-for="DispositionId" asp-items="Model.Dispositions" class="form-select">
             <option value="">@T["Select a disposition"]</option>
         </select>

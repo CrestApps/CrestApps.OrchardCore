@@ -1,11 +1,10 @@
 @using CrestApps.OrchardCore.Roles.ViewModels
-@using OrchardCore
 
 @model RolePickerViewModel
 
-<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="Roles">
-    <label asp-for="Roles" class="@Orchard.GetLabelClasses()">@Model.DisplayName</label>
-    <div class="@Orchard.GetEndClasses()">
+<div class="ocat-wrapper" asp-validation-class-for="Roles">
+    <label asp-for="Roles" class="ocat-label">@Model.DisplayName</label>
+    <div class="ocat-end">
         @if (Model.Settings.AllowSelectMultiple)
         {
             @await Component.InvokeAsync("SelectRoles", new

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Memory.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Migrations;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using CrestApps.OrchardCore.AI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
@@ -18,6 +19,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory;
@@ -71,5 +73,7 @@ public sealed class UserMemoryStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<User>, UserMemoryDisplayDriver>();
+        services.AddPermissionProvider<AIMemoryPermissionsProvider>();
+        services.AddScoped<IAuthorizationHandler, AIMemoryAuthorizationHandler>();
     }
 }

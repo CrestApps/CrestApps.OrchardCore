@@ -2,30 +2,58 @@
 
 @model EditUserMemoryViewModel
 
+@if (string.IsNullOrEmpty(Model.UserId))
+{
+    return;
+}
+
 <fieldset class="mb-4">
     <legend>@T["AI Memory"]</legend>
 
-    @if (Model.MemoryCount == 0)
+    @if (!Model.HasMemories)
     {
-        <span class="hint">@T["No saved AI memory was found for your account."]</span>
+        @if (Model.IsOtherUser)
+        {
+            <span class="hint">@T["No saved AI memory was found for this user."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["No saved AI memory was found for your account."]</span>
+        }
     }
     else
     {
         <div class="alert alert-warning" role="alert">
             <strong>@T["Danger zone"]</strong>
-            <div>@T["You currently have {0} saved AI memories linked to your account.", Model.MemoryCount]</div>
-            <div>@T["Clearing memory permanently removes all saved preferences and other remembered details for your account. Review the confirmation page before you continue."]</div>
+
+            @if (Model.IsOtherUser)
+            {
+                <div>@T["This user has saved AI memories associated with their account."]</div>
+                <div>@T["Clearing memory will permanently forget all saved preferences and remembered details associated with this user's account, including indexed AI memory documents used for retrieval."]</div>
+            }
+            else
+            {
+                <div>@T["You currently have saved AI memories associated with your account."]</div>
+                <div>@T["Clearing memory will permanently forget all saved preferences and remembered details associated with your account, including indexed AI memory documents used for retrieval."]</div>
+            }
 
             <div class="mt-3">
                 <a
-                    asp-controller="UserMemory"
-                    asp-action="Clear"
+                    asp-route="AIUserMemoryClear"
                     asp-route-userId="@Model.UserId"
                     asp-route-returnUrl="@Model.ReturnUrl"
-                    class="btn btn-danger">
+                    class="btn btn-danger"
+                    data-url-af="RemoveUrl UnsafeUrl"
+                    data-title="@T["Clear saved AI memory"]"
+                    data-message="@(Model.IsOtherUser
+                        ? T["Are you sure you want to permanently remove all saved AI memories for this user? This action cannot be undone."]
+                        : T["Are you sure you want to permanently remove all saved AI memories for your account? This action cannot be undone."])"
+                    data-ok-text="@T["Clear"]"
+                    data-cancel-text="@T["Cancel"]">
                     @T["Clear saved AI memory"]
                 </a>
             </div>
         </div>
     }
 </fieldset>
+

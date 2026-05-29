@@ -1,21 +1,24 @@
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
-@using OrchardCore
 
 @model EditAIProfileSessionDocumentsViewModel
 
 @if (!Model.HasIndexProfile)
 {
-    <div id="sessionDocumentsIndexWarning" class="alert alert-warning @(Model.AllowSessionDocuments ? string.Empty : "d-none")" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i>
-        <strong>@T["Index not configured"]</strong>
-        <p class="mb-0">
-            @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
-        </p>
+    <div id="sessionDocumentsIndexWarning" class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div id="sessionDocumentsIndexWarning" class="alert alert-warning @(Model.AllowSessionDocuments ? string.Empty : "d-none")" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Index not configured"]</strong>
+                <p class="mb-0">
+                    @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
+                </p>
+            </div>
+        </div>
     </div>
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
             <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow session document uploads"]</label>
@@ -24,8 +27,8 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowSessionImageUploads" />
             <label class="form-check-label" asp-for="AllowSessionImageUploads">@T["Allow session image uploads"]</label>
