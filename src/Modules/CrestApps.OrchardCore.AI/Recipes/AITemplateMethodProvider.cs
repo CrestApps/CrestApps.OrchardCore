@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Templates.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Scripting;
 
@@ -8,23 +9,20 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
 {
-    private readonly ITemplateService _templateService;
     private readonly ILogger<AITemplateMethodProvider> _logger;
     private readonly GlobalMethod _globalMethod;
 
-    public AITemplateMethodProvider(
-        ITemplateService templateService,
-        ILogger<AITemplateMethodProvider> logger)
+    public AITemplateMethodProvider(ILogger<AITemplateMethodProvider> logger)
     {
-        _templateService = templateService;
         _logger = logger;
 
         _globalMethod = new GlobalMethod
         {
             Name = "renderAITemplate",
-            Method = _ => (Func<string, object, object>)((templateId, arguments) =>
-                ResolveTemplateContentAsync(templateId, arguments).GetAwaiter().GetResult()),
-            AsyncMethod = _ => ResolveTemplateContentAsync,
+            Method = serviceProvider => (Func<string, object, object>)((templateId, arguments) =>
+                ResolveTemplateContentAsync(serviceProvider, templateId, arguments).GetAwaiter().GetResult()),
+            AsyncMethod = serviceProvider => (Func<string, object, object>)((templateId, arguments) =>
+                ResolveTemplateContentAsync(serviceProvider, templateId, arguments)),
         };
     }
 
@@ -33,7 +31,10 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
         yield return _globalMethod;
     }
 
-    private async Task<object> ResolveTemplateContentAsync(string templateId, object arguments)
+    private async Task<object> ResolveTemplateContentAsync(
+        IServiceProvider serviceProvider,
+        string templateId,
+        object arguments)
     {
         if (string.IsNullOrWhiteSpace(templateId))
         {
@@ -42,10 +43,11 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
 
         var normalizedTemplateId = templateId.Trim();
         var templateArguments = NormalizeArguments(arguments);
+        var templateService = serviceProvider.GetRequiredService<ITemplateService>();
 
         if (templateArguments is { Count: > 0 })
         {
-            var rendered = await _templateService.RenderAsync(normalizedTemplateId, templateArguments);
+            var rendered = await templateService.RenderAsync(normalizedTemplateId, templateArguments);
 
             if (string.IsNullOrWhiteSpace(rendered))
             {
@@ -56,7 +58,7 @@ internal sealed class AITemplateMethodProvider : IGlobalMethodProvider
             return rendered;
         }
 
-        var template = await _templateService.GetAsync(normalizedTemplateId);
+        var template = await templateService.GetAsync(normalizedTemplateId);
 
         if (template is null)
         {

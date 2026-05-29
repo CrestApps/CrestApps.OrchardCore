@@ -31,7 +31,7 @@ At runtime the feature can compose all known step schemas into a single "recipe"
 This repository also includes an exporter utility for synchronizing the runtime recipe schemas into the Orchard Core AgentSkills repository:
 
 ```powershell
-dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
+dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
 ```
 
 By default, the tool first locates the `CrestApps.OrchardCore` repository root by walking up from the running process directory until it finds a marker such as `global.json`, `NuGet.config`, `CrestApps.OrchardCore.sln`, or `CrestApps.OrchardCore.slnx`. It then writes:
