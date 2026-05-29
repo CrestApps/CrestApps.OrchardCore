@@ -158,7 +158,7 @@ public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IGlobalMethodProvider, AITemplateMethodProvider>();
+        services.AddSingleton<IGlobalMethodProvider, AITemplateMethodProvider>();
         services.AddRecipeExecutionStep<AIProfileStep>();
         services.AddRecipeExecutionStep<CreateAIProfileFromTemplateStep>();
         services.AddRecipeExecutionStep<AIProfileTemplateStep>();
