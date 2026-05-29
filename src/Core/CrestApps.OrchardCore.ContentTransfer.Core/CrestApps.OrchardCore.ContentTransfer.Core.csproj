@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.ContentTransfer</RootNamespace>
+    <Title>CrestApps OrchardCore Content Transfer Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core implementation for the CrestApps Orchard Core Content Transfer module.
+    </Description>
+    <PackageTags>$(PackageTags) ContentTransfer ContentManagement</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Alias" />
+    <PackageReference Include="OrchardCore.ArchiveLater" />
+    <PackageReference Include="OrchardCore.Autoroute.Core" />
+    <PackageReference Include="OrchardCore.ContentFields" />
+    <PackageReference Include="OrchardCore.Html" />
+    <PackageReference Include="OrchardCore.Liquid" />
+    <PackageReference Include="OrchardCore.Markdown" />
+    <PackageReference Include="OrchardCore.Media.Core" />
+    <PackageReference Include="OrchardCore.PublishLater" />
+    <PackageReference Include="OrchardCore.Taxonomies" />
+    <PackageReference Include="OrchardCore.Title" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentTransfer.Abstractions\CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

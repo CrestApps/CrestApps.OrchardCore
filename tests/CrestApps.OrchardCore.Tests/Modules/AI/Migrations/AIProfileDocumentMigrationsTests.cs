@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using AIStartup = CrestApps.OrchardCore.AI.Startup;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents.Models;
@@ -294,7 +295,7 @@ public sealed class AIProfileDocumentMigrationsTests
 
     private static bool InvokeNormalizePersistedProfileDocument(JsonObject profileDocument)
     {
-        var method = typeof(Startup).Assembly
+        var method = typeof(AIStartup).Assembly
             .GetType("CrestApps.OrchardCore.AI.Migrations.AIProfileDocumentMigrations", throwOnError: true)!
             .GetMethod("NormalizePersistedProfileDocument", BindingFlags.NonPublic | BindingFlags.Static)!;
 
