@@ -90,6 +90,17 @@ In Orchard Core Admin:
 4. Add any fields/parts you need (phone number, email, lead status, custom fields, etc.).
 5. Create/import contact items.
 
+#### Import and export contact methods
+
+Omnichannel contact imports and exports integrate with **Content Transfer**.
+
+- exports write the first available contact-method entries to `Email`, `Cell Phone`, and `Phone` workbook columns
+- imports can recreate those values as contact-method content items inside the `ContactMethods` bag
+- duplicate filtering can ignore rows that repeat a previously imported phone number
+- do-not-call filtering can skip rows whose phone numbers are registered on one or more configured registries
+
+Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
@@ -203,4 +214,3 @@ The page also includes a **Page size** selector so managers can review more than
 | **Set Instructions** | Set instruction text for all selected activities. Instructions are notes the agent reads before completing the task. |
 | **Set Urgency Level** | Update the urgency level for all selected activities. |
 | **Change Subject** | Change the subject content type for all selected activities. |
-

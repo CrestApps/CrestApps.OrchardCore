@@ -177,10 +177,9 @@
                 var end = Math.min(start + chunkSize, fileSize);
                 var chunk = file.slice(start, end);
 
-                var formData = new FormData();
-                formData.append('ImportContentFile.File', new File([chunk], file.name, { type: file.type }));
-                formData.append('__RequestVerificationToken', token);
-                formData.append('__chunkedFileUploadId', uploadId);
+                var formData = new FormData(form);
+                formData.set('ImportContentFile.File', new File([chunk], file.name, { type: file.type }));
+                formData.set('__chunkedFileUploadId', uploadId);
 
                 var xhr = new XMLHttpRequest();
 

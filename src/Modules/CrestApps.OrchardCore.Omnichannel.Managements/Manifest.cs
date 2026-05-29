@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -24,5 +25,17 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
         "OrchardCore.Users",
         "CrestApps.OrchardCore.Users",
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Omnichannel National Do Not Call Registry",
+    Id = OmnichannelConstants.Features.NationalDoNotCallRegistry,
+    Category = "Communications",
+    Description = "Checks phone numbers against national do-not-call registries during contact import.",
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Managements,
+        DncRegistryConstants.Features.Area,
     ]
 )]

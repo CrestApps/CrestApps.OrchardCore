@@ -1,6 +1,8 @@
 using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -142,5 +144,26 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddDispositionActionsEndpoint();
+    }
+}
+
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class ContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPartImportHandler<OmnichannelContactPart, OmnichannelContactPartContentImportHandler>();
+        services.AddScoped<IContentImportRowFilter, OmnichannelContactImportRowFilter>();
+        services.AddScoped<IDisplayDriver<ImportContent>, OmnichannelContactImportOptionsDisplayDriver>();
+    }
+}
+
+[Feature(OmnichannelConstants.Features.NationalDoNotCallRegistry)]
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ImportContent, NationalDoNotCallRegistryImportOptionsDisplayDriver>();
     }
 }

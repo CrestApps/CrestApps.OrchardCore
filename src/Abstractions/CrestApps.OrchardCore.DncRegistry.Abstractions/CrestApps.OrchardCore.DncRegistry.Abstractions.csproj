@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.DncRegistry</RootNamespace>
+    <Title>CrestApps OrchardCore DNC Registry Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Abstractions for the CrestApps OrchardCore DNC Registry module.
+    </Description>
+    <PackageTags>$(PackageTags) DncRegistry Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>

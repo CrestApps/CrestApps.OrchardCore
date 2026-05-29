@@ -39,6 +39,8 @@ Use **Content** -> **Bulk Import** to upload an Excel workbook for a content typ
 
 Validation runs through `IContentManager.ValidateAsync()`. Failed rows are tracked, and rejected rows can be downloaded as an error workbook for correction and re-import.
 
+For Omnichannel contacts, the import UI can also expose duplicate-phone filtering and national do-not-call registry checks. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
+
 ## Bulk export
 
 Use **Content** -> **Bulk Export** to export content items to Excel.
@@ -79,6 +81,7 @@ The module supports custom import and export handlers for content parts and fiel
 
 - implement `IContentPartImportHandler` for part-level import/export behavior
 - implement `IContentFieldImportHandler`, or inherit from `StandardFieldImportHandler`, for field-level behavior
+- implement `IContentImportRowFilter` when you need import-specific row filtering, use `InitializeAsync` to opt in for the current import, and keep any import-scoped state on the filter instance
 - register handlers from your module `Startup`
 
 ```csharp

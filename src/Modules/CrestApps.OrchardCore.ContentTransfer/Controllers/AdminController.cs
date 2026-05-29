@@ -265,6 +265,14 @@ public sealed class AdminController : Controller, IUpdateModel
                 var fileName = Guid.NewGuid() + extension;
                 var storedFileName = await _contentTransferFileStore.CreateFileFromStreamAsync(fileName, file.OpenReadStream(), false);
 
+                var importContent = new ImportContent()
+                {
+                    ContentTypeId = contentTypeId,
+                    ContentTypeName = contentTypeDefinition.Name,
+                };
+
+                await _displayManager.UpdateEditorAsync(importContent, _updateModelAccessor.ModelUpdater, false, string.Empty, string.Empty);
+
                 var entry = new ContentTransferEntry()
                 {
                     EntryId = IdGenerator.GenerateId(),
@@ -277,6 +285,8 @@ public sealed class AdminController : Controller, IUpdateModel
                     Direction = ContentTransferDirection.Import,
                     CreatedUtc = _clock.UtcNow,
                 };
+
+                importContent.CopyPropertiesTo(entry);
 
                 _session.Save(entry);
                 await TriggerImportProcessingAsync(entry.EntryId);

@@ -1,4 +1,6 @@
 using System.Data;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -7,8 +9,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.ContentTransfer.Models;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -75,6 +75,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
+        var rowFilters = serviceProvider.GetServices<IContentImportRowFilter>();
         var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
         if (entry == null || entry.Status == ContentTransferEntryStatus.Canceled || entry.Status == ContentTransferEntryStatus.CanceledWithImportedRecords)
@@ -122,6 +123,21 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(entry.StoredFileName))
                 ?? throw new InvalidOperationException(localizer["Unsupported file format: {0}", Path.GetExtension(entry.StoredFileName)]);
 
+            var filterInitContext = new ContentImportRowFilterInitContext()
+            {
+                ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
+            };
+            var activeRowFilters = new List<IContentImportRowFilter>();
+
+            foreach (var filter in rowFilters)
+            {
+                if (await filter.InitializeAsync(filterInitContext))
+                {
+                    activeRowFilters.Add(filter);
+                }
+            }
+
             await ProcessFileInBatchesAsync(
                 serviceProvider,
                 fileStream,
@@ -131,6 +147,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 contentTypeDefinition,
                 contentManager,
                 contentImportManager,
+                activeRowFilters,
                 session,
                 clock,
                 batchSize,
@@ -174,6 +191,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
         IContentImportManager contentImportManager,
+        List<IContentImportRowFilter> activeRowFilters,
         ISession session,
         IClock clock,
         int batchSize,
@@ -206,6 +224,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
 
         var rowIndex = 1;
+        var hasFilters = activeRowFilters.Count > 0;
 
         foreach (var rowValues in reader.ReadRows())
         {
@@ -244,6 +263,35 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (!isEmpty)
             {
+                var shouldSkip = false;
+
+                if (hasFilters)
+                {
+                    var filterContext = new ContentImportRowFilterContext()
+                    {
+                        Row = dataRow,
+                        Columns = dataTable.Columns,
+                        ContentTypeDefinition = contentTypeDefinition,
+                        Entry = entry,
+                        RowIndex = rowIndex,
+                    };
+
+                    foreach (var filter in activeRowFilters)
+                    {
+                        if (await filter.ShouldSkipRowAsync(filterContext))
+                        {
+                            shouldSkip = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (shouldSkip)
+                {
+                    rowIndex++;
+                    continue;
+                }
+
                 if (contentTypeDefinition.IsVersionable() && indexOfVersionKeyColumn > -1)
                 {
                     var contentItemVersionId = dataRow[indexOfVersionKeyColumn]?.ToString()?.Trim();

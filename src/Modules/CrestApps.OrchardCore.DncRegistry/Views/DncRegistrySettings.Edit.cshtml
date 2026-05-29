@@ -1,0 +1,39 @@
+@model CrestApps.OrchardCore.DncRegistry.ViewModels.DncRegistrySettingsViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Global enforcement"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnforceGlobally" />
+            <label class="form-check-label" asp-for="EnforceGlobally">@T["Enforce do-not-call registry checks globally"]</label>
+            <span class="hint dashed">@T["When enabled, all contact imports will be required to check phone numbers against the selected registries. Users cannot disable this during import."]</span>
+        </div>
+    </div>
+</div>
+
+@if (Model.AvailableRegistries.Length > 0)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Enforced registries"]</label>
+        <div class="ocat-end">
+            <span class="hint dashed">@T["Select which registries are always checked during import. Users can add more during import but cannot remove the enforced ones."]</span>
+            @for (var i = 0; i < Model.AvailableRegistries.Length; i++)
+            {
+                var registry = Model.AvailableRegistries[i];
+                var inputId = $"EnforcedRegistryKeys_{i}";
+                var isChecked = Model.EnforcedRegistryKeys?.Contains(registry.Key) == true;
+
+                <div class="form-check mt-2">
+                    <input type="checkbox"
+                           class="form-check-input"
+                           id="@inputId"
+                           name="@Html.NameFor(m => m.EnforcedRegistryKeys)"
+                           value="@registry.Key"
+                           checked="@(isChecked ? "checked" : null)" />
+                    <label class="form-check-label" for="@inputId">@registry.DisplayName</label>
+                    <span class="hint dashed d-block">@registry.Description</span>
+                </div>
+            }
+        </div>
+    </div>
+}
