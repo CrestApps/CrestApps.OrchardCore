@@ -29,6 +29,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.ContentTypes.Events;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -64,6 +65,11 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
+        services.AddContentPart<OmnichannelContactPart>()
+            .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
+        services.AddScoped<OmnichannelContactDefinitionService>();
+        services.AddScoped<IContentDefinitionHandler, OmnichannelContactDefinitionHandler>();
+        services.AddScoped<IModularTenantEvents, OmnichannelContactDefinitionTenantEvents>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();

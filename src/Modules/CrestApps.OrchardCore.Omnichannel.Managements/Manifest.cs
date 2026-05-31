@@ -23,6 +23,7 @@ using OrchardCore.Modules.Manifest;
         UsersConstants.Feature.Area,
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
+        "OrchardCore.Flows",
         "OrchardCore.Users",
         "CrestApps.OrchardCore.Users",
     ]

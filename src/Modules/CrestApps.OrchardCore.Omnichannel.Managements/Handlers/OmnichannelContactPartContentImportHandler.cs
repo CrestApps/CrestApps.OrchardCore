@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.Flows.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -18,17 +19,30 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class OmnichannelContactPartContentImportHandler : ContentImportHandlerBase, IContentPartImportHandler
 {
     internal readonly IStringLocalizer S;
+    private readonly IClock _clock;
 
     private ImportColumn _emailColumn;
     private ImportColumn _cellPhoneColumn;
     private ImportColumn _homePhoneColumn;
+    private ImportColumn _doNotCallColumn;
+    private ImportColumn _doNotCallUtcColumn;
+    private ImportColumn _doNotSmsColumn;
+    private ImportColumn _doNotSmsUtcColumn;
+    private ImportColumn _doNotEmailColumn;
+    private ImportColumn _doNotEmailUtcColumn;
+    private ImportColumn _doNotChatColumn;
+    private ImportColumn _doNotChatUtcColumn;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactPartContentImportHandler"/> class.
     /// </summary>
+    /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public OmnichannelContactPartContentImportHandler(IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
+    public OmnichannelContactPartContentImportHandler(
+        IClock clock,
+        IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
     {
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -56,7 +70,29 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             AdditionalNames = ["HomePhone", "Home Phone", "Phone", "PhoneNumber", "Phone Number", "Landline"],
         };
 
-        return [_emailColumn, _cellPhoneColumn, _homePhoneColumn];
+        _doNotCallColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotCall), S["Whether phone calls are blocked for the contact."]);
+        _doNotCallUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotCallUtc), S["When the phone-call block was recorded in UTC."]);
+        _doNotSmsColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotSms), S["Whether SMS is blocked for the contact."]);
+        _doNotSmsUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotSmsUtc), S["When the SMS block was recorded in UTC."]);
+        _doNotEmailColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmail), S["Whether email is blocked for the contact."]);
+        _doNotEmailUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmailUtc), S["When the email block was recorded in UTC."]);
+        _doNotChatColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChat), S["Whether chat is blocked for the contact."]);
+        _doNotChatUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChatUtc), S["When the chat block was recorded in UTC."]);
+
+        return
+        [
+            _emailColumn,
+            _cellPhoneColumn,
+            _homePhoneColumn,
+            _doNotCallColumn,
+            _doNotCallUtcColumn,
+            _doNotSmsColumn,
+            _doNotSmsUtcColumn,
+            _doNotEmailColumn,
+            _doNotEmailUtcColumn,
+            _doNotChatColumn,
+            _doNotChatUtcColumn,
+        ];
     }
 
     /// <inheritdoc/>
@@ -67,10 +103,22 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         ArgumentNullException.ThrowIfNull(context.Columns, nameof(context.Columns));
         ArgumentNullException.ThrowIfNull(context.Row, nameof(context.Row));
 
-        var columns = GetColumns(context);
+        _ = GetColumns(context);
         string email = null;
         string cellPhone = null;
         string homePhone = null;
+        var doNotCall = false;
+        DateTime? doNotCallUtc = null;
+        var hasDoNotCall = false;
+        var doNotSms = false;
+        DateTime? doNotSmsUtc = null;
+        var hasDoNotSms = false;
+        var doNotEmail = false;
+        DateTime? doNotEmailUtc = null;
+        var hasDoNotEmail = false;
+        var doNotChat = false;
+        DateTime? doNotChatUtc = null;
+        var hasDoNotChat = false;
 
         foreach (DataColumn column in context.Columns)
         {
@@ -86,35 +134,109 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             {
                 homePhone = context.Row[column]?.ToString()?.Trim();
             }
+            else if (Is(column.ColumnName, _doNotCallColumn))
+            {
+                hasDoNotCall = TryParseBoolean(context.Row[column], out doNotCall);
+            }
+            else if (Is(column.ColumnName, _doNotCallUtcColumn))
+            {
+                doNotCallUtc = TryParseDateTime(context.Row[column]);
+            }
+            else if (Is(column.ColumnName, _doNotSmsColumn))
+            {
+                hasDoNotSms = TryParseBoolean(context.Row[column], out doNotSms);
+            }
+            else if (Is(column.ColumnName, _doNotSmsUtcColumn))
+            {
+                doNotSmsUtc = TryParseDateTime(context.Row[column]);
+            }
+            else if (Is(column.ColumnName, _doNotEmailColumn))
+            {
+                hasDoNotEmail = TryParseBoolean(context.Row[column], out doNotEmail);
+            }
+            else if (Is(column.ColumnName, _doNotEmailUtcColumn))
+            {
+                doNotEmailUtc = TryParseDateTime(context.Row[column]);
+            }
+            else if (Is(column.ColumnName, _doNotChatColumn))
+            {
+                hasDoNotChat = TryParseBoolean(context.Row[column], out doNotChat);
+            }
+            else if (Is(column.ColumnName, _doNotChatUtcColumn))
+            {
+                doNotChatUtc = TryParseDateTime(context.Row[column]);
+            }
         }
 
-        if (string.IsNullOrEmpty(email) && string.IsNullOrEmpty(cellPhone) && string.IsNullOrEmpty(homePhone))
+        if (string.IsNullOrEmpty(email) &&
+            string.IsNullOrEmpty(cellPhone) &&
+            string.IsNullOrEmpty(homePhone) &&
+            !hasDoNotCall &&
+            !hasDoNotSms &&
+            !hasDoNotEmail &&
+            !hasDoNotChat &&
+            !doNotCallUtc.HasValue &&
+            !doNotSmsUtc.HasValue &&
+            !doNotEmailUtc.HasValue &&
+            !doNotChatUtc.HasValue)
         {
             return Task.CompletedTask;
         }
 
-        var bagPart = context.ContentItem.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
-        bagPart.ContentItems ??= [];
-
-        if (!string.IsNullOrEmpty(email))
+        if (!string.IsNullOrEmpty(email) || !string.IsNullOrEmpty(cellPhone) || !string.IsNullOrEmpty(homePhone))
         {
-            var emailItem = CreateEmailAddressContentItem(email);
-            bagPart.ContentItems.Add(emailItem);
+            var bagPart = context.ContentItem.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
+            bagPart.ContentItems ??= [];
+
+            if (!string.IsNullOrEmpty(email))
+            {
+                var emailItem = CreateEmailAddressContentItem(email);
+                bagPart.ContentItems.Add(emailItem);
+            }
+
+            if (!string.IsNullOrEmpty(cellPhone))
+            {
+                var cellPhoneItem = CreatePhoneNumberContentItem(cellPhone, "Cell");
+                bagPart.ContentItems.Add(cellPhoneItem);
+            }
+
+            if (!string.IsNullOrEmpty(homePhone))
+            {
+                var homePhoneItem = CreatePhoneNumberContentItem(homePhone, "Home");
+                bagPart.ContentItems.Add(homePhoneItem);
+            }
+
+            context.ContentItem.Apply(OmnichannelConstants.NamedParts.ContactMethods, bagPart);
         }
 
-        if (!string.IsNullOrEmpty(cellPhone))
+        var contactPart = context.ContentItem.GetOrCreate<OmnichannelContactPart>();
+        var utcNow = _clock.UtcNow;
+
+        if (hasDoNotCall)
         {
-            var cellPhoneItem = CreatePhoneNumberContentItem(cellPhone, "Cell");
-            bagPart.ContentItems.Add(cellPhoneItem);
+            contactPart.SetDoNotCall(doNotCall, utcNow);
+            contactPart.DoNotCallUtc = doNotCall ? doNotCallUtc ?? contactPart.DoNotCallUtc : null;
         }
 
-        if (!string.IsNullOrEmpty(homePhone))
+        if (hasDoNotSms)
         {
-            var homePhoneItem = CreatePhoneNumberContentItem(homePhone, "Home");
-            bagPart.ContentItems.Add(homePhoneItem);
+            contactPart.SetDoNotSms(doNotSms, utcNow);
+            contactPart.DoNotSmsUtc = doNotSms ? doNotSmsUtc ?? contactPart.DoNotSmsUtc : null;
         }
 
-        context.ContentItem.Apply(OmnichannelConstants.NamedParts.ContactMethods, bagPart);
+        if (hasDoNotEmail)
+        {
+            contactPart.SetDoNotEmail(doNotEmail, utcNow);
+            contactPart.DoNotEmailUtc = doNotEmail ? doNotEmailUtc ?? contactPart.DoNotEmailUtc : null;
+        }
+
+        if (hasDoNotChat)
+        {
+            contactPart.SetDoNotChat(doNotChat, utcNow);
+            contactPart.DoNotChatUtc = doNotChat ? doNotChatUtc ?? contactPart.DoNotChatUtc : null;
+        }
+
+        context.ContentItem.Apply(contactPart);
 
         return Task.CompletedTask;
     }
@@ -126,9 +248,14 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         ArgumentNullException.ThrowIfNull(context.ContentItem, nameof(context.ContentItem));
         ArgumentNullException.ThrowIfNull(context.Row, nameof(context.Row));
 
-        if (!context.ContentItem.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
+        _ = GetColumns(null);
+
+        var hasContactMethods = context.ContentItem.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
+            bagPart.ContentItems is not null &&
+            bagPart.ContentItems.Count > 0;
+        var hasContactPart = context.ContentItem.TryGet<OmnichannelContactPart>(out var contactPart);
+
+        if (!hasContactMethods && !hasContactPart)
         {
             return Task.CompletedTask;
         }
@@ -137,37 +264,40 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         string cellPhone = null;
         string homePhone = null;
 
-        foreach (var contentMethod in bagPart.ContentItems)
+        if (hasContactMethods)
         {
-            if (email == null &&
-                contentMethod.ContentType == OmnichannelConstants.ContentTypes.EmailAddress &&
-                contentMethod.TryGet<EmailInfoPart>(out var emailPart) &&
-                !string.IsNullOrEmpty(emailPart.Email?.Text))
+            foreach (var contentMethod in bagPart.ContentItems)
             {
-                email = emailPart.Email.Text;
-            }
+                if (email == null &&
+                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.EmailAddress &&
+                    contentMethod.TryGet<EmailInfoPart>(out var emailPart) &&
+                    !string.IsNullOrEmpty(emailPart.Email?.Text))
+                {
+                    email = emailPart.Email.Text;
+                }
 
-            if (cellPhone == null &&
-                contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
-                contentMethod.TryGet<PhoneNumberInfoPart>(out var cellPart) &&
-                cellPart.Type?.Text == "Cell" &&
-                !string.IsNullOrEmpty(cellPart.Number?.Text))
-            {
-                cellPhone = cellPart.Number.Text;
-            }
+                if (cellPhone == null &&
+                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
+                    contentMethod.TryGet<PhoneNumberInfoPart>(out var cellPart) &&
+                    cellPart.Type?.Text == "Cell" &&
+                    !string.IsNullOrEmpty(cellPart.Number?.Text))
+                {
+                    cellPhone = cellPart.Number.Text;
+                }
 
-            if (homePhone == null &&
-                contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
-                contentMethod.TryGet<PhoneNumberInfoPart>(out var homePart) &&
-                homePart.Type?.Text == "Home" &&
-                !string.IsNullOrEmpty(homePart.Number?.Text))
-            {
-                homePhone = homePart.Number.Text;
-            }
+                if (homePhone == null &&
+                    contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
+                    contentMethod.TryGet<PhoneNumberInfoPart>(out var homePart) &&
+                    homePart.Type?.Text == "Home" &&
+                    !string.IsNullOrEmpty(homePart.Number?.Text))
+                {
+                    homePhone = homePart.Number.Text;
+                }
 
-            if (email != null && cellPhone != null && homePhone != null)
-            {
-                break;
+                if (email != null && cellPhone != null && homePhone != null)
+                {
+                    break;
+                }
             }
         }
 
@@ -186,7 +316,112 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             context.Row[_homePhoneColumn.Name] = homePhone;
         }
 
+        if (hasContactPart)
+        {
+            context.Row[_doNotCallColumn.Name] = contactPart.DoNotCall;
+            context.Row[_doNotSmsColumn.Name] = contactPart.DoNotSms;
+            context.Row[_doNotEmailColumn.Name] = contactPart.DoNotEmail;
+            context.Row[_doNotChatColumn.Name] = contactPart.DoNotChat;
+
+            if (contactPart.DoNotCallUtc.HasValue)
+            {
+                context.Row[_doNotCallUtcColumn.Name] = contactPart.DoNotCallUtc.Value;
+            }
+
+            if (contactPart.DoNotSmsUtc.HasValue)
+            {
+                context.Row[_doNotSmsUtcColumn.Name] = contactPart.DoNotSmsUtc.Value;
+            }
+
+            if (contactPart.DoNotEmailUtc.HasValue)
+            {
+                context.Row[_doNotEmailUtcColumn.Name] = contactPart.DoNotEmailUtc.Value;
+            }
+
+            if (contactPart.DoNotChatUtc.HasValue)
+            {
+                context.Row[_doNotChatUtcColumn.Name] = contactPart.DoNotChatUtc.Value;
+            }
+        }
+
         return Task.CompletedTask;
+    }
+
+    private static ImportColumn CreatePreferenceColumn(string name, LocalizedString description)
+    {
+        return new ImportColumn()
+        {
+            Name = name,
+            Description = description,
+        };
+    }
+
+    private static bool TryParseBoolean(object value, out bool result)
+    {
+        result = false;
+
+        if (value is null || value == DBNull.Value)
+        {
+            return false;
+        }
+
+        if (value is bool boolValue)
+        {
+            result = boolValue;
+            return true;
+        }
+
+        var text = value.ToString()?.Trim();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        if (bool.TryParse(text, out result))
+        {
+            return true;
+        }
+
+        if (string.Equals(text, "1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(text, "yes", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(text, "y", StringComparison.OrdinalIgnoreCase))
+        {
+            result = true;
+            return true;
+        }
+
+        if (string.Equals(text, "0", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(text, "no", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(text, "n", StringComparison.OrdinalIgnoreCase))
+        {
+            result = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static DateTime? TryParseDateTime(object value)
+    {
+        if (value is null || value == DBNull.Value)
+        {
+            return null;
+        }
+
+        if (value is DateTime dateTime)
+        {
+            return dateTime;
+        }
+
+        var text = value.ToString()?.Trim();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        return DateTime.TryParse(text, out var parsedDateTime) ? parsedDateTime : null;
     }
 
     private static ContentItem CreateEmailAddressContentItem(string email)

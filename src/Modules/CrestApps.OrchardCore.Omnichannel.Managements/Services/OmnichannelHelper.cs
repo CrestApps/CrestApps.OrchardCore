@@ -15,6 +15,16 @@ internal static class OmnichannelHelper
     /// <param name="channel">The channel.</param>
     public static string GetPreferredDestenation(ContentItem contact, string channel)
     {
+        if (contact.TryGet<OmnichannelContactPart>(out var contactPart))
+        {
+            if ((channel == OmnichannelConstants.Channels.Phone && contactPart.DoNotCall) ||
+                (channel == OmnichannelConstants.Channels.Sms && contactPart.DoNotSms) ||
+                (channel == OmnichannelConstants.Channels.Email && contactPart.DoNotEmail))
+            {
+                return null;
+            }
+        }
+
         if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
             bagPart.ContentItems is null ||
                 bagPart.ContentItems.Count == 0)
@@ -70,7 +80,7 @@ internal static class OmnichannelHelper
                 }
             }
 
-            return phoneNumbers.Dequeue();
+            return phoneNumbers.Count > 0 ? phoneNumbers.Dequeue() : null;
         }
         else if (channel == OmnichannelConstants.Channels.Sms)
         {

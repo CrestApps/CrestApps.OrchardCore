@@ -21,7 +21,10 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                     return null;
                 }
 
-                var index = new OmnichannelContactIndex();
+                var index = new OmnichannelContactIndex
+                {
+                    ContentItemId = contact.ContentItemId,
+                };
 
                 if (contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
                     bagPart.ContentItems is not null &&

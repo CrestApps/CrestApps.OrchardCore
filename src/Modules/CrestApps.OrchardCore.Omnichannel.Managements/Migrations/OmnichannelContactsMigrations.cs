@@ -1,6 +1,9 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Builders;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -70,5 +73,26 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    /// <summary>
+    /// Updates existing omnichannel contact types so they always store contact methods in the fixed ContactMethods bag.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        var contentTypeDefinitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
+
+        foreach (var contentTypeDefinition in contentTypeDefinitions)
+        {
+            if (!OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition) ||
+                !OmnichannelContactDefinitionService.NeedsContactMethodsBagUpdate(contentTypeDefinition))
+            {
+                continue;
+            }
+
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(contentTypeDefinition.Name, OmnichannelContactDefinitionService.ConfigureContactMethodsBagPart);
+        }
+
+        return 3;
     }
 }
