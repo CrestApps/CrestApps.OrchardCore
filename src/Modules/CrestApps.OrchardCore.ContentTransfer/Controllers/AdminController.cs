@@ -1,8 +1,5 @@
 using System.Data;
 using System.Security.Claims;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -55,6 +52,7 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IChunkFileUploadService _chunkFileUploadService;
+    private readonly IContentTransferFileFormatProvider[] _formatProviders;
 
     private readonly IStringLocalizer S;
     private readonly IHtmlLocalizer H;
@@ -78,6 +76,7 @@ public sealed class AdminController : Controller, IUpdateModel
         IContentImportManager contentImportManager,
         IContentItemDisplayManager contentItemDisplayManager,
         IChunkFileUploadService chunkFileUploadService,
+        IEnumerable<IContentTransferFileFormatProvider> formatProviders,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -96,6 +95,9 @@ public sealed class AdminController : Controller, IUpdateModel
         _contentImportManager = contentImportManager;
         _contentItemDisplayManager = contentItemDisplayManager;
         _chunkFileUploadService = chunkFileUploadService;
+        _formatProviders = formatProviders
+            .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -206,6 +208,7 @@ public sealed class AdminController : Controller, IUpdateModel
             ContentTypeDefinition = contentTypeDefinition,
             Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
             Columns = columns.Where(x => x.Type != ImportColumnType.ExportOnly),
+            FileFormats = BuildFileFormatSelectList(),
         };
 
         return View(viewModel);
@@ -253,13 +256,11 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
 
                 var extension = Path.GetExtension(file.FileName);
-
-                var formatProviders = HttpContext.RequestServices.GetServices<IContentTransferFileFormatProvider>();
-                var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(file.FileName));
+                var formatProvider = ResolveFileFormatProviderByFileName(file.FileName);
 
                 if (formatProvider == null)
                 {
-                    return BadRequest(new { error = S["Only .xlsx and .csv files are supported."].Value });
+                    return BadRequest(new { error = GetUnsupportedFormatsMessage().Value });
                 }
 
                 var fileName = Guid.NewGuid() + extension;
@@ -332,6 +333,12 @@ public sealed class AdminController : Controller, IUpdateModel
         var importColumns = columns.Where(c => c.Type != ImportColumnType.ExportOnly).Select(c => c.Name).ToList();
 
         var formatProvider = ResolveFileFormatProvider(format);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk import."]);
+        }
+
         var content = new MemoryStream();
 
         using (var writer = formatProvider.CreateWriter(content, contentTypeDefinition.DisplayName))
@@ -396,7 +403,7 @@ public sealed class AdminController : Controller, IUpdateModel
     [Admin("export/contents/download-file", "ExportContentDownloadFile")]
     public async Task<IActionResult> DownloadExport(
         string contentTypeId,
-        string format = null,
+        string extension = null,
         bool partialExport = false,
         DateTime? createdFrom = null,
         DateTime? createdTo = null,
@@ -441,7 +448,12 @@ public sealed class AdminController : Controller, IUpdateModel
 
         var contentImportOptions = HttpContext.RequestServices.GetRequiredService<IOptions<ContentImportOptions>>().Value;
         var threshold = contentImportOptions.ExportQueueThreshold;
-        var formatProvider = ResolveFileFormatProvider(format);
+        var formatProvider = ResolveFileFormatProvider(extension);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk export."]);
+        }
 
         if (totalCount > threshold)
         {
@@ -695,8 +707,15 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(Export));
         }
 
+        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
+
+        if (formatProvider == null)
+        {
+            await _notifier.ErrorAsync(H["The file format for this export is no longer enabled."]);
+            return RedirectToAction(nameof(Export));
+        }
+
         var stream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
-        var formatProvider = ResolveFileFormatProvider(Path.GetExtension(entry.StoredFileName)?.TrimStart('.'));
 
         return new FileStreamResult(stream, formatProvider.ContentType)
         {
@@ -744,72 +763,51 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(List));
         }
 
-        await using var sourceStream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
+        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
 
-        using var sourceDoc = SpreadsheetDocument.Open(sourceStream, false);
-        var sourceWorkbookPart = sourceDoc.WorkbookPart;
-        var sourceSheet = sourceWorkbookPart.WorksheetParts.First().Worksheet;
-        var sourceSheetData = sourceSheet.GetFirstChild<SheetData>();
-        var sharedStringTable = sourceWorkbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
-
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xlsx");
-        var outputStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
-        using (var destDoc = SpreadsheetDocument.Create(outputStream, SpreadsheetDocumentType.Workbook))
+        if (formatProvider == null)
         {
-            var destWorkbookPart = destDoc.AddWorkbookPart();
-            destWorkbookPart.Workbook = new Workbook();
+            await _notifier.ErrorAsync(H["The file format for this import is no longer enabled."]);
+            return RedirectToAction(nameof(List));
+        }
 
-            if (sharedStringTable != null)
+        await using var sourceStream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
+        var outputStream = new MemoryStream();
+        statsPart.ErrorMessages ??= [];
+
+        using (var reader = formatProvider.CreateReader(sourceStream))
+        using (var writer = formatProvider.CreateWriter(outputStream, entry.ContentType))
+        {
+            var columnNames = reader.GetColumnNames().ToList();
+            columnNames.Add(S["Errors"]);
+            writer.WriteHeader(columnNames);
+
+            var rowIndex = 1;
+
+            foreach (var rowValues in reader.ReadRows())
             {
-                var destSharedStringPart = destWorkbookPart.AddNewPart<SharedStringTablePart>();
-                sharedStringTable.SharedStringTable.Save(destSharedStringPart);
-            }
-
-            var destWorksheetPart = destWorkbookPart.AddNewPart<WorksheetPart>();
-            destWorksheetPart.Worksheet = new Worksheet(new SheetData());
-
-            var sheets = destDoc.WorkbookPart.Workbook.AppendChild(new Sheets());
-            sheets.Append(new Sheet()
-            {
-                Id = destDoc.WorkbookPart.GetIdOfPart(destWorksheetPart),
-                SheetId = 1,
-                Name = "Errors",
-            });
-
-            var destSheetData = destWorksheetPart.Worksheet.GetFirstChild<SheetData>();
-            statsPart.ErrorMessages ??= [];
-
-            var sourceRowIndex = 0;
-            uint destRowIndex = 1;
-
-            foreach (var sourceRow in sourceSheetData.Elements<Row>())
-            {
-                if (sourceRowIndex == 0)
+                if (!statsPart.Errors.Contains(rowIndex))
                 {
-                    destSheetData.Append(CloneRowWithErrorMessage(sourceRow, destRowIndex, S["Errors"]));
-                    destRowIndex++;
-                    sourceRowIndex++;
+                    rowIndex++;
                     continue;
                 }
 
-                if (statsPart.Errors.Contains(sourceRowIndex))
-                {
-                    statsPart.ErrorMessages.TryGetValue(sourceRowIndex, out var errorMessage);
-                    destSheetData.Append(CloneRowWithErrorMessage(sourceRow, destRowIndex, errorMessage));
-                    destRowIndex++;
-                }
+                statsPart.ErrorMessages.TryGetValue(rowIndex, out var errorMessage);
 
-                sourceRowIndex++;
+                var values = rowValues.ToList();
+                values.Add(errorMessage ?? string.Empty);
+                writer.WriteRow(values);
+                rowIndex++;
             }
 
-            destWorkbookPart.Workbook.Save();
+            writer.Flush();
         }
 
         outputStream.Position = 0;
 
-        return new FileStreamResult(outputStream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return new FileStreamResult(outputStream, formatProvider.ContentType)
         {
-            FileDownloadName = $"{entry.ContentType}_Errors.xlsx",
+            FileDownloadName = $"{entry.ContentType}_Errors{formatProvider.FileExtension}",
         };
     }
 
@@ -911,16 +909,16 @@ public sealed class AdminController : Controller, IUpdateModel
     }
 
     private ContentExporterViewModel BuildContentExporterViewModel(IList<SelectListItem> exportableTypes)
-        => new()
+    {
+        var formats = BuildFileFormatSelectList();
+
+        return new()
         {
             ContentTypes = exportableTypes,
-            Extensions =
-            [
-                new(S["Excel Workbook"], ".xlsx"),
-                new(S["Comma-Separated Values (CSV)"], ".csv"),
-            ],
-            Extension = ".xlsx",
+            Extensions = formats,
+            Extension = formats.Count > 0 ? formats[0].Value : null,
         };
+    }
 
     private async Task<BulkExportViewModel> BuildBulkExportViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
@@ -1024,52 +1022,12 @@ public sealed class AdminController : Controller, IUpdateModel
             entryId,
             static (scope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, CancellationToken.None, id));
 
-    private static Row CloneRowWithErrorMessage(Row sourceRow, uint destinationRowIndex, string errorMessage)
-    {
-        var destinationRow = new Row() { RowIndex = destinationRowIndex };
-        uint columnIndex = 1;
-
-        foreach (var sourceCell in sourceRow.Elements<Cell>())
-        {
-            var clonedCell = (Cell)sourceCell.CloneNode(true);
-            clonedCell.CellReference = GetCellReference(columnIndex, destinationRowIndex);
-            destinationRow.Append(clonedCell);
-            columnIndex++;
-        }
-
-        destinationRow.Append(new Cell()
-        {
-            CellReference = GetCellReference(columnIndex, destinationRowIndex),
-            DataType = CellValues.String,
-            CellValue = new CellValue(errorMessage ?? string.Empty),
-        });
-
-        return destinationRow;
-    }
-
-    private static string GetCellReference(uint columnIndex, uint rowIndex)
-    {
-        var columnName = string.Empty;
-        var dividend = columnIndex;
-
-        while (dividend > 0)
-        {
-            var modulo = (dividend - 1) % 26;
-            columnName = Convert.ToChar(65 + modulo) + columnName;
-            dividend = (dividend - modulo) / 26;
-        }
-
-        return columnName + rowIndex;
-    }
-
     private IContentTransferFileFormatProvider ResolveFileFormatProvider(string format)
     {
-        var providers = HttpContext.RequestServices.GetServices<IContentTransferFileFormatProvider>();
-
         if (!string.IsNullOrEmpty(format))
         {
             var extension = format.StartsWith('.') ? format : "." + format;
-            var provider = providers.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
+            var provider = _formatProviders.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
 
             if (provider != null)
             {
@@ -1077,9 +1035,27 @@ public sealed class AdminController : Controller, IUpdateModel
             }
         }
 
-        // Default to Excel.
-        return providers.First(p => p.FileExtension == ".xlsx");
+        return _formatProviders.Length > 0 ? _formatProviders[0] : null;
     }
+
+    private IContentTransferFileFormatProvider ResolveFileFormatProviderByFileName(string fileName)
+        => _formatProviders.FirstOrDefault(provider => provider.CanHandle(fileName));
+
+    private List<SelectListItem> BuildFileFormatSelectList()
+        => _formatProviders
+            .Select(provider => new SelectListItem(GetFileFormatLabel(provider), provider.FileExtension))
+            .ToList();
+
+    private string GetFileFormatExtensions()
+        => string.Join(", ", _formatProviders.Select(provider => provider.FileExtension));
+
+    private LocalizedString GetUnsupportedFormatsMessage()
+        => _formatProviders.Length == 0
+            ? S["No file formats are currently enabled."]
+            : S["Only the enabled file formats are supported: {0}.", GetFileFormatExtensions()];
+
+    private static string GetFileFormatLabel(IContentTransferFileFormatProvider provider)
+        => provider.FileExtension.TrimStart('.').ToUpperInvariant();
 
     private IQuery<ContentItem> BuildExportQuery(
         string contentTypeId,

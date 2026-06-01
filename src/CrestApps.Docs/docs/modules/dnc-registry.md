@@ -21,7 +21,7 @@ The module currently ships with these provider features:
 | USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** -> **DNC Registries** -> **USA FTC Registry** |
 | Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** |
 
-Enable the core **DNC Registry** feature first, then enable the provider features you want to use.
+Enable the core **DNC Registry** feature first, then enable the provider features you want to use. The **USA FTC Registry** and **Canada LNNTE-DNCL Registry** settings pages are only added to the admin menu when their matching provider feature is enabled.
 
 ## Where settings live
 
@@ -50,10 +50,11 @@ This keeps the saved credential hidden while still allowing administrators to ro
 When **Omnichannel Management** and **Content Transfer** are enabled, Omnichannel contact imports can:
 
 - ignore duplicate rows by phone number
+- check duplicate phone numbers against both the current import batch and the contact records that already exist in Orchard before the batch saves
 - skip rows whose phone numbers are found on one or more selected registries
 - merge importer-selected registries with any registries enforced globally by site settings
 
-Registry checks run in parallel across the selected providers so a single import can compare the same row against multiple external compliance services.
+Registry checks run in parallel across the selected providers so a single import can compare the same row against multiple external compliance services. Rows skipped because of duplicate phone numbers or DNC matches are added to the import error export together with the skip reason.
 
 ## Provider-specific configuration
 

@@ -49,7 +49,7 @@ public sealed class ContentImportManager : IContentImportManager
             if (part == null)
             {
                 part = partActivator.CreateInstance();
-                part.Weld(typePartDefinition.Name, part);
+                contentItem.Weld(typePartDefinition.Name, part);
             }
 
             var partHandlers = _contentImportHandlerResolver.GetPartHandlers(partName);
@@ -134,7 +134,7 @@ public sealed class ContentImportManager : IContentImportManager
             if (part == null)
             {
                 part = partActivator.CreateInstance();
-                part.Weld(typePartDefinition.Name, part);
+                context.ContentItem.Weld(typePartDefinition.Name, part);
             }
 
             foreach (var partFieldDefinition in typePartDefinition.PartDefinition.Fields)
@@ -182,7 +182,7 @@ public sealed class ContentImportManager : IContentImportManager
             if (part == null)
             {
                 part = partActivator.CreateInstance();
-                part.Weld(typePartDefinition.Name, part);
+                context.ContentItem.Weld(typePartDefinition.Name, part);
             }
 
             var partHandlers = _contentImportHandlerResolver.GetPartHandlers(partName);

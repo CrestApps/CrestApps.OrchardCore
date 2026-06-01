@@ -15,18 +15,6 @@ internal sealed class DncRegistryAdminMenu : AdminNavigationProvider
         { "groupId", DncRegistryConstants.SettingsGroupIds.ImportContentSettings },
     };
 
-    private static readonly RouteValueDictionary _usaFtcRouteValues = new()
-    {
-        { "area", "OrchardCore.Settings" },
-        { "groupId", DncRegistryConstants.SettingsGroupIds.UsaFtcRegistry },
-    };
-
-    private static readonly RouteValueDictionary _canadaDnclRouteValues = new()
-    {
-        { "area", "OrchardCore.Settings" },
-        { "groupId", DncRegistryConstants.SettingsGroupIds.CanadaDnclRegistry },
-    };
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -48,24 +36,6 @@ internal sealed class DncRegistryAdminMenu : AdminNavigationProvider
                     .Action("Index", "Admin", _importContentRouteValues)
                     .Permission(DncRegistryPermissions.ManageDncRegistrySettings)
                     .LocalNav()
-                )
-                .Add(S["DNC Registries"], S["DNC Registries"].PrefixPosition(), registries => registries
-                    .AddClass("dnc-registries")
-                    .Id("dncRegistries")
-                    .Add(S["USA FTC Registry"], S["USA FTC Registry"].PrefixPosition(), usaFtc => usaFtc
-                        .AddClass("usa-ftc-registry")
-                        .Id("usaFtcRegistry")
-                        .Action("Index", "Admin", _usaFtcRouteValues)
-                        .Permission(DncRegistryPermissions.ManageDncRegistrySettings)
-                        .LocalNav()
-                    )
-                    .Add(S["Canada LNNTE-DNCL Registry"], S["Canada LNNTE-DNCL Registry"].PrefixPosition(), canadaDncl => canadaDncl
-                        .AddClass("canada-dncl-registry")
-                        .Id("canadaDnclRegistry")
-                        .Action("Index", "Admin", _canadaDnclRouteValues)
-                        .Permission(DncRegistryPermissions.ManageDncRegistrySettings)
-                        .LocalNav()
-                    )
                 )
             );
 

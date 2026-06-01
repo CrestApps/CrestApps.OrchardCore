@@ -32,4 +32,9 @@ public sealed class ContentImportRowFilterContext
     /// Gets or sets the row index (1-based).
     /// </summary>
     public int RowIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason the row should be skipped.
+    /// </summary>
+    public string SkipReason { get; set; }
 }

@@ -23,6 +23,13 @@ public interface IContentImportRowFilter
     Task<bool> InitializeAsync(ContentImportRowFilterInitContext context);
 
     /// <summary>
+    /// Prepares filter state for the next import batch.
+    /// </summary>
+    /// <param name="context">The context containing the rows that are about to be evaluated.</param>
+    /// <returns>A task that completes when the batch state is ready.</returns>
+    Task PrepareBatchAsync(ContentImportRowFilterBatchContext context);
+
+    /// <summary>
     /// Determines whether a row should be skipped during import.
     /// </summary>
     /// <param name="context">The context containing the row data, entry metadata, and content type information.</param>

@@ -6,8 +6,7 @@
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IgnoreDuplicateByPhoneNumber" />
             <label class="form-check-label" asp-for="IgnoreDuplicateByPhoneNumber">@T["Ignore duplicate by phone number"]</label>
-            <span class="hint dashed">@T["When enabled, if multiple rows in the file have the same phone number, only the first occurrence is imported."]</span>
+            <span class="hint dashed">@T["When enabled, only the first row for a phone number is imported. Later duplicates in the file and phone numbers that already exist in the database are skipped and added to the error export."]</span>
         </div>
     </div>
 </div>
-

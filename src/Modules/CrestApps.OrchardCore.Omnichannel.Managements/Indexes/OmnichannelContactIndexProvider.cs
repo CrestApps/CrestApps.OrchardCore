@@ -47,6 +47,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                                 !string.IsNullOrEmpty(phonePart.Number?.Text))
                             {
                                 index.PrimaryCellPhoneNumber = phonePart.Number.Text.Substring(0, Math.Min(50, phonePart.Number.Text.Length));
+                                index.NormalizedPrimaryCellPhoneNumber = NormalizePhoneNumber(phonePart.Number.Text);
                             }
                         }
 
@@ -57,6 +58,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                                 !string.IsNullOrEmpty(phonePart.Number?.Text))
                             {
                                 index.PrimaryHomePhoneNumber = phonePart.Number.Text.Substring(0, Math.Min(50, phonePart.Number.Text.Length));
+                                index.NormalizedPrimaryHomePhoneNumber = NormalizePhoneNumber(phonePart.Number.Text);
                             }
                         }
                     }
@@ -65,4 +67,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                 return index;
             });
     }
+
+    private static string NormalizePhoneNumber(string phoneNumber)
+        => new(phoneNumber.Where(char.IsDigit).ToArray());
 }

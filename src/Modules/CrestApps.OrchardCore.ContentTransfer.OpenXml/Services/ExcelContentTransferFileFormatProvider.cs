@@ -2,7 +2,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
-namespace CrestApps.OrchardCore.ContentTransfer.FileFormats;
+namespace CrestApps.OrchardCore.ContentTransfer.OpenXml.Services;
 
 public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFileFormatProvider
 {
@@ -52,7 +52,6 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 var columnName = GetCellValue(cell)?.Trim() ?? string.Empty;
                 var columnIndex = GetColumnIndexFromCellReference(cell.CellReference);
 
-                // Pad missing columns.
                 while (columnNames.Count < columnIndex)
                 {
                     columnNames.Add("Col " + (columnNames.Count + 1));

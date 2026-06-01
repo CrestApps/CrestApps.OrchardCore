@@ -1,9 +1,7 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Builders;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -43,15 +41,31 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))
             .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
         );
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex("IDX_OmnichannelContactIndex_DocumentId",
-        "DocumentId",
-        "ContentItemId"
-        )
+            "DocumentId",
+            "ContentItemId"
+            )
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryCellPhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryCellPhoneNumber")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryHomePhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryHomePhoneNumber")
         );
 
         return 2;
@@ -94,5 +108,33 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         }
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds normalized phone number columns to support duplicate detection across formatted values.
+    /// </summary>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+        {
+            table.AddColumn<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50));
+            table.AddColumn<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50));
+        });
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryCellPhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryCellPhoneNumber")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryHomePhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryHomePhoneNumber")
+        );
+
+        return 4;
     }
 }

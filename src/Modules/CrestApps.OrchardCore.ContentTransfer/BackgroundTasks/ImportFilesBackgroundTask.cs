@@ -119,8 +119,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         try
         {
-            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>();
-            var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(entry.StoredFileName))
+            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
+                .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
                 ?? throw new InvalidOperationException(localizer["Unsupported file format: {0}", Path.GetExtension(entry.StoredFileName)]);
 
             var filterInitContext = new ContentImportRowFilterInitContext()
@@ -264,6 +267,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             if (!isEmpty)
             {
                 var shouldSkip = false;
+                string filterSkipReason = null;
 
                 if (hasFilters)
                 {
@@ -281,6 +285,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         if (await filter.ShouldSkipRowAsync(filterContext))
                         {
                             shouldSkip = true;
+                            filterSkipReason = filterContext.SkipReason;
                             break;
                         }
                     }
@@ -288,6 +293,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
                 if (shouldSkip)
                 {
+                    if (!string.IsNullOrWhiteSpace(filterSkipReason))
+                    {
+                        AddRowError(progressPart, rowIndex, filterSkipReason);
+                    }
+
                     rowIndex++;
                     continue;
                 }

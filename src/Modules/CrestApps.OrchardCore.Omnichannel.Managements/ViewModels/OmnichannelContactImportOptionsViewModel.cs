@@ -8,6 +8,5 @@ public class OmnichannelContactImportOptionsViewModel
     /// <summary>
     /// Gets or sets a value indicating whether to ignore duplicate contacts based on phone number.
     /// </summary>
-    public bool IgnoreDuplicateByPhoneNumber { get; set; }
+    public bool IgnoreDuplicateByPhoneNumber { get; set; } = true;
 }
-

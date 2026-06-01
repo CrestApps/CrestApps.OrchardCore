@@ -63,7 +63,6 @@ public sealed class Startup : StartupBase
             return new ContentTransferFileStore(fileStore);
         });
 
-        services.AddSingleton<IContentTransferFileFormatProvider, ExcelContentTransferFileFormatProvider>();
         services.AddSingleton<IContentTransferFileFormatProvider, CsvContentTransferFileFormatProvider>();
 
         services.AddDataMigration<ContentTransferMigrations>();

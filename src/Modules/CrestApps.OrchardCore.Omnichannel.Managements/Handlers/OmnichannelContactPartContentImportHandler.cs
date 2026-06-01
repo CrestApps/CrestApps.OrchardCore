@@ -70,13 +70,13 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             AdditionalNames = ["HomePhone", "Home Phone", "Phone", "PhoneNumber", "Phone Number", "Landline"],
         };
 
-        _doNotCallColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotCall), S["Whether phone calls are blocked for the contact."]);
+        _doNotCallColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotCall), S["Whether phone calls are blocked for the contact. Use true or false."]);
         _doNotCallUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotCallUtc), S["When the phone-call block was recorded in UTC."]);
-        _doNotSmsColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotSms), S["Whether SMS is blocked for the contact."]);
+        _doNotSmsColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotSms), S["Whether SMS is blocked for the contact. Use true or false."]);
         _doNotSmsUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotSmsUtc), S["When the SMS block was recorded in UTC."]);
-        _doNotEmailColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmail), S["Whether email is blocked for the contact."]);
+        _doNotEmailColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotEmail), S["Whether email is blocked for the contact. Use true or false."]);
         _doNotEmailUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmailUtc), S["When the email block was recorded in UTC."]);
-        _doNotChatColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChat), S["Whether chat is blocked for the contact."]);
+        _doNotChatColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotChat), S["Whether chat is blocked for the contact. Use true or false."]);
         _doNotChatUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChatUtc), S["When the chat block was recorded in UTC."]);
 
         return
@@ -353,6 +353,16 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         {
             Name = name,
             Description = description,
+        };
+    }
+
+    private static ImportColumn CreateBooleanPreferenceColumn(string name, LocalizedString description)
+    {
+        return new ImportColumn()
+        {
+            Name = name,
+            Description = description,
+            ValidValues = ["true", "false"],
         };
     }
 

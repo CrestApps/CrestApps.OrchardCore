@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -19,26 +20,31 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 {
     private readonly IEnumerable<INationalDoNotCallRegistry> _registries;
+    private readonly IOmnichannelContactDuplicateLookupService _duplicateLookupService;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
     private bool _ignoreDuplicates;
     private bool _ignoreDoNotCallNumbers;
     private string[] _selectedRegistryKeys = [];
-    private string[] _phoneColumnNames = [];
     private HashSet<string> _seenPhoneNumbers = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _existingPhoneNumbers = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<int, string> _batchSkipReasons = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactImportRowFilter"/> class.
     /// </summary>
     /// <param name="registries">The available do-not-call registries.</param>
+    /// <param name="duplicateLookupService">The duplicate lookup service.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="logger">The logger.</param>
     public OmnichannelContactImportRowFilter(
         IEnumerable<INationalDoNotCallRegistry> registries,
+        IOmnichannelContactDuplicateLookupService duplicateLookupService,
         ISiteService siteService,
         ILogger<OmnichannelContactImportRowFilter> logger)
     {
         _registries = registries;
+        _duplicateLookupService = duplicateLookupService;
         _siteService = siteService;
         _logger = logger;
     }
@@ -86,67 +92,97 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             return false;
         }
 
-        _phoneColumnNames =
-        [
-            $"{OmnichannelConstants.NamedParts.ContactMethods}_CellPhone",
-            "CellPhone", "Cell Phone", "Cell", "Mobile", "MobilePhone", "Mobile Phone",
-            $"{OmnichannelConstants.NamedParts.ContactMethods}_HomePhone",
-            "HomePhone", "Home Phone", "Phone", "PhoneNumber", "Phone Number", "Landline",
-        ];
+        if (_ignoreDuplicates)
+        {
+            _existingPhoneNumbers = await _duplicateLookupService.GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken.None);
+        }
 
         return true;
     }
 
     /// <inheritdoc/>
+    public Task PrepareBatchAsync(ContentImportRowFilterBatchContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(context.Rows);
+
+        _batchSkipReasons = [];
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)
     {
-        var phoneNumbers = ExtractPhoneNumbers(context.Row, context.Columns);
+        ArgumentNullException.ThrowIfNull(context);
 
-        if (phoneNumbers.Count == 0)
+        if (_batchSkipReasons.TryGetValue(context.RowIndex, out var skipReason))
+        {
+            context.SkipReason = skipReason;
+
+            return true;
+        }
+
+        var phoneEntries = ExtractPhoneEntries(context.Row, context.Columns);
+
+        if (phoneEntries.Count == 0)
         {
             return false;
         }
 
         if (_ignoreDuplicates)
         {
-            var isDuplicate = true;
-
-            foreach (var phone in phoneNumbers)
+            foreach (var entry in phoneEntries)
             {
-                if (_seenPhoneNumbers.Add(phone))
+                if (_existingPhoneNumbers.Contains(entry.NormalizedNumber))
                 {
-                    isDuplicate = false;
-                }
-            }
+                    context.SkipReason = $"{entry.Label} '{entry.RawValue}' already exists in the database.";
 
-            if (isDuplicate)
-            {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Skipping row {RowIndex} due to duplicate phone number.",
-                        context.RowIndex);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
+
+                    return true;
                 }
 
-                return true;
+                if (!_seenPhoneNumbers.Add(entry.NormalizedNumber))
+                {
+                    context.SkipReason = $"{entry.Label} '{entry.RawValue}' already appeared earlier in the import file.";
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
+
+                    return true;
+                }
             }
         }
 
         if (_ignoreDoNotCallNumbers)
         {
-            var doNotCallNumbers = await LoadDoNotCallNumbersAsync(phoneNumbers, CancellationToken.None);
+            var normalizedNumbers = phoneEntries.Select(e => e.NormalizedNumber);
+            var doNotCallNumbers = await LoadDoNotCallNumbersAsync(normalizedNumbers, CancellationToken.None);
 
-            foreach (var phone in phoneNumbers)
+            foreach (var entry in phoneEntries)
             {
-                var normalized = NormalizePhoneNumber(phone);
-
-                if (doNotCallNumbers.Contains(normalized))
+                if (doNotCallNumbers.Contains(entry.NormalizedNumber))
                 {
+                    context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
+
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         _logger.LogDebug(
-                            "Skipping row {RowIndex} because phone number is on the do-not-call list.",
-                            context.RowIndex);
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
                     }
 
                     return true;
@@ -157,13 +193,15 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         return false;
     }
 
-    private List<string> ExtractPhoneNumbers(DataRow row, DataColumnCollection columns)
+    private static List<PhoneEntry> ExtractPhoneEntries(DataRow row, DataColumnCollection columns)
     {
-        var phoneNumbers = new List<string>();
+        var entries = new List<PhoneEntry>();
 
         foreach (DataColumn column in columns)
         {
-            if (!IsPhoneColumn(column.ColumnName))
+            var phoneType = GetPhoneType(column.ColumnName);
+
+            if (phoneType == null)
             {
                 continue;
             }
@@ -172,28 +210,47 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
             if (!string.IsNullOrEmpty(value))
             {
-                phoneNumbers.Add(value);
+                var normalizedPhoneNumber = NormalizePhoneNumber(value);
+
+                if (!string.IsNullOrEmpty(normalizedPhoneNumber))
+                {
+                    entries.Add(new PhoneEntry(normalizedPhoneNumber, value, phoneType));
+                }
             }
         }
 
-        return phoneNumbers;
+        return entries;
     }
 
-    private bool IsPhoneColumn(string columnName)
+    private static string? GetPhoneType(string columnName)
     {
-        foreach (var name in _phoneColumnNames)
+        if (string.Equals(columnName, $"{OmnichannelConstants.NamedParts.ContactMethods}_CellPhone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "CellPhone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Cell Phone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Cell", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Mobile", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "MobilePhone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Mobile Phone", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(columnName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return "Cell phone number";
         }
 
-        return false;
+        if (string.Equals(columnName, $"{OmnichannelConstants.NamedParts.ContactMethods}_HomePhone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "HomePhone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Home Phone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Phone", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "PhoneNumber", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Phone Number", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(columnName, "Landline", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Home phone number";
+        }
+
+        return null;
     }
 
     private async Task<HashSet<string>> LoadDoNotCallNumbersAsync(
-        List<string> phoneNumbers,
+        IEnumerable<string> phoneNumbers,
         CancellationToken cancellationToken)
     {
         var allDncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -245,4 +302,6 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
     private static string NormalizePhoneNumber(string phoneNumber)
         => new string(phoneNumber.Where(char.IsDigit).ToArray());
+
+    private sealed record PhoneEntry(string NormalizedNumber, string RawValue, string Label);
 }

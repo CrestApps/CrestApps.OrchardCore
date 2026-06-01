@@ -32,6 +32,7 @@ public sealed class UsaFtcStartup : StartupBase
         services.AddHttpClient(nameof(UsaFtcDncRegistry));
         services.AddScoped<INationalDoNotCallRegistry, UsaFtcDncRegistry>();
         services.AddSiteDisplayDriver<UsaFtcDncRegistrySettingsDisplayDriver>();
+        services.AddNavigationProvider<UsaFtcDncRegistryAdminMenu>();
     }
 }
 
@@ -46,5 +47,6 @@ public sealed class CanadaDnclStartup : StartupBase
         services.AddHttpClient(nameof(CanadaDnclRegistry));
         services.AddScoped<INationalDoNotCallRegistry, CanadaDnclRegistry>();
         services.AddSiteDisplayDriver<CanadaDnclRegistrySettingsDisplayDriver>();
+        services.AddNavigationProvider<CanadaDnclRegistryAdminMenu>();
     }
 }

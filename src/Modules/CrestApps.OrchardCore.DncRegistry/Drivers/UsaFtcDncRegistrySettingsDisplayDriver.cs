@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.DncRegistry.Drivers;
 /// </summary>
 public sealed class UsaFtcDncRegistrySettingsDisplayDriver : SiteDisplayDriver<UsaFtcDncRegistrySettings>
 {
-    private const string ProtectorPurpose = "CrestApps.OrchardCore.DncRegistry.UsaFtcSettings";
+    private const string ProtectorPurpose = "usa-ftc";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;

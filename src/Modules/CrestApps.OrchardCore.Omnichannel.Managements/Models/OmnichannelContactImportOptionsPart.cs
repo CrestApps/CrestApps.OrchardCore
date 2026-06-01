@@ -10,7 +10,7 @@ public sealed class OmnichannelContactImportOptionsPart
     /// Gets or sets a value indicating whether to ignore duplicate contacts based on phone number.
     /// When enabled, only the first row with a given phone number is imported.
     /// </summary>
-    public bool IgnoreDuplicateByPhoneNumber { get; set; }
+    public bool IgnoreDuplicateByPhoneNumber { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether to ignore phone numbers listed on a national do-not-call registry.
