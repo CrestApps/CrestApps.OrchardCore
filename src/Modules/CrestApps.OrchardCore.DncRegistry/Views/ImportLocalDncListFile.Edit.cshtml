@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.DncRegistry.ViewModels.UploadLocalDncListViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label">@T["List name"]</label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+    <span class="hint">@T["A descriptive name for this list (e.g., \"June 2026 DNC Update\")."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="CountryCode" class="form-label">@T["Country"]</label>
+    <select asp-for="CountryCode" asp-items="Model.CountryOptions" class="form-select"></select>
+    <span asp-validation-for="CountryCode" class="text-danger"></span>
+    <span class="hint">@T["Select the country this phone number list applies to. Phone numbers will be associated with this country for filtering."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="File" class="form-label">@T["CSV file"]</label>
+    <input asp-for="File" type="file" class="form-control" accept=".csv" />
+    <span asp-validation-for="File" class="text-danger"></span>
+    <span class="hint">@T["The import continues in the background after the file is uploaded."]</span>
+</div>

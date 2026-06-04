@@ -152,14 +152,15 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.2" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.3.5" />
-    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.3.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.2" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.4.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
     <PackageVersion Include="MailKit" Version="4.16.0" />
+    <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
   </ItemGroup>
   <ItemGroup>
     <!-- Sample Packages -->

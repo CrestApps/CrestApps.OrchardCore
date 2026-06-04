@@ -7,7 +7,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Provides integration with national do-not-call registries (USA FTC, Canada LNNTE-DNCL) for phone number compliance checking.
+      Provides integration with national do-not-call registries (USA FTC, Canada LNNTE-DNCL, Local) for phone number compliance checking.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS DNC Compliance</PackageTags>
   </PropertyGroup>
@@ -19,8 +19,11 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="YesSql.Core" />
   </ItemGroup>
 
   <ItemGroup>

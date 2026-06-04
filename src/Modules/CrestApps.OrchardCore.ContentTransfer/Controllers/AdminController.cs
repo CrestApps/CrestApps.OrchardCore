@@ -1,5 +1,8 @@
 using System.Data;
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -15,9 +18,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.ContentTransfer.Models;
-using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -54,8 +54,8 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IChunkFileUploadService _chunkFileUploadService;
     private readonly IContentTransferFileFormatProvider[] _formatProviders;
 
-    private readonly IStringLocalizer S;
-    private readonly IHtmlLocalizer H;
+    internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     public AdminController(
         IAuthorizationService authorizationService,

@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.DncRegistry.Models
+@using CrestApps.OrchardCore.DncRegistry.ViewModels
+@using System.Globalization
+
+@model LocalDncListViewModel
+
+@{
+    var entry = Model.LocalDncList;
+    var errorCount = entry.ErrorMessages?.Count ?? 0;
+
+    var statusClass = entry.Status switch
+    {
+        LocalDncListStatus.Pending => "text-secondary-emphasis",
+        LocalDncListStatus.Processing => "text-primary",
+        LocalDncListStatus.Completed when errorCount > 0 => "text-warning-emphasis",
+        LocalDncListStatus.Completed => "text-success",
+        LocalDncListStatus.Failed => "text-danger",
+        LocalDncListStatus.Paused => "text-secondary",
+        LocalDncListStatus.Deleting => "text-danger",
+        _ => "text-body",
+    };
+}
+
+<div class="d-flex flex-wrap gap-1">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Country"]">
+        <i class="fa-solid fa-globe text-secondary" aria-hidden="true"></i> @entry.CountryCode
+    </span>
+
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: entry.CreatedUtc, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@entry.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)">
+            @await DisplayAsync(await New.Timespan(Utc: entry.CreatedUtc))
+        </time>
+    </span>
+
+    <span class="badge ta-badge font-weight-normal @statusClass" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        @switch (entry.Status)
+        {
+            case LocalDncListStatus.Pending:
+                @T["Pending"]
+                break;
+            case LocalDncListStatus.Processing:
+                @T["Processing"]
+                break;
+            case LocalDncListStatus.Completed when errorCount > 0:
+                @T["Completed with errors"]
+                break;
+            case LocalDncListStatus.Completed:
+                @T["Completed"]
+                break;
+            case LocalDncListStatus.Failed:
+                @T["Failed"]
+                break;
+            case LocalDncListStatus.Paused:
+                @T["Paused"]
+                break;
+            case LocalDncListStatus.Deleting:
+                @T["Deleting"]
+                break;
+        }
+    </span>
+
+    @if (entry.TotalProcessed > 0)
+    {
+        <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Records imported successfully"]">
+            <i class="fa-solid fa-check text-success" aria-hidden="true"></i> @entry.ImportedCount.ToString("N0")
+        </span>
+
+        @if (errorCount > 0)
+        {
+            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Records with errors"]">
+                <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i> @errorCount
+            </span>
+        }
+    }
+
+    @if (entry.ProcessSaveUtc.HasValue)
+    {
+        <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Last processed at"]">
+            <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i>
+            <time datetime="@entry.ProcessSaveUtc.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)">
+                @await DisplayAsync(await New.Timespan(Utc: entry.ProcessSaveUtc.Value))
+            </time>
+        </span>
+    }
+</div>
+
+@if (!string.IsNullOrWhiteSpace(entry.Error))
+{
+    <div class="text-danger mt-1">
+        <small><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @entry.Error</small>
+    </div>
+}

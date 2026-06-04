@@ -23,13 +23,13 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
-using OrchardCore.ContentTypes.Events;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 

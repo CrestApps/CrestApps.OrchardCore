@@ -33,4 +33,20 @@ public interface INationalDoNotCallRegistry
     Task<HashSet<string>> GetRegisteredNumbersAsync(
         IEnumerable<string> phoneNumbers,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks whether the given phone numbers are listed on this registry,
+    /// applying additional filtering criteria from the search context.
+    /// </summary>
+    /// <param name="phoneNumbers">The phone numbers to check.</param>
+    /// <param name="context">The search context containing additional filters such as country.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>
+    /// A set of phone numbers from the input that are listed on the registry.
+    /// </returns>
+    Task<HashSet<string>> GetRegisteredNumbersAsync(
+        IEnumerable<string> phoneNumbers,
+        NumberSearchContext context,
+        CancellationToken cancellationToken = default)
+        => GetRegisteredNumbersAsync(phoneNumbers, cancellationToken);
 }

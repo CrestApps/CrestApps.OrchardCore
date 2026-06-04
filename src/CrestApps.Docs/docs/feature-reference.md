@@ -58,6 +58,7 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | `CrestApps.OrchardCore.DncRegistry` | DNC Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | USA FTC Do Not Call Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | Canada LNNTE-DNCL Registry | Feature | [DNC Registry](./modules/dnc-registry) |
+| `CrestApps.OrchardCore.DncRegistry.Local` | Local Do Not Call Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.SignalR` | SignalR | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.Users` | Users Core Components | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | Feature | [Users](./modules/users) |

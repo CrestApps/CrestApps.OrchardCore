@@ -38,3 +38,14 @@ using OrchardCore.Modules.Manifest;
         DncRegistryConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Local Do Not Call Registry",
+    Id = DncRegistryConstants.Features.Local,
+    Category = "Compliance",
+    Description = "Provides a local do-not-call registry where administrators can upload CSV files of phone numbers organized by country.",
+    Dependencies =
+    [
+        DncRegistryConstants.Features.Area,
+    ]
+)]

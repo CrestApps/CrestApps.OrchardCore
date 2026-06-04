@@ -1,0 +1,45 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="LocalDncRegistryAdmin">@T["Local Do Not Call Registry"]</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@RenderTitleSegments(T["Upload DNC List"])</li>
+    </ol>
+</nav>
+
+@if (!ViewContext.ModelState.IsValid)
+{
+    @Html.ValidationSummary(false, string.Empty, new { @class = "text-danger" })
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header fw-bold">@T["Upload DNC List"]</div>
+    <div class="card-body">
+        <form asp-action="Upload" asp-controller="LocalDncRegistryAdmin" method="post" enctype="multipart/form-data">
+            @await DisplayAsync(Model)
+
+            <div class="mb-3 mt-2">
+                <button type="submit" class="btn btn-primary">@T["Upload"]</button>
+                <a asp-action="Index" asp-controller="LocalDncRegistryAdmin" class="btn btn-secondary">@T["Cancel"]</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-bold">@T["File Requirements"]</div>
+    <div class="card-body">
+        <ul>
+            <li>@T["The uploaded file must be a CSV file (comma-separated values)."]</li>
+            <li>@T["The file must contain a single column with phone numbers only."]</li>
+            <li>@T["If your data source has multiple columns or tabs, export the phone number column to a separate CSV file first."]</li>
+            <li>@T["A header row (e.g., \"Phone Number\") is optional and will be automatically skipped if detected."]</li>
+            <li>@T["Blank rows, duplicate phone numbers, and invalid values are automatically skipped and tracked as rejected records."]</li>
+            <li>@T["Phone numbers are normalized (all non-digit characters removed) before storage for consistent lookup."]</li>
+            <li>@T["After the import completes, rejected records can be downloaded as a CSV file with reasons for rejection."]</li>
+            <li>@T["To replace an existing list, upload the new file and then delete the old list from the registry."]</li>
+        </ul>
+    </div>
+</div>
+
