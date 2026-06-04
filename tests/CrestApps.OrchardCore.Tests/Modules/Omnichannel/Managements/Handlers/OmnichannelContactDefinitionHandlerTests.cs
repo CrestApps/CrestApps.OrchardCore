@@ -32,8 +32,9 @@ public sealed class OmnichannelContactDefinitionHandlerTests
 
         handler.ContentTypeBuilding(context);
 
-        var contactMethods = Assert.Single(context.Record.ContentTypePartDefinitionRecords.Where(record =>
-            string.Equals(record.Name, OmnichannelConstants.NamedParts.ContactMethods, StringComparison.Ordinal)));
+        var contactMethods = Assert.Single(
+            context.Record.ContentTypePartDefinitionRecords,
+            record => string.Equals(record.Name, OmnichannelConstants.NamedParts.ContactMethods, StringComparison.Ordinal));
 
         Assert.Equal("BagPart", contactMethods.PartName);
         Assert.Equal(

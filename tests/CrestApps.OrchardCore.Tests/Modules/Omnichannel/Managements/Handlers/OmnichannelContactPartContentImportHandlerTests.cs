@@ -47,6 +47,6 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
 
-        public IStringLocalizer WithCulture(CultureInfo culture) => this;
+        public PassThroughStringLocalizer<T> WithCulture(CultureInfo culture) => this;
     }
 }
