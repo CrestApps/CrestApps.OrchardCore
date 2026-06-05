@@ -1,4 +1,4 @@
-﻿using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
 
@@ -98,8 +98,6 @@ public static class OmnichannelConstants
         public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
 
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
-
-        public const string NationalDoNotCallRegistry = "CrestApps.OrchardCore.Omnichannel.Managements.NationalDoNotCallRegistry";
     }
 
     /// <summary>

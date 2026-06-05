@@ -9,7 +9,9 @@
 
 <div class="mb-3">
     <label asp-for="CountryCode" class="form-label">@T["Country"]</label>
-    <select asp-for="CountryCode" asp-items="Model.CountryOptions" class="form-select"></select>
+    <select asp-for="CountryCode" asp-items="Model.CountryOptions" class="form-select">
+        <option value="">@T["Select a country"]</option>
+    </select>
     <span asp-validation-for="CountryCode" class="text-danger"></span>
     <span class="hint">@T["Select the country this phone number list applies to. Phone numbers will be associated with this country for filtering."]</span>
 </div>

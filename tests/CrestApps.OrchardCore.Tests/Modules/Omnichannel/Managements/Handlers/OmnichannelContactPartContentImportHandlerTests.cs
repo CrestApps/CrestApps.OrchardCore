@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -17,6 +18,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     {
         var handler = new OmnichannelContactPartContentImportHandler(
             Mock.Of<IClock>(),
+            Mock.Of<IPhoneNumberService>(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
 
         var columns = handler.GetColumns(new ImportContentPartContext

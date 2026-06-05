@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.DncRegistry.Indexes;
 
 /// <summary>
 /// Index provider that maps <see cref="LocalDncEntry"/> documents to <see cref="LocalDncEntryIndex"/>.
+/// Phone numbers are stored in E.164 format and indexed directly.
 /// </summary>
 public sealed class LocalDncEntryIndexProvider : IndexProvider<LocalDncEntry>
 {

@@ -64,20 +64,20 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 
 ### Key features
 
-- **CSV upload**: Import phone numbers from CSV files with automatic normalization
+- **CSV upload**: Import phone numbers from CSV files with automatic E.164 normalization
 - **Background processing**: Uploads return quickly and continue processing after the request ends
 - **Progress reporting**: Each uploaded list shows total rows, processed rows, successes, and errors while the import runs
 - **Country-based organization**: Each list is associated with a specific country (ISO 3166-1 alpha-2 code)
 - **Filtering by country**: When checking numbers, you can filter against a specific country's list or check all countries
 - **List replacement**: Delete old lists and upload replacements (e.g., monthly DNC updates)
-- **Phone number normalization**: Numbers are stripped to digits-only before storage for consistent matching
+- **Phone number normalization**: Uploaded phone numbers are normalized to [E.164](https://en.wikipedia.org/wiki/E.164) format (`+<country code><subscriber number>`, e.g., `+17024993350`) using [libphonenumber](https://github.com/twcclegg/libphonenumber-csharp). This globally unique format eliminates ambiguity between countries and provides a consistent comparison key.
 
 ### Managing local lists
 
 Navigate to **Interaction Center** -> **Local DNC Registry** to:
 
 1. **View uploaded lists** — see all lists with their country, phone number count, and upload date
-2. **Upload a new list** — use either the page action or **Interaction Center** -> **Upload DNC List**, then select a country, provide a name, and upload a CSV file
+2. **Upload a new list** — use either the page action or **Interaction Center** -> **Upload DNC List**, then select a country (the picker shows the dialing prefix), provide a name, and upload a CSV file
 3. **Delete a list** — remove a list and all its phone numbers from the list grid when it is no longer needed
 
 After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
@@ -93,7 +93,7 @@ The importer automatically:
 - skips invalid phone numbers
 - tracks row-level errors and success counts
 
-Rows with multiple populated columns are rejected because the file must contain phone numbers only in a single column. Numbers are normalized by removing all non-digit characters before storage.
+Rows with multiple populated columns are rejected because the file must contain phone numbers only in a single column. When a row omits the leading `+`, the importer uses the selected country as the region context to parse and convert the number to E.164 format using `IPhoneNumberService`. Numbers that cannot be parsed into valid E.164 format are rejected.
 
 Example CSV:
 ```csv

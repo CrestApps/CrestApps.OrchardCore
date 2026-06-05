@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -16,11 +17,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 /// <summary>
 /// Filters import rows for omnichannel contacts based on duplicate phone numbers
 /// and national do-not-call registry membership.
+/// Phone numbers are normalized to E.164 for comparison.
 /// </summary>
 public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 {
     private readonly IEnumerable<INationalDoNotCallRegistry> _registries;
     private readonly IOmnichannelContactDuplicateLookupService _duplicateLookupService;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
     private bool _ignoreDuplicates;
@@ -35,16 +38,19 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     /// </summary>
     /// <param name="registries">The available do-not-call registries.</param>
     /// <param name="duplicateLookupService">The duplicate lookup service.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="logger">The logger.</param>
     public OmnichannelContactImportRowFilter(
         IEnumerable<INationalDoNotCallRegistry> registries,
         IOmnichannelContactDuplicateLookupService duplicateLookupService,
+        IPhoneNumberService phoneNumberService,
         ISiteService siteService,
         ILogger<OmnichannelContactImportRowFilter> logger)
     {
         _registries = registries;
         _duplicateLookupService = duplicateLookupService;
+        _phoneNumberService = phoneNumberService;
         _siteService = siteService;
         _logger = logger;
     }
@@ -193,7 +199,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         return false;
     }
 
-    private static List<PhoneEntry> ExtractPhoneEntries(DataRow row, DataColumnCollection columns)
+    private List<PhoneEntry> ExtractPhoneEntries(DataRow row, DataColumnCollection columns)
     {
         var entries = new List<PhoneEntry>();
 
@@ -300,8 +306,16 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         }
     }
 
-    private static string NormalizePhoneNumber(string phoneNumber)
-        => new string(phoneNumber.Where(char.IsDigit).ToArray());
+    private string NormalizePhoneNumber(string phoneNumber)
+    {
+        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164))
+        {
+            return e164;
+        }
+
+        // Fallback: strip non-digits for consistent comparison of national-format numbers.
+        return new string(phoneNumber.Where(char.IsDigit).ToArray());
+    }
 
     private sealed record PhoneEntry(string NormalizedNumber, string RawValue, string Label);
 }

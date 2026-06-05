@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.DncRegistry;
+using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -14,7 +15,11 @@ using OrchardCore.Modules.Manifest;
     Name = "DNC Registry",
     Id = DncRegistryConstants.Features.Area,
     Category = "Compliance",
-    Description = "Provides the core framework for integrating with national do-not-call registries."
+    Description = "Provides the core framework for integrating with national do-not-call registries.",
+    Dependencies =
+    [
+        PhoneNumbersConstants.Features.Area,
+    ]
 )]
 
 [assembly: Feature(

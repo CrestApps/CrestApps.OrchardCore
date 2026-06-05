@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Services;
@@ -7,18 +9,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
 /// Queries stored omnichannel contacts for existing normalized phone numbers.
+/// Phone numbers are compared in E.164 format.
 /// </summary>
 public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelContactDuplicateLookupService
 {
     private readonly ISession _session;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactDuplicateLookupService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    public OmnichannelContactDuplicateLookupService(ISession session)
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
+    public OmnichannelContactDuplicateLookupService(
+        ISession session,
+        IPhoneNumberService phoneNumberService)
     {
         _session = session;
+        _phoneNumberService = phoneNumberService;
     }
 
     /// <inheritdoc />
@@ -118,7 +126,7 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         return existingPhoneNumbers;
     }
 
-    private static void AddPhoneFromIndex(HashSet<string> phoneNumbers, string normalizedValue, string rawValue)
+    private void AddPhoneFromIndex(HashSet<string> phoneNumbers, string normalizedValue, string rawValue)
     {
         if (!string.IsNullOrWhiteSpace(normalizedValue))
         {
@@ -143,20 +151,31 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     {
         foreach (var match in matches)
         {
-            var normalizedPhoneNumber = NormalizePhoneNumber(phoneSelector(match));
+            var rawPhone = phoneSelector(match);
 
-            if (string.IsNullOrWhiteSpace(normalizedPhoneNumber) ||
-                !missingPhoneNumbers.Contains(normalizedPhoneNumber, StringComparer.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(rawPhone) ||
+                !missingPhoneNumbers.Contains(rawPhone, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            existingPhoneNumbers.Add(normalizedPhoneNumber);
+            existingPhoneNumbers.Add(rawPhone);
         }
     }
 
-    internal static string NormalizePhoneNumber(string phoneNumber)
-        => string.IsNullOrWhiteSpace(phoneNumber)
-            ? string.Empty
-            : new(phoneNumber.Where(char.IsDigit).ToArray());
+    internal string NormalizePhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return string.Empty;
+        }
+
+        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164))
+        {
+            return e164;
+        }
+
+        // Fallback: strip non-digits for consistent comparison of national-format numbers.
+        return new string(phoneNumber.Where(char.IsDigit).ToArray());
+    }
 }

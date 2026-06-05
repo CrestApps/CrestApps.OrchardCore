@@ -1,9 +1,11 @@
 using System.Net.Http.Json;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.DncRegistry.Services;
@@ -18,6 +20,7 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -40,18 +43,22 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service for reading settings.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public UsaFtcDncRegistry(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
+        IPhoneNumberService phoneNumberService,
         IStringLocalizer<UsaFtcDncRegistry> stringLocalizer,
         ILogger<UsaFtcDncRegistry> logger)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
+        _phoneNumberService = phoneNumberService;
         _logger = logger;
 
         DisplayName = stringLocalizer["USA FTC Do Not Call Registry"];
@@ -91,8 +98,13 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
 
             try
             {
-                var normalizedNumber = NormalizePhoneNumber(phoneNumber);
-                var requestUrl = $"{baseUrl}Check?PhoneNumber={normalizedNumber}&OrganizationId={settings.OrganizationId}&api_key={apiKey}";
+                if (!_phoneNumberService.TryFormatToE164(phoneNumber, "US", out var e164Number))
+                {
+                    continue;
+                }
+
+                var apiNumber = ConvertToApiFormat(e164Number);
+                var requestUrl = $"{baseUrl}Check?PhoneNumber={apiNumber}&OrganizationId={settings.OrganizationId}&api_key={apiKey}";
 
                 var response = await client.GetAsync(requestUrl, cancellationToken);
 
@@ -123,8 +135,20 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
         return dncNumbers;
     }
 
-    private static string NormalizePhoneNumber(string phoneNumber)
-        => new(phoneNumber.Where(char.IsDigit).ToArray());
+    /// <summary>
+    /// Converts an E.164 number to the 10-digit format expected by the FTC API.
+    /// </summary>
+    private static string ConvertToApiFormat(string e164Number)
+    {
+        // E.164 for US: +1XXXXXXXXXX → strip +1 to get the 10-digit number.
+        if (e164Number.StartsWith("+1", StringComparison.Ordinal) && e164Number.Length == 12)
+        {
+            return e164Number[2..];
+        }
+
+        // Fallback: strip the leading '+'.
+        return e164Number.TrimStart('+');
+    }
 
     private sealed class FtcDncResponse
     {

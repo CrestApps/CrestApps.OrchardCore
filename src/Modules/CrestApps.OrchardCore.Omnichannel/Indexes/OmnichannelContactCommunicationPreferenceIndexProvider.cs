@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -7,6 +8,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Indexes;
 
 internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : IndexProvider<ContentItem>
 {
+    public OmnichannelContactCommunicationPreferenceIndexProvider()
+    {
+    }
+
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context

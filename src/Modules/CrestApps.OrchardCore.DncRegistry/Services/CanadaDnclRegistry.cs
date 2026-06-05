@@ -1,10 +1,9 @@
 using System.Net.Http.Json;
-using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.DncRegistry.Services;
@@ -19,6 +18,7 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -41,18 +41,22 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service for reading settings.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public CanadaDnclRegistry(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
+        IPhoneNumberService phoneNumberService,
         IStringLocalizer<CanadaDnclRegistry> stringLocalizer,
         ILogger<CanadaDnclRegistry> logger)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
+        _phoneNumberService = phoneNumberService;
         _logger = logger;
 
         DisplayName = stringLocalizer["Canada LNNTE-DNCL Registry"];
@@ -92,8 +96,13 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
 
             try
             {
-                var normalizedNumber = NormalizePhoneNumber(phoneNumber);
-                var requestUrl = $"{baseUrl}DNCLNumbers/{normalizedNumber}?accountNumber={settings.AccountNumber}";
+                if (!_phoneNumberService.TryFormatToE164(phoneNumber, "CA", out var e164Number))
+                {
+                    continue;
+                }
+
+                var apiNumber = ConvertToApiFormat(e164Number);
+                var requestUrl = $"{baseUrl}DNCLNumbers/{apiNumber}?accountNumber={settings.AccountNumber}";
 
                 using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
                 request.Headers.Add("x-api-key", apiKey);
@@ -127,8 +136,20 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
         return dncNumbers;
     }
 
-    private static string NormalizePhoneNumber(string phoneNumber)
-        => new string(phoneNumber.Where(char.IsDigit).ToArray());
+    /// <summary>
+    /// Converts an E.164 number to the 10-digit format expected by the Canada DNCL API.
+    /// </summary>
+    private static string ConvertToApiFormat(string e164Number)
+    {
+        // E.164 for CA: +1XXXXXXXXXX → strip +1 to get the 10-digit number.
+        if (e164Number.StartsWith("+1", StringComparison.Ordinal) && e164Number.Length == 12)
+        {
+            return e164Number[2..];
+        }
+
+        // Fallback: strip the leading '+'.
+        return e164Number.TrimStart('+');
+    }
 
     private sealed class DnclResponse
     {

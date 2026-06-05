@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -31,11 +30,8 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelContact, part => part
             .Attachable()
-            .WithDescription("Omnichannel Contact")
-            .WithSettings(new ContentSettings()
-            {
-                IsSystemDefined = true,
-            })
+            .WithDisplayName("Omnichannel Contact")
+            .WithDescription("Provides a way to configure a content type to act as an omnichannel contact record.")
         );
 
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
@@ -49,8 +45,8 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex("IDX_OmnichannelContactIndex_DocumentId",
-            "DocumentId",
-            "ContentItemId"
+                "DocumentId",
+                "ContentItemId"
             )
         );
 
@@ -76,45 +72,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
-        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelContact, part => part
-            .Attachable()
-            .WithDisplayName("Omnichannel Contact")
-            .WithDescription("Treats the content item as Contact.")
-            .WithSettings(new ContentSettings()
-            {
-                IsSystemDefined = true,
-            })
-        );
-
-        return 2;
-    }
-
-    /// <summary>
-    /// Updates existing omnichannel contact types so they always store contact methods in the fixed ContactMethods bag.
-    /// </summary>
-    public async Task<int> UpdateFrom2Async()
-    {
-        var contentTypeDefinitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-
-        foreach (var contentTypeDefinition in contentTypeDefinitions)
-        {
-            if (!OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition) ||
-                !OmnichannelContactDefinitionService.NeedsContactMethodsBagUpdate(contentTypeDefinition))
-            {
-                continue;
-            }
-
-            await _contentDefinitionManager.AlterTypeDefinitionAsync(contentTypeDefinition.Name, OmnichannelContactDefinitionService.ConfigureContactMethodsBagPart);
-        }
-
-        return 3;
-    }
-
-    /// <summary>
-    /// Adds normalized phone number columns to support duplicate detection across formatted values.
-    /// </summary>
-    public async Task<int> UpdateFrom3Async()
-    {
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
         {
             table.AddColumn<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50));
@@ -135,6 +92,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
                 "NormalizedPrimaryHomePhoneNumber")
         );
 
-        return 4;
+        return 2;
     }
 }

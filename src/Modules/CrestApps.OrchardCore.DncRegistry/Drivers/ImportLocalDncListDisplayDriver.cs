@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,14 +14,20 @@ namespace CrestApps.OrchardCore.DncRegistry.Drivers;
 /// </summary>
 public sealed class ImportLocalDncListDisplayDriver : DisplayDriver<ImportLocalDncList>
 {
+    private readonly IPhoneNumberService _phoneNumberService;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImportLocalDncListDisplayDriver"/> class.
     /// </summary>
+    /// <param name="phoneNumberService">The phone number service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ImportLocalDncListDisplayDriver(IStringLocalizer<ImportLocalDncListDisplayDriver> stringLocalizer)
+    public ImportLocalDncListDisplayDriver(
+        IPhoneNumberService phoneNumberService,
+        IStringLocalizer<ImportLocalDncListDisplayDriver> stringLocalizer)
     {
+        _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
     }
 
@@ -78,36 +85,47 @@ public sealed class ImportLocalDncListDisplayDriver : DisplayDriver<ImportLocalD
     {
         return
         [
-            new SelectListItem(S["Select a country..."], string.Empty),
-            new SelectListItem(S["United States"], "US"),
-            new SelectListItem(S["Canada"], "CA"),
-            new SelectListItem(S["United Kingdom"], "GB"),
-            new SelectListItem(S["Australia"], "AU"),
-            new SelectListItem(S["Germany"], "DE"),
-            new SelectListItem(S["France"], "FR"),
-            new SelectListItem(S["India"], "IN"),
-            new SelectListItem(S["Brazil"], "BR"),
-            new SelectListItem(S["Mexico"], "MX"),
-            new SelectListItem(S["Japan"], "JP"),
-            new SelectListItem(S["South Korea"], "KR"),
-            new SelectListItem(S["Italy"], "IT"),
-            new SelectListItem(S["Spain"], "ES"),
-            new SelectListItem(S["Netherlands"], "NL"),
-            new SelectListItem(S["Belgium"], "BE"),
-            new SelectListItem(S["Switzerland"], "CH"),
-            new SelectListItem(S["Sweden"], "SE"),
-            new SelectListItem(S["Norway"], "NO"),
-            new SelectListItem(S["Denmark"], "DK"),
-            new SelectListItem(S["Finland"], "FI"),
-            new SelectListItem(S["Ireland"], "IE"),
-            new SelectListItem(S["New Zealand"], "NZ"),
-            new SelectListItem(S["South Africa"], "ZA"),
-            new SelectListItem(S["Argentina"], "AR"),
-            new SelectListItem(S["Colombia"], "CO"),
-            new SelectListItem(S["Chile"], "CL"),
-            new SelectListItem(S["Poland"], "PL"),
-            new SelectListItem(S["Austria"], "AT"),
-            new SelectListItem(S["Portugal"], "PT"),
+            CreateCountryOption("United States", "US"),
+            CreateCountryOption("Canada", "CA"),
+            CreateCountryOption("United Kingdom", "GB"),
+            CreateCountryOption("Australia", "AU"),
+            CreateCountryOption("Germany", "DE"),
+            CreateCountryOption("France", "FR"),
+            CreateCountryOption("India", "IN"),
+            CreateCountryOption("Brazil", "BR"),
+            CreateCountryOption("Mexico", "MX"),
+            CreateCountryOption("Japan", "JP"),
+            CreateCountryOption("South Korea", "KR"),
+            CreateCountryOption("Italy", "IT"),
+            CreateCountryOption("Spain", "ES"),
+            CreateCountryOption("Netherlands", "NL"),
+            CreateCountryOption("Belgium", "BE"),
+            CreateCountryOption("Switzerland", "CH"),
+            CreateCountryOption("Sweden", "SE"),
+            CreateCountryOption("Norway", "NO"),
+            CreateCountryOption("Denmark", "DK"),
+            CreateCountryOption("Finland", "FI"),
+            CreateCountryOption("Ireland", "IE"),
+            CreateCountryOption("New Zealand", "NZ"),
+            CreateCountryOption("South Africa", "ZA"),
+            CreateCountryOption("Argentina", "AR"),
+            CreateCountryOption("Colombia", "CO"),
+            CreateCountryOption("Chile", "CL"),
+            CreateCountryOption("Poland", "PL"),
+            CreateCountryOption("Austria", "AT"),
+            CreateCountryOption("Portugal", "PT"),
         ];
+    }
+
+    private SelectListItem CreateCountryOption(string displayName, string countryCode)
+    {
+        var callingCode = _phoneNumberService.GetCountryCode(countryCode);
+
+        if (callingCode > 0)
+        {
+            return new SelectListItem(S["{0} (+{1})", displayName, callingCode], countryCode);
+        }
+
+        return new SelectListItem(S[displayName], countryCode);
     }
 }

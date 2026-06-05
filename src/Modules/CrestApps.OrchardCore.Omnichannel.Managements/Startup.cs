@@ -165,8 +165,7 @@ public sealed class ContentTransferStartup : StartupBase
     }
 }
 
-[Feature(OmnichannelConstants.Features.NationalDoNotCallRegistry)]
-[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+[RequireFeatures("CrestApps.OrchardCore.DncRegistry", ContentTransferConstants.Feature.ModuleId)]
 public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

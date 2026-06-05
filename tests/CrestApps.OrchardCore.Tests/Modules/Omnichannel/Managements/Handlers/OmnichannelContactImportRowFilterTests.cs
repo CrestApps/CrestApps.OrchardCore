@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
@@ -199,6 +200,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         => new(
             registries,
             _duplicateLookupService.Object,
+            new DefaultPhoneNumberService(),
             _siteService.Object,
             Mock.Of<Microsoft.Extensions.Logging.ILogger<OmnichannelContactImportRowFilter>>());
 

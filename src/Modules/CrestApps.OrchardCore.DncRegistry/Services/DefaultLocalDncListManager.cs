@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -23,6 +24,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     private readonly IDistributedLock _distributedLock;
     private readonly ILocalDncFileStore _fileStore;
     private readonly IClock _clock;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -32,18 +34,21 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     /// <param name="distributedLock">The distributed lock service.</param>
     /// <param name="fileStore">The tenant-local file store.</param>
     /// <param name="clock">The clock service.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="logger">The logger.</param>
     public DefaultLocalDncListManager(
         ISession session,
         IDistributedLock distributedLock,
         ILocalDncFileStore fileStore,
         IClock clock,
+        IPhoneNumberService phoneNumberService,
         ILogger<DefaultLocalDncListManager> logger)
     {
         _session = session;
         _distributedLock = distributedLock;
         _fileStore = fileStore;
         _clock = clock;
+        _phoneNumberService = phoneNumberService;
         _logger = logger;
     }
 
@@ -604,21 +609,20 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             }
 
             var value = nonEmptyFields[0];
-            var normalized = NormalizePhoneNumber(value);
 
-            if (rowIndex == 1 && normalized.Length < 7 && value.Any(char.IsLetter))
+            if (rowIndex == 1 && value.Any(char.IsLetter))
             {
                 AddRowError(list, rowIndex, "Header row ignored.");
                 continue;
             }
 
-            if (string.IsNullOrEmpty(normalized) || normalized.Length < 7)
+            if (!_phoneNumberService.TryFormatToE164(value, list.CountryCode, out var e164Number))
             {
                 AddRowError(list, rowIndex, "Row ignored because it does not contain a valid phone number.");
                 continue;
             }
 
-            if (!seenNumbers.Add(normalized))
+            if (!seenNumbers.Add(e164Number))
             {
                 AddRowError(list, rowIndex, "Duplicate phone number ignored.");
                 continue;
@@ -629,7 +633,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 EntryId = IdGenerator.GenerateId(),
                 ListId = list.ListId,
                 CountryCode = list.CountryCode,
-                PhoneNumber = normalized,
+                PhoneNumber = e164Number,
             });
 
             list.ImportedCount++;
@@ -735,24 +739,4 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             : errorMessage;
     }
 
-    private static string NormalizePhoneNumber(string phoneNumber)
-    {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            return string.Empty;
-        }
-
-        var digits = new char[phoneNumber.Length];
-        var count = 0;
-
-        foreach (var c in phoneNumber)
-        {
-            if (char.IsDigit(c))
-            {
-                digits[count++] = c;
-            }
-        }
-
-        return new string(digits, 0, count);
-    }
 }

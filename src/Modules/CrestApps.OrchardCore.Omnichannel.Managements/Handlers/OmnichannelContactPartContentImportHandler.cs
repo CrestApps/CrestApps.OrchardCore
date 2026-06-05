@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
@@ -20,6 +21,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 {
     internal readonly IStringLocalizer S;
     private readonly IClock _clock;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     private ImportColumn _emailColumn;
     private ImportColumn _cellPhoneColumn;
@@ -37,12 +39,15 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     /// Initializes a new instance of the <see cref="OmnichannelContactPartContentImportHandler"/> class.
     /// </summary>
     /// <param name="clock">The clock.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelContactPartContentImportHandler(
         IClock clock,
+        IPhoneNumberService phoneNumberService,
         IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
     {
         _clock = clock;
+        _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
     }
 
@@ -196,13 +201,13 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
             if (!string.IsNullOrEmpty(cellPhone))
             {
-                var cellPhoneItem = CreatePhoneNumberContentItem(cellPhone, "Cell");
+                var cellPhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(cellPhone), "Cell");
                 bagPart.ContentItems.Add(cellPhoneItem);
             }
 
             if (!string.IsNullOrEmpty(homePhone))
             {
-                var homePhoneItem = CreatePhoneNumberContentItem(homePhone, "Home");
+                var homePhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(homePhone), "Home");
                 bagPart.ContentItems.Add(homePhoneItem);
             }
 
@@ -433,6 +438,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         return DateTime.TryParse(text, out var parsedDateTime) ? parsedDateTime : null;
     }
+
+    private string NormalizePhoneNumber(string phoneNumber)
+        => _phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164Number)
+            ? e164Number
+            : phoneNumber;
 
     private static ContentItem CreateEmailAddressContentItem(string email)
     {

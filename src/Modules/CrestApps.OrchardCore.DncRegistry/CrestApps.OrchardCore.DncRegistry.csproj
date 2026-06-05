@@ -22,6 +22,7 @@
     <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="YesSql.Core" />
   </ItemGroup>
@@ -29,6 +30,16 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ensure this module directly depends on the required package so that when someone installs it,
+      they won't need to manually include the Phone Numbers package.
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

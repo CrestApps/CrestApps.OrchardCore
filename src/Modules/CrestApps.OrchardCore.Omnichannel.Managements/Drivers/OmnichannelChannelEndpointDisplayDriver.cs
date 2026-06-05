@@ -1,6 +1,7 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,7 +13,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<OmnichannelChannelEndpoint>
 {
-    private readonly IPhoneFormatValidator _phoneFormatValidator;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
 
     internal readonly IStringLocalizer S;
@@ -20,15 +21,15 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointDisplayDriver"/> class.
     /// </summary>
-    /// <param name="phoneFormatValidator">The phone format validator.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointDisplayDriver(
-        IPhoneFormatValidator phoneFormatValidator,
+        IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
         IStringLocalizer<OmnichannelChannelEndpointDisplayDriver> stringLocalizer)
     {
-        _phoneFormatValidator = phoneFormatValidator;
+        _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
         S = stringLocalizer;
     }
@@ -38,10 +39,10 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         return CombineAsync(
             View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-        View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
-            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-        View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
-            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+            View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+            View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 
@@ -90,14 +91,13 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         {
             if (model.Channel == OmnichannelConstants.Channels.Phone || model.Channel == OmnichannelConstants.Channels.Sms)
             {
-                if (!_phoneFormatValidator.IsValid(model.Value))
+                if (!_phoneNumberService.TryFormatToE164(model.Value, null, out var e164Number))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."]);
                 }
                 else
                 {
-                    // Ensure phone numbers don't contain any spaces since its valid to have spaces in phone numbers.
-                    value = model.Value.GetCleanedPhoneNumber();
+                    value = e164Number;
                 }
             }
             else if (model.Channel == OmnichannelConstants.Channels.Email)

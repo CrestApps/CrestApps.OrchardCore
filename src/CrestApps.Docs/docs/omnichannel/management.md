@@ -109,6 +109,8 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can populate the same DNC/compliance columns directly onto `OmnichannelContactPart`
 - duplicate filtering can ignore rows that repeat a previously imported phone number
 - do-not-call filtering can skip rows whose phone numbers are registered on one or more configured registries
+- channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
+- contact publish and update operations now keep the omnichannel contact indexes in sync automatically
 
 Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using YesSql;
 using YesSql.Services;
@@ -11,10 +12,12 @@ namespace CrestApps.OrchardCore.DncRegistry.Services;
 /// A local do-not-call registry that checks phone numbers against
 /// administrator-uploaded CSV lists stored in YesSql.
 /// Supports filtering by country via <see cref="NumberSearchContext"/>.
+/// Phone numbers are expected in E.164 format for comparison.
 /// </summary>
 public sealed class LocalDncRegistry : INationalDoNotCallRegistry
 {
     private readonly ISession _session;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     /// <summary>
     /// Gets the unique key identifying this registry.
@@ -35,12 +38,15 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
     /// Initializes a new instance of the <see cref="LocalDncRegistry"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="S">The string localizer.</param>
     public LocalDncRegistry(
         ISession session,
+        IPhoneNumberService phoneNumberService,
         IStringLocalizer<LocalDncRegistry> S)
     {
         _session = session;
+        _phoneNumberService = phoneNumberService;
 
         DisplayName = S["Local Do Not Call Registry"];
         Description = S["Checks phone numbers against locally uploaded CSV lists organized by country."];
@@ -59,17 +65,31 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
         CancellationToken cancellationToken = default)
     {
         var dncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var normalizedNumbers = phoneNumbers
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(NormalizePhoneNumber)
-            .Where(n => !string.IsNullOrEmpty(n))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
-        if (normalizedNumbers.Count == 0)
+        // Normalize input numbers to E.164 for comparison.
+        var e164Map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var phone in phoneNumbers)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                continue;
+            }
+
+            var e164 = NormalizeToE164(phone, context?.CountryCode);
+
+            if (!string.IsNullOrEmpty(e164) && !e164Map.ContainsKey(e164))
+            {
+                e164Map[e164] = phone;
+            }
+        }
+
+        if (e164Map.Count == 0)
         {
             return dncNumbers;
         }
+
+        var e164Numbers = e164Map.Keys.ToList();
 
         IQuery<LocalDncEntry> query;
 
@@ -78,14 +98,14 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
             var upperCountry = context.CountryCode.ToUpperInvariant();
 
             query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
-                i => i.PhoneNumber.IsIn(normalizedNumbers) &&
+                i => i.PhoneNumber.IsIn(e164Numbers) &&
                      i.CountryCode == upperCountry,
                 collection: DncRegistryConstants.CollectionName);
         }
         else
         {
             query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
-                i => i.PhoneNumber.IsIn(normalizedNumbers),
+                i => i.PhoneNumber.IsIn(e164Numbers),
                 collection: DncRegistryConstants.CollectionName);
         }
 
@@ -114,18 +134,23 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
                 continue;
             }
 
-            foreach (var original in phoneNumbers)
+            // Return the original input number that matched.
+            if (e164Map.TryGetValue(entry.PhoneNumber, out var originalNumber))
             {
-                if (string.Equals(NormalizePhoneNumber(original), entry.PhoneNumber, StringComparison.OrdinalIgnoreCase))
-                {
-                    dncNumbers.Add(original);
-                }
+                dncNumbers.Add(originalNumber);
             }
         }
 
         return dncNumbers;
     }
 
-    private static string NormalizePhoneNumber(string phoneNumber)
-        => new(phoneNumber.Where(char.IsDigit).ToArray());
+    private string NormalizeToE164(string phoneNumber, string regionCode)
+    {
+        if (_phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164))
+        {
+            return e164;
+        }
+
+        return null;
+    }
 }
