@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
@@ -17,6 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +39,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements;
 /// </summary>
 public sealed class Startup : StartupBase
 {
-    private readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
