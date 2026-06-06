@@ -1,0 +1,19 @@
+@model CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.OmnichannelContactImportOptionsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Import options"]</div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IgnoreDuplicateByPhoneNumber" />
+            <label class="form-check-label" asp-for="IgnoreDuplicateByPhoneNumber">@T["Ignore duplicate by phone number"]</label>
+            <span class="hint dashed">@T["When enabled, only the first row for a phone number is imported. Later duplicates in the file and phone numbers that already exist in the database are skipped and added to the error export."]</span>
+        </div>
+
+        <div class="mt-3">
+            <label asp-for="SelectedCountryCode" class="form-label">@T["Lead country"]</label>
+            <select asp-for="SelectedCountryCode" asp-items="Model.AvailableCountries" class="form-select" required></select>
+            <span asp-validation-for="SelectedCountryCode" class="text-danger"></span>
+            <span class="hint dashed">@T["Select the default country for non-E.164 phone numbers in this file. Imports for content types with OmnichannelContactPart should contain leads from one country per file unless every phone number in the file already uses E.164."]</span>
+        </div>
+    </div>
+</div>

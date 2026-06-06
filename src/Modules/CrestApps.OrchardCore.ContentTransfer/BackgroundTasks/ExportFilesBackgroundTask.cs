@@ -1,4 +1,6 @@
 using System.Data;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -6,8 +8,6 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.ContentTransfer.Models;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -109,9 +109,18 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 progressPart.TotalRecords = totalCount;
 
                 // Resolve file format provider from the stored file name extension.
-                var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>();
-                var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(entry.StoredFileName))
-                    ?? formatProviders.First(p => p.FileExtension == ".xlsx");
+                var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
+                    .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
+                    ?? formatProviders.FirstOrDefault();
+
+                if (formatProvider == null)
+                {
+                    await SaveEntryWithErrorAsync(session, clock, entry, localizer["No file formats are currently enabled."]);
+                    continue;
+                }
 
                 var fileName = entry.StoredFileName;
                 var tempFilePath = Path.GetTempFileName();
@@ -244,7 +253,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync();
     }
 
-    private static string GetExportLockKey(string entryId)
+    internal static string GetExportLockKey(string entryId)
         => $"ContentsTransfer_Export_{entryId}";
 
     private static IQuery<ContentItem> BuildExportQuery(

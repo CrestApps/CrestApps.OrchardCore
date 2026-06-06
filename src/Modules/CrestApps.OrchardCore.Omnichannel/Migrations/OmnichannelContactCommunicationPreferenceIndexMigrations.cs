@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -25,9 +26,8 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table => table
             .CreateIndex("IDX_OmnichannelContactCommunicationPreferenceIndex_DoNotCallUtc",
-        "DocumentId",
-        "DoNotCallUtc")
-        );
+                "DocumentId",
+                "DoNotCallUtc"));
 
         return 1;
     }

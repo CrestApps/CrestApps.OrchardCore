@@ -208,30 +208,26 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
 
         var now = _clock.UtcNow;
 
-        contact.Alter<CommunicationPreferencePart>(part =>
+        contact.Alter<OmnichannelContactPart>(part =>
         {
             if (action.SetDoNotCall.HasValue)
             {
-                part.DoNotCall = action.SetDoNotCall.Value;
-                part.DoNotCallUtc = now;
+                part.SetDoNotCall(action.SetDoNotCall.Value, now);
             }
 
             if (action.SetDoNotEmail.HasValue)
             {
-                part.DoNotEmail = action.SetDoNotEmail.Value;
-                part.DoNotEmailUtc = now;
+                part.SetDoNotEmail(action.SetDoNotEmail.Value, now);
             }
 
             if (action.SetDoNotSms.HasValue)
             {
-                part.DoNotSms = action.SetDoNotSms.Value;
-                part.DoNotSmsUtc = now;
+                part.SetDoNotSms(action.SetDoNotSms.Value, now);
             }
 
             if (action.SetDoNotChat.HasValue)
             {
-                part.DoNotChat = action.SetDoNotChat.Value;
-                part.DoNotChatUtc = now;
+                part.SetDoNotChat(action.SetDoNotChat.Value, now);
             }
         });
     }

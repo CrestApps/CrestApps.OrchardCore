@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -20,8 +21,10 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Area,
         UsersConstants.Feature.Area,
+        PhoneNumbersConstants.Features.Area,
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
+        "OrchardCore.Flows",
         "OrchardCore.Users",
         "CrestApps.OrchardCore.Users",
     ]

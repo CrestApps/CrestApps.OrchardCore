@@ -8,6 +8,10 @@
     var entry = Model.Value.ContentTransferEntry;
     var errorCount = 0;
     var successCount = 0;
+    var isImportEntry = entry.Direction == ContentTransferDirection.Import;
+    var status = isImportEntry
+        ? entry.Status.NormalizeImportStatus()
+        : entry.Status;
 
     if (entry.TryGet<ImportFileProcessStatsPart>(out var statsPart))
     {
@@ -28,14 +32,15 @@
 </span>
 
 @{
-    var statusClasses = entry.Status switch
+    var statusClasses = status switch
     {
         ContentTransferEntryStatus.New => "text-secondary-emphasis",
+        ContentTransferEntryStatus.Pending => "text-secondary-emphasis",
         ContentTransferEntryStatus.Processing => "text-primary",
         ContentTransferEntryStatus.Completed => "text-success",
         ContentTransferEntryStatus.CompletedWithErrors => "text-warning-emphasis",
-        ContentTransferEntryStatus.Canceled => "text-secondary",
-        ContentTransferEntryStatus.CanceledWithImportedRecords => "text-warning",
+        ContentTransferEntryStatus.Paused => "text-secondary",
+        ContentTransferEntryStatus.Deleting => "text-danger",
         ContentTransferEntryStatus.Failed => "text-danger",
         _ => "text-body",
     };
@@ -43,10 +48,13 @@
 
 <span class="badge ta-badge font-weight-normal @statusClasses" data-bs-toggle="tooltip" title="@T["Status"]">
     <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-    @switch (entry.Status)
+    @switch (status)
     {
         case ContentTransferEntryStatus.New:
             @T["New"]
+            break;
+        case ContentTransferEntryStatus.Pending:
+            @T["Pending"]
             break;
         case ContentTransferEntryStatus.Processing:
             @T["Processing"]
@@ -57,11 +65,11 @@
         case ContentTransferEntryStatus.CompletedWithErrors:
             @T["Completed with errors"]
             break;
-        case ContentTransferEntryStatus.Canceled:
-            @T["Canceled"]
+        case ContentTransferEntryStatus.Paused:
+            @T["Paused"]
             break;
-        case ContentTransferEntryStatus.CanceledWithImportedRecords:
-            @T["Canceled with imported records"]
+        case ContentTransferEntryStatus.Deleting:
+            @T["Deleting"]
             break;
         case ContentTransferEntryStatus.Failed:
             @T["Failed"]

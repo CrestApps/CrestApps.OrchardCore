@@ -8,4 +8,6 @@ public class ImportContentContext
     public ContentItem ContentItem { get; set; }
 
     public ContentTypeDefinition ContentTypeDefinition { get; set; }
+
+    public ContentTransferEntry Entry { get; set; }
 }

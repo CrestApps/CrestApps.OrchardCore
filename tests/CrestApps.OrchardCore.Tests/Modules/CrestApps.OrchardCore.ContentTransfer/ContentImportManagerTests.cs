@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -186,6 +187,97 @@ public class ContentImportManagerTests
     {
         await Assert.ThrowsAsync<ArgumentNullException>(() => _manager.GetColumnsAsync(null));
     }
+
+    [Fact]
+    public async Task GetColumnsAsync_WeldsMissingPartToContentItem()
+    {
+        var contentItem = new ContentItem { ContentType = "Article" };
+
+        _contentManager.Setup(x => x.NewAsync("Article"))
+            .ReturnsAsync(contentItem);
+
+        SetupPartActivator<HtmlBodyPart>("HtmlBodyPart");
+
+        var context = new ImportContentContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition("Article", CreateTypePartDefinition("HtmlBodyPart")),
+        };
+
+        await _manager.GetColumnsAsync(context);
+
+        Assert.True(contentItem.TryGet<HtmlBodyPart>(out _));
+    }
+
+    [Fact]
+    public async Task ImportAsync_WeldsMissingPartToContentItem()
+    {
+        var contentItem = new ContentItem { ContentType = "Article" };
+        var dataTable = new DataTable();
+        var row = dataTable.NewRow();
+
+        SetupPartActivator<HtmlBodyPart>("HtmlBodyPart");
+
+        var context = new ContentImportContext
+        {
+            ContentItem = contentItem,
+            ContentTypeDefinition = CreateContentTypeDefinition("Article", CreateTypePartDefinition("HtmlBodyPart")),
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await _manager.ImportAsync(context);
+
+        Assert.True(contentItem.TryGet<HtmlBodyPart>(out _));
+    }
+
+    [Fact]
+    public async Task ExportAsync_WeldsMissingPartToContentItem()
+    {
+        var contentItem = new ContentItem { ContentType = "Article" };
+        var dataTable = new DataTable();
+        var row = dataTable.NewRow();
+
+        SetupPartActivator<HtmlBodyPart>("HtmlBodyPart");
+
+        var context = new ContentExportContext
+        {
+            ContentItem = contentItem,
+            ContentTypeDefinition = CreateContentTypeDefinition("Article", CreateTypePartDefinition("HtmlBodyPart")),
+            Row = row,
+        };
+
+        await _manager.ExportAsync(context);
+
+        Assert.True(contentItem.TryGet<HtmlBodyPart>(out _));
+    }
+
+    private void SetupPartActivator<TPart>(string partName)
+        where TPart : ContentPart, new()
+    {
+        var activator = new Mock<ITypeActivator<ContentPart>>();
+        activator.SetupGet(x => x.Type)
+            .Returns(typeof(TPart));
+        activator.Setup(x => x.CreateInstance())
+            .Returns(new TPart());
+
+        _partFactory.Setup(x => x.GetTypeActivator(partName))
+            .Returns(activator.Object);
+    }
+
+    private static ContentTypeDefinition CreateContentTypeDefinition(string contentTypeName, params ContentTypePartDefinition[] parts)
+    {
+        var contentTypeDefinition = new ContentTypeDefinition(contentTypeName, contentTypeName, parts, new JsonObject());
+
+        foreach (var part in parts)
+        {
+            part.ContentTypeDefinition = contentTypeDefinition;
+        }
+
+        return contentTypeDefinition;
+    }
+
+    private static ContentTypePartDefinition CreateTypePartDefinition(string partName)
+        => new(partName, new ContentPartDefinition(partName), new JsonObject());
 }
 
 public class CommonContentImportHandlerTests
@@ -350,6 +442,30 @@ public class CommonContentImportHandlerTests
         Assert.Equal("test-id-123456789012345", row[nameof(ContentItem.ContentItemId)].ToString());
         Assert.Equal(contentItem.CreatedUtc?.ToString(), row[nameof(ContentItem.CreatedUtc)]?.ToString());
         Assert.Equal(contentItem.ModifiedUtc?.ToString(), row[nameof(ContentItem.ModifiedUtc)]?.ToString());
+    }
+
+    [Fact]
+    public async Task ImportAsync_IgnoresContentItemVersionId()
+    {
+        var dataTable = new DataTable();
+        dataTable.Columns.Add(nameof(ContentItem.ContentItemVersionId));
+        var row = dataTable.NewRow();
+        row[nameof(ContentItem.ContentItemVersionId)] = "abcdefghijklmnopqrstuvwxyz";
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem();
+
+        var context = new ContentImportContext
+        {
+            ContentItem = contentItem,
+            ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await _handler.ImportAsync(context);
+
+        Assert.Null(contentItem.ContentItemVersionId);
     }
 
     [Fact]

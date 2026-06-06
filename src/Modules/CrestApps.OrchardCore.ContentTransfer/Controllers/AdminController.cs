@@ -1,8 +1,8 @@
 using System.Data;
 using System.Security.Claims;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -18,13 +18,11 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.ContentTransfer.Models;
-using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Media;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -55,9 +53,11 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IChunkFileUploadService _chunkFileUploadService;
+    private readonly IContentTransferFileFormatProvider[] _formatProviders;
+    private readonly IContentTransferEntryManager _contentTransferEntryManager;
 
-    private readonly IStringLocalizer S;
-    private readonly IHtmlLocalizer H;
+    internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     public AdminController(
         IAuthorizationService authorizationService,
@@ -78,6 +78,8 @@ public sealed class AdminController : Controller, IUpdateModel
         IContentImportManager contentImportManager,
         IContentItemDisplayManager contentItemDisplayManager,
         IChunkFileUploadService chunkFileUploadService,
+        IEnumerable<IContentTransferFileFormatProvider> formatProviders,
+        IContentTransferEntryManager contentTransferEntryManager,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -96,6 +98,10 @@ public sealed class AdminController : Controller, IUpdateModel
         _contentImportManager = contentImportManager;
         _contentItemDisplayManager = contentItemDisplayManager;
         _chunkFileUploadService = chunkFileUploadService;
+        _formatProviders = formatProviders
+            .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        _contentTransferEntryManager = contentTransferEntryManager;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -148,18 +154,23 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
+        var queuedDeletion = false;
+
         if (!string.IsNullOrWhiteSpace(entryId))
         {
             var entry = await _session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync();
 
             if (entry != null)
             {
-                if (!await DeleteEntryAsync(entry))
-                {
-                    await _notifier.ErrorAsync(H["The file for this transfer entry could not be deleted."]);
-                    return RedirectTo(returnUrl);
-                }
+                await _contentTransferEntryManager.MarkAsDeletingAsync(entry.EntryId);
+                TriggerEntryDeletion(entry.EntryId);
+                queuedDeletion = true;
             }
+        }
+
+        if (queuedDeletion)
+        {
+            await _notifier.InformationAsync(H["The content transfer entry will be deleted in the background shortly."]);
         }
 
         return RedirectTo(returnUrl);
@@ -206,6 +217,7 @@ public sealed class AdminController : Controller, IUpdateModel
             ContentTypeDefinition = contentTypeDefinition,
             Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
             Columns = columns.Where(x => x.Type != ImportColumnType.ExportOnly),
+            FileFormats = BuildFileFormatSelectList(),
         };
 
         return View(viewModel);
@@ -253,13 +265,24 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
 
                 var extension = Path.GetExtension(file.FileName);
-
-                var formatProviders = HttpContext.RequestServices.GetServices<IContentTransferFileFormatProvider>();
-                var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(file.FileName));
+                var formatProvider = ResolveFileFormatProviderByFileName(file.FileName);
 
                 if (formatProvider == null)
                 {
-                    return BadRequest(new { error = S["Only .xlsx and .csv files are supported."].Value });
+                    return BadRequest(new { error = GetUnsupportedFormatsMessage().Value });
+                }
+
+                var importContent = new ImportContent()
+                {
+                    ContentTypeId = contentTypeId,
+                    ContentTypeName = contentTypeDefinition.Name,
+                };
+
+                await _displayManager.UpdateEditorAsync(importContent, _updateModelAccessor.ModelUpdater, false, string.Empty, string.Empty);
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { error = GetModelErrorMessage() });
                 }
 
                 var fileName = Guid.NewGuid() + extension;
@@ -273,13 +296,16 @@ public sealed class AdminController : Controller, IUpdateModel
                     Author = User.Identity.Name,
                     UploadedFileName = file.FileName,
                     StoredFileName = storedFileName,
-                    Status = ContentTransferEntryStatus.New,
+                    Status = ContentTransferEntryStatus.Pending,
                     Direction = ContentTransferDirection.Import,
                     CreatedUtc = _clock.UtcNow,
                 };
 
+                importContent.CopyPropertiesTo(entry);
+
                 _session.Save(entry);
-                await TriggerImportProcessingAsync(entry.EntryId);
+                await _session.SaveChangesAsync();
+                TriggerImportProcessing(entry.EntryId);
 
                 return Ok(new { success = true });
             });
@@ -322,6 +348,12 @@ public sealed class AdminController : Controller, IUpdateModel
         var importColumns = columns.Where(c => c.Type != ImportColumnType.ExportOnly).Select(c => c.Name).ToList();
 
         var formatProvider = ResolveFileFormatProvider(format);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk import."]);
+        }
+
         var content = new MemoryStream();
 
         using (var writer = formatProvider.CreateWriter(content, contentTypeDefinition.DisplayName))
@@ -386,7 +418,7 @@ public sealed class AdminController : Controller, IUpdateModel
     [Admin("export/contents/download-file", "ExportContentDownloadFile")]
     public async Task<IActionResult> DownloadExport(
         string contentTypeId,
-        string format = null,
+        string extension = null,
         bool partialExport = false,
         DateTime? createdFrom = null,
         DateTime? createdTo = null,
@@ -431,7 +463,12 @@ public sealed class AdminController : Controller, IUpdateModel
 
         var contentImportOptions = HttpContext.RequestServices.GetRequiredService<IOptions<ContentImportOptions>>().Value;
         var threshold = contentImportOptions.ExportQueueThreshold;
-        var formatProvider = ResolveFileFormatProvider(format);
+        var formatProvider = ResolveFileFormatProvider(extension);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk export."]);
+        }
 
         if (totalCount > threshold)
         {
@@ -468,7 +505,8 @@ public sealed class AdminController : Controller, IUpdateModel
             }
 
             _session.Save(entry);
-            await TriggerExportProcessingAsync(entry.EntryId);
+            await _session.SaveChangesAsync();
+            TriggerExportProcessing(entry.EntryId);
 
             await _notifier.InformationAsync(H["The export contains {0} records and has been queued for background processing. You can download it from Bulk Export when it is ready.", totalCount]);
 
@@ -568,8 +606,8 @@ public sealed class AdminController : Controller, IUpdateModel
         return Export(queryFilterResult, pagerParameters, options);
     }
 
-    [Admin("import/entries/{entryId}/process", "ProcessImport")]
-    public async Task<IActionResult> ProcessImport(string entryId, string returnUrl)
+    [Admin("import/entries/{entryId}/resume", "ResumeImport")]
+    public async Task<IActionResult> ResumeImport(string entryId, string returnUrl)
     {
         if (string.IsNullOrEmpty(entryId))
         {
@@ -592,20 +630,23 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
-        if (entry.Status != ContentTransferEntryStatus.New && entry.Status != ContentTransferEntryStatus.Processing)
+        var isStalled = IsStalled(entry);
+
+        if (!entry.Status.CanResumeImport() && !isStalled)
         {
-            await _notifier.WarningAsync(H["Only new or processing import files can be processed again."]);
+            await _notifier.WarningAsync(H["Only pending, paused, failed, or stalled import files can be resumed."]);
             return RedirectTo(returnUrl);
         }
 
-        await TriggerImportProcessingAsync(entry.EntryId);
-        await _notifier.SuccessAsync(H["The import file will be processed in the background shortly."]);
+        await _contentTransferEntryManager.ResumeImportAsync(entry.EntryId);
+        TriggerImportProcessing(entry.EntryId);
+        await _notifier.SuccessAsync(H["The import will resume in the background shortly."]);
 
         return RedirectTo(returnUrl);
     }
 
-    [Admin("import/entries/{entryId}/cancel", "CancelImport")]
-    public async Task<IActionResult> CancelImport(string entryId, string returnUrl)
+    [Admin("import/entries/{entryId}/pause", "PauseImport")]
+    public async Task<IActionResult> PauseImport(string entryId, string returnUrl)
     {
         if (string.IsNullOrEmpty(entryId))
         {
@@ -628,27 +669,14 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
-        if (entry.Status != ContentTransferEntryStatus.New && entry.Status != ContentTransferEntryStatus.Processing)
+        if (entry.Status != ContentTransferEntryStatus.Processing)
         {
-            await _notifier.WarningAsync(H["Only new or processing import files can be canceled."]);
+            await _notifier.WarningAsync(H["Only processing import files can be paused."]);
             return RedirectTo(returnUrl);
         }
 
-        var importedCount = entry.TryGet<ImportFileProcessStatsPart>(out var progressPart)
-            ? progressPart.ImportedCount
-            : 0;
-
-        entry.Status = importedCount > 0
-            ? ContentTransferEntryStatus.CanceledWithImportedRecords
-            : ContentTransferEntryStatus.Canceled;
-        entry.ProcessSaveUtc = _clock.UtcNow;
-        entry.CompletedUtc = _clock.UtcNow;
-
-        _session.Save(entry);
-
-        await _notifier.SuccessAsync(importedCount > 0
-            ? H["The import was canceled after some records had already been imported."]
-            : H["The import was canceled before any records were imported."]);
+        await _contentTransferEntryManager.PauseImportAsync(entry.EntryId);
+        await _notifier.SuccessAsync(H["The import has been paused."]);
 
         return RedirectTo(returnUrl);
     }
@@ -685,8 +713,15 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(Export));
         }
 
+        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
+
+        if (formatProvider == null)
+        {
+            await _notifier.ErrorAsync(H["The file format for this export is no longer enabled."]);
+            return RedirectToAction(nameof(Export));
+        }
+
         var stream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
-        var formatProvider = ResolveFileFormatProvider(Path.GetExtension(entry.StoredFileName)?.TrimStart('.'));
 
         return new FileStreamResult(stream, formatProvider.ContentType)
         {
@@ -734,72 +769,51 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(List));
         }
 
-        await using var sourceStream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
+        var formatProvider = ResolveFileFormatProviderByFileName(entry.StoredFileName);
 
-        using var sourceDoc = SpreadsheetDocument.Open(sourceStream, false);
-        var sourceWorkbookPart = sourceDoc.WorkbookPart;
-        var sourceSheet = sourceWorkbookPart.WorksheetParts.First().Worksheet;
-        var sourceSheetData = sourceSheet.GetFirstChild<SheetData>();
-        var sharedStringTable = sourceWorkbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault();
-
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xlsx");
-        var outputStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
-        using (var destDoc = SpreadsheetDocument.Create(outputStream, SpreadsheetDocumentType.Workbook))
+        if (formatProvider == null)
         {
-            var destWorkbookPart = destDoc.AddWorkbookPart();
-            destWorkbookPart.Workbook = new Workbook();
+            await _notifier.ErrorAsync(H["The file format for this import is no longer enabled."]);
+            return RedirectToAction(nameof(List));
+        }
 
-            if (sharedStringTable != null)
+        await using var sourceStream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
+        var outputStream = new MemoryStream();
+        statsPart.ErrorMessages ??= [];
+
+        using (var reader = formatProvider.CreateReader(sourceStream))
+        using (var writer = formatProvider.CreateWriter(outputStream, entry.ContentType))
+        {
+            var columnNames = reader.GetColumnNames().ToList();
+            columnNames.Add(S["Errors"]);
+            writer.WriteHeader(columnNames);
+
+            var rowIndex = 1;
+
+            foreach (var rowValues in reader.ReadRows())
             {
-                var destSharedStringPart = destWorkbookPart.AddNewPart<SharedStringTablePart>();
-                sharedStringTable.SharedStringTable.Save(destSharedStringPart);
-            }
-
-            var destWorksheetPart = destWorkbookPart.AddNewPart<WorksheetPart>();
-            destWorksheetPart.Worksheet = new Worksheet(new SheetData());
-
-            var sheets = destDoc.WorkbookPart.Workbook.AppendChild(new Sheets());
-            sheets.Append(new Sheet()
-            {
-                Id = destDoc.WorkbookPart.GetIdOfPart(destWorksheetPart),
-                SheetId = 1,
-                Name = "Errors",
-            });
-
-            var destSheetData = destWorksheetPart.Worksheet.GetFirstChild<SheetData>();
-            statsPart.ErrorMessages ??= [];
-
-            var sourceRowIndex = 0;
-            uint destRowIndex = 1;
-
-            foreach (var sourceRow in sourceSheetData.Elements<Row>())
-            {
-                if (sourceRowIndex == 0)
+                if (!statsPart.Errors.Contains(rowIndex))
                 {
-                    destSheetData.Append(CloneRowWithErrorMessage(sourceRow, destRowIndex, S["Errors"]));
-                    destRowIndex++;
-                    sourceRowIndex++;
+                    rowIndex++;
                     continue;
                 }
 
-                if (statsPart.Errors.Contains(sourceRowIndex))
-                {
-                    statsPart.ErrorMessages.TryGetValue(sourceRowIndex, out var errorMessage);
-                    destSheetData.Append(CloneRowWithErrorMessage(sourceRow, destRowIndex, errorMessage));
-                    destRowIndex++;
-                }
+                statsPart.ErrorMessages.TryGetValue(rowIndex, out var errorMessage);
 
-                sourceRowIndex++;
+                var values = rowValues.ToList();
+                values.Add(errorMessage ?? string.Empty);
+                writer.WriteRow(values);
+                rowIndex++;
             }
 
-            destWorkbookPart.Workbook.Save();
+            writer.Flush();
         }
 
         outputStream.Position = 0;
 
-        return new FileStreamResult(outputStream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return new FileStreamResult(outputStream, formatProvider.ContentType)
         {
-            FileDownloadName = $"{entry.ContentType}_Errors.xlsx",
+            FileDownloadName = $"{entry.ContentType}_Errors{formatProvider.FileExtension}",
         };
     }
 
@@ -813,12 +827,12 @@ public sealed class AdminController : Controller, IUpdateModel
 
         options.Statuses =
         [
-            new(S["New"], nameof(ContentTransferEntryStatus.New)),
+            new(S["Pending"], nameof(ContentTransferEntryStatus.Pending)),
             new(S["Processing"], nameof(ContentTransferEntryStatus.Processing)),
             new(S["Completed"], nameof(ContentTransferEntryStatus.Completed)),
-            new(S["Completed With Errors"], nameof(ContentTransferEntryStatus.CompletedWithErrors)),
-            new(S["Canceled"], nameof(ContentTransferEntryStatus.Canceled)),
-            new(S["Canceled With Imported Records"], nameof(ContentTransferEntryStatus.CanceledWithImportedRecords)),
+            new(S["Completed with errors"], nameof(ContentTransferEntryStatus.CompletedWithErrors)),
+            new(S["Paused"], nameof(ContentTransferEntryStatus.Paused)),
+            new(S["Deleting"], nameof(ContentTransferEntryStatus.Deleting)),
             new(S["Failed"], nameof(ContentTransferEntryStatus.Failed)),
         ];
 
@@ -901,16 +915,16 @@ public sealed class AdminController : Controller, IUpdateModel
     }
 
     private ContentExporterViewModel BuildContentExporterViewModel(IList<SelectListItem> exportableTypes)
-        => new()
+    {
+        var formats = BuildFileFormatSelectList();
+
+        return new()
         {
             ContentTypes = exportableTypes,
-            Extensions =
-            [
-                new(S["Excel Workbook"], ".xlsx"),
-                new(S["Comma-Separated Values (CSV)"], ".csv"),
-            ],
-            Extension = ".xlsx",
+            Extensions = formats,
+            Extension = formats.Count > 0 ? formats[0].Value : null,
         };
+    }
 
     private async Task<BulkExportViewModel> BuildBulkExportViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
@@ -955,111 +969,73 @@ public sealed class AdminController : Controller, IUpdateModel
         var entries = await query.ListAsync();
 
         var deletedCount = 0;
-        var failedCount = 0;
 
         switch (bulkAction)
         {
             case ContentTransferEntryBulkAction.Remove:
                 foreach (var entry in entries)
                 {
-                    if (await DeleteEntryAsync(entry))
-                    {
-                        deletedCount++;
-                    }
-                    else
-                    {
-                        failedCount++;
-                    }
+                    await _contentTransferEntryManager.MarkAsDeletingAsync(entry.EntryId);
+                    TriggerEntryDeletion(entry.EntryId);
+                    deletedCount++;
                 }
 
                 if (deletedCount > 0)
                 {
-                    await _notifier.SuccessAsync(H["{0} {1} removed successfully.", deletedCount, H.Plural(deletedCount, "entry", "entries")]);
-                }
-
-                if (failedCount > 0)
-                {
-                    await _notifier.WarningAsync(H["{0} {1} could not be removed because the stored file could not be deleted.", failedCount, H.Plural(failedCount, "entry", "entries")]);
+                    await _notifier.SuccessAsync(H["{0} {1} queued for background deletion.", deletedCount, H.Plural(deletedCount, "entry", "entries")]);
                 }
                 break;
         }
     }
 
-    private async Task<bool> DeleteEntryAsync(ContentTransferEntry entry)
+    private bool IsStalled(ContentTransferEntry entry)
+        => entry.Status == ContentTransferEntryStatus.Processing
+            && entry.ProcessSaveUtc.HasValue
+            && (_clock.UtcNow - entry.ProcessSaveUtc.Value).TotalMinutes > 10;
+
+    private static void TriggerImportProcessing(string entryId)
     {
-        if (!string.IsNullOrWhiteSpace(entry.StoredFileName))
+        ShellScope.AddDeferredTask(async scope =>
         {
-            var fileInfo = await _contentTransferFileStore.GetFileInfoAsync(entry.StoredFileName);
-
-            if (fileInfo != null && !await _contentTransferFileStore.TryDeleteFileAsync(entry.StoredFileName))
-            {
-                return false;
-            }
-        }
-
-        _session.Delete(entry);
-
-        return true;
-    }
-
-    private static Task TriggerImportProcessingAsync(string entryId)
-        => HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
-            $"content-transfer-import-{entryId}",
-            entryId,
-            static (scope, id) => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, CancellationToken.None, id));
-
-    private static Task TriggerExportProcessingAsync(string entryId)
-        => HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
-            $"content-transfer-export-{entryId}",
-            entryId,
-            static (scope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, CancellationToken.None, id));
-
-    private static Row CloneRowWithErrorMessage(Row sourceRow, uint destinationRowIndex, string errorMessage)
-    {
-        var destinationRow = new Row() { RowIndex = destinationRowIndex };
-        uint columnIndex = 1;
-
-        foreach (var sourceCell in sourceRow.Elements<Cell>())
-        {
-            var clonedCell = (Cell)sourceCell.CloneNode(true);
-            clonedCell.CellReference = GetCellReference(columnIndex, destinationRowIndex);
-            destinationRow.Append(clonedCell);
-            columnIndex++;
-        }
-
-        destinationRow.Append(new Cell()
-        {
-            CellReference = GetCellReference(columnIndex, destinationRowIndex),
-            DataType = CellValues.String,
-            CellValue = new CellValue(errorMessage ?? string.Empty),
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
+                $"content-transfer-import-{entryId}",
+                entryId,
+                static (backgroundScope, id) => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, CancellationToken.None, id));
         });
-
-        return destinationRow;
     }
 
-    private static string GetCellReference(uint columnIndex, uint rowIndex)
+    private static void TriggerExportProcessing(string entryId)
     {
-        var columnName = string.Empty;
-        var dividend = columnIndex;
-
-        while (dividend > 0)
+        ShellScope.AddDeferredTask(async scope =>
         {
-            var modulo = (dividend - 1) % 26;
-            columnName = Convert.ToChar(65 + modulo) + columnName;
-            dividend = (dividend - modulo) / 26;
-        }
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
+                $"content-transfer-export-{entryId}",
+                entryId,
+                static (backgroundScope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, CancellationToken.None, id));
+        });
+    }
 
-        return columnName + rowIndex;
+    private static void TriggerEntryDeletion(string entryId)
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
+                $"content-transfer-delete-{entryId}",
+                entryId,
+                static async (backgroundScope, id) =>
+                {
+                    var manager = backgroundScope.ServiceProvider.GetRequiredService<IContentTransferEntryManager>();
+                    await manager.DeleteAsync(id);
+                });
+        });
     }
 
     private IContentTransferFileFormatProvider ResolveFileFormatProvider(string format)
     {
-        var providers = HttpContext.RequestServices.GetServices<IContentTransferFileFormatProvider>();
-
         if (!string.IsNullOrEmpty(format))
         {
             var extension = format.StartsWith('.') ? format : "." + format;
-            var provider = providers.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
+            var provider = _formatProviders.FirstOrDefault(p => p.FileExtension.Equals(extension, StringComparison.OrdinalIgnoreCase));
 
             if (provider != null)
             {
@@ -1067,9 +1043,36 @@ public sealed class AdminController : Controller, IUpdateModel
             }
         }
 
-        // Default to Excel.
-        return providers.First(p => p.FileExtension == ".xlsx");
+        return _formatProviders.Length > 0 ? _formatProviders[0] : null;
     }
+
+    private IContentTransferFileFormatProvider ResolveFileFormatProviderByFileName(string fileName)
+        => _formatProviders.FirstOrDefault(provider => provider.CanHandle(fileName));
+
+    private List<SelectListItem> BuildFileFormatSelectList()
+        => _formatProviders
+            .Select(provider => new SelectListItem(GetFileFormatLabel(provider), provider.FileExtension))
+            .ToList();
+
+    private string GetFileFormatExtensions()
+        => string.Join(", ", _formatProviders.Select(provider => provider.FileExtension));
+
+    private LocalizedString GetUnsupportedFormatsMessage()
+        => _formatProviders.Length == 0
+            ? S["No file formats are currently enabled."]
+            : S["Only the enabled file formats are supported: {0}.", GetFileFormatExtensions()];
+
+    private static string GetFileFormatLabel(IContentTransferFileFormatProvider provider)
+        => provider.FileExtension.TrimStart('.').ToUpperInvariant();
+
+    private string GetModelErrorMessage()
+        => ModelState.Values
+            .SelectMany(entry => entry.Errors)
+            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                ? error.Exception?.Message
+                : error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? S["The import request is invalid."].Value;
 
     private IQuery<ContentItem> BuildExportQuery(
         string contentTypeId,

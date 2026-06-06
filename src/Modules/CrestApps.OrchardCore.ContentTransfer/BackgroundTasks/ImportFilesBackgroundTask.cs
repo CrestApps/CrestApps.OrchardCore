@@ -1,4 +1,6 @@
 using System.Data;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -7,8 +9,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
-using CrestApps.OrchardCore.ContentTransfer.Models;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -36,7 +36,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
-                (x.Status == ContentTransferEntryStatus.New || x.Status == ContentTransferEntryStatus.Processing)
+                (x.Status == ContentTransferEntryStatus.New
+                    || x.Status == ContentTransferEntryStatus.Pending
+                    || x.Status == ContentTransferEntryStatus.Processing)
                 && x.Direction == ContentTransferDirection.Import
                 && (entryId == null || x.EntryId == entryId))
             .OrderBy(x => x.CreatedUtc)
@@ -75,9 +77,10 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
+        var rowFilters = serviceProvider.GetServices<IContentImportRowFilter>();
         var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
-        if (entry == null || entry.Status == ContentTransferEntryStatus.Canceled || entry.Status == ContentTransferEntryStatus.CanceledWithImportedRecords)
+        if (entry == null || entry.Status.ShouldStopImport())
         {
             return;
         }
@@ -102,13 +105,25 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? ContentImportOptions.DefaultImportBatchSize
             : contentImportOptions.ImportBatchSize;
 
+        var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+        progressPart.Errors ??= [];
+        progressPart.ErrorMessages ??= [];
+
+        var isResuming = progressPart.CurrentRow > 0;
+
         entry.Status = ContentTransferEntryStatus.Processing;
         entry.Error = null;
         entry.CompletedUtc = null;
 
-        var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
-        progressPart.Errors ??= [];
-        progressPart.ErrorMessages ??= [];
+        if (!isResuming)
+        {
+            progressPart.CurrentRow = 0;
+            progressPart.TotalProcessed = 0;
+            progressPart.ImportedCount = 0;
+            progressPart.Errors.Clear();
+            progressPart.ErrorMessages.Clear();
+        }
+
         entry.Put(progressPart);
 
         session.Save(entry);
@@ -118,11 +133,29 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         try
         {
-            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>();
-            var formatProvider = formatProviders.FirstOrDefault(p => p.CanHandle(entry.StoredFileName))
+            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
+                .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
                 ?? throw new InvalidOperationException(localizer["Unsupported file format: {0}", Path.GetExtension(entry.StoredFileName)]);
 
-            await ProcessFileInBatchesAsync(
+            var filterInitContext = new ContentImportRowFilterInitContext()
+            {
+                ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
+            };
+            var activeRowFilters = new List<IContentImportRowFilter>();
+
+            foreach (var filter in rowFilters)
+            {
+                if (await filter.InitializeAsync(filterInitContext))
+                {
+                    activeRowFilters.Add(filter);
+                }
+            }
+
+            var completed = await ProcessFileInBatchesAsync(
                 serviceProvider,
                 fileStream,
                 formatProvider,
@@ -131,25 +164,20 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 contentTypeDefinition,
                 contentManager,
                 contentImportManager,
+                activeRowFilters,
                 session,
                 clock,
                 batchSize,
                 cancellationToken);
+
+            if (!completed)
+            {
+                return;
+            }
         }
         catch (Exception ex)
         {
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", ex.Message], cancellationToken);
-            return;
-        }
-
-        if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
-        {
-            entry.Status = GetCanceledStatus(progressPart);
-            entry.ProcessSaveUtc = clock.UtcNow;
-            entry.CompletedUtc = clock.UtcNow;
-            entry.Put(progressPart);
-            session.Save(entry);
-            await session.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -165,7 +193,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task ProcessFileInBatchesAsync(
+    private static async Task<bool> ProcessFileInBatchesAsync(
         IServiceProvider serviceProvider,
         Stream stream,
         IContentTransferFileFormatProvider formatProvider,
@@ -174,6 +202,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
         IContentImportManager contentImportManager,
+        List<IContentImportRowFilter> activeRowFilters,
         ISession session,
         IClock clock,
         int batchSize,
@@ -182,7 +211,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         using var reader = formatProvider.CreateReader(stream);
 
         var columnNames = reader.GetColumnNames();
-        var dataTable = new DataTable();
+        using var dataTable = new DataTable();
 
         foreach (var columnName in columnNames)
         {
@@ -200,12 +229,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         progressPart.TotalRecords = reader.GetRowCount();
 
         var indexOfKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemId));
-        var indexOfVersionKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemVersionId));
         var newRecords = new Dictionary<int, DataRow>();
-        var existingVersionRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
         var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
 
         var rowIndex = 1;
+        var hasFilters = activeRowFilters.Count > 0;
+        var importInterrupted = false;
 
         foreach (var rowValues in reader.ReadRows())
         {
@@ -214,8 +243,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 break;
             }
 
-            if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
             {
+                importInterrupted = true;
                 break;
             }
 
@@ -244,44 +274,47 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (!isEmpty)
             {
-                if (contentTypeDefinition.IsVersionable() && indexOfVersionKeyColumn > -1)
+                var shouldSkip = false;
+                string filterSkipReason = null;
+
+                if (hasFilters)
                 {
-                    var contentItemVersionId = dataRow[indexOfVersionKeyColumn]?.ToString()?.Trim();
+                    var filterContext = new ContentImportRowFilterContext()
+                    {
+                        Row = dataRow,
+                        Columns = dataTable.Columns,
+                        ContentTypeDefinition = contentTypeDefinition,
+                        Entry = entry,
+                        RowIndex = rowIndex,
+                    };
 
-                    if (!string.IsNullOrEmpty(contentItemVersionId))
+                    foreach (var filter in activeRowFilters)
                     {
-                        existingVersionRows[contentItemVersionId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
-                    }
-                    else if (indexOfKeyColumn > -1)
-                    {
-                        var contentItemId = dataRow[indexOfKeyColumn]?.ToString()?.Trim();
-
-                        if (!string.IsNullOrEmpty(contentItemId))
+                        if (await filter.ShouldSkipRowAsync(filterContext))
                         {
-                            existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
+                            shouldSkip = true;
+                            filterSkipReason = filterContext.SkipReason;
+                            break;
                         }
-                        else
-                        {
-                            newRecords[rowIndex] = dataRow;
-                        }
-                    }
-                    else
-                    {
-                        newRecords[rowIndex] = dataRow;
                     }
                 }
-                else if (indexOfKeyColumn > -1)
-                {
-                    var contentItemId = dataRow[indexOfKeyColumn]?.ToString()?.Trim();
 
-                    if (!string.IsNullOrEmpty(contentItemId))
+                if (shouldSkip)
+                {
+                    if (!string.IsNullOrWhiteSpace(filterSkipReason))
                     {
-                        existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
+                        AddRowError(progressPart, rowIndex, filterSkipReason);
                     }
-                    else
-                    {
-                        newRecords[rowIndex] = dataRow;
-                    }
+
+                    rowIndex++;
+                    continue;
+                }
+
+                var contentItemId = GetImportContentItemId(dataRow, indexOfKeyColumn);
+
+                if (!string.IsNullOrEmpty(contentItemId))
+                {
+                    existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
                 }
                 else
                 {
@@ -289,14 +322,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 }
             }
 
-            if (newRecords.Count + existingRows.Count + existingVersionRows.Count >= batchSize)
+            if (newRecords.Count + existingRows.Count >= batchSize)
             {
                 await ProcessBatchAsync(
                     serviceProvider,
                     entry,
                     dataTable,
                     newRecords,
-                    existingVersionRows,
                     existingRows,
                     contentTypeDefinition,
                     contentManager,
@@ -305,9 +337,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     session,
                     clock,
                     cancellationToken);
-
                 newRecords.Clear();
-                existingVersionRows.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
             }
@@ -315,14 +345,18 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             rowIndex++;
         }
 
-        if (newRecords.Count + existingRows.Count + existingVersionRows.Count > 0)
+        if (importInterrupted || cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        if (newRecords.Count + existingRows.Count > 0)
         {
             await ProcessBatchAsync(
                 serviceProvider,
                 entry,
                 dataTable,
                 newRecords,
-                existingVersionRows,
                 existingRows,
                 contentTypeDefinition,
                 contentManager,
@@ -333,7 +367,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 cancellationToken);
         }
 
-        dataTable.Dispose();
+        return true;
     }
 
     private static async Task ProcessBatchAsync(
@@ -341,7 +375,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTransferEntry entry,
         DataTable dataTable,
         Dictionary<int, DataRow> newRecords,
-        Dictionary<string, KeyValuePair<int, DataRow>> existingVersionRows,
         Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
@@ -351,37 +384,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IClock clock,
         CancellationToken cancellationToken)
     {
-        if (existingVersionRows.Count > 0)
-        {
-            foreach (var existingVersionRow in existingVersionRows)
-            {
-                if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
-                {
-                    return;
-                }
-
-                var contentItem = await contentManager.GetVersionAsync(existingVersionRow.Key);
-                var isNew = contentItem == null;
-
-                if (isNew)
-                {
-                    contentItem = await contentManager.NewAsync(entry.ContentType);
-                }
-
-                await ProcessRowAsync(
-                    entry,
-                    contentItem,
-                    existingVersionRow.Value.Key,
-                    existingVersionRow.Value.Value,
-                    dataTable.Columns,
-                    contentTypeDefinition,
-                    contentManager,
-                    contentImportManager,
-                    progressPart,
-                    isNew);
-            }
-        }
-
         if (existingRows.Count > 0)
         {
             var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
@@ -389,7 +391,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             foreach (var existingRow in existingRows)
             {
-                if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+                if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
                 {
                     return;
                 }
@@ -418,7 +420,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         foreach (var record in newRecords)
         {
-            if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
             {
                 return;
             }
@@ -443,6 +445,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync(cancellationToken);
     }
 
+    internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
+        => indexOfKeyColumn > -1
+            ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
+            : null;
+
     private static async Task ProcessRowAsync(
         ContentTransferEntry entry,
         ContentItem contentItem,
@@ -457,10 +464,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         try
         {
+            var importOptions = entry.GetOrCreate<ImportContentOptionsPart>();
             var mapContext = new ContentImportContext()
             {
                 ContentItem = contentItem,
                 ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
                 Columns = columns,
                 Row = row,
             };
@@ -481,13 +490,26 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             if (isNew)
             {
                 await contentManager.CreateAsync(mapContext.ContentItem, VersionOptions.DraftRequired);
+
+                if (importOptions.PublishImportedContent)
+                {
+                    await contentManager.PublishAsync(mapContext.ContentItem);
+                }
             }
             else
             {
                 await contentManager.UpdateAsync(mapContext.ContentItem);
+
+                if (importOptions.PublishImportedContent)
+                {
+                    await contentManager.PublishAsync(mapContext.ContentItem);
+                }
+                else
+                {
+                    await contentManager.SaveDraftAsync(mapContext.ContentItem);
+                }
             }
 
-            await contentManager.PublishAsync(mapContext.ContentItem);
             progressPart.ImportedCount++;
 
             progressPart.Errors.Remove(rowIndex);
@@ -535,27 +557,22 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         entry.Status = ContentTransferEntryStatus.Failed;
         entry.Error = error;
+        entry.ProcessSaveUtc = clock.UtcNow;
         entry.CompletedUtc = clock.UtcNow;
 
         session.Save(entry);
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    private static string GetImportLockKey(string entryId)
+    internal static string GetImportLockKey(string entryId)
         => $"ContentsTransfer_Import_{entryId}";
 
-    private static async Task<bool> IsImportCanceledAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
+    private static async Task<bool> ShouldStopImportAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var session = scope.ServiceProvider.GetRequiredService<ISession>();
         var currentEntry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
-        return currentEntry?.Status == ContentTransferEntryStatus.Canceled
-            || currentEntry?.Status == ContentTransferEntryStatus.CanceledWithImportedRecords;
+        return currentEntry?.Status.ShouldStopImport() == true;
     }
-
-    private static ContentTransferEntryStatus GetCanceledStatus(ImportFileProcessStatsPart progressPart)
-        => (progressPart?.ImportedCount ?? 0) > 0
-            ? ContentTransferEntryStatus.CanceledWithImportedRecords
-            : ContentTransferEntryStatus.Canceled;
 }
