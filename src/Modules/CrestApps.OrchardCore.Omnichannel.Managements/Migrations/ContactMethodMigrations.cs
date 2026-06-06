@@ -13,6 +13,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Title.Models;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -195,58 +196,74 @@ public sealed class ContactMethodMigrations : DataMigration
     {
         var store = scope.ServiceProvider.GetRequiredService<IStore>();
         var phoneNumberService = scope.ServiceProvider.GetRequiredService<IPhoneNumberService>();
+        var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ContactMethodMigrations>>();
 
-        List<ContentItem> allItems;
+        var contentTypes = await GetContentTypesWithPhoneNumberInfoPartAsync(contentDefinitionManager);
 
-        await using (var querySession = store.CreateSession())
-        {
-            allItems = (await querySession.Query<ContentItem, ContentItemIndex>(index =>
-                index.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber)
-                .ListAsync())
-                .ToList();
-        }
-
-        if (allItems.Count == 0)
+        if (contentTypes.Length == 0)
         {
             return;
         }
 
         var migratedCount = 0;
         var skippedCount = 0;
+        var page = 0;
 
-        for (var batchStart = 0; batchStart < allItems.Count; batchStart += _batchSize)
+        while (true)
         {
-            var batch = allItems.Skip(batchStart).Take(_batchSize).ToList();
+            List<ContentItem> batch;
 
-            await using var session = store.CreateSession();
-
-            foreach (var contentItem in batch)
+            await using (var session = store.CreateSession())
             {
-                try
-                {
-                    if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
-                    {
-                        skippedCount++;
-
-                        continue;
-                    }
-
-                    await session.SaveAsync(contentItem);
-                    migratedCount++;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(
-                        ex,
-                        "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
-                        contentItem.ContentItemId,
-                        contentItem.ContentItemVersionId);
-                    skippedCount++;
-                }
+                batch = (await session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.ContentType.IsIn(contentTypes))
+                    .OrderBy(index => index.DocumentId)
+                    .Skip(page * _batchSize)
+                    .Take(_batchSize)
+                    .ListAsync())
+                    .ToList();
             }
 
-            await session.SaveChangesAsync();
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            var batchMigrated = 0;
+
+            await using (var session = store.CreateSession())
+            {
+                foreach (var contentItem in batch)
+                {
+                    try
+                    {
+                        if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
+                        {
+                            skippedCount++;
+
+                            continue;
+                        }
+
+                        await session.SaveAsync(contentItem);
+                        batchMigrated++;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
+                            contentItem.ContentItemId,
+                            contentItem.ContentItemVersionId);
+                        skippedCount++;
+                    }
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            migratedCount += batchMigrated;
+            page++;
         }
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -256,6 +273,17 @@ public sealed class ContactMethodMigrations : DataMigration
                 migratedCount,
                 skippedCount);
         }
+    }
+
+    private static async Task<string[]> GetContentTypesWithPhoneNumberInfoPartAsync(IContentDefinitionManager contentDefinitionManager)
+    {
+        var typeDefinitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
+
+        return typeDefinitions
+            .Where(type => type.Parts.Any(part =>
+                string.Equals(part.PartDefinition.Name, OmnichannelConstants.ContentParts.PhoneNumberInfo, StringComparison.Ordinal)))
+            .Select(type => type.Name)
+            .ToArray();
     }
 
     private static bool TryMigratePhoneNumberContent(ContentItem contentItem, IPhoneNumberService phoneNumberService)
