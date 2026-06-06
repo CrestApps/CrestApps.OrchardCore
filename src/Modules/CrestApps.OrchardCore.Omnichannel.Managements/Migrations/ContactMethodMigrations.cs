@@ -209,58 +209,53 @@ public sealed class ContactMethodMigrations : DataMigration
         var migratedCount = 0;
         var skippedCount = 0;
         var page = 0;
+        var documentId = 0L;
 
         while (true)
         {
-            List<ContentItem> batch;
+            await using var session = store.CreateSession();
 
-            await using (var session = store.CreateSession())
-            {
-                batch = (await session.Query<ContentItem, ContentItemIndex>(index =>
-                    index.ContentType.IsIn(contentTypes))
-                    .OrderBy(index => index.DocumentId)
-                    .Skip(page * _batchSize)
-                    .Take(_batchSize)
-                    .ListAsync())
-                    .ToList();
-            }
+            var batch = await session.Query<ContentItem, ContentItemIndex>(index =>
+                index.ContentType.IsIn(contentTypes) && index.DocumentId > documentId)
+                .OrderBy(index => index.DocumentId)
+                .Take(_batchSize)
+                .ListAsync();
 
-            if (batch.Count == 0)
+            if (!batch.Any())
             {
                 break;
             }
 
             var batchMigrated = 0;
 
-            await using (var session = store.CreateSession())
+            foreach (var contentItem in batch)
             {
-                foreach (var contentItem in batch)
+                documentId = Math.Max(documentId, contentItem.Id);
+
+                try
                 {
-                    try
+                    if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
                     {
-                        if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
-                        {
-                            skippedCount++;
-
-                            continue;
-                        }
-
-                        await session.SaveAsync(contentItem);
-                        batchMigrated++;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(
-                            ex,
-                            "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
-                            contentItem.ContentItemId,
-                            contentItem.ContentItemVersionId);
                         skippedCount++;
-                    }
-                }
 
-                await session.SaveChangesAsync();
+                        continue;
+                    }
+
+                    await session.SaveAsync(contentItem);
+                    batchMigrated++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
+                        contentItem.ContentItemId,
+                        contentItem.ContentItemVersionId);
+                    skippedCount++;
+                }
             }
+
+            await session.SaveChangesAsync();
 
             migratedCount += batchMigrated;
             page++;
