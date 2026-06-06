@@ -208,7 +208,6 @@ public sealed class ContactMethodMigrations : DataMigration
 
         var migratedCount = 0;
         var skippedCount = 0;
-        var page = 0;
         var documentId = 0L;
 
         while (true)
@@ -258,7 +257,6 @@ public sealed class ContactMethodMigrations : DataMigration
             await session.SaveChangesAsync();
 
             migratedCount += batchMigrated;
-            page++;
         }
 
         if (logger.IsEnabled(LogLevel.Information))
