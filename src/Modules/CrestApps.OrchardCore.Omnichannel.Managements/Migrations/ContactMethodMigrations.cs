@@ -1,10 +1,18 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentFields.Settings;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.PhoneNumbers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentFields.Settings;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Title.Models;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -13,6 +21,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 /// </summary>
 public sealed class ContactMethodMigrations : DataMigration
 {
+    private const int _batchSize = 100;
+    private const string _defaultRegionCode = "US";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     /// <summary>
@@ -148,7 +159,8 @@ public sealed class ContactMethodMigrations : DataMigration
     }
 
     /// <summary>
-    /// Migrates the Number field from TextField with InternationalTelephone editor to PhoneField.
+    /// Migrates the Number field from TextField to PhoneField and schedules background
+    /// data migration for existing phone number records.
     /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
@@ -174,6 +186,138 @@ public sealed class ContactMethodMigrations : DataMigration
                     Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })));
 
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
+
         return 2;
+    }
+
+    private static async Task MigratePhoneNumberDataAsync(ShellScope scope)
+    {
+        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+        var phoneNumberService = scope.ServiceProvider.GetRequiredService<IPhoneNumberService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ContactMethodMigrations>>();
+
+        List<ContentItem> allItems;
+
+        await using (var querySession = store.CreateSession())
+        {
+            allItems = (await querySession.Query<ContentItem, ContentItemIndex>(index =>
+                index.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber)
+                .ListAsync())
+                .ToList();
+        }
+
+        if (allItems.Count == 0)
+        {
+            return;
+        }
+
+        var migratedCount = 0;
+        var skippedCount = 0;
+
+        for (var batchStart = 0; batchStart < allItems.Count; batchStart += _batchSize)
+        {
+            var batch = allItems.Skip(batchStart).Take(_batchSize).ToList();
+
+            await using var session = store.CreateSession();
+
+            foreach (var contentItem in batch)
+            {
+                try
+                {
+                    if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
+                    {
+                        skippedCount++;
+
+                        continue;
+                    }
+
+                    await session.SaveAsync(contentItem);
+                    migratedCount++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
+                        contentItem.ContentItemId,
+                        contentItem.ContentItemVersionId);
+                    skippedCount++;
+                }
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Phone number data migration completed. Migrated: {MigratedCount}, Skipped: {SkippedCount}.",
+                migratedCount,
+                skippedCount);
+        }
+    }
+
+    private static bool TryMigratePhoneNumberContent(ContentItem contentItem, IPhoneNumberService phoneNumberService)
+    {
+        var partNode = contentItem.Content[OmnichannelConstants.ContentParts.PhoneNumberInfo] as JsonObject;
+
+        if (partNode is null)
+        {
+            return false;
+        }
+
+        var numberNode = partNode["Number"] as JsonObject;
+
+        if (numberNode is null)
+        {
+            return false;
+        }
+
+        // Already migrated if PhoneNumber property exists.
+        if (numberNode["PhoneNumber"] is not null)
+        {
+            return false;
+        }
+
+        var textValue = numberNode["Text"]?.GetValue<string>();
+
+        if (string.IsNullOrWhiteSpace(textValue))
+        {
+            return false;
+        }
+
+        if (!phoneNumberService.IsValidNumber(textValue, _defaultRegionCode))
+        {
+            return false;
+        }
+
+        if (!phoneNumberService.TryFormatToE164(textValue, _defaultRegionCode, out var e164Number))
+        {
+            return false;
+        }
+
+        var regionCode = phoneNumberService.GetRegionCode(e164Number) ?? _defaultRegionCode;
+        var countryCode = phoneNumberService.GetCountryCode(regionCode);
+        var nationalNumber = e164Number;
+
+        // Strip the leading '+' and country calling code to get the national number.
+        if (countryCode > 0)
+        {
+            var prefix = $"+{countryCode}";
+
+            if (nationalNumber.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                nationalNumber = nationalNumber.Substring(prefix.Length);
+            }
+        }
+
+        // Replace the old TextField structure with PhoneField properties.
+        numberNode.Remove("Text");
+        numberNode["PhoneNumber"] = e164Number;
+        numberNode["CountryCode"] = regionCode;
+        numberNode["NationalNumber"] = nationalNumber;
+
+        return true;
     }
 }
