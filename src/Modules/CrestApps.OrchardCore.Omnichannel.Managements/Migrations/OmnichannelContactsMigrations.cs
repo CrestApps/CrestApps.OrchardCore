@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -13,14 +14,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 public sealed class OmnichannelContactsMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactsMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public OmnichannelContactsMigrations(IContentDefinitionManager contentDefinitionManager)
+    /// <param name="logger">The logger.</param>
+    public OmnichannelContactsMigrations(
+        IContentDefinitionManager contentDefinitionManager,
+        ILogger<OmnichannelContactsMigrations> logger)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _logger = logger;
     }
 
     /// <summary>
@@ -108,16 +114,30 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     /// </summary>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
-            table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))
-        );
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'TimeZoneId' column may already exist on the OmnichannelContactIndex table.");
+        }
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
-            .CreateIndex(
-                "IDX_OmnichannelContactIndex_TimeZoneId",
-                "DocumentId",
-                "TimeZoneId")
-        );
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OmnichannelContactIndex_TimeZoneId",
+                    "DocumentId",
+                    "TimeZoneId")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OmnichannelContactIndex_TimeZoneId' index may already exist.");
+        }
 
         return 3;
     }

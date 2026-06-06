@@ -72,7 +72,7 @@ public sealed class ContentTransferMigrations : DataMigration
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while updating the ContentTransferEntryIndex table.");
+            _logger.LogWarning(ex, "The 'Direction' column may already exist on the ContentTransferEntryIndex table.");
         }
 
         return 2;
