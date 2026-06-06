@@ -194,8 +194,6 @@ public sealed class ContactMethodMigrations : DataMigration
 
     private static async Task MigratePhoneNumberDataAsync(ShellScope scope)
     {
-        var store = scope.ServiceProvider.GetRequiredService<IStore>();
-        var phoneNumberService = scope.ServiceProvider.GetRequiredService<IPhoneNumberService>();
         var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ContactMethodMigrations>>();
 
@@ -209,6 +207,9 @@ public sealed class ContactMethodMigrations : DataMigration
         var migratedCount = 0;
         var skippedCount = 0;
         var documentId = 0L;
+
+        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+        var phoneNumberService = scope.ServiceProvider.GetRequiredService<IPhoneNumberService>();
 
         while (true)
         {
