@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelContactPartSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RequireTimeZone">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RequireTimeZone" />
+            <label class="form-check-label" asp-for="RequireTimeZone">@T["Require time zone"]</label>
+            <span class="hint dashed">@T["Require editors to select a contact time zone before saving."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Communication preferences"]</div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseDoNotCall" />
+            <label class="form-check-label" asp-for="UseDoNotCall">@T["Use Do not call"]</label>
+            <span class="hint dashed">@T["Show the Do not call preference in the contact editor. Enabled by default."]</span>
+        </div>
+
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseDoNotSms" />
+            <label class="form-check-label" asp-for="UseDoNotSms">@T["Use Do not SMS"]</label>
+            <span class="hint dashed">@T["Show the Do not SMS preference in the contact editor."]</span>
+        </div>
+
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseDoNotChat" />
+            <label class="form-check-label" asp-for="UseDoNotChat">@T["Use Do not chat"]</label>
+            <span class="hint dashed">@T["Show the Do not chat preference in the contact editor."]</span>
+        </div>
+
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseDoNotEmail" />
+            <label class="form-check-label" asp-for="UseDoNotEmail">@T["Use Do not email"]</label>
+            <span class="hint dashed">@T["Show the Do not email preference in the contact editor."]</span>
+        </div>
+    </div>
+</div>

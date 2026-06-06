@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
@@ -5,6 +8,47 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 /// </summary>
 public class OmnichannelContactPartViewModel
 {
+    /// <summary>
+    /// Gets or sets the contact's local time zone identifier.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available time zones for the contact.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AvailableTimeZones { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the contact time zone is required.
+    /// </summary>
+    [BindNever]
+    public bool RequireTimeZone { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Do not call preference is available.
+    /// </summary>
+    [BindNever]
+    public bool UseDoNotCall { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Do not email preference is available.
+    /// </summary>
+    [BindNever]
+    public bool UseDoNotEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Do not SMS preference is available.
+    /// </summary>
+    [BindNever]
+    public bool UseDoNotSms { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Do not chat preference is available.
+    /// </summary>
+    [BindNever]
+    public bool UseDoNotChat { get; set; }
+
     /// <summary>
     /// Gets or sets a value indicating whether phone calls are blocked for this contact.
     /// </summary>

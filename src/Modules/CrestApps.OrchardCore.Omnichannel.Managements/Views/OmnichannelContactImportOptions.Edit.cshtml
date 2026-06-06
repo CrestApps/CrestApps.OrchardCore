@@ -13,7 +13,7 @@
             <label asp-for="SelectedCountryCode" class="form-label">@T["Lead country"]</label>
             <select asp-for="SelectedCountryCode" asp-items="Model.AvailableCountries" class="form-select" required></select>
             <span asp-validation-for="SelectedCountryCode" class="text-danger"></span>
-            <span class="hint dashed">@T["Select the default country for non-E.164 phone numbers in this file. Imports for content types with OmnichannelContactPart should contain leads from one country per file unless every phone number in the file already uses E.164."]</span>
+            <span class="hint dashed">@T["Select the default country for non-E.164 phone numbers in this file. Imports for content types with OmnichannelContactPart should contain leads from one country per file unless every phone number in the file already uses E.164. The same normalized phone numbers are also used to infer a lead time zone when one is not provided in the file."]</span>
         </div>
     </div>
 </div>

@@ -41,6 +41,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("TimeZoneId", column => column.WithLength(64))
         );
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
@@ -64,7 +65,14 @@ public sealed class OmnichannelContactsMigrations : DataMigration
                 "NormalizedPrimaryHomePhoneNumber")
         );
 
-        return 2;
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_TimeZoneId",
+                "DocumentId",
+                "TimeZoneId")
+        );
+
+        return 3;
     }
 
     /// <summary>
@@ -93,5 +101,24 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    /// <summary>
+    /// Updates the from2 async.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+            table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_TimeZoneId",
+                "DocumentId",
+                "TimeZoneId")
+        );
+
+        return 3;
     }
 }
