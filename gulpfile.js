@@ -352,7 +352,7 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
 }
 
 function buildCopyPipeline(assetGroup, doRebuild) {
-    var stream = gulp.src(assetGroup.inputPaths);
+    var stream = gulp.src(assetGroup.inputPaths, { encoding: false });
 
     if (!doRebuild) {
         stream = stream.pipe(newer(assetGroup.outputDir))
