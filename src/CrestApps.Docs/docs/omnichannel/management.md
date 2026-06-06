@@ -90,7 +90,7 @@ In Orchard Core Admin:
 4. Add any fields/parts you need (phone number, email, lead status, custom fields, etc.).
 5. Create/import contact items.
 
-If you use the built-in `PhoneNumberInfoPart`, the `Number` field now uses the `InternationalTelephone` TextField editor from `CrestApps.OrchardCore.ContentFields`, which provides country-aware entry and stores submitted values in international format.
+If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (from `CrestApps.OrchardCore.ContentFields`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
 
 When a content type includes `OmnichannelContactPart`, the module now enforces two code-controlled omnichannel surfaces:
 

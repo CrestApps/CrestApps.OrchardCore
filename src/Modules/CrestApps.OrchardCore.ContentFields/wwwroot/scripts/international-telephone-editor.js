@@ -4,37 +4,62 @@
 */
 
 (function () {
-  var selector = '[data-intl-tel-input="true"]';
-  function initializeInput(input) {
-    if (!window.intlTelInput || input.dataset.intlTelInputInitialized === 'true') {
+  var selector = '[data-phone-field]';
+  function initializeField(wrapper) {
+    var telInput = wrapper.querySelector('input[data-intl-tel-input="true"]');
+    if (!window.intlTelInput || !telInput || telInput.dataset.intlTelInputInitialized === 'true') {
       return;
     }
-    input.dataset.intlTelInputInitialized = 'true';
-    var telephoneInput = window.intlTelInput(input, {
+    telInput.dataset.intlTelInputInitialized = 'true';
+    var e164Input = wrapper.querySelector('[data-phone-e164]');
+    var countryInput = wrapper.querySelector('[data-phone-country]');
+    var nationalInput = wrapper.querySelector('[data-phone-national]');
+    var options = {
       containerClass: 'w-100',
       dropdownParent: document.body,
       numberDisplayFormat: 'INTERNATIONAL',
       strictMode: true
-    });
-    if (input.disabled) {
+    };
+    var initialCountry = telInput.dataset.initialCountry;
+    if (initialCountry) {
+      options.initialCountry = initialCountry;
+    }
+    var telephoneInput = window.intlTelInput(telInput, options);
+    if (telInput.disabled) {
       telephoneInput.setDisabled(true);
-    } else if (input.readOnly) {
+    } else if (telInput.readOnly) {
       telephoneInput.setReadonly(true);
     }
-    if (input.form) {
-      input.form.addEventListener('submit', function () {
-        if (!input.value) {
+    if (telInput.form) {
+      telInput.form.addEventListener('submit', function () {
+        if (!telInput.value) {
+          if (e164Input) {
+            e164Input.value = '';
+          }
+          if (countryInput) {
+            countryInput.value = '';
+          }
+          if (nationalInput) {
+            nationalInput.value = '';
+          }
           return;
         }
-        var normalizedNumber = telephoneInput.getNumber();
-        if (normalizedNumber) {
-          input.value = normalizedNumber;
+        var e164Number = telephoneInput.getNumber();
+        var countryData = telephoneInput.getSelectedCountryData();
+        if (e164Input) {
+          e164Input.value = e164Number || '';
+        }
+        if (countryInput) {
+          countryInput.value = (countryData.iso2 || '').toUpperCase();
+        }
+        if (nationalInput) {
+          nationalInput.value = telInput.value || '';
         }
       });
     }
   }
   function initialize() {
-    document.querySelectorAll(selector).forEach(initializeInput);
+    document.querySelectorAll(selector).forEach(initializeField);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialize, {

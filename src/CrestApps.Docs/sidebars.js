@@ -100,6 +100,7 @@ const sidebars = {
             items: [
                 'modules/index',
                 'modules/content-access-control',
+                'modules/content-fields',
                 'modules/recipes',
                 'modules/resources',
                 'modules/roles',

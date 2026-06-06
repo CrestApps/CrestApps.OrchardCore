@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContentFields.Settings;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement.Metadata;
@@ -52,10 +53,9 @@ public sealed class ContactMethodMigrations : DataMigration
             .WithDescription("Provides a way to capture required phone number info")
             .WithField("Number", field => field
                 .WithPosition("1")
-                .OfType("TextField")
+                .OfType("PhoneField")
                 .WithDisplayName("Number")
-                .WithEditor("InternationalTelephone")
-                .WithSettings(new TextFieldSettings()
+                .WithSettings(new PhoneFieldSettings()
                 {
                     Required = true,
                 })
@@ -138,29 +138,40 @@ public sealed class ContactMethodMigrations : DataMigration
                 .WithSettings(new TitlePartSettings()
                 {
                     Options = TitlePartOptions.GeneratedHidden,
-                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.Text }}",
+                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })
             )
             .WithPart(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part.WithPosition("5"))
         );
 
-        return 1;
+        return 2;
     }
 
     /// <summary>
-    /// Updates existing phone number fields to use the international telephone editor.
+    /// Migrates the Number field from TextField with InternationalTelephone editor to PhoneField.
     /// </summary>
     public async Task<int> UpdateFrom1Async()
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
+            .RemoveField("Number"));
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
             .WithField("Number", field => field
-                .OfType("TextField")
+                .OfType("PhoneField")
                 .WithDisplayName("Number")
                 .WithPosition("1")
-                .WithEditor("InternationalTelephone")
-                .WithSettings(new TextFieldSettings
+                .WithSettings(new PhoneFieldSettings
                 {
                     Required = true,
+                })));
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
+            .WithPart<TitlePart>(part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings()
+                {
+                    Options = TitlePartOptions.GeneratedHidden,
+                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })));
 
         return 2;

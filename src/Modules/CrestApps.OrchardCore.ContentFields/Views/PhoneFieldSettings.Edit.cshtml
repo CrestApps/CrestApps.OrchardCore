@@ -1,0 +1,20 @@
+@model CrestApps.OrchardCore.ContentFields.Settings.PhoneFieldSettings
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Required" />
+        <label class="form-check-label" asp-for="Required">@T["Required"]</label>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Hint" class="form-label">@T["Hint"]</label>
+    <input asp-for="Hint" class="form-control" />
+    <span class="hint">@T["The hint text to display below the input."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DefaultCountryCode" class="form-label">@T["Default country code"]</label>
+    <input asp-for="DefaultCountryCode" class="form-control" maxlength="2" style="max-width:6em;" />
+    <span class="hint">@T["The ISO 3166-1 alpha-2 country code used when no country has been selected (e.g., US)."]</span>
+</div>

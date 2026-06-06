@@ -1,4 +1,5 @@
-﻿using OrchardCore.ContentFields.Fields;
+using CrestApps.OrchardCore.ContentFields.Fields;
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -11,7 +12,7 @@ public sealed class PhoneNumberInfoPart : ContentPart
     /// <summary>
     /// Gets or sets the number.
     /// </summary>
-    public TextField Number { get; set; }
+    public PhoneField Number { get; set; }
 
     /// <summary>
     /// Gets or sets the extension.

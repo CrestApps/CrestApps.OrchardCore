@@ -53,7 +53,7 @@ internal static class OmnichannelHelper
             {
                 if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
                     phonePart.Type is null ||
-                    string.IsNullOrEmpty(phonePart.Number?.Text))
+                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
                 {
                     continue;
                 }
@@ -61,19 +61,19 @@ internal static class OmnichannelHelper
                 switch (phonePart.Type.Text)
                 {
                     case "Cell":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 1);
+                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 1);
                         break;
                     case "Home":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 2);
+                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 2);
                         break;
                     case "Office":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 3);
+                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 3);
                         break;
                     case "Work":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 4);
+                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 4);
                         break;
                     case "Other":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 5);
+                        phoneNumbers.Enqueue(phonePart.Number.PhoneNumber, 5);
                         break;
                     default:
                         continue;
@@ -89,12 +89,12 @@ internal static class OmnichannelHelper
                 if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
                     phonePart.Type is null ||
                     phonePart.Type.Text != "Cell" ||
-                    string.IsNullOrEmpty(phonePart.Number?.Text))
+                    string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
                 {
                     continue;
                 }
 
-                return phonePart.Number.Text;
+                return phonePart.Number.PhoneNumber;
             }
         }
 

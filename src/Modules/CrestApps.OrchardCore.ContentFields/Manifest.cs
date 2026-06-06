@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -6,7 +7,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Description = "Adds custom Orchard Core content field editors maintained by CrestApps.",
+    Description = "Adds custom Orchard Core content fields maintained by CrestApps.",
     Category = "Content",
     IsAlwaysEnabled = false
 )]
@@ -15,10 +16,12 @@ using OrchardCore.Modules.Manifest;
     Name = "CrestApps Content Fields",
     Id = "CrestApps.OrchardCore.ContentFields",
     Category = "Content",
-    Description = "Adds custom Orchard Core content field editors maintained by CrestApps.",
+    Description = "Adds custom Orchard Core content fields maintained by CrestApps.",
     Dependencies =
     [
         "CrestApps.OrchardCore.Resources",
+        PhoneNumbersConstants.Features.Area,
         "OrchardCore.ContentFields",
+        "OrchardCore.ContentTypes",
     ]
 )]

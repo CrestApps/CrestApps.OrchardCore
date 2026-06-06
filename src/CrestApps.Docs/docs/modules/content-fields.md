@@ -2,7 +2,7 @@
 sidebar_label: Content Fields
 sidebar_position: 2
 title: Content Fields
-description: Adds custom Orchard Core content field editors maintained by CrestApps.
+description: Adds custom Orchard Core content fields maintained by CrestApps.
 ---
 
 | | |
@@ -10,38 +10,59 @@ description: Adds custom Orchard Core content field editors maintained by CrestA
 | **Feature Name** | CrestApps Content Fields |
 | **Feature ID** | `CrestApps.OrchardCore.ContentFields` |
 
-Provides custom Orchard Core content field editors maintained by CrestApps.
+Provides custom Orchard Core content fields maintained by CrestApps.
 
 ## Overview
 
-This module adds reusable editor variants for Orchard Core content fields without changing the underlying field types.
+This module adds custom content fields for Orchard Core that extend the built-in field library with additional functionality. Each field ships with its own display driver, settings, edit and display views.
 
-It follows Orchard Core's custom editor convention by shipping both:
+## Included fields
 
-- `TextField-InternationalTelephone.Option.cshtml`
-- `TextField-InternationalTelephone.Edit.cshtml`
+### PhoneField
 
-## Included editors
+A content field that stores an international phone number together with its ISO country code so the correct country flag is always displayed when the field is edited again.
 
-### InternationalTelephone (`TextField`)
+The field uses the [intl-tel-input](https://intl-tel-input.com/) library (provided by `CrestApps.OrchardCore.Resources`) to give editors a country-aware phone number input with flag dropdown and automatic formatting.
 
-The `InternationalTelephone` editor uses the `intl-tel-input` library to provide:
+#### Stored properties
 
-- country-aware phone number entry
-- international formatting while editing
-- normalization back to E.164 on submit
-- shared `intl-tel-input` resources from `CrestApps.OrchardCore.Resources`
-- local editor-specific assets from `CrestApps.OrchardCore.ContentFields`
+| Property | Type | Description |
+| --- | --- | --- |
+| `PhoneNumber` | `string` | The full phone number in E.164 format (e.g. `+14155552671`). |
+| `CountryCode` | `string` | ISO 3166-1 alpha-2 country code (e.g. `US`, `CA`). Stored separately because some countries share a calling code (e.g. US and CA both use `+1`). |
+| `NationalNumber` | `string` | The national (local) portion of the number without the country calling code (e.g. `4155552671`). |
 
-Use it from the content definition UI or through migrations with:
+#### Settings
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Hint` | `string` | `null` | Help text displayed below the field. |
+| `Required` | `bool` | `false` | Whether the field is required. |
+| `DefaultCountryCode` | `string` | `null` | ISO country code used to pre-select the flag when the field is empty (e.g. `US`). |
+
+#### Adding PhoneField via migration
 
 ```csharp
-.WithEditor("InternationalTelephone")
+await _contentDefinitionManager.AlterPartDefinitionAsync("MyPart", part => part
+    .WithField("Phone", field => field
+        .OfType("PhoneField")
+        .WithDisplayName("Phone Number")
+        .WithPosition("1")
+        .WithSettings(new PhoneFieldSettings
+        {
+            Required = true,
+            DefaultCountryCode = "US",
+            Hint = "Enter a phone number with country code.",
+        })
+    )
+);
 ```
+
+#### Server-side validation
+
+When the field value is submitted, the display driver uses `IPhoneNumberService` (from `CrestApps.OrchardCore.PhoneNumbers`) to validate that the entered number is a well-formed phone number. Invalid numbers produce a model-state error and the editor is re-displayed.
 
 ## Notes
 
-- The underlying field type stays `TextField`.
-- Existing values stored in E.164 format continue to edit correctly.
 - The shared `intl-tel-input` script and stylesheet are registered by `CrestApps.OrchardCore.Resources`.
-- The Omnichannel Management module now depends on this feature for `PhoneNumberInfoPart.Number`.
+- The Omnichannel Management module depends on this feature for `PhoneNumberInfoPart.Number`.

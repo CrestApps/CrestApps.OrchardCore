@@ -7,7 +7,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Adds custom Orchard Core content field editors maintained by CrestApps.
+      Adds custom Orchard Core content fields maintained by CrestApps.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS Content Fields</PackageTags>
   </PropertyGroup>
@@ -19,11 +19,14 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentFields" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
   </ItemGroup>
 

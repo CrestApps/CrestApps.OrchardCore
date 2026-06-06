@@ -1,0 +1,8 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.DisplayPhoneFieldViewModel
+@using OrchardCore.ContentManagement.Metadata.Models
+
+@if (!string.IsNullOrEmpty(Model.Field.PhoneNumber))
+{
+    <p class="text-muted">@Model.PartFieldDefinition.DisplayName()</p>
+    <a href="tel:@Model.Field.PhoneNumber">@(Model.Field.NationalNumber ?? Model.Field.PhoneNumber)</a>
+}
