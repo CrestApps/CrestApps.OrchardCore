@@ -5,7 +5,7 @@ Provides custom Orchard Core content field editors maintained by CrestApps.
 ## Features
 
 - Adds the `InternationalTelephone` editor for Orchard Core `TextField`
-- Bundles the `intl-tel-input` library and supporting assets
+- Depends on `CrestApps.OrchardCore.Resources` for the shared `intl-tel-input` library assets
 
 ## Usage
 

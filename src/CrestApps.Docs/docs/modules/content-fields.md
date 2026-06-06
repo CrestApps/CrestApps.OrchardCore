@@ -30,7 +30,8 @@ The `InternationalTelephone` editor uses the `intl-tel-input` library to provide
 - country-aware phone number entry
 - international formatting while editing
 - normalization back to E.164 on submit
-- local copied assets with CDN fallbacks through Orchard resource manifests
+- shared `intl-tel-input` resources from `CrestApps.OrchardCore.Resources`
+- local editor-specific assets from `CrestApps.OrchardCore.ContentFields`
 
 Use it from the content definition UI or through migrations with:
 
@@ -42,4 +43,5 @@ Use it from the content definition UI or through migrations with:
 
 - The underlying field type stays `TextField`.
 - Existing values stored in E.164 format continue to edit correctly.
+- The shared `intl-tel-input` script and stylesheet are registered by `CrestApps.OrchardCore.Resources`.
 - The Omnichannel Management module now depends on this feature for `PhoneNumberInfoPart.Number`.

@@ -18,6 +18,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Adds custom Orchard Core content field editors maintained by CrestApps.",
     Dependencies =
     [
+        "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentFields",
     ]
 )]

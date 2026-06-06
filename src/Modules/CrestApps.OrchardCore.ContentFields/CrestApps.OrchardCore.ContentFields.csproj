@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
