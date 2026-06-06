@@ -1,0 +1,7 @@
+{
+  "name": "crestapps.orchardcore.content-fields",
+  "private": true,
+  "dependencies": {
+    "intl-tel-input": "25.12.4"
+  }
+}

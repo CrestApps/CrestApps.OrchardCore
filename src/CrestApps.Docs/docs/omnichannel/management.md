@@ -90,6 +90,8 @@ In Orchard Core Admin:
 4. Add any fields/parts you need (phone number, email, lead status, custom fields, etc.).
 5. Create/import contact items.
 
+If you use the built-in `PhoneNumberInfoPart`, the `Number` field now uses the `InternationalTelephone` TextField editor from `CrestApps.OrchardCore.ContentFields`, which provides country-aware entry and stores submitted values in international format.
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
@@ -203,4 +205,3 @@ The page also includes a **Page size** selector so managers can review more than
 | **Set Instructions** | Set instruction text for all selected activities. Instructions are notes the agent reads before completing the task. |
 | **Set Urgency Level** | Update the urgency level for all selected activities. |
 | **Change Subject** | Change the subject content type for all selected activities. |
-

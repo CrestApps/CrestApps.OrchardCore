@@ -1,0 +1,39 @@
+@model OrchardCore.ContentFields.ViewModels.EditTextFieldViewModel
+@using OrchardCore.ContentFields
+@using OrchardCore.ContentFields.Settings
+@using OrchardCore.ContentManagement.Metadata.Models
+@using OrchardCore.Localization.Data
+@using OrchardCore.Mvc.Utilities
+@inject IDataLocalizer D
+@{
+    var settings = Model.PartFieldDefinition.GetSettings<TextFieldSettings>();
+    string localizedFieldName = D[Model.PartFieldDefinition.DisplayName(), DataLocalizationContext.ContentField(Model.PartFieldDefinition.PartDefinition.Name)];
+}
+
+@if (settings.Type == FieldBehaviorType.GeneratedHidden)
+{
+    <input type="hidden" asp-for="Text" />
+
+    return;
+}
+
+<div class="@($"ocat-wrapper field-wrapper field-wrapper-{Model.PartFieldDefinition.PartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()} content-field-international-telephone" + (Model.PartFieldDefinition.IsNamedPart() ? $" field-wrapper-{Model.PartFieldDefinition.ContentTypePartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()}" : string.Empty))" id="@Html.IdFor(x => x.Text)_FieldWrapper">
+    <label asp-for="Text" class="ocat-label @(settings.Required ? "ocat-label-required" : "")">@localizedFieldName</label>
+    <div class="ocat-end">
+        <input asp-for="Text"
+               class="form-control content-preview-text"
+               data-intl-tel-input="true"
+               placeholder="@settings.Placeholder"
+               type="tel"
+               asp-is-disabled="settings.Type == FieldBehaviorType.GeneratedDisabled" />
+        <span asp-validation-for="Text"></span>
+        @if (!string.IsNullOrEmpty(settings.Hint))
+        {
+            <span class="hint">@settings.Hint</span>
+        }
+    </div>
+</div>
+
+<style asp-name="intl-tel-input" at="Head"></style>
+<style asp-name="international-telephone-editor" at="Head"></style>
+<script asp-name="international-telephone-editor" at="Foot"></script>

@@ -54,7 +54,7 @@ public sealed class ContactMethodMigrations : DataMigration
             .WithPosition("1")
             .OfType("TextField")
             .WithDisplayName("Number")
-            .WithEditor("masked")
+            .WithEditor("InternationalTelephone")
             .WithSettings(new TextFieldSettings()
             {
                 Required = true,
@@ -144,5 +144,24 @@ public sealed class ContactMethodMigrations : DataMigration
         );
 
         return 1;
+    }
+
+    /// <summary>
+    /// Updates existing phone number fields to use the international telephone editor.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
+            .WithField("Number", field => field
+                .OfType("TextField")
+                .WithDisplayName("Number")
+                .WithPosition("1")
+                .WithEditor("InternationalTelephone")
+                .WithSettings(new TextFieldSettings
+                {
+                    Required = true,
+                })));
+
+        return 2;
     }
 }

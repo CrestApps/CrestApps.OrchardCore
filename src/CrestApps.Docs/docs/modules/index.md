@@ -14,6 +14,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | Module | Feature ID | Description |
 |--------|-----------|-------------|
 | [Content Access Control](content-access-control) | `CrestApps.OrchardCore.ContentAccessControl` | Role-based content access restrictions |
+| [Content Fields](content-fields) | `CrestApps.OrchardCore.ContentFields` | Custom Orchard Core content field editors |
 | [Content Transfer](content-transfer) | `CrestApps.OrchardCore.ContentTransfer` | Bulk Excel import and export for content items |
 | [Recipes](recipes) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes |
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
