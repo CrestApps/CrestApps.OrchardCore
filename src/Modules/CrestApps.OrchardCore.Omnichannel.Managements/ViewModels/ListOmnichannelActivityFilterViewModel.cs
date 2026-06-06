@@ -30,6 +30,11 @@ public class ListOmnichannelActivityFilterViewModel
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the lead time zone identifier.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
     /// Gets or sets the scheduled from.
     /// </summary>
     public string ScheduledFrom { get; set; }
@@ -56,6 +61,12 @@ public class ListOmnichannelActivityFilterViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available time zones.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> TimeZones { get; set; }
 
     /// <summary>
     /// Gets or sets the attempt filters.

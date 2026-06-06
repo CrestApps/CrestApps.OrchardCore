@@ -5,9 +5,31 @@
 @inject ILocalClock LocalClock
 @model OmnichannelContactPartViewModel
 
-<div class="ocat-wrapper">
-    <div class="ocat-label">@T["Communication preferences"]</div>
+<div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Contact time zone"]</label>
     <div class="ocat-end">
+        <div class="mb-3">
+            <select asp-for="TimeZoneId" asp-items="Model.AvailableTimeZones" class="form-select"></select>
+            <span asp-validation-for="TimeZoneId"></span>
+            @if (Model.RequireTimeZone)
+            {
+                <span class="hint dashed">@T["Choose the contact's local time zone so agents can call during appropriate local hours. This field is required."]</span>
+            }
+            else
+            {
+                <span class="hint dashed">@T["Choose the contact's local time zone so agents can call during appropriate local hours."]</span>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.UseDoNotCall || Model.UseDoNotSms || Model.UseDoNotChat || Model.UseDoNotEmail)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-label">@T["Communication preferences"]</div>
+        <div class="ocat-end">
+@if (Model.UseDoNotCall)
+{
         <div class="form-check">
             <input class="form-check-input" type="checkbox" asp-for="DoNotCall">
             <label class="form-check-label" asp-for="DoNotCall">
@@ -21,7 +43,9 @@
                 }
             </label>
         </div>
-
+}
+@if (Model.UseDoNotSms)
+{
         <div class="form-check">
             <input class="form-check-input" type="checkbox" asp-for="DoNotSms">
             <label class="form-check-label" asp-for="DoNotSms">
@@ -35,7 +59,9 @@
                 }
             </label>
         </div>
-
+}
+@if (Model.UseDoNotChat)
+{
         <div class="form-check">
             <input class="form-check-input" type="checkbox" asp-for="DoNotChat">
             <label class="form-check-label" asp-for="DoNotChat">
@@ -49,7 +75,9 @@
                 }
             </label>
         </div>
-
+}
+@if (Model.UseDoNotEmail)
+{
         <div class="form-check">
             <input class="form-check-input" type="checkbox" asp-for="DoNotEmail">
             <label class="form-check-label" asp-for="DoNotEmail">
@@ -63,5 +91,7 @@
                 }
             </label>
         </div>
+}
+        </div>
     </div>
-</div>
+}

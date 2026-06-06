@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 public sealed class OmnichannelContactPart : ContentPart
 {
     /// <summary>
+    /// Gets or sets the contact's local time zone identifier.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether phone calls are blocked for this contact.
     /// </summary>
     public bool DoNotCall { get; set; }

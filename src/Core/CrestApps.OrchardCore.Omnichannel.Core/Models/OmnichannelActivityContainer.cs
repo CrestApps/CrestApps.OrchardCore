@@ -30,6 +30,19 @@ public sealed class OmnichannelActivityContainer
     public User User { get; }
 
     /// <summary>
+    /// Gets the lead time zone identifier.
+    /// </summary>
+    public string LeadTimeZoneId
+    {
+        get
+        {
+            return Contact is not null && Contact.TryGet<OmnichannelContactPart>(out var contactPart)
+                ? contactPart.TimeZoneId
+                : null;
+        }
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelActivityContainer"/> class.
     /// </summary>
     /// <param name="activity">The omnichannel activity.</param>

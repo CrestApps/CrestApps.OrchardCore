@@ -106,6 +106,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - exports write the first available contact-method entries to `Email`, `Cell Phone`, and `Phone` workbook columns
 - exports also write `DoNotCall`, `DoNotCallUtc`, `DoNotSms`, `DoNotSmsUtc`, `DoNotEmail`, `DoNotEmailUtc`, `DoNotChat`, and `DoNotChatUtc`
 - imports can recreate those values as contact-method content items inside the `ContactMethods` bag
+- imports and exports include `TimeZoneId`, and imports can infer that IANA time zone from the normalized phone number when the file does not provide one explicitly
 - imports can populate the same DNC/compliance columns directly onto `OmnichannelContactPart`
 - duplicate filtering can ignore rows that repeat a previously imported phone number, while still allowing updates when the imported row already targets the owning `ContentItemId`
 - when a row targets an existing `ContentItemId`, the imported column values overwrite the mapped omnichannel fields on the new latest version of that content item
@@ -175,6 +176,12 @@ The batch will run in the background and will load activities incrementally.
 4. A preview appears showing what actions will execute (e.g. "Try Again — schedule date" or "New Activity — target campaign").
 5. Adjust the schedule dates if needed.
 6. Click **Complete** to save and execute the campaign actions.
+
+### Scheduled activities list
+
+Navigate to **Omnichannel** -> **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
+
+The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
 ## Bulk Activity Management
 
