@@ -8,18 +8,16 @@ internal static class OmnichannelTimeZoneHelper
 {
     public static List<SelectListItem> GetTimeZoneOptions(
         IClock clock,
-        IStringLocalizer stringLocalizer,
-        string emptyOptionText,
+        LocalizedString emptyOptionText,
         string selectedTimeZoneId)
     {
         ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(stringLocalizer);
 
         var options = new List<SelectListItem>
         {
             new()
             {
-                Text = stringLocalizer[emptyOptionText],
+                Text = emptyOptionText.Value,
                 Value = string.Empty,
                 Selected = string.IsNullOrEmpty(selectedTimeZoneId),
             },

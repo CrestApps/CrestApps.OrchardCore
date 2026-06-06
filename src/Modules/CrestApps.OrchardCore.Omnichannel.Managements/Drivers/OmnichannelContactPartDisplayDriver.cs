@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -13,6 +12,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDriver<OmnichannelContactPart>
 {
     private readonly IClock _clock;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -40,7 +40,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.UseDoNotChat = settings.UseDoNotChat;
             model.UseDoNotEmail = settings.UseDoNotEmail;
             model.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, part.TimeZoneId);
-            model.AvailableTimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S, "Select lead time zone", model.TimeZoneId);
+            model.AvailableTimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S["Select time zone"], model.TimeZoneId);
             model.DoNotCall = part.DoNotCall;
             model.DoNotCallUtc = part.DoNotCallUtc;
             model.DoNotSms = part.DoNotSms;
@@ -64,7 +64,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
 
         if (settings.RequireTimeZone && string.IsNullOrEmpty(part.TimeZoneId))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TimeZoneId), S["The contact time zone is required."]);
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TimeZoneId), S["The contact time zone is required."]);
         }
 
         var utcNow = _clock.UtcNow;

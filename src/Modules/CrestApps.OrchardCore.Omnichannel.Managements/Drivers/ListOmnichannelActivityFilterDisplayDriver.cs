@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -71,7 +71,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
 
-            model.TimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S, "Any time zone", model.TimeZoneId);
+            model.TimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S["Any time zone"], model.TimeZoneId);
 
             model.AttemptFilters =
             [

@@ -370,6 +370,10 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
         dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotCall));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotSms));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotChat));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotEmail));
         var row = dataTable.NewRow();
         dataTable.Rows.Add(row);
 

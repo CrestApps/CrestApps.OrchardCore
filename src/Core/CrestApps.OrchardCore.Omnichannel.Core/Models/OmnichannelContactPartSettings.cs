@@ -8,7 +8,7 @@ public sealed class OmnichannelContactPartSettings
     /// <summary>
     /// Gets or sets a value indicating whether a time zone must be provided.
     /// </summary>
-    public bool RequireTimeZone { get; set; }
+    public bool RequireTimeZone { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the Do not call preference is available.

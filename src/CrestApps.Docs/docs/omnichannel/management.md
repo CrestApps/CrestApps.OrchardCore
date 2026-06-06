@@ -99,6 +99,12 @@ Do not rename or replace the `ContactMethods` bag in custom definitions. Instead
 
 The management feature depends on `OrchardCore.Flows` so the enforced `ContactMethods` bag renders with the standard Orchard bag editor when you edit a contact content item. The bag is injected during Orchard's content-type definition build pipeline, so content types that attach `OmnichannelContactPart` always materialize with the named `ContactMethods` bag even when the stored type definition does not yet include it.
 
+`OmnichannelContactPart` also includes configurable part settings in the content-type editor:
+
+- **Require time zone** is enabled by default and forces editors to choose a lead time zone before the contact can be saved.
+- **Use Do not call** is enabled by default and controls whether the contact editor shows the Do not call preference.
+- **Use Do not SMS**, **Use Do not chat**, and **Use Do not email** are disabled by default and can be enabled individually when that contact type should track those communication preferences.
+
 #### Import and export contact methods
 
 Omnichannel contact imports and exports integrate with **Content Transfer**.
