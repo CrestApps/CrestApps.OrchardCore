@@ -263,9 +263,6 @@ public sealed class AdminController : Controller, IUpdateModel
                     return BadRequest(new { error = GetUnsupportedFormatsMessage().Value });
                 }
 
-                var fileName = Guid.NewGuid() + extension;
-                var storedFileName = await _contentTransferFileStore.CreateFileFromStreamAsync(fileName, file.OpenReadStream(), false);
-
                 var importContent = new ImportContent()
                 {
                     ContentTypeId = contentTypeId,
@@ -273,6 +270,14 @@ public sealed class AdminController : Controller, IUpdateModel
                 };
 
                 await _displayManager.UpdateEditorAsync(importContent, _updateModelAccessor.ModelUpdater, false, string.Empty, string.Empty);
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { error = GetModelErrorMessage() });
+                }
+
+                var fileName = Guid.NewGuid() + extension;
+                var storedFileName = await _contentTransferFileStore.CreateFileFromStreamAsync(fileName, file.OpenReadStream(), false);
 
                 var entry = new ContentTransferEntry()
                 {
@@ -1056,6 +1061,15 @@ public sealed class AdminController : Controller, IUpdateModel
 
     private static string GetFileFormatLabel(IContentTransferFileFormatProvider provider)
         => provider.FileExtension.TrimStart('.').ToUpperInvariant();
+
+    private string GetModelErrorMessage()
+        => ModelState.Values
+            .SelectMany(entry => entry.Errors)
+            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                ? error.Exception?.Message
+                : error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? S["The import request is invalid."].Value;
 
     private IQuery<ContentItem> BuildExportQuery(
         string contentTypeId,

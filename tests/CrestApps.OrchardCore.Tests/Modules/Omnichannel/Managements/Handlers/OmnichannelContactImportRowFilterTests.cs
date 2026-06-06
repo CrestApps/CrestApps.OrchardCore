@@ -41,9 +41,12 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumbersAsync(
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "5553334444" });
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["5553334444"] = ["existing-contact"],
+            });
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -55,9 +58,9 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         var rowContexts = new[]
         {
-            CreateRowContext(entry, 1, "Cell Phone", "555-111-2222"),
-            CreateRowContext(entry, 2, "Phone", "(555) 111-2222"),
-            CreateRowContext(entry, 3, "Mobile", "555-333-4444"),
+            CreateRowContext(entry, 1, ("Cell Phone", "555-111-2222")),
+            CreateRowContext(entry, 2, ("Phone", "(555) 111-2222")),
+            CreateRowContext(entry, 3, ("Mobile", "555-333-4444")),
         };
 
         // Act & Assert
@@ -69,7 +72,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(await filter.ShouldSkipRowAsync(rowContexts[2]));
         Assert.Contains("already exists in the database", rowContexts[2].SkipReason);
 
-        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumbersAsync(
+        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -83,6 +86,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         registry.SetupGet(x => x.Description).Returns("USA registry");
         registry.Setup(x => x.GetRegisteredNumbersAsync(
                 It.IsAny<IEnumerable<string>>(),
+                It.IsAny<NumberSearchContext>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(["5557778888"]);
 
@@ -102,13 +106,13 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         Assert.True(initialized);
 
-        var rowContext = CreateRowContext(entry, 1, "Cell Phone", "555-777-8888");
+        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "555-777-8888"));
 
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
 
-        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumbersAsync(
+        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -122,9 +126,12 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumbersAsync(
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "5551112222" });
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["5551112222"] = ["existing-contact"],
+            });
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -135,11 +142,11 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(initialized);
 
         // Row uses "Home Phone" column, but the number exists in DB as a cell phone — should still be rejected.
-        var row1 = CreateRowContext(entry, 1, "Home Phone", "555-111-2222");
+        var row1 = CreateRowContext(entry, 1, ("Home Phone", "555-111-2222"));
 
         // Row uses "Cell Phone" column with a new number, then same number in "Phone" column in the next row.
-        var row2 = CreateRowContext(entry, 2, "Cell Phone", "555-999-8888");
-        var row3 = CreateRowContext(entry, 3, "Home Phone", "(555) 999-8888");
+        var row2 = CreateRowContext(entry, 2, ("Cell Phone", "555-999-8888"));
+        var row3 = CreateRowContext(entry, 3, ("Home Phone", "(555) 999-8888"));
 
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(row1));
@@ -163,13 +170,13 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumbersAsync(
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                "5551112222",
-                "5553334444",
-                "5556667777",
+                ["5551112222"] = ["existing-contact-1"],
+                ["5553334444"] = ["existing-contact-2"],
+                ["5556667777"] = ["existing-contact-3"],
             });
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
@@ -181,9 +188,9 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(initialized);
 
         // Act & Assert - every row should be rejected
-        var row1 = CreateRowContext(entry, 1, "Cell Phone", "555-111-2222");
-        var row2 = CreateRowContext(entry, 2, "Cell Phone", "555-333-4444");
-        var row3 = CreateRowContext(entry, 3, "Cell Phone", "555-666-7777");
+        var row1 = CreateRowContext(entry, 1, ("Cell Phone", "555-111-2222"));
+        var row2 = CreateRowContext(entry, 2, ("Cell Phone", "555-333-4444"));
+        var row3 = CreateRowContext(entry, 3, ("Cell Phone", "555-666-7777"));
 
         Assert.True(await filter.ShouldSkipRowAsync(row1));
         Assert.Contains("already exists in the database", row1.SkipReason);
@@ -194,6 +201,239 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         Assert.True(await filter.ShouldSkipRowAsync(row3));
         Assert.Contains("already exists in the database", row3.SkipReason);
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldAllowUpdatingExistingOwner()
+    {
+        // Arrange
+        var filter = CreateFilter([]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = true,
+        });
+
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["7024993350"] = ["4eb8n2j6ffk0q6dg9jevfavb5y"],
+            });
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var rowContext = CreateRowContext(
+            entry,
+            1,
+            ("ContentItemId", "4eb8n2j6ffk0q6dg9jevfavb5y"),
+            ("Phone", "7024993350"));
+
+        // Act & Assert
+        Assert.False(await filter.ShouldSkipRowAsync(rowContext));
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldAllowRepeatedPhoneForSameContentItemIdInFile()
+    {
+        // Arrange
+        var filter = CreateFilter([]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = true,
+        });
+
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase));
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var row1 = CreateRowContext(
+            entry,
+            1,
+            ("ContentItemId", "4eb8n2j6ffk0q6dg9jevfavb5y"),
+            ("Phone", "7024993350"));
+        var row2 = CreateRowContext(
+            entry,
+            2,
+            ("ContentItemId", "4eb8n2j6ffk0q6dg9jevfavb5y"),
+            ("Phone", "(702) 499-3350"));
+
+        // Act & Assert
+        Assert.False(await filter.ShouldSkipRowAsync(row1));
+        Assert.False(await filter.ShouldSkipRowAsync(row2));
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldRejectRepeatedPhoneForDifferentContentItemIdInFile()
+    {
+        // Arrange
+        var filter = CreateFilter([]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = true,
+        });
+
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase));
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var row1 = CreateRowContext(
+            entry,
+            1,
+            ("ContentItemId", "first-contact"),
+            ("Phone", "7024993350"));
+        var row2 = CreateRowContext(
+            entry,
+            2,
+            ("ContentItemId", "second-contact"),
+            ("Phone", "(702) 499-3350"));
+
+        // Act & Assert
+        Assert.False(await filter.ShouldSkipRowAsync(row1));
+        Assert.True(await filter.ShouldSkipRowAsync(row2));
+        Assert.Contains("already appeared earlier in the import file", row2.SkipReason);
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldUseSelectedCountryForDncComparison()
+    {
+        // Arrange
+        var lookupBatches = new List<string[]>();
+        var registry = new Mock<INationalDoNotCallRegistry>();
+        registry.SetupGet(x => x.Key).Returns("local-dnc");
+        registry.SetupGet(x => x.DisplayName).Returns("Local");
+        registry.SetupGet(x => x.Description).Returns("Local registry");
+        registry.Setup(x => x.GetRegisteredNumbersAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<NumberSearchContext>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> numbers, NumberSearchContext _, CancellationToken _) =>
+            {
+                var batch = numbers.ToArray();
+                lookupBatches.Add(batch);
+
+                return batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase)
+                    ? ["+12502000003"]
+                    : [];
+            });
+
+        var filter = CreateFilter([registry.Object]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = false,
+            IgnoreDoNotCallNumbers = true,
+            SelectedCountryCode = "CA",
+            SelectedRegistryKeys = ["local-dnc"],
+        });
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "2502000003"));
+
+        // Act & Assert
+        Assert.True(await filter.ShouldSkipRowAsync(rowContext));
+        Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
+        Assert.Contains(
+            lookupBatches,
+            batch => batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase));
+        registry.Verify(x => x.GetRegisteredNumbersAsync(
+            It.IsAny<IEnumerable<string>>(),
+            It.Is<NumberSearchContext>(context => context.CountryCode == "CA"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldNormalizeNumbersBeforeCheckingDoNotCallRegistry()
+    {
+        // Arrange
+        var lookupBatches = new List<string[]>();
+        var registry = new Mock<INationalDoNotCallRegistry>();
+        registry.SetupGet(x => x.Key).Returns("local-dnc");
+        registry.SetupGet(x => x.DisplayName).Returns("Local");
+        registry.SetupGet(x => x.Description).Returns("Local registry");
+        registry.Setup(x => x.GetRegisteredNumbersAsync(
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<NumberSearchContext>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> numbers, NumberSearchContext _, CancellationToken _) =>
+            {
+                var batch = numbers.ToArray();
+                lookupBatches.Add(batch);
+
+                return batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase)
+                    ? ["+12502000003"]
+                    : [];
+            });
+
+        var filter = CreateFilter([registry.Object]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = true,
+            IgnoreDoNotCallNumbers = true,
+            SelectedCountryCode = "CA",
+            SelectedRegistryKeys = ["local-dnc"],
+        });
+
+        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["7024993350"] = ["4eb8n2j6ffk0q6dg9jevfavb5y"],
+            });
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var updateRow = CreateRowContext(
+            entry,
+            1,
+            ("ContentItemId", "4eb8n2j6ffk0q6dg9jevfavb5y"),
+            ("Phone", "7024993350"));
+        var newRow = CreateRowContext(
+            entry,
+            2,
+            ("Cell Phone", "2502000003"));
+
+        // Act & Assert
+        Assert.False(await filter.ShouldSkipRowAsync(updateRow));
+
+        Assert.True(await filter.ShouldSkipRowAsync(newRow));
+        Assert.Contains("is registered on a national do-not-call registry", newRow.SkipReason);
+        Assert.Contains(
+            lookupBatches,
+            batch => batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase));
     }
 
     private OmnichannelContactImportRowFilter CreateFilter(IEnumerable<INationalDoNotCallRegistry> registries)
@@ -215,14 +455,20 @@ public sealed class OmnichannelContactImportRowFilterTests
     private static ContentImportRowFilterContext CreateRowContext(
         ContentTransferEntry entry,
         int rowIndex,
-        string columnName,
-        string value)
+        params (string ColumnName, string Value)[] values)
     {
         var table = new DataTable();
-        table.Columns.Add(columnName);
+        foreach (var (columnName, _) in values)
+        {
+            table.Columns.Add(columnName);
+        }
 
         var row = table.NewRow();
-        row[0] = value;
+
+        for (var index = 0; index < values.Length; index++)
+        {
+            row[index] = values[index].Value;
+        }
 
         return new ContentImportRowFilterContext
         {

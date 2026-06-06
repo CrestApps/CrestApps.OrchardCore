@@ -40,11 +40,16 @@ Use **Content** -> **Bulk Import** to upload a transfer file for a content type.
 1. Select a content type.
 2. Download the template if you need the expected column layout.
 3. Upload one of the enabled file formats shown in the UI.
-4. The import is queued and processed in the background.
+4. Choose whether the imported items should stay as the latest draft or be published immediately.
+5. The import is queued and processed in the background.
 
 Validation runs through `IContentManager.ValidateAsync()`. Failed rows are tracked, and rejected rows can be downloaded again in the same file format as the original import as long as that format feature is still enabled.
 
-For Omnichannel contacts, the import UI can also expose duplicate-phone filtering and national do-not-call registry checks. Duplicate-phone filtering is enabled by default, skipped duplicate rows are recorded in the error export with the reason, and duplicate detection checks both the current import batch and existing contact phone numbers already stored in Orchard before the batch commits. The database lookup also falls back to older stored phone values that predate the normalized-phone index columns, so re-importing the same contact list is still rejected while older tenants finish reindexing. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
+For Omnichannel contacts, the import UI can also expose duplicate-phone filtering, a lead-country selector for phone normalization, and national do-not-call registry checks. Duplicate-phone filtering is enabled by default, skipped duplicate rows are recorded in the error export with the reason, and duplicate detection checks both the current import batch and existing contact phone numbers already stored in Orchard before the batch commits. When a row includes an existing `ContentItemId`, duplicate detection now treats matching phone numbers on that same content item as an update instead of a conflict. The database lookup also falls back to older stored phone values that predate the normalized-phone index columns, so re-importing the same contact list is still rejected while older tenants finish reindexing. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
+
+Bulk imports now default to saving drafts only. Enable **Publish imported content** when the imported items should be published immediately after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports now ignore that value entirely.
+
+For content types that attach `OmnichannelContactPart`, each import file should contain leads from a single country unless every phone number in the file already uses E.164. Selecting that lead country in the import UI is now required so non-E.164 values are normalized before duplicate checks, before DNC registry providers receive the lookup values, and before contact-method storage runs. The picker shows the same `Country (+calling code)` labels used by the Local DNC import UI.
 
 The Omnichannel contact columns `DoNotCall`, `DoNotSms`, `DoNotEmail`, and `DoNotChat` now advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
 

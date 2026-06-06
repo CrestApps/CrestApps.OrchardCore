@@ -84,32 +84,38 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     /// <inheritdoc />
     public async Task<HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken cancellationToken)
     {
-        var existingPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var owners = await GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken);
 
+        return owners.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken)
+    {
+        var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var allIndexes = await _session.QueryIndex<OmnichannelContactIndex>()
             .ListAsync(cancellationToken);
 
         if (!allIndexes.Any())
         {
-            return existingPhoneNumbers;
+            return [];
         }
 
         var contentItemIds = allIndexes
-            .Select(i => i.ContentItemId)
+            .Select(index => index.ContentItemId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         if (contentItemIds.Length == 0)
         {
-            return existingPhoneNumbers;
+            return [];
         }
 
-        // Only include phone numbers from content items that are still alive (Latest).
-        var latestContentItemIds = (await _session.QueryIndex<ContentItemIndex>(i =>
-                i.ContentItemId.IsIn(contentItemIds) && i.Latest)
+        var latestContentItemIds = (await _session.QueryIndex<ContentItemIndex>(index =>
+                index.ContentItemId.IsIn(contentItemIds) && index.Latest)
             .ListAsync(cancellationToken))
-            .Select(i => i.ContentItemId)
+            .Select(index => index.ContentItemId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var index in allIndexes)
@@ -119,11 +125,14 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
                 continue;
             }
 
-            AddPhoneFromIndex(existingPhoneNumbers, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
-            AddPhoneFromIndex(existingPhoneNumbers, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
+            AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
+            AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
         }
 
-        return existingPhoneNumbers;
+        return phoneOwners.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.ToArray(),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     private void AddPhoneFromIndex(HashSet<string> phoneNumbers, string normalizedValue, string rawValue)
@@ -141,6 +150,45 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
                 phoneNumbers.Add(normalized);
             }
         }
+    }
+
+    private void AddPhoneOwners(
+        IDictionary<string, HashSet<string>> phoneOwners,
+        string contentItemId,
+        string normalizedValue,
+        string rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(contentItemId))
+        {
+            return;
+        }
+
+        AddPhoneOwner(phoneOwners, normalizedValue, contentItemId);
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            AddPhoneOwner(phoneOwners, NormalizePhoneNumber(rawValue), contentItemId);
+            AddPhoneOwner(phoneOwners, rawValue.Trim(), contentItemId);
+        }
+    }
+
+    private static void AddPhoneOwner(
+        IDictionary<string, HashSet<string>> phoneOwners,
+        string phoneNumber,
+        string contentItemId)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return;
+        }
+
+        if (!phoneOwners.TryGetValue(phoneNumber, out var owners))
+        {
+            owners = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            phoneOwners[phoneNumber] = owners;
+        }
+
+        owners.Add(contentItemId);
     }
 
     internal static void AddLegacyMatches(

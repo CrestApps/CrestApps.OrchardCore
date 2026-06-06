@@ -10,6 +10,8 @@ public class ContentImportViewModel
     [DataType(DataType.Upload)]
     public IFormFile File { get; set; }
 
+    public bool PublishImportedContent { get; set; }
+
     [BindNever]
     public string AcceptedFileTypes { get; set; }
 }

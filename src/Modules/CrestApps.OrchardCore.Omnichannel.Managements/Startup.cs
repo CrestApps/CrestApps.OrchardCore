@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
@@ -153,7 +154,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId, PhoneNumbersConstants.Features.Area)]
 public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

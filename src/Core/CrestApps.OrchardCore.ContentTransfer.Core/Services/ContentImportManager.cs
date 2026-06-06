@@ -57,6 +57,7 @@ public sealed class ContentImportManager : IContentImportManager
             var partContext = new ContentPartImportMapContext()
             {
                 ContentItem = contentItem,
+                Entry = context.Entry,
                 // ContentPart = part,
                 ContentTypePartDefinition = typePartDefinition,
             };
@@ -117,6 +118,7 @@ public sealed class ContentImportManager : IContentImportManager
             var partContext = new ContentPartImportMapContext()
             {
                 ContentItem = context.ContentItem,
+                Entry = context.Entry,
                 ContentTypePartDefinition = typePartDefinition,
                 Columns = context.Columns,
                 Row = context.Row,
@@ -156,6 +158,7 @@ public sealed class ContentImportManager : IContentImportManager
                     ContentPartFieldDefinition = partFieldDefinition,
                     PartName = typePartDefinition.Name ?? partName,
                     ContentPart = part,
+                    Entry = context.Entry,
                     Row = context.Row,
                     Columns = context.Columns,
                     ContentItem = context.ContentItem,

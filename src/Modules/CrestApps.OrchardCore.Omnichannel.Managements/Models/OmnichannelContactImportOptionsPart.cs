@@ -21,4 +21,9 @@ public sealed class OmnichannelContactImportOptionsPart
     /// Gets or sets the registry keys selected for DNC checking during this import.
     /// </summary>
     public string[] SelectedRegistryKeys { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the ISO 3166-1 alpha-2 country code used to normalize imported phone numbers.
+    /// </summary>
+    public string SelectedCountryCode { get; set; }
 }

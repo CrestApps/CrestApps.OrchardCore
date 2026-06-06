@@ -221,9 +221,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         progressPart.TotalRecords = reader.GetRowCount();
 
         var indexOfKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemId));
-        var indexOfVersionKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemVersionId));
         var newRecords = new Dictionary<int, DataRow>();
-        var existingVersionRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
         var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
 
         var rowIndex = 1;
@@ -302,44 +300,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                if (contentTypeDefinition.IsVersionable() && indexOfVersionKeyColumn > -1)
+                var contentItemId = GetImportContentItemId(dataRow, indexOfKeyColumn);
+
+                if (!string.IsNullOrEmpty(contentItemId))
                 {
-                    var contentItemVersionId = dataRow[indexOfVersionKeyColumn]?.ToString()?.Trim();
-
-                    if (!string.IsNullOrEmpty(contentItemVersionId))
-                    {
-                        existingVersionRows[contentItemVersionId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
-                    }
-                    else if (indexOfKeyColumn > -1)
-                    {
-                        var contentItemId = dataRow[indexOfKeyColumn]?.ToString()?.Trim();
-
-                        if (!string.IsNullOrEmpty(contentItemId))
-                        {
-                            existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
-                        }
-                        else
-                        {
-                            newRecords[rowIndex] = dataRow;
-                        }
-                    }
-                    else
-                    {
-                        newRecords[rowIndex] = dataRow;
-                    }
-                }
-                else if (indexOfKeyColumn > -1)
-                {
-                    var contentItemId = dataRow[indexOfKeyColumn]?.ToString()?.Trim();
-
-                    if (!string.IsNullOrEmpty(contentItemId))
-                    {
-                        existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
-                    }
-                    else
-                    {
-                        newRecords[rowIndex] = dataRow;
-                    }
+                    existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
                 }
                 else
                 {
@@ -347,14 +312,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 }
             }
 
-            if (newRecords.Count + existingRows.Count + existingVersionRows.Count >= batchSize)
+            if (newRecords.Count + existingRows.Count >= batchSize)
             {
                 await ProcessBatchAsync(
                     serviceProvider,
                     entry,
                     dataTable,
                     newRecords,
-                    existingVersionRows,
                     existingRows,
                     contentTypeDefinition,
                     contentManager,
@@ -363,9 +327,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     session,
                     clock,
                     cancellationToken);
-
                 newRecords.Clear();
-                existingVersionRows.Clear();
+                newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
             }
@@ -373,14 +336,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             rowIndex++;
         }
 
-        if (newRecords.Count + existingRows.Count + existingVersionRows.Count > 0)
+        if (newRecords.Count + existingRows.Count > 0)
         {
             await ProcessBatchAsync(
                 serviceProvider,
                 entry,
                 dataTable,
                 newRecords,
-                existingVersionRows,
                 existingRows,
                 contentTypeDefinition,
                 contentManager,
@@ -399,7 +361,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTransferEntry entry,
         DataTable dataTable,
         Dictionary<int, DataRow> newRecords,
-        Dictionary<string, KeyValuePair<int, DataRow>> existingVersionRows,
         Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
@@ -409,37 +370,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IClock clock,
         CancellationToken cancellationToken)
     {
-        if (existingVersionRows.Count > 0)
-        {
-            foreach (var existingVersionRow in existingVersionRows)
-            {
-                if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
-                {
-                    return;
-                }
-
-                var contentItem = await contentManager.GetVersionAsync(existingVersionRow.Key);
-                var isNew = contentItem == null;
-
-                if (isNew)
-                {
-                    contentItem = await contentManager.NewAsync(entry.ContentType);
-                }
-
-                await ProcessRowAsync(
-                    entry,
-                    contentItem,
-                    existingVersionRow.Value.Key,
-                    existingVersionRow.Value.Value,
-                    dataTable.Columns,
-                    contentTypeDefinition,
-                    contentManager,
-                    contentImportManager,
-                    progressPart,
-                    isNew);
-            }
-        }
-
         if (existingRows.Count > 0)
         {
             var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
@@ -501,6 +431,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync(cancellationToken);
     }
 
+    internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
+        => indexOfKeyColumn > -1
+            ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
+            : null;
+
     private static async Task ProcessRowAsync(
         ContentTransferEntry entry,
         ContentItem contentItem,
@@ -515,10 +450,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         try
         {
+            var importOptions = entry.GetOrCreate<ImportContentOptionsPart>();
             var mapContext = new ContentImportContext()
             {
                 ContentItem = contentItem,
                 ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
                 Columns = columns,
                 Row = row,
             };
@@ -539,13 +476,26 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             if (isNew)
             {
                 await contentManager.CreateAsync(mapContext.ContentItem, VersionOptions.DraftRequired);
+
+                if (importOptions.PublishImportedContent)
+                {
+                    await contentManager.PublishAsync(mapContext.ContentItem);
+                }
             }
             else
             {
                 await contentManager.UpdateAsync(mapContext.ContentItem);
+
+                if (importOptions.PublishImportedContent)
+                {
+                    await contentManager.PublishAsync(mapContext.ContentItem);
+                }
+                else
+                {
+                    await contentManager.SaveDraftAsync(mapContext.ContentItem);
+                }
             }
 
-            await contentManager.PublishAsync(mapContext.ContentItem);
             progressPart.ImportedCount++;
 
             progressPart.Errors.Remove(rowIndex);

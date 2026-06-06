@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Drivers;
@@ -35,7 +36,9 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
         => Task.FromResult<IDisplayResult>(
             Initialize<ContentImportViewModel>("ImportContentFile_Edit", viewModel =>
             {
+                var options = model.GetOrCreate<ImportContentOptionsPart>();
                 viewModel.File = model.File;
+                viewModel.PublishImportedContent = options.PublishImportedContent;
                 viewModel.AcceptedFileTypes = _acceptedFileTypes;
             })
             .Location("Content:1"));
@@ -68,6 +71,10 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
 
                 model.File = viewModel.File;
             }
+
+            var options = model.GetOrCreate<ImportContentOptionsPart>();
+            options.PublishImportedContent = viewModel.PublishImportedContent;
+            model.Put(options);
         }
 
         return await EditAsync(model, context);

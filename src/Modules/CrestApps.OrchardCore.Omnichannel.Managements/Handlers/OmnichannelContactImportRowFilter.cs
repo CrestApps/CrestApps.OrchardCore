@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -28,9 +29,10 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private readonly ILogger _logger;
     private bool _ignoreDuplicates;
     private bool _ignoreDoNotCallNumbers;
+    private string? _selectedCountryCode;
     private string[] _selectedRegistryKeys = [];
-    private HashSet<string> _seenPhoneNumbers = new(StringComparer.OrdinalIgnoreCase);
-    private HashSet<string> _existingPhoneNumbers = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, SeenPhoneOwnerState> _seenPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string[]> _existingPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<int, string> _batchSkipReasons = [];
 
     /// <summary>
@@ -69,8 +71,9 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         var options = context.Entry.GetOrCreate<OmnichannelContactImportOptionsPart>();
         _ignoreDuplicates = options.IgnoreDuplicateByPhoneNumber;
         _ignoreDoNotCallNumbers = options.IgnoreDoNotCallNumbers;
+        _selectedCountryCode = NormalizeCountryCode(options.SelectedCountryCode);
         _selectedRegistryKeys = options.SelectedRegistryKeys ?? [];
-        _seenPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _seenPhoneOwners = new Dictionary<string, SeenPhoneOwnerState>(StringComparer.OrdinalIgnoreCase);
 
         // Apply global enforcement from site settings.
         var site = await _siteService.GetSiteSettingsAsync();
@@ -100,7 +103,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
         if (_ignoreDuplicates)
         {
-            _existingPhoneNumbers = await _duplicateLookupService.GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken.None);
+            _existingPhoneOwners = await _duplicateLookupService.GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken.None);
         }
 
         return true;
@@ -138,9 +141,11 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
         if (_ignoreDuplicates)
         {
+            var contentItemId = GetContentItemId(context.Row, context.Columns);
+
             foreach (var entry in phoneEntries)
             {
-                if (_existingPhoneNumbers.Contains(entry.NormalizedNumber))
+                if (HasConflictingExistingOwner(entry, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already exists in the database.";
 
@@ -155,7 +160,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                     return true;
                 }
 
-                if (!_seenPhoneNumbers.Add(entry.NormalizedNumber))
+                if (HasConflictingSeenOwner(entry.NormalizedNumber, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already appeared earlier in the import file.";
 
@@ -169,13 +174,14 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
                     return true;
                 }
+
+                MarkSeenOwner(entry.NormalizedNumber, contentItemId);
             }
         }
 
         if (_ignoreDoNotCallNumbers)
         {
-            var normalizedNumbers = phoneEntries.Select(e => e.NormalizedNumber);
-            var doNotCallNumbers = await LoadDoNotCallNumbersAsync(normalizedNumbers, CancellationToken.None);
+            var doNotCallNumbers = await LoadDoNotCallNumbersAsync(phoneEntries, CancellationToken.None);
 
             foreach (var entry in phoneEntries)
             {
@@ -220,7 +226,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
                 if (!string.IsNullOrEmpty(normalizedPhoneNumber))
                 {
-                    entries.Add(new PhoneEntry(normalizedPhoneNumber, value, phoneType));
+                    entries.Add(new PhoneEntry(normalizedPhoneNumber, value, phoneType, GetComparisonKeys(value, normalizedPhoneNumber)));
                 }
             }
         }
@@ -256,22 +262,31 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     }
 
     private async Task<HashSet<string>> LoadDoNotCallNumbersAsync(
-        IEnumerable<string> phoneNumbers,
+        IEnumerable<PhoneEntry> phoneEntries,
         CancellationToken cancellationToken)
     {
         var allDncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lookupPhoneNumbers = phoneEntries
+            .Select(entry => entry.NormalizedNumber)
+            .Where(number => !string.IsNullOrWhiteSpace(number))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         var selectedRegistries = _registries
             .Where(r => _selectedRegistryKeys.Contains(r.Key, StringComparer.OrdinalIgnoreCase))
             .ToList();
 
-        if (selectedRegistries.Count == 0)
+        if (selectedRegistries.Count == 0 || lookupPhoneNumbers.Length == 0)
         {
             return allDncNumbers;
         }
 
+        var searchContext = new NumberSearchContext
+        {
+            CountryCode = _selectedCountryCode,
+        };
         var tasks = selectedRegistries.Select(registry =>
-            QueryRegistrySafeAsync(registry, phoneNumbers, cancellationToken));
+            QueryRegistrySafeAsync(registry, lookupPhoneNumbers, searchContext, cancellationToken));
 
         var results = await Task.WhenAll(tasks);
 
@@ -279,7 +294,12 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         {
             foreach (var number in result)
             {
-                allDncNumbers.Add(NormalizePhoneNumber(number));
+                var normalizedNumber = NormalizePhoneNumber(number);
+
+                if (!string.IsNullOrEmpty(normalizedNumber))
+                {
+                    allDncNumbers.Add(normalizedNumber);
+                }
             }
         }
 
@@ -289,11 +309,12 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private async Task<HashSet<string>> QueryRegistrySafeAsync(
         INationalDoNotCallRegistry registry,
         IEnumerable<string> phoneNumbers,
+        NumberSearchContext searchContext,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await registry.GetRegisteredNumbersAsync(phoneNumbers, cancellationToken);
+            return await registry.GetRegisteredNumbersAsync(phoneNumbers, searchContext, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -308,7 +329,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
     private string NormalizePhoneNumber(string phoneNumber)
     {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164))
+        if (_phoneNumberService.TryFormatToE164(phoneNumber, GetFormattingRegionCode(phoneNumber), out var e164))
         {
             return e164;
         }
@@ -317,5 +338,119 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         return new string(phoneNumber.Where(char.IsDigit).ToArray());
     }
 
-    private sealed record PhoneEntry(string NormalizedNumber, string RawValue, string Label);
+    private string? GetFormattingRegionCode(string phoneNumber)
+        => !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber.TrimStart().StartsWith('+')
+            ? null
+            : _selectedCountryCode;
+
+    private bool HasConflictingExistingOwner(PhoneEntry entry, string? contentItemId)
+    {
+        foreach (var key in entry.ComparisonKeys)
+        {
+            if (!_existingPhoneOwners.TryGetValue(key, out var owners) || owners.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(contentItemId))
+            {
+                return true;
+            }
+
+            if (owners.Any(owner => !string.Equals(owner, contentItemId, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasConflictingSeenOwner(string normalizedPhoneNumber, string? contentItemId)
+    {
+        if (!_seenPhoneOwners.TryGetValue(normalizedPhoneNumber, out var seenState))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(contentItemId))
+        {
+            return true;
+        }
+
+        return seenState.HasAnonymousRows ||
+            seenState.ContentItemIds.Any(owner => !string.Equals(owner, contentItemId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void MarkSeenOwner(string normalizedPhoneNumber, string? contentItemId)
+    {
+        if (!_seenPhoneOwners.TryGetValue(normalizedPhoneNumber, out var seenState))
+        {
+            seenState = new SeenPhoneOwnerState();
+            _seenPhoneOwners[normalizedPhoneNumber] = seenState;
+        }
+
+        if (string.IsNullOrWhiteSpace(contentItemId))
+        {
+            seenState.HasAnonymousRows = true;
+            return;
+        }
+
+        seenState.ContentItemIds.Add(contentItemId);
+    }
+
+    private static string? GetContentItemId(DataRow row, DataColumnCollection columns)
+    {
+        foreach (DataColumn column in columns)
+        {
+            if (!string.Equals(column.ColumnName, nameof(ContentItem.ContentItemId), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return row[column]?.ToString()?.Trim();
+        }
+
+        return null;
+    }
+
+    private static string? NormalizeCountryCode(string? countryCode)
+        => string.IsNullOrWhiteSpace(countryCode)
+            ? null
+            : countryCode.Trim().ToUpperInvariant();
+
+    private static string[] GetComparisonKeys(string rawValue, string normalizedNumber)
+    {
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(normalizedNumber))
+        {
+            keys.Add(normalizedNumber);
+        }
+
+        var digits = new string(rawValue.Where(char.IsDigit).ToArray());
+
+        if (!string.IsNullOrWhiteSpace(digits))
+        {
+            keys.Add(digits);
+        }
+
+        var trimmedValue = rawValue.Trim();
+
+        if (!string.IsNullOrWhiteSpace(trimmedValue))
+        {
+            keys.Add(trimmedValue);
+        }
+
+        return [.. keys];
+    }
+
+    private sealed class SeenPhoneOwnerState
+    {
+        public HashSet<string> ContentItemIds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool HasAnonymousRows { get; set; }
+    }
+
+    private sealed record PhoneEntry(string NormalizedNumber, string RawValue, string Label, string[] ComparisonKeys);
 }

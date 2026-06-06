@@ -3,10 +3,12 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
 
@@ -109,6 +111,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         ArgumentNullException.ThrowIfNull(context.Row, nameof(context.Row));
 
         _ = GetColumns(context);
+        var countryCode = NormalizeCountryCode(context.Entry?.GetOrCreate<OmnichannelContactImportOptionsPart>()?.SelectedCountryCode);
         string email = null;
         string cellPhone = null;
         string homePhone = null;
@@ -195,19 +198,22 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
             if (!string.IsNullOrEmpty(email))
             {
+                RemoveEmailAddressContentItems(bagPart);
                 var emailItem = CreateEmailAddressContentItem(email);
                 bagPart.ContentItems.Add(emailItem);
             }
 
             if (!string.IsNullOrEmpty(cellPhone))
             {
-                var cellPhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(cellPhone), "Cell");
+                RemovePhoneNumberContentItems(bagPart, "Cell");
+                var cellPhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(cellPhone, countryCode), "Cell");
                 bagPart.ContentItems.Add(cellPhoneItem);
             }
 
             if (!string.IsNullOrEmpty(homePhone))
             {
-                var homePhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(homePhone), "Home");
+                RemovePhoneNumberContentItems(bagPart, "Home");
+                var homePhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(homePhone, countryCode), "Home");
                 bagPart.ContentItems.Add(homePhoneItem);
             }
 
@@ -439,10 +445,30 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         return DateTime.TryParse(text, out var parsedDateTime) ? parsedDateTime : null;
     }
 
-    private string NormalizePhoneNumber(string phoneNumber)
-        => _phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164Number)
+    private string NormalizePhoneNumber(string phoneNumber, string countryCode)
+        => _phoneNumberService.TryFormatToE164(phoneNumber, GetFormattingRegionCode(phoneNumber, countryCode), out var e164Number)
             ? e164Number
             : phoneNumber;
+
+    private static string NormalizeCountryCode(string countryCode)
+        => string.IsNullOrWhiteSpace(countryCode)
+            ? null
+            : countryCode.Trim().ToUpperInvariant();
+
+    private static string GetFormattingRegionCode(string phoneNumber, string countryCode)
+        => !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber.TrimStart().StartsWith('+')
+            ? null
+            : countryCode;
+
+    private static void RemoveEmailAddressContentItems(BagPart bagPart)
+        => bagPart.ContentItems.RemoveAll(contentMethod =>
+            contentMethod.ContentType == OmnichannelConstants.ContentTypes.EmailAddress);
+
+    private static void RemovePhoneNumberContentItems(BagPart bagPart, string type)
+        => bagPart.ContentItems.RemoveAll(contentMethod =>
+            contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
+            contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) &&
+            string.Equals(phonePart.Type?.Text, type, StringComparison.Ordinal));
 
     private static ContentItem CreateEmailAddressContentItem(string email)
     {

@@ -445,6 +445,30 @@ public class CommonContentImportHandlerTests
     }
 
     [Fact]
+    public async Task ImportAsync_IgnoresContentItemVersionId()
+    {
+        var dataTable = new DataTable();
+        dataTable.Columns.Add(nameof(ContentItem.ContentItemVersionId));
+        var row = dataTable.NewRow();
+        row[nameof(ContentItem.ContentItemVersionId)] = "abcdefghijklmnopqrstuvwxyz";
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem();
+
+        var context = new ContentImportContext
+        {
+            ContentItem = contentItem,
+            ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await _handler.ImportAsync(context);
+
+        Assert.Null(contentItem.ContentItemVersionId);
+    }
+
+    [Fact]
     public async Task ImportAsync_ThrowsOnNullContext()
     {
         await Assert.ThrowsAsync<ArgumentNullException>(() => _handler.ImportAsync(null));

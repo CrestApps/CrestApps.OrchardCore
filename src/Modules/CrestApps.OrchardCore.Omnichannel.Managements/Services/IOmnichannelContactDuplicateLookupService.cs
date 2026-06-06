@@ -22,4 +22,12 @@ public interface IOmnichannelContactDuplicateLookupService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A set of all existing normalized phone numbers.</returns>
     Task<HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns all normalized phone numbers currently stored across all omnichannel contacts,
+    /// along with the content item identifiers that own each number.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A mapping of normalized phone numbers to owning content item identifiers.</returns>
+    Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken);
 }
