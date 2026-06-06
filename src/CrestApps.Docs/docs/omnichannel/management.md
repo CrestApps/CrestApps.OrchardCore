@@ -92,6 +92,34 @@ In Orchard Core Admin:
 
 If you use the built-in `PhoneNumberInfoPart`, the `Number` field now uses the `InternationalTelephone` TextField editor from `CrestApps.OrchardCore.ContentFields`, which provides country-aware entry and stores submitted values in international format.
 
+When a content type includes `OmnichannelContactPart`, the module now enforces two code-controlled omnichannel surfaces:
+
+- `OmnichannelContactPart` stores the contact-level communication compliance flags (`DoNotCall`, `DoNotSms`, `DoNotEmail`, `DoNotChat`) and their UTC timestamps.
+- A fixed `ContactMethods` bag part is added automatically and reserved for `ContactMethod` stereotype items so imports, exports, indexing, and activity-batch loading always read phone numbers and email addresses from a known location.
+
+Do not rename or replace the `ContactMethods` bag in custom definitions. Instead, add or extend content types with the `ContactMethod` stereotype (such as `EmailAddress` and `PhoneNumber`) so they can be stored there consistently.
+
+The management feature depends on `OrchardCore.Flows` so the enforced `ContactMethods` bag renders with the standard Orchard bag editor when you edit a contact content item. The bag is injected during Orchard's content-type definition build pipeline, so content types that attach `OmnichannelContactPart` always materialize with the named `ContactMethods` bag even when the stored type definition does not yet include it.
+
+#### Import and export contact methods
+
+Omnichannel contact imports and exports integrate with **Content Transfer**.
+
+- exports write the first available contact-method entries to `Email`, `Cell Phone`, and `Phone` workbook columns
+- exports also write `DoNotCall`, `DoNotCallUtc`, `DoNotSms`, `DoNotSmsUtc`, `DoNotEmail`, `DoNotEmailUtc`, `DoNotChat`, and `DoNotChatUtc`
+- imports can recreate those values as contact-method content items inside the `ContactMethods` bag
+- imports can populate the same DNC/compliance columns directly onto `OmnichannelContactPart`
+- duplicate filtering can ignore rows that repeat a previously imported phone number, while still allowing updates when the imported row already targets the owning `ContentItemId`
+- when a row targets an existing `ContentItemId`, the imported column values overwrite the mapped omnichannel fields on the new latest version of that content item
+- do-not-call filtering can skip rows whose phone numbers are registered on one or more configured registries
+- imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
+- channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
+- contact publish and update operations now keep the omnichannel contact indexes in sync automatically
+
+Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
+
+When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.

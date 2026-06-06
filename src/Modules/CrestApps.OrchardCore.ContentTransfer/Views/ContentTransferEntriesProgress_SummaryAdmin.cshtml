@@ -6,9 +6,15 @@
 
 @{
     var entry = Model.Value.ContentTransferEntry;
+    var status = entry.Direction == ContentTransferDirection.Import
+        ? entry.Status.NormalizeImportStatus()
+        : entry.Status;
 }
 
-@if (entry.Status == ContentTransferEntryStatus.Processing
+@if (entry.Direction == ContentTransferDirection.Import
+    && (status == ContentTransferEntryStatus.Pending
+        || status == ContentTransferEntryStatus.Processing
+        || status == ContentTransferEntryStatus.Paused)
     && entry.TryGet<ImportFileProcessStatsPart>(out var part)
     && part.TotalRecords > 0)
 {
@@ -18,7 +24,7 @@
     <div class="row mt-1">
         <div class="col-12">
             <div class="progress" role="progressbar" title="@T["Progress"]" aria-label="@T["Progress"]" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar @(errorCount > 0 ? "bg-warning" : "")" style="width: @(percent)%">@(percent)%</div>
+                <div class="progress-bar progress-bar-striped @(status == ContentTransferEntryStatus.Processing ? "progress-bar-animated" : "") @(errorCount > 0 ? "bg-warning" : "")" style="width: @(percent)%">@(percent)%</div>
             </div>
             <small class="text-muted">
                 @T["{0} of {1} records processed", part.TotalProcessed, part.TotalRecords]

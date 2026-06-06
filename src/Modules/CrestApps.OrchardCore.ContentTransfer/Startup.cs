@@ -63,7 +63,6 @@ public sealed class Startup : StartupBase
             return new ContentTransferFileStore(fileStore);
         });
 
-        services.AddSingleton<IContentTransferFileFormatProvider, ExcelContentTransferFileFormatProvider>();
         services.AddSingleton<IContentTransferFileFormatProvider, CsvContentTransferFileFormatProvider>();
 
         services.AddDataMigration<ContentTransferMigrations>();
@@ -74,6 +73,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentImportHandlerResolver, ContentImportHandlerResolver>();
         services.AddScoped<IContentImportManager, ContentImportManager>();
+        services.AddScoped<IContentTransferEntryManager, ContentTransferEntryManager>();
         services.AddScoped<IContentTypeDefinitionDisplayDriver, ContentTypeTransferSettingsDisplayDriver>();
         services.AddScoped<IContentImportHandler, CommonContentImportHandler>();
         services.AddScoped<INavigationProvider, AdminMenu>();

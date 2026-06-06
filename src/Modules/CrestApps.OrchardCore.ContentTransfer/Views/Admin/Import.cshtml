@@ -6,6 +6,10 @@
 
 @inject IOptions<MediaOptions> MediaOptions
 
+@{
+    var supportedFormats = Model.FileFormats?.Select(format => format.Value).ToList() ?? [];
+}
+
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-action="List" asp-controller="Admin">@T["Bulk Import"]</a></li>
@@ -43,23 +47,41 @@
     <div class="card-header fw-bold">@T["File Requirements"]</div>
 
     <div class="card-body">
+        @if (supportedFormats.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">
+                @T["No file formats are currently enabled for bulk import."]
+            </div>
+        }
+        else
+        {
+            <ul>
+                <li>@T["The uploaded file must use one of the enabled formats: {0}.", string.Join(", ", supportedFormats)]</li>
+                <li>@T["The very first row of the uploaded file must be the column names. The column names and their requirements are defined below."]</li>
+                <li>@T["The order of the columns in the file is not important as long as they exist. Any column not defined below will be ignored."]</li>
+                <li>
+                    @T["Download a template for one of the enabled formats:"]
 
-        <ul>
-            <li>@T["The uploaded file must be in .xlsx (Excel) or .csv format."]</li>
-            <li>@T["For Excel files, the file must contain a single tab and all formats should be cleared."]</li>
-            <li>@T["For CSV files, fields containing commas, quotes, or newlines must be properly quoted per RFC 4180."]</li>
-            <li>@T["The very first row of the uploaded file must be the column names. The column names and their requirements are defined below."]</li>
-            <li>@T["The order of the column in the file is not important as long as it exists. Any column not defined below will be ignored."]</li>
-            <li>@T["Click 'Download Template' link to download a sample template of a file."]
-                <a asp-action="DownloadTemplate" asp-controller="Admin" asp-route-contentTypeId="@Model.ContentTypeDefinition.Name" asp-area="@(ContentTransferConstants.Feature.ModuleId)" download="Bulk-@(Model.ContentTypeDefinition.Name)-Import-Template.xlsx">
-                    @T["Download Template (Excel)"]
-                </a>
-                |
-                <a asp-action="DownloadTemplate" asp-controller="Admin" asp-route-contentTypeId="@Model.ContentTypeDefinition.Name" asp-route-format="csv" asp-area="@(ContentTransferConstants.Feature.ModuleId)" download="Bulk-@(Model.ContentTypeDefinition.Name)-Import-Template.csv">
-                    @T["Download Template (CSV)"]
-                </a>
-            </li>
-        </ul>
+                    @for (var i = 0; i < Model.FileFormats.Count; i++)
+                    {
+                        var format = Model.FileFormats[i];
+                        if (i > 0)
+                        {
+                            @: |
+                        }
+
+                        <a asp-action="DownloadTemplate"
+                           asp-controller="Admin"
+                           asp-route-contentTypeId="@Model.ContentTypeDefinition.Name"
+                           asp-route-format="@format.Value"
+                           asp-area="@(ContentTransferConstants.Feature.ModuleId)"
+                           download="Bulk-@(Model.ContentTypeDefinition.Name)-Import-Template@(format.Value)">
+                            @T["Download template ({0})", format.Text]
+                        </a>
+                    }
+                </li>
+            </ul>
+        }
 
         <table class="table">
             <thead class="table-dark">
@@ -177,10 +199,9 @@
                 var end = Math.min(start + chunkSize, fileSize);
                 var chunk = file.slice(start, end);
 
-                var formData = new FormData();
-                formData.append('ImportContentFile.File', new File([chunk], file.name, { type: file.type }));
-                formData.append('__RequestVerificationToken', token);
-                formData.append('__chunkedFileUploadId', uploadId);
+                var formData = new FormData(form);
+                formData.set('ImportContentFile.File', new File([chunk], file.name, { type: file.type }));
+                formData.set('__chunkedFileUploadId', uploadId);
 
                 var xhr = new XMLHttpRequest();
 

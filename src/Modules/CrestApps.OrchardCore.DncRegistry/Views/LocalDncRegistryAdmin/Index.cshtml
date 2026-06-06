@@ -1,0 +1,7 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Local Do Not Call Registry"])</h1></zone>
+
+@await DisplayAsync(Model)
+

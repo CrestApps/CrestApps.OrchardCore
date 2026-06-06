@@ -5,9 +5,9 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.Email;
 using OrchardCore.Modules;
 
@@ -17,7 +17,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
-    private readonly IPhoneFormatValidator _phoneFormatValidator;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
 
     internal readonly IStringLocalizer S;
@@ -27,19 +27,19 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="clock">The clock.</param>
-    /// <param name="phoneFormatValidator">The phone format validator.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
-        IPhoneFormatValidator phoneFormatValidator,
+        IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
-        _phoneFormatValidator = phoneFormatValidator;
+        _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
         S = stringLocalizer;
     }
@@ -76,7 +76,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         {
             if (context.Model.Channel == OmnichannelConstants.Channels.Phone || context.Model.Channel == OmnichannelConstants.Channels.Sms)
             {
-                if (!_phoneFormatValidator.IsValid(context.Model.Value))
+                if (!_phoneNumberService.TryFormatToE164(context.Model.Value, null, out _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
@@ -108,7 +108,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
+    private Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
     {
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
 
@@ -135,7 +135,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
         if (!string.IsNullOrEmpty(valueText))
         {
-            enabpoint.Value = valueText;
+            enabpoint.Value = NormalizePhoneValue(enabpoint.Channel, valueText);
         }
 
         var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
@@ -150,5 +150,16 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         }
 
         return Task.CompletedTask;
+    }
+
+    private string NormalizePhoneValue(string channel, string value)
+    {
+        if ((channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms) ||
+            !_phoneNumberService.TryFormatToE164(value, null, out var e164Number))
+        {
+            return value;
+        }
+
+        return e164Number;
     }
 }

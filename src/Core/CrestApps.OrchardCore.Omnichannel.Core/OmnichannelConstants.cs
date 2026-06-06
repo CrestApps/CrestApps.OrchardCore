@@ -1,4 +1,4 @@
-﻿using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
 

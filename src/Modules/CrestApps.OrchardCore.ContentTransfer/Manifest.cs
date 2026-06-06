@@ -6,6 +6,6 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Description = "Provides a way to import and export content from and to Excel files.",
+    Description = "Provides bulk content import and export with pluggable file format support.",
     Category = "Content Management"
 )]

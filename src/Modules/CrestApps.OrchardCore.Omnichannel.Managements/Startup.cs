@@ -1,11 +1,14 @@
 using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
@@ -21,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -62,6 +66,11 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
+        services.AddContentPart<OmnichannelContactPart>()
+            .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
+        services.AddScoped<OmnichannelContactDefinitionService>();
+        services.AddScoped<IContentDefinitionHandler, OmnichannelContactDefinitionHandler>();
+        services.AddScoped<IModularTenantEvents, OmnichannelContactDefinitionTenantEvents>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
@@ -142,5 +151,26 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddDispositionActionsEndpoint();
+    }
+}
+
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId, PhoneNumbersConstants.Features.Area)]
+public sealed class ContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPartImportHandler<OmnichannelContactPart, OmnichannelContactPartContentImportHandler>();
+        services.AddScoped<IOmnichannelContactDuplicateLookupService, OmnichannelContactDuplicateLookupService>();
+        services.AddScoped<IContentImportRowFilter, OmnichannelContactImportRowFilter>();
+        services.AddScoped<IDisplayDriver<ImportContent>, OmnichannelContactImportOptionsDisplayDriver>();
+    }
+}
+
+[RequireFeatures("CrestApps.OrchardCore.DncRegistry", ContentTransferConstants.Feature.ModuleId)]
+public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ImportContent, NationalDoNotCallRegistryImportOptionsDisplayDriver>();
     }
 }

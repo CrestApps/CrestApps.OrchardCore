@@ -47,7 +47,8 @@ public sealed class CommonContentImportHandler : ContentImportHandlerBase, ICont
             columns.Insert(1, new ImportColumn()
             {
                 Name = nameof(ContentItem.ContentItemVersionId),
-                Description = S["The version id for the {0}", context.ContentTypeDefinition.DisplayName],
+                Description = S["The version id for the {0}. This value is exported for reference only and is ignored during import.", context.ContentTypeDefinition.DisplayName],
+                Type = ImportColumnType.ExportOnly,
             });
         }
 
@@ -77,20 +78,6 @@ public sealed class CommonContentImportHandler : ContentImportHandlerBase, ICont
                 {
                     // Just check if the given id matched the fakeId length.
                     context.ContentItem.ContentItemId = contentItemId;
-                }
-            }
-            else if (context.ContentTypeDefinition.IsVersionable() && Is(column.ColumnName, nameof(ContentItem.ContentItemVersionId)))
-            {
-                var contentItemVersionId = context.Row[column]?.ToString();
-
-                if (!string.IsNullOrWhiteSpace(contentItemVersionId))
-                {
-                    var fakeId = _contentItemIdGenerator.GenerateUniqueId(new ContentItem());
-
-                    if (fakeId.Length == contentItemVersionId.Length)
-                    {
-                        context.ContentItem.ContentItemVersionId = contentItemVersionId;
-                    }
                 }
             }
         }
