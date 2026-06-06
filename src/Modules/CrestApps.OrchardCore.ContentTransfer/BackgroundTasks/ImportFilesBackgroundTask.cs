@@ -36,7 +36,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
-                (x.Status == ContentTransferEntryStatus.New || x.Status == ContentTransferEntryStatus.Processing)
+                (x.Status == ContentTransferEntryStatus.New
+                    || x.Status == ContentTransferEntryStatus.Pending
+                    || x.Status == ContentTransferEntryStatus.Processing)
                 && x.Direction == ContentTransferDirection.Import
                 && (entryId == null || x.EntryId == entryId))
             .OrderBy(x => x.CreatedUtc)
@@ -78,7 +80,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var rowFilters = serviceProvider.GetServices<IContentImportRowFilter>();
         var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
-        if (entry == null || entry.Status == ContentTransferEntryStatus.Canceled || entry.Status == ContentTransferEntryStatus.CanceledWithImportedRecords)
+        if (entry == null || entry.Status.ShouldStopImport())
         {
             return;
         }
@@ -103,13 +105,25 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? ContentImportOptions.DefaultImportBatchSize
             : contentImportOptions.ImportBatchSize;
 
+        var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+        progressPart.Errors ??= [];
+        progressPart.ErrorMessages ??= [];
+
+        var isResuming = progressPart.CurrentRow > 0;
+
         entry.Status = ContentTransferEntryStatus.Processing;
         entry.Error = null;
         entry.CompletedUtc = null;
 
-        var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
-        progressPart.Errors ??= [];
-        progressPart.ErrorMessages ??= [];
+        if (!isResuming)
+        {
+            progressPart.CurrentRow = 0;
+            progressPart.TotalProcessed = 0;
+            progressPart.ImportedCount = 0;
+            progressPart.Errors.Clear();
+            progressPart.ErrorMessages.Clear();
+        }
+
         entry.Put(progressPart);
 
         session.Save(entry);
@@ -141,7 +155,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 }
             }
 
-            await ProcessFileInBatchesAsync(
+            var completed = await ProcessFileInBatchesAsync(
                 serviceProvider,
                 fileStream,
                 formatProvider,
@@ -155,21 +169,15 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 clock,
                 batchSize,
                 cancellationToken);
+
+            if (!completed)
+            {
+                return;
+            }
         }
         catch (Exception ex)
         {
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["Error processing file: {0}", ex.Message], cancellationToken);
-            return;
-        }
-
-        if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
-        {
-            entry.Status = GetCanceledStatus(progressPart);
-            entry.ProcessSaveUtc = clock.UtcNow;
-            entry.CompletedUtc = clock.UtcNow;
-            entry.Put(progressPart);
-            session.Save(entry);
-            await session.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -185,7 +193,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task ProcessFileInBatchesAsync(
+    private static async Task<bool> ProcessFileInBatchesAsync(
         IServiceProvider serviceProvider,
         Stream stream,
         IContentTransferFileFormatProvider formatProvider,
@@ -203,7 +211,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         using var reader = formatProvider.CreateReader(stream);
 
         var columnNames = reader.GetColumnNames();
-        var dataTable = new DataTable();
+        using var dataTable = new DataTable();
 
         foreach (var columnName in columnNames)
         {
@@ -226,6 +234,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         var rowIndex = 1;
         var hasFilters = activeRowFilters.Count > 0;
+        var importInterrupted = false;
 
         foreach (var rowValues in reader.ReadRows())
         {
@@ -234,8 +243,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 break;
             }
 
-            if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
             {
+                importInterrupted = true;
                 break;
             }
 
@@ -328,12 +338,16 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                     clock,
                     cancellationToken);
                 newRecords.Clear();
-                newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
             }
 
             rowIndex++;
+        }
+
+        if (importInterrupted || cancellationToken.IsCancellationRequested)
+        {
+            return false;
         }
 
         if (newRecords.Count + existingRows.Count > 0)
@@ -353,7 +367,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 cancellationToken);
         }
 
-        dataTable.Dispose();
+        return true;
     }
 
     private static async Task ProcessBatchAsync(
@@ -377,7 +391,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             foreach (var existingRow in existingRows)
             {
-                if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+                if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
                 {
                     return;
                 }
@@ -406,7 +420,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         foreach (var record in newRecords)
         {
-            if (await IsImportCanceledAsync(serviceProvider, entry.EntryId, cancellationToken))
+            if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
             {
                 return;
             }
@@ -543,27 +557,22 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         entry.Status = ContentTransferEntryStatus.Failed;
         entry.Error = error;
+        entry.ProcessSaveUtc = clock.UtcNow;
         entry.CompletedUtc = clock.UtcNow;
 
         session.Save(entry);
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    private static string GetImportLockKey(string entryId)
+    internal static string GetImportLockKey(string entryId)
         => $"ContentsTransfer_Import_{entryId}";
 
-    private static async Task<bool> IsImportCanceledAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
+    private static async Task<bool> ShouldStopImportAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var session = scope.ServiceProvider.GetRequiredService<ISession>();
         var currentEntry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
-        return currentEntry?.Status == ContentTransferEntryStatus.Canceled
-            || currentEntry?.Status == ContentTransferEntryStatus.CanceledWithImportedRecords;
+        return currentEntry?.Status.ShouldStopImport() == true;
     }
-
-    private static ContentTransferEntryStatus GetCanceledStatus(ImportFileProcessStatsPart progressPart)
-        => (progressPart?.ImportedCount ?? 0) > 0
-            ? ContentTransferEntryStatus.CanceledWithImportedRecords
-            : ContentTransferEntryStatus.Canceled;
 }

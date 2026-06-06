@@ -41,9 +41,11 @@ Use **Content** -> **Bulk Import** to upload a transfer file for a content type.
 2. Download the template if you need the expected column layout.
 3. Upload one of the enabled file formats shown in the UI.
 4. Choose whether the imported items should stay as the latest draft or be published immediately.
-5. The import is queued and processed in the background.
+5. The import is queued with a **Pending** status and processed in the background.
 
 Validation runs through `IContentManager.ValidateAsync()`. Failed rows are tracked, and rejected rows can be downloaded again in the same file format as the original import as long as that format feature is still enabled.
+
+Queued imports now follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. While an import is running, the action menu offers **Pause import**. Paused, failed, pending, and stalled imports show **Resume import** so the background job can continue from the last saved batch.
 
 For Omnichannel contacts, the import UI can also expose duplicate-phone filtering, a lead-country selector for phone normalization, and national do-not-call registry checks. Duplicate-phone filtering is enabled by default, skipped duplicate rows are recorded in the error export with the reason, and duplicate detection checks both the current import batch and existing contact phone numbers already stored in Orchard before the batch commits. When a row includes an existing `ContentItemId`, duplicate detection now treats matching phone numbers on that same content item as an update instead of a conflict. The database lookup also falls back to older stored phone values that predate the normalized-phone index columns, so re-importing the same contact list is still rejected while older tenants finish reindexing. See [DNC Registry](./dnc-registry) for registry configuration and global enforcement.
 

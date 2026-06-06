@@ -69,13 +69,14 @@ public sealed class ContentTransferEntry : Entity
 
 public enum ContentTransferEntryStatus
 {
-    New,
-    Processing,
-    Completed,
-    CompletedWithErrors,
-    Canceled,
-    CanceledWithImportedRecords,
-    Failed,
+    New = 0,
+    Processing = 1,
+    Completed = 2,
+    CompletedWithErrors = 3,
+    Failed = 6,
+    Pending = 7,
+    Paused = 8,
+    Deleting = 9,
 }
 
 public enum ContentTransferDirection

@@ -253,7 +253,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         await session.SaveChangesAsync();
     }
 
-    private static string GetExportLockKey(string entryId)
+    internal static string GetExportLockKey(string entryId)
         => $"ContentsTransfer_Export_{entryId}";
 
     private static IQuery<ContentItem> BuildExportQuery(

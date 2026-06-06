@@ -15,6 +15,19 @@ public sealed class DefaultContentTransferEntryAdminListFilterProvider : IConten
                 {
                     if (Enum.TryParse<ContentTransferEntryStatus>(val, true, out var status))
                     {
+                        if (status == ContentTransferEntryStatus.Pending)
+                        {
+                            return new ValueTask<IQuery<ContentTransferEntry>>(query.With<ContentTransferEntryIndex>(x =>
+                                x.Status == ContentTransferEntryStatus.Pending
+                                || x.Status == ContentTransferEntryStatus.New));
+                        }
+
+                        if (status == ContentTransferEntryStatus.Paused)
+                        {
+                            return new ValueTask<IQuery<ContentTransferEntry>>(query.With<ContentTransferEntryIndex>(x =>
+                                x.Status == ContentTransferEntryStatus.Paused));
+                        }
+
                         return new ValueTask<IQuery<ContentTransferEntry>>(query.With<ContentTransferEntryIndex>(x => x.Status == status));
                     }
 
