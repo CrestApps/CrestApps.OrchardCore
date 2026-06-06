@@ -199,7 +199,7 @@ public sealed class ContactMethodMigrations : DataMigration
         var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ContactMethodMigrations>>();
 
-        var contentTypes = await GetContentTypesWithPhoneNumberInfoPartAsync(contentDefinitionManager);
+        var contentTypes = await GetContentTypesWithOmnichannelContactPartAsync(contentDefinitionManager);
 
         if (contentTypes.Length == 0)
         {
@@ -233,21 +233,21 @@ public sealed class ContactMethodMigrations : DataMigration
 
                 try
                 {
-                    if (!TryMigratePhoneNumberContent(contentItem, phoneNumberService))
+                    if (TryMigrateContactPhoneNumbers(contentItem, phoneNumberService))
+                    {
+                        await session.SaveAsync(contentItem);
+                        batchMigrated++;
+                    }
+                    else
                     {
                         skippedCount++;
-
-                        continue;
                     }
-
-                    await session.SaveAsync(contentItem);
-                    batchMigrated++;
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(
                         ex,
-                        "Failed to migrate phone number for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
+                        "Failed to migrate phone numbers for content item '{ContentItemId}' (version '{ContentItemVersionId}').",
                         contentItem.ContentItemId,
                         contentItem.ContentItemVersionId);
                     skippedCount++;
@@ -268,20 +268,61 @@ public sealed class ContactMethodMigrations : DataMigration
         }
     }
 
-    private static async Task<string[]> GetContentTypesWithPhoneNumberInfoPartAsync(IContentDefinitionManager contentDefinitionManager)
+    private static async Task<string[]> GetContentTypesWithOmnichannelContactPartAsync(IContentDefinitionManager contentDefinitionManager)
     {
         var typeDefinitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
 
         return typeDefinitions
             .Where(type => type.Parts.Any(part =>
-                string.Equals(part.PartDefinition.Name, OmnichannelConstants.ContentParts.PhoneNumberInfo, StringComparison.Ordinal)))
+                string.Equals(part.PartDefinition.Name, OmnichannelConstants.ContentParts.OmnichannelContact, StringComparison.Ordinal)))
             .Select(type => type.Name)
             .ToArray();
     }
 
-    private static bool TryMigratePhoneNumberContent(ContentItem contentItem, IPhoneNumberService phoneNumberService)
+    private static bool TryMigrateContactPhoneNumbers(ContentItem contentItem, IPhoneNumberService phoneNumberService)
     {
-        var partNode = contentItem.Content[OmnichannelConstants.ContentParts.PhoneNumberInfo] as JsonObject;
+        var bagNode = contentItem.Content[OmnichannelConstants.NamedParts.ContactMethods] as JsonObject;
+
+        if (bagNode is null)
+        {
+            return false;
+        }
+
+        var contentItems = bagNode["ContentItems"] as JsonArray;
+
+        if (contentItems is null || contentItems.Count == 0)
+        {
+            return false;
+        }
+
+        var anyMigrated = false;
+
+        foreach (var item in contentItems)
+        {
+            if (item is not JsonObject innerItem)
+            {
+                continue;
+            }
+
+            var contentType = innerItem["ContentType"]?.GetValue<string>();
+
+            if (!string.Equals(contentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (TryMigratePhoneNumberField(innerItem, phoneNumberService))
+            {
+                anyMigrated = true;
+            }
+        }
+
+        return anyMigrated;
+    }
+
+    private static bool TryMigratePhoneNumberField(JsonObject innerContentItem, IPhoneNumberService phoneNumberService)
+    {
+        var partNode = innerContentItem[OmnichannelConstants.ContentParts.PhoneNumberInfo] as JsonObject;
 
         if (partNode is null)
         {
