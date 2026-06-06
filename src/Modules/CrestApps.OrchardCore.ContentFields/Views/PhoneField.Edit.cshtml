@@ -4,7 +4,7 @@
 @using OrchardCore.Mvc.Utilities
 @{
     var settings = Model.PartFieldDefinition.GetSettings<PhoneFieldSettings>();
-    var initialCountry = Model.CountryCode?.ToLowerInvariant() ?? settings.DefaultCountryCode?.ToLowerInvariant() ?? string.Empty;
+    var initialCountry = Model.CountryCode?.ToLowerInvariant() ?? string.Empty;
 }
 
 <div class="ocat-wrapper field-wrapper @($"field-wrapper-{Model.PartFieldDefinition.PartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()} content-field-international-telephone" + (Model.PartFieldDefinition.IsNamedPart() ? $" field-wrapper-{Model.PartFieldDefinition.ContentTypePartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()}" : string.Empty))"

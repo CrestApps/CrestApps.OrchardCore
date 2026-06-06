@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentFields.Settings;
 using CrestApps.OrchardCore.ContentFields.ViewModels;
@@ -69,9 +70,9 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
             model.Part = context.ContentPart;
             model.PartFieldDefinition = context.PartFieldDefinition;
 
-            if (string.IsNullOrEmpty(model.CountryCode) && !string.IsNullOrEmpty(settings.DefaultCountryCode))
+            if (string.IsNullOrEmpty(model.CountryCode))
             {
-                model.CountryCode = settings.DefaultCountryCode;
+                model.CountryCode = ResolveInitialCountryCode(settings);
             }
         });
     }
@@ -119,5 +120,36 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
         field.NationalNumber = viewModel.NationalNumber;
 
         return Edit(field, context);
+    }
+
+    private static string ResolveInitialCountryCode(PhoneFieldSettings settings)
+    {
+        return settings.InitialCountryMode switch
+        {
+            InitialCountryMode.CurrentCulture => GetCountryCodeFromCulture(),
+            InitialCountryMode.Specific => settings.SpecificCountryCode,
+            _ => null,
+        };
+    }
+
+    private static string GetCountryCodeFromCulture()
+    {
+        var culture = CultureInfo.CurrentCulture;
+
+        if (culture.IsNeutralCulture || culture == CultureInfo.InvariantCulture)
+        {
+            return null;
+        }
+
+        try
+        {
+            var regionInfo = new RegionInfo(culture.Name);
+
+            return regionInfo.TwoLetterISORegionName;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

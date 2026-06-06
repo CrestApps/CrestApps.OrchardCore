@@ -38,7 +38,16 @@ The field uses the [intl-tel-input](https://intl-tel-input.com/) library (provid
 | --- | --- | --- | --- |
 | `Hint` | `string` | `null` | Help text displayed below the field. |
 | `Required` | `bool` | `false` | Whether the field is required. |
-| `DefaultCountryCode` | `string` | `null` | ISO country code used to pre-select the flag when the field is empty (e.g. `US`). |
+| `InitialCountryMode` | `InitialCountryMode` | `Globe` | Controls which country flag is pre-selected when the field is empty. See [Initial country modes](#initial-country-modes). |
+| `SpecificCountryCode` | `string` | `null` | ISO country code used when `InitialCountryMode` is `Specific` (e.g. `US`). |
+
+#### Initial country modes
+
+| Mode | Behavior |
+| --- | --- |
+| **Globe** | Shows the globe icon without pre-selecting any country. This is the default. |
+| **Current culture** | Resolves the country from the current request culture's region (e.g. `en-US` resolves to `US`). |
+| **Specific** | Always pre-selects the country configured in the **Country** dropdown. |
 
 #### Adding PhoneField via migration
 
@@ -51,7 +60,8 @@ await _contentDefinitionManager.AlterPartDefinitionAsync("MyPart", part => part
         .WithSettings(new PhoneFieldSettings
         {
             Required = true,
-            DefaultCountryCode = "US",
+            InitialCountryMode = InitialCountryMode.Specific,
+            SpecificCountryCode = "US",
             Hint = "Enter a phone number with country code.",
         })
     )

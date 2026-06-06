@@ -16,8 +16,16 @@ public sealed class PhoneFieldSettings
     public bool Required { get; set; }
 
     /// <summary>
-    /// Gets or sets the default ISO 3166-1 alpha-2 country code used
-    /// when no country has been selected yet (e.g., "US").
+    /// Gets or sets how the initial country flag is selected when no
+    /// country has been stored for the field value.
+    /// Defaults to <see cref="InitialCountryMode.Globe"/>.
     /// </summary>
-    public string DefaultCountryCode { get; set; }
+    public InitialCountryMode InitialCountryMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ISO 3166-1 alpha-2 country code used when
+    /// <see cref="InitialCountryMode"/> is <see cref="Settings.InitialCountryMode.Specific"/>
+    /// (e.g., "US").
+    /// </summary>
+    public string SpecificCountryCode { get; set; }
 }
