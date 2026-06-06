@@ -1,25 +1,16 @@
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Migrations;
 
 public sealed class ContentTransferMigrations : DataMigration
 {
-    private readonly IStore _store;
-    private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly ILogger _logger;
 
-    public ContentTransferMigrations(
-        IStore store,
-        IDbConnectionAccessor dbConnectionAccessor,
-        ILogger<ContentTransferMigrations> logger)
+    public ContentTransferMigrations(ILogger<ContentTransferMigrations> logger)
     {
-        _store = store;
-        _dbConnectionAccessor = dbConnectionAccessor;
         _logger = logger;
     }
 
