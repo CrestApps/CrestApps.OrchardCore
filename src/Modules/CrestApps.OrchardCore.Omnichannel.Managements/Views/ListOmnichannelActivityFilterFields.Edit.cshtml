@@ -26,6 +26,10 @@
 </div>
 
 <div class="col-lg-2">
+    <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
     <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select"></select>
 </div>
 

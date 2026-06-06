@@ -13,6 +13,11 @@ public sealed class OmnichannelContactIndex : MapIndex
     public string ContentItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the contact time zone identifier.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
     /// Gets or sets the primary cell phone number.
     /// </summary>
     public string PrimaryCellPhoneNumber { get; set; }

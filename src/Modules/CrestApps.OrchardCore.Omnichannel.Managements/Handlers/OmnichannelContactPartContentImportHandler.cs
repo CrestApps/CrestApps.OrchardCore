@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
@@ -36,6 +37,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     private ImportColumn _doNotEmailUtcColumn;
     private ImportColumn _doNotChatColumn;
     private ImportColumn _doNotChatUtcColumn;
+    private ImportColumn _timeZoneIdColumn;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactPartContentImportHandler"/> class.
@@ -85,12 +87,19 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         _doNotEmailUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotEmailUtc), S["When the email block was recorded in UTC."]);
         _doNotChatColumn ??= CreateBooleanPreferenceColumn(nameof(OmnichannelContactPart.DoNotChat), S["Whether chat is blocked for the contact. Use true or false."]);
         _doNotChatUtcColumn ??= CreatePreferenceColumn(nameof(OmnichannelContactPart.DoNotChatUtc), S["When the chat block was recorded in UTC."]);
+        _timeZoneIdColumn ??= new ImportColumn()
+        {
+            Name = nameof(OmnichannelContactPart.TimeZoneId),
+            Description = S["The contact's IANA time zone identifier."],
+            AdditionalNames = ["TimeZone", "Time Zone", "Timezone"],
+        };
 
         return
         [
             _emailColumn,
             _cellPhoneColumn,
             _homePhoneColumn,
+            _timeZoneIdColumn,
             _doNotCallColumn,
             _doNotCallUtcColumn,
             _doNotSmsColumn,
@@ -115,6 +124,9 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         string email = null;
         string cellPhone = null;
         string homePhone = null;
+        string rawTimeZoneId = null;
+        string normalizedCellPhone = null;
+        string normalizedHomePhone = null;
         var doNotCall = false;
         DateTime? doNotCallUtc = null;
         var hasDoNotCall = false;
@@ -127,6 +139,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         var doNotChat = false;
         DateTime? doNotChatUtc = null;
         var hasDoNotChat = false;
+        var hasTimeZoneId = false;
 
         foreach (DataColumn column in context.Columns)
         {
@@ -141,6 +154,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             else if (Is(column.ColumnName, _homePhoneColumn))
             {
                 homePhone = context.Row[column]?.ToString()?.Trim();
+            }
+            else if (Is(column.ColumnName, _timeZoneIdColumn))
+            {
+                hasTimeZoneId = true;
+                rawTimeZoneId = context.Row[column]?.ToString()?.Trim();
             }
             else if (Is(column.ColumnName, _doNotCallColumn))
             {
@@ -179,6 +197,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         if (string.IsNullOrEmpty(email) &&
             string.IsNullOrEmpty(cellPhone) &&
             string.IsNullOrEmpty(homePhone) &&
+            !hasTimeZoneId &&
             !hasDoNotCall &&
             !hasDoNotSms &&
             !hasDoNotEmail &&
@@ -206,14 +225,16 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             if (!string.IsNullOrEmpty(cellPhone))
             {
                 RemovePhoneNumberContentItems(bagPart, "Cell");
-                var cellPhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(cellPhone, countryCode), "Cell");
+                normalizedCellPhone = NormalizePhoneNumber(cellPhone, countryCode);
+                var cellPhoneItem = CreatePhoneNumberContentItem(normalizedCellPhone, "Cell");
                 bagPart.ContentItems.Add(cellPhoneItem);
             }
 
             if (!string.IsNullOrEmpty(homePhone))
             {
                 RemovePhoneNumberContentItems(bagPart, "Home");
-                var homePhoneItem = CreatePhoneNumberContentItem(NormalizePhoneNumber(homePhone, countryCode), "Home");
+                normalizedHomePhone = NormalizePhoneNumber(homePhone, countryCode);
+                var homePhoneItem = CreatePhoneNumberContentItem(normalizedHomePhone, "Home");
                 bagPart.ContentItems.Add(homePhoneItem);
             }
 
@@ -245,6 +266,27 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         {
             contactPart.SetDoNotChat(doNotChat, utcNow);
             contactPart.DoNotChatUtc = doNotChat ? doNotChatUtc ?? contactPart.DoNotChatUtc : null;
+        }
+
+        if (hasTimeZoneId)
+        {
+            if (string.IsNullOrEmpty(rawTimeZoneId))
+            {
+                contactPart.TimeZoneId = null;
+            }
+            else
+            {
+                var normalizedTimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, rawTimeZoneId);
+
+                if (!string.IsNullOrEmpty(normalizedTimeZoneId))
+                {
+                    contactPart.TimeZoneId = normalizedTimeZoneId;
+                }
+            }
+        }
+        else if (string.IsNullOrEmpty(contactPart.TimeZoneId))
+        {
+            contactPart.TimeZoneId = InferTimeZoneId(normalizedHomePhone, normalizedCellPhone);
         }
 
         context.ContentItem.Apply(contactPart);
@@ -329,6 +371,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         if (hasContactPart)
         {
+            if (!string.IsNullOrEmpty(contactPart.TimeZoneId))
+            {
+                context.Row[_timeZoneIdColumn.Name] = contactPart.TimeZoneId;
+            }
+
             context.Row[_doNotCallColumn.Name] = contactPart.DoNotCall;
             context.Row[_doNotSmsColumn.Name] = contactPart.DoNotSms;
             context.Row[_doNotEmailColumn.Name] = contactPart.DoNotEmail;
@@ -449,6 +496,29 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         => _phoneNumberService.TryFormatToE164(phoneNumber, GetFormattingRegionCode(phoneNumber, countryCode), out var e164Number)
             ? e164Number
             : phoneNumber;
+
+    private string InferTimeZoneId(string primaryPhoneNumber, string fallbackPhoneNumber)
+        => GetFirstKnownTimeZoneId(primaryPhoneNumber) ?? GetFirstKnownTimeZoneId(fallbackPhoneNumber);
+
+    private string GetFirstKnownTimeZoneId(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return null;
+        }
+
+        foreach (var timeZoneId in _phoneNumberService.GetTimeZones(phoneNumber))
+        {
+            var normalizedTimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, timeZoneId);
+
+            if (!string.IsNullOrEmpty(normalizedTimeZoneId))
+            {
+                return normalizedTimeZoneId;
+            }
+        }
+
+        return null;
+    }
 
     private static string NormalizeCountryCode(string countryCode)
         => string.IsNullOrWhiteSpace(countryCode)

@@ -24,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -66,6 +67,7 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
+        services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
         services.AddScoped<OmnichannelContactDefinitionService>();
@@ -77,7 +79,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()
-            .AddScoped<IListOmnichannelActivityFilterHandler, ListOmnichannelActivityFilterHandler>();
+            .AddScoped<IListOmnichannelActivityFilterHandler, ListOmnichannelActivityFilterHandler>()
+            .AddScoped<IListOmnichannelActivityFilterHandler, TimeZoneListOmnichannelActivityFilterHandler>();
 
         services
             .AddDisplayDriver<BulkManageActivityFilter, BulkManageActivityFilterDisplayDriver>()

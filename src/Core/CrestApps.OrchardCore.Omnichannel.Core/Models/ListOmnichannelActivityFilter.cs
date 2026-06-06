@@ -30,6 +30,11 @@ public sealed class ListOmnichannelActivityFilter : Entity
     public string AttemptFilter { get; set; }
 
     /// <summary>
+    /// Gets or sets the lead time zone identifier.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+
+    /// <summary>
     /// Gets or sets the scheduled from.
     /// </summary>
     public DateTime? ScheduledFrom { get; set; }

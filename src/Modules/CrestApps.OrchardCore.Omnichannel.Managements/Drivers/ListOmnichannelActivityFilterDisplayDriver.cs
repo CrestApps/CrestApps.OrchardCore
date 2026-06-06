@@ -1,6 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -8,12 +9,14 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver<ListOmnichannelActivityFilter>
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -24,9 +27,11 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
+        IClock clock,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -43,6 +48,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.SubjectContentType = filter.SubjectContentType;
             model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
+            model.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, filter.TimeZoneId);
             model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -64,6 +70,8 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
                 new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
+
+            model.TimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S["Any time zone"], model.TimeZoneId);
 
             model.AttemptFilters =
             [
@@ -109,6 +117,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.SubjectContentType = model.SubjectContentType;
         filter.UrgencyLevel = model.UrgencyLevel;
         filter.Channel = model.Channel;
+        filter.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, model.TimeZoneId);
         filter.AttemptFilter = model.AttemptFilter;
         filter.ScheduledFrom = null;
         filter.ScheduledTo = null;
@@ -138,6 +147,11 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         if (!string.IsNullOrEmpty(filter.Channel))
         {
             filter.RouteValues.TryAdd(Prefix + ".Channel", filter.Channel);
+        }
+
+        if (!string.IsNullOrEmpty(filter.TimeZoneId))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".TimeZoneId", filter.TimeZoneId);
         }
 
         if (!string.IsNullOrEmpty(filter.AttemptFilter))

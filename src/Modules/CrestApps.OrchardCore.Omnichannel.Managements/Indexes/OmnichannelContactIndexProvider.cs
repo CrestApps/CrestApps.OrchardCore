@@ -24,7 +24,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             .For<OmnichannelContactIndex>()
             .Map(contact =>
             {
-                if (!contact.Published || !contact.Has<OmnichannelContactPart>())
+                if (!contact.Published || !contact.TryGet<OmnichannelContactPart>(out var contactPart))
                 {
                     return null;
                 }
@@ -32,6 +32,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                 var index = new OmnichannelContactIndex
                 {
                     ContentItemId = contact.ContentItemId,
+                    TimeZoneId = Truncate(contactPart.TimeZoneId, 64),
                 };
 
                 if (contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
@@ -81,4 +82,9 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
         // If the number is already in E.164 format, return it as-is.
         return phoneNumber;
     }
+
+    private static string Truncate(string value, int maxLength)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim().Substring(0, Math.Min(maxLength, value.Trim().Length));
 }

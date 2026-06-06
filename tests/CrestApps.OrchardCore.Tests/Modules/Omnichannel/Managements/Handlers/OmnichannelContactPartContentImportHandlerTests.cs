@@ -24,7 +24,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public void GetColumns_ShouldDescribeBooleanPreferenceValues()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
+            CreateClock(),
             Mock.Of<IPhoneNumberService>(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
 
@@ -40,12 +40,14 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var doNotSmsColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotSms));
         var doNotEmailColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotEmail));
         var doNotChatColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotChat));
+        var timeZoneColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.TimeZoneId));
 
         Assert.Equal(["true", "false"], doNotCallColumn.ValidValues);
         Assert.Equal(["true", "false"], doNotSmsColumn.ValidValues);
         Assert.Equal(["true", "false"], doNotEmailColumn.ValidValues);
         Assert.Equal(["true", "false"], doNotChatColumn.ValidValues);
         Assert.Contains("true or false", doNotCallColumn.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IANA time zone", timeZoneColumn.Description, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -94,6 +96,41 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
         Assert.Equal("+12502000003", phoneNumbers["Cell"]);
         Assert.Equal("+17024993350", phoneNumbers["Home"]);
+    }
+
+    [Fact]
+    public async Task ImportAsync_ShouldInferTimeZoneIdFromImportedPhoneNumber()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock("America/Los_Angeles"),
+            new DefaultPhoneNumberService(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("Phone");
+
+        var row = dataTable.NewRow();
+        row["Phone"] = "7024993350";
+        dataTable.Rows.Add(row);
+
+        var entry = new ContentTransferEntry();
+        entry.Put(new OmnichannelContactImportOptionsPart
+        {
+            SelectedCountryCode = "US",
+        });
+
+        var contentItem = new ContentItem();
+        var context = new ContentPartImportMapContext
+        {
+            ContentItem = contentItem,
+            Entry = entry,
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await handler.ImportAsync(context);
+
+        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var contactPart));
+        Assert.Equal("America/Los_Angeles", contactPart.TimeZoneId);
     }
 
     [Fact]
@@ -250,6 +287,113 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         Assert.Null(updatedPart.DoNotChatUtc);
     }
 
+    [Fact]
+    public async Task ImportAsync_ShouldPreserveExistingTimeZoneWhenColumnIsMissing()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock("America/Los_Angeles"),
+            new DefaultPhoneNumberService(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("Phone");
+
+        var row = dataTable.NewRow();
+        row["Phone"] = "7024993350";
+        dataTable.Rows.Add(row);
+
+        var entry = new ContentTransferEntry();
+        entry.Put(new OmnichannelContactImportOptionsPart
+        {
+            SelectedCountryCode = "US",
+        });
+
+        var contentItem = new ContentItem();
+        contentItem.Apply(new OmnichannelContactPart
+        {
+            TimeZoneId = "America/New_York",
+        });
+
+        var context = new ContentPartImportMapContext
+        {
+            ContentItem = contentItem,
+            Entry = entry,
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await handler.ImportAsync(context);
+
+        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var updatedPart));
+        Assert.Equal("America/New_York", updatedPart.TimeZoneId);
+    }
+
+    [Fact]
+    public async Task ImportAsync_ShouldClearExistingTimeZoneWhenColumnIsBlank()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock("America/Los_Angeles"),
+            new DefaultPhoneNumberService(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+        var dataTable = new DataTable();
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
+
+        var row = dataTable.NewRow();
+        row[nameof(OmnichannelContactPart.TimeZoneId)] = string.Empty;
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem();
+        contentItem.Apply(new OmnichannelContactPart
+        {
+            TimeZoneId = "America/New_York",
+        });
+
+        var context = new ContentPartImportMapContext
+        {
+            ContentItem = contentItem,
+            Entry = new ContentTransferEntry(),
+            Columns = dataTable.Columns,
+            Row = row,
+        };
+
+        await handler.ImportAsync(context);
+
+        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var updatedPart));
+        Assert.Null(updatedPart.TimeZoneId);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ShouldWriteTimeZoneId()
+    {
+        var handler = new OmnichannelContactPartContentImportHandler(
+            CreateClock("America/Los_Angeles"),
+            new DefaultPhoneNumberService(),
+            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
+        var dataTable = new DataTable();
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotCall));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotSms));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotChat));
+        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotEmail));
+        var row = dataTable.NewRow();
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem();
+        contentItem.Apply(new OmnichannelContactPart
+        {
+            TimeZoneId = "America/Los_Angeles",
+        });
+
+        var context = new ContentPartExportMapContext
+        {
+            ContentItem = contentItem,
+            Row = row,
+        };
+
+        await handler.ExportAsync(context);
+
+        Assert.Equal("America/Los_Angeles", row[nameof(OmnichannelContactPart.TimeZoneId)]);
+    }
+
     private static ContentItem CreateEmailAddressContentItem(string email)
     {
         var contentItem = new ContentItem
@@ -282,6 +426,18 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
         return contentItem;
     }
+
+    private static IClock CreateClock(params string[] timeZoneIds)
+    {
+        var clock = new Mock<IClock>();
+        clock.SetupGet(x => x.UtcNow).Returns(new DateTime(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc));
+        clock.Setup(x => x.GetTimeZones()).Returns(timeZoneIds.Select(CreateTimeZone).ToArray());
+
+        return clock.Object;
+    }
+
+    private static ITimeZone CreateTimeZone(string timeZoneId)
+        => Mock.Of<ITimeZone>(timeZone => timeZone.TimeZoneId == timeZoneId);
 
     private sealed class PassThroughStringLocalizer<T> : IStringLocalizer<T>
     {

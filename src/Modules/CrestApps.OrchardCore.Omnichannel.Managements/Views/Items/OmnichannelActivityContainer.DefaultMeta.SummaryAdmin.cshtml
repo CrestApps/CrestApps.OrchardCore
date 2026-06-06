@@ -1,3 +1,4 @@
+@using System
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
@@ -5,13 +6,24 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.Contents
 @using OrchardCore.DisplayManagement.Views
+@using OrchardCore.Modules
 
 @model ShapeViewModel<OmnichannelActivityContainer>
 
 @inject IAuthorizationService AuthorizationService
+@inject IClock Clock
 
 @{
     var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture);
+    var leadTimeZone = !string.IsNullOrEmpty(Model.Value.LeadTimeZoneId)
+        ? Clock.GetTimeZones().FirstOrDefault(timeZone => string.Equals(timeZone.TimeZoneId, Model.Value.LeadTimeZoneId, StringComparison.OrdinalIgnoreCase))
+        : null;
+    var leadLocalNow = leadTimeZone is null
+        ? (DateTimeOffset?)null
+        : Clock.ConvertToTimeZone(new DateTimeOffset(Clock.UtcNow, TimeSpan.Zero), leadTimeZone);
+    var leadLocalTimeTitle = leadLocalNow.HasValue
+        ? T["Contact current time: {0} | Time zone: {1}", leadLocalNow.Value.ToString("f", CultureInfo.CurrentCulture), leadTimeZone.TimeZoneId]
+        : null;
 }
 
 @if (Model.Value.Activity.Attempts > 1)
@@ -47,6 +59,13 @@
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Communication target"]">
         <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.PreferredDestination
+    </span>
+}
+
+@if (leadLocalNow.HasValue)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@leadLocalTimeTitle">
+        <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@leadLocalNow.Value.ToString("t", CultureInfo.CurrentCulture)
     </span>
 }
 
