@@ -190,6 +190,9 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetCdn(
                 "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.min.css",
                 "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css")
+            .SetCdnIntegrity(
+                "sha384-WNF7dtZ0UZJjHFk7vUp7qTzY3PQnxFBo6/lqKHvZmCYwIUHqDDsyFL6zfeG83jKf",
+                "sha384-KgNFOuU4mTPtXZmFu6WaY2/jxbJEA+INAC2SFk+B0vTR9iuuKE+5qujIZY8Mnmzt")
             .SetVersion("25.12.4");
 
         _manifest
@@ -200,6 +203,9 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetCdn(
                 "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.min.js",
                 "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.js")
+            .SetCdnIntegrity(
+                "sha384-zmSxq8xjduh+c9LYQCwKvFI7Q3Glzkdm2t62FEZ0T+aPhd1443w9QLqX4YFq6yRF",
+                "sha384-FdYuaXg9bZPa49HOFPWlxiUurpAlJZFOLCVAV/d8BUFdIjEh98n1FtwpIje1FGQK")
             .SetVersion("25.12.4");
     }
 

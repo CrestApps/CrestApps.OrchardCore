@@ -1,10 +1,3 @@
-.content-field-international-telephone {
-  --iti-path-flags-1x: url("/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/img/flags.webp");
-  --iti-path-flags-2x: url("/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/img/flags@2x.webp");
-  --iti-path-globe-1x: url("/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/img/globe.webp");
-  --iti-path-globe-2x: url("/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/img/globe@2x.webp");
-}
-
 .content-field-international-telephone .iti,
 .content-field-international-telephone .iti--inline-dropdown,
 .content-field-international-telephone .iti__tel-input {
