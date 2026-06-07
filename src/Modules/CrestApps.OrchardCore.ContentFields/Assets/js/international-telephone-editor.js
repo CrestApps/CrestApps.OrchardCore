@@ -76,11 +76,41 @@
         document.querySelectorAll(selector).forEach(initializeField);
     }
 
+    function observeDynamicAdditions() {
+        var observer = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var addedNodes = mutations[i].addedNodes;
+
+                for (var j = 0; j < addedNodes.length; j++) {
+                    var node = addedNodes[j];
+
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        continue;
+                    }
+
+                    if (node.matches(selector)) {
+                        initializeField(node);
+                    }
+                    else {
+                        var fields = node.querySelectorAll(selector);
+                        fields.forEach(initializeField);
+                    }
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+        document.addEventListener('DOMContentLoaded', function () {
+            initialize();
+            observeDynamicAdditions();
+        }, { once: true });
 
         return;
     }
 
     initialize();
+    observeDynamicAdditions();
 })();
