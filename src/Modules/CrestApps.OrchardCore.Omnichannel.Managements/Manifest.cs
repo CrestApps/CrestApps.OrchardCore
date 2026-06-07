@@ -21,6 +21,7 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Area,
         UsersConstants.Feature.Area,
+        "CrestApps.OrchardCore.ContentFields",
         PhoneNumbersConstants.Features.Area,
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",

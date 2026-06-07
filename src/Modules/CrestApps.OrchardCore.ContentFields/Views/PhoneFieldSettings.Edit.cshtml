@@ -1,0 +1,40 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.PhoneFieldSettingsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Required" />
+        <label class="form-check-label" asp-for="Required">@T["Required"]</label>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Hint" class="form-label">@T["Hint"]</label>
+    <input asp-for="Hint" class="form-control" />
+    <span class="hint">@T["The hint text to display below the input."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="InitialCountryMode" class="form-label">@T["Initial country"]</label>
+    <select asp-for="InitialCountryMode" asp-items="Model.InitialCountryModeOptions" class="form-select" style="max-width:20em;"></select>
+    <span class="hint">@T["Determines which country flag is pre-selected when the phone field is empty."]</span>
+</div>
+
+<div class="mb-3" id="@Html.IdFor(m => m.SpecificCountryCode)_Container" style="display:none;">
+    <label asp-for="SpecificCountryCode" class="form-label">@T["Country"]</label>
+    <select asp-for="SpecificCountryCode" asp-items="Model.CountryOptions" class="form-select" style="max-width:30em;"></select>
+    <span class="hint">@T["The country that will be pre-selected every time the phone field is empty."]</span>
+</div>
+
+<script at="Foot">
+    (function () {
+        var modeSelect = document.getElementById('@Html.IdFor(m => m.InitialCountryMode)');
+        var countryContainer = document.getElementById('@Html.IdFor(m => m.SpecificCountryCode)_Container');
+
+        function toggleCountry() {
+            countryContainer.style.display = modeSelect.value === 'Specific' ? '' : 'none';
+        }
+
+        modeSelect.addEventListener('change', toggleCountry);
+        toggleCountry();
+    })();
+</script>

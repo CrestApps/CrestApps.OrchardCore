@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Content Fields Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Adds custom Orchard Core content fields maintained by CrestApps.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Content Fields</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentFields" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

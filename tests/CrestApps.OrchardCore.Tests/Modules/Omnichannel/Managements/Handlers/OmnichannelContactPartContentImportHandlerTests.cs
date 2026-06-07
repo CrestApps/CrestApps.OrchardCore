@@ -1,6 +1,7 @@
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -92,7 +93,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
                 return phoneNumberPart;
             })
-            .ToDictionary(part => part.Type.Text, part => part.Number.Text, StringComparer.Ordinal);
+            .ToDictionary(part => part.Type.Text, part => part.Number.PhoneNumber, StringComparer.Ordinal);
 
         Assert.Equal("+12502000003", phoneNumbers["Cell"]);
         Assert.Equal("+17024993350", phoneNumbers["Home"]);
@@ -420,7 +421,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
 
         contentItem.Alter<PhoneNumberInfoPart>(part =>
         {
-            part.Number = new TextField { Text = number };
+            part.Number = new PhoneField { PhoneNumber = number };
             part.Type = new TextField { Text = type };
         });
 

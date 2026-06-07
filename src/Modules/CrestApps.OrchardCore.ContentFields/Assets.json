@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/international-telephone-editor.js"
+    ],
+    "output": "wwwroot/scripts/international-telephone-editor.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/international-telephone-editor.css"
+    ],
+    "output": "wwwroot/styles/international-telephone-editor.css"
+  }
+]

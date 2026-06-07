@@ -1,4 +1,5 @@
 using System.Data;
+using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -333,18 +334,18 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
                     contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
                     contentMethod.TryGet<PhoneNumberInfoPart>(out var cellPart) &&
                     cellPart.Type?.Text == "Cell" &&
-                    !string.IsNullOrEmpty(cellPart.Number?.Text))
+                    !string.IsNullOrEmpty(cellPart.Number?.PhoneNumber))
                 {
-                    cellPhone = cellPart.Number.Text;
+                    cellPhone = cellPart.Number.PhoneNumber;
                 }
 
                 if (homePhone == null &&
                     contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
                     contentMethod.TryGet<PhoneNumberInfoPart>(out var homePart) &&
                     homePart.Type?.Text == "Home" &&
-                    !string.IsNullOrEmpty(homePart.Number?.Text))
+                    !string.IsNullOrEmpty(homePart.Number?.PhoneNumber))
                 {
-                    homePhone = homePart.Number.Text;
+                    homePhone = homePart.Number.PhoneNumber;
                 }
 
                 if (email != null && cellPhone != null && homePhone != null)
@@ -562,7 +563,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         contentItem.Alter<PhoneNumberInfoPart>(part =>
         {
-            part.Number = new TextField { Text = number };
+            part.Number = new PhoneField { PhoneNumber = number };
             part.Type = new TextField { Text = type };
         });
 

@@ -5,3 +5,15 @@
 # Keep LF line endings in webroot assets files. Otherwise, building them under Windows would change the line endings to CLRF and cause changes without actually editing the source files.
 **/wwwroot/**/*.js text eol=lf
 **/wwwroot/**/*.css text eol=lf
+
+# Ensure binary files are never treated as text.
+*.webp binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

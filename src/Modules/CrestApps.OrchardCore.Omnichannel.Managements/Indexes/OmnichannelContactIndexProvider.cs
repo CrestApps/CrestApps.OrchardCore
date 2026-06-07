@@ -51,18 +51,18 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
                         if (contentMethod.ContentType == OmnichannelConstants.ContentTypes.PhoneNumber &&
                             contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) &&
-                            !string.IsNullOrEmpty(phonePart.Number?.Text))
+                            !string.IsNullOrEmpty(phonePart.Number?.PhoneNumber))
                         {
                             if (string.IsNullOrEmpty(index.PrimaryCellPhoneNumber) && phonePart.Type?.Text == "Cell")
                             {
-                                index.PrimaryCellPhoneNumber = phonePart.Number.Text.Substring(0, Math.Min(50, phonePart.Number.Text.Length));
-                                index.NormalizedPrimaryCellPhoneNumber = NormalizeToE164(phonePart.Number.Text);
+                                index.PrimaryCellPhoneNumber = phonePart.Number.PhoneNumber.Substring(0, Math.Min(50, phonePart.Number.PhoneNumber.Length));
+                                index.NormalizedPrimaryCellPhoneNumber = NormalizeToE164(phonePart.Number.PhoneNumber);
                             }
 
                             if (string.IsNullOrEmpty(index.PrimaryHomePhoneNumber) && phonePart.Type?.Text == "Home")
                             {
-                                index.PrimaryHomePhoneNumber = phonePart.Number.Text.Substring(0, Math.Min(50, phonePart.Number.Text.Length));
-                                index.NormalizedPrimaryHomePhoneNumber = NormalizeToE164(phonePart.Number.Text);
+                                index.PrimaryHomePhoneNumber = phonePart.Number.PhoneNumber.Substring(0, Math.Min(50, phonePart.Number.PhoneNumber.Length));
+                                index.NormalizedPrimaryHomePhoneNumber = NormalizeToE164(phonePart.Number.PhoneNumber);
                             }
                         }
                     }
