@@ -70,6 +70,7 @@ public sealed class ContactMethodMigrations : DataMigration
                 .WithSettings(new PhoneFieldSettings()
                 {
                     Required = true,
+                    InitialCountryMode = InitialCountryMode.CurrentCulture,
                 })
             )
         .WithField("Extension", field => field
@@ -176,6 +177,7 @@ public sealed class ContactMethodMigrations : DataMigration
                 .WithSettings(new PhoneFieldSettings
                 {
                     Required = true,
+                    InitialCountryMode = InitialCountryMode.CurrentCulture,
                 })));
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
