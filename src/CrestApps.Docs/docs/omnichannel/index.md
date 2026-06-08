@@ -14,6 +14,8 @@ description: Orchard Core modules for unified communication orchestration and ma
 
 The Omnichannel modules provide Orchard Core building blocks for coordinating communication across channels such as SMS and event-driven integrations.
 
+The management experience layers a lightweight Customer Relationship Management (CRM) workflow on top of those building blocks, including contacts, subjects, campaigns, subject flows, dispositions, activities, and batches.
+
 ## Available Orchard modules
 
 | Module | Docs |

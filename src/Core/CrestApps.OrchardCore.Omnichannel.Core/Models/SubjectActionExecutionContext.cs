@@ -3,9 +3,9 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// Context passed to <see cref="Services.ICampaignActionExecutor"/> when processing campaign actions.
+/// Context passed to <see cref="Services.ISubjectActionExecutor"/> when processing subject actions.
 /// </summary>
-public sealed class CampaignActionExecutionContext
+public sealed class SubjectActionExecutionContext
 {
     /// <summary>
     /// Gets or sets the activity being completed.
@@ -29,7 +29,7 @@ public sealed class CampaignActionExecutionContext
 
     /// <summary>
     /// Gets or sets the schedule dates provided by the user during completion.
-    /// Key is the campaign action ItemId, value is the schedule date.
+    /// Key is the subject action ItemId, value is the schedule date.
     /// </summary>
     public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
@@ -45,9 +45,9 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelDisposition> context, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
+        if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
-            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OmnichannelDisposition.DisplayText)]));
+            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OmnichannelDisposition.Name)]));
         }
 
         return Task.CompletedTask;
@@ -70,18 +70,18 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
 
     private static Task PopulateAsync(OmnichannelDisposition disposition, JsonNode data)
     {
-        var displayText = data[nameof(OmnichannelDisposition.DisplayText)]?.GetValue<string>()?.Trim();
+        var name = data[nameof(OmnichannelDisposition.Name)]?.GetValue<string>()?.Trim();
 
-        if (!string.IsNullOrEmpty(displayText))
+        if (!string.IsNullOrEmpty(name))
         {
-            disposition.DisplayText = displayText;
+            disposition.Name = name;
         }
 
         var descriptionText = data[nameof(OmnichannelDisposition.Description)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(descriptionText))
         {
-            disposition.DisplayText = descriptionText;
+            disposition.Description = descriptionText;
         }
 
         var properties = data[nameof(OmnichannelDisposition.Properties)]?.AsObject();

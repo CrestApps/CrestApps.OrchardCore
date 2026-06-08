@@ -40,7 +40,7 @@
 @if (!string.IsNullOrEmpty(Model.Value.Activity.DispositionId))
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Disposition"]">
-        <i class="fa-solid fa-gavel text-secondary me-1" aria-hidden="true"></i>@((await DispositionCatalog.FindByIdAsync(Model.Value.Activity.DispositionId)).DisplayText)
+        <i class="fa-solid fa-gavel text-secondary me-1" aria-hidden="true"></i>@((await DispositionCatalog.FindByIdAsync(Model.Value.Activity.DispositionId)).Name)
     </span>
 }
 

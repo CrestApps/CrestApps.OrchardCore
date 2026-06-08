@@ -3,10 +3,19 @@
 @model OmnichannelDispositionViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
-        <input asp-for="DisplayText" class="form-control" />
-        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The disposition name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 </div>
 

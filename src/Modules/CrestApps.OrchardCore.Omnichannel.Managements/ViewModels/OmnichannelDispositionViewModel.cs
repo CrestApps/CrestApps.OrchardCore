@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
 /// Represents the view model for omnichannel disposition.
@@ -6,9 +6,14 @@
 public class OmnichannelDispositionViewModel
 {
     /// <summary>
-    /// Gets or sets the display text.
+    /// Gets or sets a value indicating whether the disposition is new.
     /// </summary>
-    public string DisplayText { get; set; }
+    public bool IsNew { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the description.

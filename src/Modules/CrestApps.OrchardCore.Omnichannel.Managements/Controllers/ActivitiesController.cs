@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
@@ -46,8 +46,8 @@ public sealed class ActivitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly ICampaignActionExecutor _campaignActionExecutor;
-    private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly ISubjectActionExecutor _subjectActionExecutor;
+    private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
@@ -67,7 +67,7 @@ public sealed class ActivitiesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
-    /// <param name="campaignActionExecutor">The campaign action executor.</param>
+    /// <param name="subjectActionExecutor">The subject action executor.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
@@ -84,8 +84,8 @@ public sealed class ActivitiesController : Controller
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        ICampaignActionExecutor campaignActionExecutor,
-        ICatalog<OmnichannelDisposition> dispositionsCatalog,
+        ISubjectActionExecutor subjectActionExecutor,
+        INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IClock clock,
         ILocalClock localClock,
         INotifier notifier,
@@ -101,7 +101,7 @@ public sealed class ActivitiesController : Controller
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
-        _campaignActionExecutor = campaignActionExecutor;
+        _subjectActionExecutor = subjectActionExecutor;
         _dispositionsCatalog = dispositionsCatalog;
         _clock = clock;
         _localClock = localClock;
@@ -531,7 +531,7 @@ public sealed class ActivitiesController : Controller
 
         if (ModelState.IsValid)
         {
-            // Execute campaign actions for the selected disposition.
+            // Execute subject actions for the selected disposition.
             activity.Subject = subject;
             activity.Status = ActivityStatus.Completed;
             activity.CompletedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -541,7 +541,7 @@ public sealed class ActivitiesController : Controller
             await _omnichannelActivityManager.UpdateAsync(activity);
             var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
 
-            var executionContext = new CampaignActionExecutionContext
+            var executionContext = new SubjectActionExecutionContext
             {
                 Activity = activity,
                 Contact = model.ContactContentItem,
@@ -549,7 +549,7 @@ public sealed class ActivitiesController : Controller
                 Disposition = disposition,
             };
 
-            await _campaignActionExecutor.ExecuteAsync(executionContext);
+            await _subjectActionExecutor.ExecuteAsync(executionContext);
 
             await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 

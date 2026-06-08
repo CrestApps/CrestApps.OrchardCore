@@ -1,0 +1,66 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model SubjectFlowSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["Select a campaign"]</option>
+        </select>
+        <span class="hint">@T["The campaign this subject belongs to for reporting and grouping purposes."]</span>
+        <span asp-validation-for="CampaignId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
+    <div class="ocat-end">
+        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select"></select>
+        <span asp-validation-for="InteractionType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
+            <option value="">@T["Select a channel"]</option>
+        </select>
+        <span asp-validation-for="Channel" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper automated-interaction-type@(Model.InteractionType == ActivityInteractionType.Manual ? " d-none" : string.Empty)">
+    <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+    <div class="ocat-end">
+        <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
+            <option value="">@T["Select an endpoint"]</option>
+        </select>
+        <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
+        <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+(() => {
+    const interactionTypeSelect = document.getElementById('@Html.IdFor(m => m.InteractionType)');
+    const automatedSections = document.querySelectorAll('.automated-interaction-type');
+
+    if (!interactionTypeSelect) {
+        return;
+    }
+
+    const toggle = () => {
+        const isAutomated = interactionTypeSelect.value === 'Automated';
+
+        automatedSections.forEach((section) => {
+            section.classList.toggle('d-none', !isAutomated);
+        });
+    };
+
+    interactionTypeSelect.addEventListener('change', toggle);
+    toggle();
+})();
+</script>

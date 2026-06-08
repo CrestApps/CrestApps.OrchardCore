@@ -39,7 +39,7 @@
                 _ => T["Normal"],
             };
         }
-        <input asp-for="UrgencyLevel" class="form-control-plaintext" value="@value" />
+        <input asp-for="UrgencyLevel" class="form-control-plaintext" value="@value.Value" />
     </div>
 </div>
 
@@ -74,20 +74,26 @@
     </div>
 }
 
-<div class="ocat-wrapper">
-    <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
-    <div class="ocat-end">
-        <input asp-for="Instructions" class="form-control-plaintext" />
+@if (!string.IsNullOrWhiteSpace(Model.Instructions))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
+        <div class="ocat-end">
+            <input asp-for="Instructions" class="form-control-plaintext" />
+        </div>
     </div>
-</div>
+}
 
-<div class="ocat-wrapper">
-    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="Notes" class="form-control"></textarea>
-        <span asp-validation-for="Notes" class="text-danger"></span>
+@if (!string.IsNullOrWhiteSpace(Model.Notes))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Notes" class="form-control"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
+        </div>
     </div>
-</div>
+}
 
 <div class="activity-wrapper">
     <div class="ocat-wrapper">
@@ -97,7 +103,7 @@
                 <option value="">@T["Select a disposition"]</option>
                 @foreach (var disposition in Model.Dispositions)
                 {
-                    <option value="@disposition.ItemId">@disposition.DisplayText</option>
+                    <option value="@disposition.ItemId">@disposition.Name</option>
                 }
             </select>
             <span asp-validation-for="DispositionId" class="text-danger"></span>
@@ -124,7 +130,6 @@
         const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
         const previewContainer = document.getElementById("campaign-actions-preview");
         const actionsList = document.getElementById("actions-list");
-        const campaignId = '@Model.CampaignId';
         const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
         const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
         const currentAttempts = @Model.Attempts;
@@ -145,14 +150,13 @@
             }
 
             try {
-                const response = await fetch('@Url.Content("~/api/omnichannel/disposition-actions")', {
+                const response = await fetch('@Url.RouteUrl("CrestApps.Omnichannel.SubjectDispositionActions")', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        campaignId: campaignId,
                         dispositionId: dispositionId,
                         currentSubjectTitle: currentSubjectTitle,
-                        currentSubjectContentType: currentSubjectContentType,
+                        subjectContentType: currentSubjectContentType,
                         currentAttempts: currentAttempts
                     })
                 });

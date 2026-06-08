@@ -36,22 +36,13 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
-            <option value="">@T["Select a campaign"]</option>
-        </select>
-        <span asp-validation-for="CampaignId" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
     <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Select a subject content type"]</option>
         </select>
         <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+        <span class="hint">@T["The selected subject flow determines the campaign, interaction type, and channel used when the batch loads activities."]</span>
     </div>
 </div>
 
@@ -85,7 +76,7 @@
         {
             id = $"{Html.IdFor(m => m.UserIds)}_Selector",
             inputName = Html.NameFor(m => m.UserIds),
-            endpoint = Url.Content($"~/Admin/api/crestapps/users/search?valueType=userId&role={OmnichannelConstants.AgentRole}"),
+            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "userId" }),
             initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
             multiple = true,
             enableSearch = true,

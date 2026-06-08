@@ -420,9 +420,21 @@ public sealed class ActivityBatchesController : Controller
                 }
 
                 var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
-                var campaignCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelCampaign>>();
+                var flowSettingsCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<SubjectFlowSettings>>();
 
-                var campaign = await campaignCatalog.FindByIdAsync(batch.CampaignId);
+                var allFlowSettings = await flowSettingsCatalog.GetAllAsync();
+                var flowSettings = allFlowSettings.FirstOrDefault(f =>
+                    string.Equals(f.SubjectContentType, batch.SubjectContentType, StringComparison.OrdinalIgnoreCase));
+
+                if (flowSettings == null || string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+                {
+                    batch.Status = OmnichannelActivityBatchStatus.New;
+
+                    await catalog.UpdateAsync(batch);
+
+                    logger.LogError("Subject flow settings with a campaign are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
+                    return;
+                }
 
                 var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
 
@@ -509,14 +521,14 @@ public sealed class ActivityBatchesController : Controller
 
                         var activity = await activityManager.NewAsync();
 
-                        activity.InteractionType = campaign.InteractionType;
-                        activity.Channel = campaign.Channel;
+                        activity.InteractionType = flowSettings.InteractionType;
+                        activity.Channel = flowSettings.Channel;
                         activity.ContactContentItemId = contact.ContentItemId;
                         activity.ContactContentType = batch.ContactContentType;
                         activity.SubjectContentType = batch.SubjectContentType;
-                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, campaign.Channel);
-                        activity.ChannelEndpointId = campaign.ChannelEndpointId;
-                        activity.CampaignId = batch.CampaignId;
+                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, activity.Channel);
+                        activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
+                        activity.CampaignId = flowSettings.CampaignId;
                         activity.ScheduledUtc = scheduledUtc;
                         activity.AssignedToId = user.UserId;
                         activity.AssignedToUsername = user.UserName;

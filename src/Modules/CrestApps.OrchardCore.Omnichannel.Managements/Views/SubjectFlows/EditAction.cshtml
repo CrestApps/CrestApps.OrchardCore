@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model EditSubjectActionViewModel
+
+<zone Name="Title"><h1>@T["Edit Subject Action: {0}", Model.ActionTypeDisplayName]</h1></zone>
+<zone Name="Breadcrumbs">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="SubjectFlows">@T["Subject Flows"]</a></li>
+            <li class="breadcrumb-item"><a asp-action="Configure" asp-controller="SubjectFlows" asp-route-subjectContentType="@Model.SubjectContentType">@Model.SubjectDisplayName</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@T["Edit Action"]</li>
+        </ol>
+    </nav>
+</zone>
+
+<form asp-action="EditAction" method="post">
+    @await DisplayAsync(Model.Editor)
+
+    <div class="mb-3">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary" asp-action="Configure" asp-controller="SubjectFlows" asp-route-subjectContentType="@Model.SubjectContentType">@T["Cancel"]</a>
+    </div>
+</form>

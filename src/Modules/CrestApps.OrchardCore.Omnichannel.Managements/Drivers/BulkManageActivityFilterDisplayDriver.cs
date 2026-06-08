@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
@@ -21,6 +22,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<BulkManageActivityFilter>
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly LinkGenerator _linkGenerator;
     private readonly ISession _session;
 
     internal readonly IStringLocalizer S;
@@ -29,14 +31,17 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     /// Initializes a new instance of the <see cref="BulkManageActivityFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="linkGenerator">The link generator.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityFilterDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
+        LinkGenerator linkGenerator,
         ISession session,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _linkGenerator = linkGenerator;
         _session = session;
         S = stringLocalizer;
     }
@@ -120,7 +125,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
 
-            model.UserSearchEndpoint = "~/Admin/api/crestapps/users/search?valueType=userId";
+            model.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
 
             if (filter.AssignedToUserIds is { Length: > 0 })
             {

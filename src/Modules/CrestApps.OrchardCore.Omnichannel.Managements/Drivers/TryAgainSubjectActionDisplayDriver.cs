@@ -5,19 +5,18 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
-internal sealed class TryAgainCampaignActionDisplayDriver : DisplayDriver<CampaignAction>
+internal sealed class TryAgainSubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 {
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
 
-    public TryAgainCampaignActionDisplayDriver(
+    public TryAgainSubjectActionDisplayDriver(
         ISession session,
         IDisplayNameProvider displayNameProvider)
     {
@@ -25,14 +24,14 @@ internal sealed class TryAgainCampaignActionDisplayDriver : DisplayDriver<Campai
         _displayNameProvider = displayNameProvider;
     }
 
-    public override IDisplayResult Edit(CampaignAction action, BuildEditorContext context)
+    public override IDisplayResult Edit(SubjectAction action, BuildEditorContext context)
     {
         if (!string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        return Initialize<TryAgainCampaignActionViewModel>("TryAgainCampaignActionFields_Edit", async model =>
+        return Initialize<TryAgainSubjectActionViewModel>("TryAgainSubjectActionFields_Edit", async model =>
         {
             if (action.TryGet<TryAgainActionMetadata>(out var metadata))
             {
@@ -66,14 +65,14 @@ internal sealed class TryAgainCampaignActionDisplayDriver : DisplayDriver<Campai
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(CampaignAction action, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)
     {
         if (!string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        var model = new TryAgainCampaignActionViewModel();
+        var model = new TryAgainSubjectActionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 

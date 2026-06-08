@@ -1,19 +1,15 @@
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// Metadata for the "NewActivity" campaign action type.
-/// Stored via Entity Put/TryGet on <see cref="CampaignAction"/>.
+/// Metadata for the "NewActivity" action type.
+/// Stored via Put/TryGet on <see cref="SubjectAction"/>.
 /// </summary>
 public sealed class NewActivityActionMetadata
 {
     /// <summary>
-    /// Gets or sets the target campaign identifier for the new activity.
-    /// When null, the current campaign is used.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the content type for the subject of the new activity.
+    /// Gets or sets the target subject content type for the new activity.
+    /// When null, the current subject content type is used.
+    /// The target subject's flow settings determine the campaign, channel, and interaction type.
     /// </summary>
     public string SubjectContentType { get; set; }
 

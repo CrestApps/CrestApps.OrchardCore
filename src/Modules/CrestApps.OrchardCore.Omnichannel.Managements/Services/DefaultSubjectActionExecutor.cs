@@ -14,32 +14,32 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
-internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
+internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 {
-    private readonly ISourceCatalog<CampaignAction> _actionCatalog;
-    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+    private readonly ISourceCatalog<SubjectAction> _actionCatalog;
+    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
-    public DefaultCampaignActionExecutor(
-        ISourceCatalog<CampaignAction> actionCatalog,
-        ICatalog<OmnichannelCampaign> campaignCatalog,
+    public DefaultSubjectActionExecutor(
+        ISourceCatalog<SubjectAction> actionCatalog,
+        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
         IContentManager contentManager,
         ISession session,
         IClock clock,
-        ILogger<DefaultCampaignActionExecutor> logger)
+        ILogger<DefaultSubjectActionExecutor> logger)
     {
         _actionCatalog = actionCatalog;
-        _campaignCatalog = campaignCatalog;
+        _flowSettingsCatalog = flowSettingsCatalog;
         _contentManager = contentManager;
         _session = session;
         _clock = clock;
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CampaignActionExecutionContext context, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.Activity);
@@ -48,7 +48,7 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
 
         var actions = allActions
-            .Where(a => string.Equals(a.CampaignId, context.Activity.CampaignId, StringComparison.OrdinalIgnoreCase)
+            .Where(a => string.Equals(a.SubjectContentType, context.Activity.SubjectContentType, StringComparison.OrdinalIgnoreCase)
                      && string.Equals(a.DispositionId, context.Disposition.ItemId, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
@@ -58,7 +58,7 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         }
     }
 
-    private async Task ExecuteActionAsync(CampaignAction action, CampaignActionExecutionContext context)
+    private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
         ApplyCommunicationPreferences(action, context.Contact);
 
@@ -76,12 +76,12 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
                 break;
 
             default:
-                _logger.LogWarning("Unknown campaign action type: {ActionType}", action.Source);
+                _logger.LogWarning("Unknown subject action type: {ActionType}", action.Source);
                 break;
         }
     }
 
-    private async Task ExecuteTryAgainAsync(CampaignAction action, CampaignActionExecutionContext context)
+    private async Task ExecuteTryAgainAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
         var activity = context.Activity;
 
@@ -127,7 +127,7 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         await _session.SaveAsync(nextAttempt, collection: OmnichannelConstants.CollectionName);
     }
 
-    private async Task ExecuteNewActivityAsync(CampaignAction action, CampaignActionExecutionContext context)
+    private async Task ExecuteNewActivityAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
         var activity = context.Activity;
 
@@ -135,6 +135,12 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         {
             metadata = new NewActivityActionMetadata();
         }
+
+        var targetSubjectContentType = !string.IsNullOrEmpty(metadata.SubjectContentType)
+            ? metadata.SubjectContentType
+            : activity.SubjectContentType;
+
+        var flowSettings = await FindFlowSettingsForSubjectAsync(targetSubjectContentType);
 
         var now = _clock.UtcNow;
         var newActivity = new OmnichannelActivity
@@ -155,28 +161,19 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
             CreatedUtc = now,
+            SubjectContentType = targetSubjectContentType,
             UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel,
             Status = ActivityStatus.NotStated,
         };
 
-        var subjectContentType = !string.IsNullOrEmpty(metadata.SubjectContentType)
-            ? metadata.SubjectContentType
-            : activity.SubjectContentType;
+        newActivity.Subject = await _contentManager.NewAsync(targetSubjectContentType);
 
-        newActivity.SubjectContentType = subjectContentType;
-        newActivity.Subject = await _contentManager.NewAsync(subjectContentType);
-
-        if (!string.IsNullOrEmpty(metadata.CampaignId))
+        if (flowSettings != null)
         {
-            var targetCampaign = await _campaignCatalog.FindByIdAsync(metadata.CampaignId);
-
-            if (targetCampaign != null)
-            {
-                newActivity.Channel = targetCampaign.Channel;
-                newActivity.InteractionType = targetCampaign.InteractionType;
-                newActivity.ChannelEndpointId = targetCampaign.ChannelEndpointId;
-                newActivity.CampaignId = targetCampaign.ItemId;
-            }
+            newActivity.Channel = flowSettings.Channel ?? activity.Channel;
+            newActivity.InteractionType = flowSettings.InteractionType;
+            newActivity.ChannelEndpointId = flowSettings.ChannelEndpointId ?? activity.ChannelEndpointId;
+            newActivity.CampaignId = flowSettings.CampaignId ?? activity.CampaignId;
         }
 
         newActivity.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
@@ -191,7 +188,15 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);
     }
 
-    private void ApplyCommunicationPreferences(CampaignAction action, ContentItem contact)
+    private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)
+    {
+        var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
+
+        return allFlowSettings.FirstOrDefault(f =>
+            string.Equals(f.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ApplyCommunicationPreferences(SubjectAction action, ContentItem contact)
     {
         if (contact is null)
         {
@@ -232,7 +237,7 @@ internal sealed class DefaultCampaignActionExecutor : ICampaignActionExecutor
         });
     }
 
-    private DateTime ResolveScheduleDate(CampaignAction action, CampaignActionExecutionContext context, int? defaultScheduleHours)
+    private DateTime ResolveScheduleDate(SubjectAction action, SubjectActionExecutionContext context, int? defaultScheduleHours)
     {
         if (context.ActionScheduleDates?.TryGetValue(action.ItemId, out var userDate) == true && userDate.HasValue)
         {

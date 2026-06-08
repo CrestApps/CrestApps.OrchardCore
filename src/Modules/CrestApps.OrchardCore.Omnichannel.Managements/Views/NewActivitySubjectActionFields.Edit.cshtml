@@ -2,25 +2,15 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
-@model NewActivityCampaignActionViewModel
+@model NewActivitySubjectActionViewModel
 
 <div class="ocat-wrapper">
-    <label asp-for="CampaignId" class="ocat-label">@T["Target campaign"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
-            <option value="">@T["Use the same campaign"]</option>
-        </select>
-        <span class="hint">@T["The campaign for the new activity. Leave empty to use the current campaign."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
+    <label asp-for="SubjectContentType" class="ocat-label">@T["Target subject type"]</label>
     <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Use the same subject type"]</option>
         </select>
-        <span class="hint">@T["The content type for the new activity's subject. Leave empty to use the original activity's subject type."]</span>
+        <span class="hint">@T["The subject type for the new activity. Leave empty to use the current subject type. The target subject's flow settings determine the campaign, channel, and interaction type."]</span>
     </div>
 </div>
 
@@ -47,7 +37,7 @@
         {
             id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
             inputName = Html.NameFor(m => m.NormalizedUserName),
-            endpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=normalizedUserName"),
+            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName" }),
             initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
             multiple = false,
             enableSearch = true,

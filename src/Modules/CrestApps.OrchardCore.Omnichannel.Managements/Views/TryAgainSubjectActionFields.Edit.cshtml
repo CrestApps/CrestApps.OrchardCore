@@ -2,7 +2,7 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
-@model TryAgainCampaignActionViewModel
+@model TryAgainSubjectActionViewModel
 
 <div class="ocat-wrapper">
     <label asp-for="MaxAttempt" class="ocat-label">@T["Maximum attempts"]</label>
@@ -35,7 +35,7 @@
         {
             id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
             inputName = Html.NameFor(m => m.NormalizedUserName),
-            endpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=normalizedUserName"),
+            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName" }),
             initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
             multiple = false,
             enableSearch = true,

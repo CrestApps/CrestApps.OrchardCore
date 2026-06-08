@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 
@@ -7,12 +7,32 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 /// <summary>
 /// Represents the omnichannel disposition.
 /// </summary>
-public sealed class OmnichannelDisposition : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelDisposition>
+public sealed class OmnichannelDisposition : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<OmnichannelDisposition>
 {
+    private string _displayText;
+
+    /// <summary>
+    /// Gets or sets the unique disposition name.
+    /// </summary>
+    public string Name { get; set; }
+
     /// <summary>
     /// Gets or sets the display text.
     /// </summary>
-    public string DisplayText { get; set; }
+    [Obsolete("Use the Name property instead.")]
+    public string DisplayText
+    {
+        get => _displayText;
+        set
+        {
+            _displayText = value;
+
+            if (string.IsNullOrEmpty(Name) && !string.IsNullOrEmpty(value))
+            {
+                Name = value;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets the description.
@@ -52,7 +72,7 @@ public sealed class OmnichannelDisposition : CatalogItem, IDisplayTextAwareModel
         return new OmnichannelDisposition
         {
             ItemId = ItemId,
-            DisplayText = DisplayText,
+            Name = Name,
             Description = Description,
             CaptureDate = CaptureDate,
             CreatedUtc = CreatedUtc,

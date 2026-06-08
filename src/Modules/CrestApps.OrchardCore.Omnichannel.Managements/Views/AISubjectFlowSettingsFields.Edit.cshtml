@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model SubjectFlowSettingsViewModel
+
+<div class="automated-interaction-type @(Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <h5 class="border-bottom pb-2 mt-4">@T["AI Configuration"]</h5>
+         </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="ProfileId" class="ocat-label">@T["AI profile"]</label>
+        <div class="ocat-end">
+            <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+                <option value="">@T["Select a profile"]</option>
+            </select>
+            <span asp-validation-for="ProfileId" class="text-danger"></span>
+            <span class="hint">@T["The chat profile that controls the AI behavior for this subject."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SubjectGoal" class="ocat-label">@T["Subject goal"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="SubjectGoal" rows="3" class="form-control"></textarea>
+            <span asp-validation-for="SubjectGoal" class="text-danger"></span>
+            <span class="hint">@T["Describe the goal of this subject. The AI uses this to determine when to disposition the activity and end the conversation."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="InitialOutboundPromptPattern" class="ocat-label">@T["Initial outbound prompt pattern"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="InitialOutboundPromptPattern" rows="5" class="form-control"></textarea>
+            <span class="hint">@T["This is the first message sent to the contact to initiate the conversation. Supports Liquid syntax."]</span>
+            <span asp-validation-for="InitialOutboundPromptPattern" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-label">@T["AI permissions"]</div>
+        <div class="ocat-end">
+            <div class="form-check">
+                <input asp-for="AllowAIToUpdateContact" class="form-check-input" type="checkbox" />
+                <label asp-for="AllowAIToUpdateContact" class="form-check-label">@T["Allow AI to update contact"]</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="AllowAIToUpdateSubject" class="form-check-input" type="checkbox" />
+                <label asp-for="AllowAIToUpdateSubject" class="form-check-label">@T["Allow AI to update subject"]</label>
+            </div>
+        </div>
+    </div>
+</div>
