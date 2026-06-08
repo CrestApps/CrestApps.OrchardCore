@@ -1,5 +1,4 @@
 using CrestApps.Core;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -9,44 +8,39 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
-internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<CampaignAction>
+internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 {
-    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
 
-    public NewActivityCampaignActionDisplayDriver(
-        ICatalog<OmnichannelCampaign> campaignCatalog,
+    public NewActivitySubjectActionDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         ISession session,
         IDisplayNameProvider displayNameProvider)
     {
-        _campaignCatalog = campaignCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _session = session;
         _displayNameProvider = displayNameProvider;
     }
 
-    public override IDisplayResult Edit(CampaignAction action, BuildEditorContext context)
+    public override IDisplayResult Edit(SubjectAction action, BuildEditorContext context)
     {
         if (!string.Equals(action.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        return Initialize<NewActivityCampaignActionViewModel>("NewActivityCampaignActionFields_Edit", async model =>
+        return Initialize<NewActivitySubjectActionViewModel>("NewActivitySubjectActionFields_Edit", async model =>
         {
             if (action.TryGet<NewActivityActionMetadata>(out var metadata))
             {
-                model.CampaignId = metadata.CampaignId;
                 model.SubjectContentType = metadata.SubjectContentType;
                 model.UrgencyLevel = metadata.UrgencyLevel;
                 model.NormalizedUserName = metadata.NormalizedUserName;
@@ -73,17 +67,6 @@ internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<Cam
                 }
             }
 
-            var campaigns = await _campaignCatalog.GetAllAsync();
-
-            model.Campaigns = campaigns
-                .Select(c => new SelectListItem
-                {
-                    Text = c.DisplayText,
-                    Value = c.ItemId,
-                    Selected = string.Equals(c.ItemId, metadata?.CampaignId, StringComparison.OrdinalIgnoreCase),
-                })
-                .OrderBy(x => x.Text);
-
             var subjectTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
             model.SubjectContentTypes = subjectTypes
@@ -100,20 +83,19 @@ internal sealed class NewActivityCampaignActionDisplayDriver : DisplayDriver<Cam
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(CampaignAction action, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)
     {
         if (!string.Equals(action.Source, OmnichannelConstants.ActionTypes.NewActivity, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        var model = new NewActivityCampaignActionViewModel();
+        var model = new NewActivitySubjectActionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         action.Put(new NewActivityActionMetadata
         {
-            CampaignId = model.CampaignId,
             SubjectContentType = model.SubjectContentType,
             UrgencyLevel = model.UrgencyLevel,
             NormalizedUserName = model.NormalizedUserName?.Trim(),

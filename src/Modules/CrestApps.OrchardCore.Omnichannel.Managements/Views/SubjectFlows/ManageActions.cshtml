@@ -1,0 +1,154 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model ManageSubjectActionsViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Manage Flow: {0}", Model.SubjectDisplayName])</h1></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-3">
+            <div class="col">
+                <div class="has-search">
+                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                </div>
+            </div>
+            <div class="col-auto">
+                @if (Model.ActionTypes.Any())
+                {
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalAddSubjectAction">
+                        @T["Add Action"]
+                    </button>
+                }
+
+                <a class="btn btn-secondary"
+                   asp-action="Index">@T["Back to Subject Flows"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Actions.Count > 0)
+{
+    <ul class="list-group" id="actions-list">
+        <li class="list-group-item text-bg-theme ignore-elements">
+            <div class="row gx-3">
+                <div class="col">
+                    <span class="text-muted">
+                        @T.Plural(Model.Actions.Count, "1 action", "{0} actions")
+                    </span>
+                </div>
+            </div>
+        </li>
+        @foreach (var entry in Model.Actions)
+        {
+            <li class="list-group-item item" data-filter-value="@entry.DispositionDisplayText?.ToLowerInvariant() @entry.ActionTypeDisplayName?.ToLowerInvariant()">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a asp-route-action="EditAction"
+                           asp-route-controller="SubjectFlows"
+                           asp-route-id="@entry.Model.ItemId"
+                           class="fw-semibold text-break">@entry.DispositionDisplayText</a>
+                        <span class="badge text-bg-secondary ms-2">@entry.ActionTypeDisplayName</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a class="btn btn-sm btn-secondary"
+                           asp-route-action="EditAction"
+                           asp-route-controller="SubjectFlows"
+                           asp-route-id="@entry.Model.ItemId">@T["Edit"]</a>
+                        <a class="btn btn-sm btn-danger"
+                           asp-route-action="DeleteAction"
+                           asp-route-controller="SubjectFlows"
+                           asp-route-id="@entry.Model.ItemId"
+                           data-title="@T["Delete"]"
+                           data-message="@T["Are you sure you want to delete this subject action?"]"
+                           data-ok-text="@T["Delete"]"
+                           data-cancel-text="@T["Cancel"]"
+                           data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        @T["No actions have been added yet. Click \"Add Action\" to define what happens when a disposition is selected."]
+    </div>
+}
+
+@if (Model.ActionTypes.Any())
+{
+    <div class="modal fade" id="modalAddSubjectAction" tabindex="-1" role="dialog" aria-labelledby="available-action-types-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="available-action-types-title">@T["Available Action Types"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var actionType in Model.ActionTypes)
+                        {
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">@actionType.DisplayName</h5>
+                                        @if (actionType.Description != null)
+                                        {
+                                            <p class="card-text flex-grow-1">@actionType.Description</p>
+                                        }
+                                        <a class="btn btn-sm btn-primary mt-auto"
+                                           asp-action="CreateAction"
+                                           asp-controller="SubjectFlows"
+                                           asp-route-subjectContentType="@Model.SubjectContentType"
+                                           asp-route-source="@actionType.Type">@T["Select"]</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchBox = document.getElementById('search-box');
+        const list = document.getElementById('actions-list');
+        const alert = document.getElementById('list-alert');
+
+        if (searchBox && list) {
+            searchBox.addEventListener('input', function () {
+                const filter = this.value.toLowerCase();
+                const items = list.querySelectorAll('.item');
+                let visibleCount = 0;
+
+                items.forEach(function (item) {
+                    const value = item.getAttribute('data-filter-value') || '';
+                    if (value.includes(filter)) {
+                        item.style.display = '';
+                        visibleCount++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                if (alert) {
+                    alert.classList.toggle('d-none', visibleCount > 0 || !filter);
+                }
+            });
+        }
+    });
+</script>

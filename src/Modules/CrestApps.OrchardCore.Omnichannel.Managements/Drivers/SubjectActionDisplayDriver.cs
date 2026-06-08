@@ -3,49 +3,38 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
-internal sealed class CampaignActionDisplayDriver : DisplayDriver<CampaignAction>
+internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
 
     internal readonly IStringLocalizer S;
 
-    public CampaignActionDisplayDriver(
+    public SubjectActionDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
-        IStringLocalizer<CampaignActionDisplayDriver> stringLocalizer)
+        IStringLocalizer<SubjectActionDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(CampaignAction action, BuildDisplayContext context)
-    {
-        return CombineAsync(
-            View("CampaignAction_Fields_SummaryAdmin", action)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("CampaignAction_Buttons_SummaryAdmin", action)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5")
-        );
-    }
-
-    public override async Task<IDisplayResult> EditAsync(CampaignAction action, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(SubjectAction action, BuildEditorContext context)
     {
         return Combine(
-            Initialize<CampaignActionViewModel>("CampaignActionFields_Edit", async model => await PopulateAsync(model, action))
+            Initialize<SubjectActionViewModel>("SubjectActionFields_Edit", async model => await PopulateAsync(model, action))
                 .Location("Content:1"),
-            Initialize<CampaignActionViewModel>("CampaignActionCommunicationPreferences_Edit", async model => await PopulateAsync(model, action))
+            Initialize<SubjectActionViewModel>("SubjectActionCommunicationPreferences_Edit", async model => await PopulateAsync(model, action))
                 .Location("Content:100"));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(CampaignAction action, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)
     {
-        var model = new CampaignActionViewModel();
+        var model = new SubjectActionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -74,7 +63,7 @@ internal sealed class CampaignActionDisplayDriver : DisplayDriver<CampaignAction
         return await EditAsync(action, context);
     }
 
-    private async Task PopulateAsync(CampaignActionViewModel model, CampaignAction action)
+    private async Task PopulateAsync(SubjectActionViewModel model, SubjectAction action)
     {
         model.DispositionId = action.DispositionId;
         model.ShowCommunicationPreferences =
@@ -92,7 +81,7 @@ internal sealed class CampaignActionDisplayDriver : DisplayDriver<CampaignAction
         model.Dispositions = dispositions
             .Select(d => new SelectListItem
             {
-                Text = d.DisplayText,
+                Text = d.Name,
                 Value = d.ItemId,
                 Selected = string.Equals(d.ItemId, action.DispositionId, StringComparison.OrdinalIgnoreCase),
             })

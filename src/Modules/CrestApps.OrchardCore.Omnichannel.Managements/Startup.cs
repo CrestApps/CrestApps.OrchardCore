@@ -95,24 +95,26 @@ public sealed class Startup : StartupBase
 
         services
             .AddDisplayDriver<OmnichannelCampaign, OmnichannelCampaignDisplayDriver>()
-            .AddDisplayDriver<OmnichannelCampaign, CampaignActionsListDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelCampaign>, OmnichannelCampaignHandler>();
 
         services
             .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
 
-        // Campaign Actions.
+        // Subject Actions.
         services
-            .AddScoped<ISourceCatalog<CampaignAction>, CampaignActionCatalog>()
-            .AddScoped<ICatalog<CampaignAction>>(sp => sp.GetRequiredService<ISourceCatalog<CampaignAction>>())
-            .AddDisplayDriver<CampaignAction, CampaignActionDisplayDriver>()
-            .AddDisplayDriver<CampaignAction, TryAgainCampaignActionDisplayDriver>()
-            .AddDisplayDriver<CampaignAction, NewActivityCampaignActionDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<CampaignAction>, CampaignActionHandler>()
-            .AddScoped<ICampaignActionExecutor, DefaultCampaignActionExecutor>();
+            .AddScoped<ISourceCatalog<SubjectAction>, SubjectActionCatalog>()
+            .AddScoped<ICatalog<SubjectAction>>(sp => sp.GetRequiredService<ISourceCatalog<SubjectAction>>())
+            .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
+            .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
+            .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
+            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>();
 
-        services.Configure<CampaignActionOptions>(options =>
+        // Subject Flow Settings.
+        services
+            .AddDisplayDriver<SubjectFlowSettings, SubjectFlowSettingsDisplayDriver>();
+
+        services.Configure<SubjectActionOptions>(options =>
         {
             options.AddActionType(OmnichannelConstants.ActionTypes.Finish, entry =>
             {
@@ -129,7 +131,7 @@ public sealed class Startup : StartupBase
             options.AddActionType(OmnichannelConstants.ActionTypes.NewActivity, entry =>
             {
                 entry.DisplayName = S["New Activity"];
-                entry.Description = S["Creates a brand new activity, optionally targeting a different campaign or subject type."];
+                entry.Description = S["Creates a brand new activity, optionally targeting a different subject type."];
             });
         });
 
@@ -153,7 +155,16 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddDispositionActionsEndpoint();
+        routes.AddSubjectDispositionActionsEndpoint();
+    }
+}
+
+[RequireFeatures("CrestApps.OrchardCore.AI")]
+public sealed class AISubjectFlowStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>();
     }
 }
 

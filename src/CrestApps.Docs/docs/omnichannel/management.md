@@ -1,8 +1,8 @@
 ---
-sidebar_label: "Management (Mini-CRM)"
+sidebar_label: "Management (CRM)"
 sidebar_position: 2
-title: CrestApps Omnichannel Management (Mini-CRM)
-description: Mini-CRM for managing contacts, campaign actions, and activity-driven processes across communication channels.
+title: CrestApps Omnichannel Management (CRM)
+description: Customer Relationship Management (CRM) tools for contacts, subject flows, campaigns, and activity-driven work across communication channels.
 ---
 
 | | |
@@ -14,9 +14,9 @@ Provides way to manage Omnichannel Contacts.
 
 ## Overview
 
-The `CrestApps.OrchardCore.Omnichannel.Managements` module is a **mini-CRM** built on Orchard Core.
+The `CrestApps.OrchardCore.Omnichannel.Managements` module is a lightweight **Customer Relationship Management (CRM)** experience built on Orchard Core.
 
-It provides everything you need to manage **contacts**, define **campaign actions**, and run activity-driven processes (manual or AI-automated) across communication channels such as SMS, Email, and Phone.
+It provides the admin tools you need to manage **contacts**, define **subject-level flows**, group work under **campaigns**, and run activity-driven processes (manual or automated) across channels such as SMS, email, and phone.
 
 ## Core concepts
 
@@ -33,19 +33,35 @@ Subjects are used to describe the nature of the interaction and to define the da
 ### Disposition
 A **Disposition** is the outcome of an activity (e.g. `Completed`, `FollowUp`, `DoNotCall`, `Scheduled`, `Sold`).
 
-Dispositions are a key building block for controlling what happens next via campaign actions.
+Dispositions are a key building block for controlling what happens next via subject actions. Disposition names are unique and become fixed after creation so subject-flow mappings stay stable.
 
 ### Campaign
-A **Campaign** ties together:
+A **Campaign** is now used primarily for **reporting, grouping, and business outcome tracking**.
 
-- The channel to use (SMS / Email / Phone)
-- The campaign actions that define what happens for each disposition
-- The endpoint identity to send from (e.g. phone number for SMS, "from" address for Email)
+Campaigns no longer define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings now live on the subject flow so different subjects inside the same campaign can behave differently.
 
-### Campaign Action
-A **Campaign Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition.
+### Subject Flow
+A **Subject Flow** defines how a specific `OmnichannelSubject` content type behaves.
 
-Each campaign can have multiple actions per disposition, and each action has its own parameters.
+Each subject flow stores:
+
+- the campaign association used for reporting and grouping
+- the interaction type (`Manual` or `Automated`)
+- the communication channel
+- the channel endpoint used for automated work
+- the subject actions that run for each disposition
+
+When the AI feature is enabled, the subject flow editor also adds AI-specific settings for:
+
+- the chat AI profile
+- the subject goal
+- the initial outbound prompt pattern
+- AI update permissions for the contact and subject
+
+### Subject Action
+A **Subject Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition for a given subject type.
+
+Each subject can have multiple actions per disposition, and each action has its own parameters.
 
 **Available action types:**
 
@@ -53,7 +69,7 @@ Each campaign can have multiple actions per disposition, and each action has its
 |------|-------------|
 | **Finish** | Completes the task. No additional actions are taken. |
 | **Try Again** | Creates a retry activity with the same details and an incremented attempt count. Configurable parameters: max attempts, urgency level, assigned user, default schedule hours. |
-| **New Activity** | Creates a brand new activity, optionally targeting a different campaign or subject type. Configurable parameters: target campaign, subject content type, urgency level, assigned user, default schedule hours. |
+| **New Activity** | Creates a brand new activity, optionally targeting a different subject type. The new activity resolves its campaign, interaction type, and channel settings from the target subject flow. |
 
 **Communication preferences:** Every action type can optionally set Do-Not-Call, Do-Not-SMS, Do-Not-Email, and Do-Not-Chat flags on the contact when executed.
 
@@ -63,7 +79,7 @@ An **Activity** is a task to be completed for a contact.
 - **Manual activity**: A user completes the activity in the UI, adds notes, and selects a disposition.
 - **Automated activity**: An AI agent completes the activity through the configured channel.
 
-When an activity is completed, the user selects a disposition and is shown a preview of the campaign actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
+When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
 
 ### Activity Batch
 An **Activity Batch** defines filters to find contacts and then **loads activities in the background**.
@@ -136,20 +152,33 @@ When the import file is not already using E.164 phone numbers, select the defaul
 
 ### 4) Create Dispositions
 
-1. Go to `Omnichannel` → `Dispositions`.
+1. Go to `Interaction Center` → `Dispositions`.
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
+3. After a disposition is created, you can still change its description, but its name remains read-only.
 
 ### 5) Create a Campaign
 
-1. Go to `Omnichannel` → `Campaigns`.
-2. Select a channel (SMS/Email/Phone).
-3. Configure a channel endpoint if needed (e.g. phone number for SMS).
+1. Go to `Interaction Center` → `Campaigns`.
+2. Create the campaign name and description.
+3. Save the campaign.
 
-### 6) Add Campaign Actions
+### 6) Configure Subject Flows
 
-After creating a campaign, scroll to the **Campaign Actions** section at the bottom of the campaign editor.
+After creating your subject content types and campaigns, go to `Interaction Center` → `Subject Flows`.
 
-1. Click **Add Campaign Action**.
+1. Review the list of content types with the `OmnichannelSubject` stereotype.
+2. Click **Configure** next to a subject.
+3. Select the campaign used for reporting and grouping.
+4. Select the interaction type and channel.
+5. If the subject uses automated interactions, configure the channel endpoint.
+6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, and initial outbound prompt pattern fields.
+7. Save the subject flow.
+
+### 7) Manage Flow
+
+After saving the subject flow, click **Manage Flow** from the `Subject Flows` list.
+
+1. Click **Add Action**.
 2. Select an action type (**Finish**, **Try Again**, or **New Activity**).
 3. Choose a disposition and configure the action parameters.
 4. Repeat to add multiple actions per disposition or for different dispositions.
@@ -160,34 +189,35 @@ After creating a campaign, scroll to the **Campaign Actions** section at the bot
 |-------------|-------------|-------|
 | Follow up | Try Again | Max 3 attempts, schedule 24 hours later |
 | Not interested | Finish | Sets Do-Not-Call flag on contact |
-| Sold | New Activity | Creates a new activity in the "Onboarding" campaign |
+| Sold | New Activity | Creates a new activity that targets the `Onboarding` subject |
 | Sold | Finish | Completes the current workflow |
 
-### 7) Create and Load an Activity Batch
+Subjects without any actions show a **Missing flow** badge in the Subject Flows list so you can find incomplete setups quickly.
 
-1. Go to `Omnichannel` → `Activity Batches`.
+### 8) Create and Load an Activity Batch
+
+1. Go to `Interaction Center` → `Activity Batches`.
 2. Create a new batch:
-   - Select the campaign
    - Select contact type
    - Select subject type
-   - Assign agents
+   - Assign users
    - Optionally set lead created range filters
 3. Click `Load`.
 
-The batch will run in the background and will load activities incrementally.
+The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint.
 
-### 8) Complete Activities
+### 9) Complete Activities
 
 1. Open an activity from the activities list.
 2. Review the contact and subject details.
 3. Select a disposition from the dropdown.
-4. A preview appears showing what actions will execute (e.g. "Try Again — schedule date" or "New Activity — target campaign").
+4. A preview appears showing what actions will execute (for example, `Try Again` with a schedule date or `New Activity` targeting another subject).
 5. Adjust the schedule dates if needed.
-6. Click **Complete** to save and execute the campaign actions.
+6. Click **Complete** to save and execute the subject actions.
 
 ### Scheduled activities list
 
-Navigate to **Omnichannel** -> **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
+Navigate to **Interaction Center** -> **Activities** to review scheduled omnichannel work at `Admin/omnichannel/activities`.
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
@@ -225,7 +255,7 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Created from | Date | Filter activities created on or after this date |
 | Created to | Date | Filter activities created on or before this date |
 
-The assigned-user filter is displayed on its own row to make multi-user searches easier to manage.
+The assigned-user filter is displayed on its own row to make multi-user searches easier to manage, and it searches across all users instead of only agent-role users.
 
 Activity rows display an urgency icon so managers can identify priority visually at a glance.
 

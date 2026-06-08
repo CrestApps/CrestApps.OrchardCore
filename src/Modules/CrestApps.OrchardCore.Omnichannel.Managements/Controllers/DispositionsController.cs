@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Services;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -25,8 +25,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 public sealed class DispositionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
+    private const string _displayTextFieldName = "DisplayText";
 
-    private readonly ICatalogManager<OmnichannelDisposition> _manager;
+    private readonly INamedCatalogManager<OmnichannelDisposition> _manager;
+    private readonly INamedCatalog<OmnichannelDisposition> _catalog;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<OmnichannelDisposition> _displayDriver;
@@ -39,6 +41,7 @@ public sealed class DispositionsController : Controller
     /// Initializes a new instance of the <see cref="DispositionsController"/> class.
     /// </summary>
     /// <param name="manager">The manager.</param>
+    /// <param name="catalog">The named catalog.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
@@ -46,7 +49,8 @@ public sealed class DispositionsController : Controller
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DispositionsController(
-        ICatalogManager<OmnichannelDisposition> manager,
+        INamedCatalogManager<OmnichannelDisposition> manager,
+        INamedCatalog<OmnichannelDisposition> catalog,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OmnichannelDisposition> displayManager,
@@ -55,6 +59,7 @@ public sealed class DispositionsController : Controller
         IStringLocalizer<DispositionsController> stringLocalizer)
     {
         _manager = manager;
+        _catalog = catalog;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayManager;
@@ -184,11 +189,20 @@ public sealed class DispositionsController : Controller
 
         if (ModelState.IsValid)
         {
-            await _manager.CreateAsync(model);
+            var existingDisposition = await _catalog.FindByNameAsync(model.Name);
 
-            await _notifier.SuccessAsync(H["A new Disposition has been created successfully."]);
+            if (existingDisposition != null)
+            {
+                ModelState.AddModelError(_displayTextFieldName, S["A disposition with the same name already exists."]);
+            }
 
-            return RedirectToAction(nameof(Index));
+            if (ModelState.IsValid)
+            {
+                await _manager.CreateAsync(model);
+                await _notifier.SuccessAsync(H["A new Disposition has been created successfully."]);
+
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         return View(viewModel);
@@ -215,7 +229,7 @@ public sealed class DispositionsController : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.DisplayText,
+            DisplayName = model.Name,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
@@ -245,19 +259,58 @@ public sealed class DispositionsController : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.DisplayText,
+            DisplayName = model.Name,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _manager.UpdateAsync(model);
+            var dispositionName = model.Name;
+            var existingDisposition = await _catalog.FindByNameAsync(dispositionName);
 
-            await _notifier.SuccessAsync(H["The Disposition has been updated successfully."]);
+            if (existingDisposition != null && !string.Equals(existingDisposition.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(_displayTextFieldName, S["A disposition with the same name already exists."]);
+            }
 
-            return RedirectToAction(nameof(Index));
+            if (ModelState.IsValid)
+            {
+                await _manager.UpdateAsync(model);
+                await _notifier.SuccessAsync(H["The Disposition has been updated successfully."]);
+
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// Deletes the disposition.
+    /// </summary>
+    /// <param name="id">The disposition id.</param>
+    [HttpPost]
+    [ActionName("Delete")]
+    [Admin("omnichannel/dispositions/delete/{id}", "OmnichannelDispositionsDelete")]
+    public async Task<ActionResult> DeletePost(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageDispositions))
+        {
+            return Forbid();
+        }
+
+        var model = await _manager.FindByIdAsync(id);
+
+        if (model == null)
+        {
+            return NotFound();
+        }
+
+        if (await _manager.DeleteAsync(model))
+        {
+            await _notifier.SuccessAsync(H["The Disposition has been deleted successfully."]);
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 }

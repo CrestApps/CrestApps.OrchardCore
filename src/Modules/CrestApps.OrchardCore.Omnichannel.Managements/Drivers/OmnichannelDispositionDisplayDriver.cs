@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -38,7 +38,8 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
     {
         return Initialize<OmnichannelDispositionViewModel>("OmnichannelDispositionFields_Edit", model =>
         {
-            model.DisplayText = disposition.DisplayText;
+            model.IsNew = context.IsNew;
+            model.Name = disposition.Name;
             model.Description = disposition.Description;
         }).Location("Content:1");
     }
@@ -49,12 +50,18 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.DisplayText))
+        if (string.IsNullOrWhiteSpace(model.Name))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Name is a required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
         }
 
-        disposition.DisplayText = model.DisplayText?.Trim();
+        var name = model.Name?.Trim();
+
+        if (context.IsNew)
+        {
+            disposition.Name = name;
+        }
+
         disposition.Description = model.Description?.Trim();
 
         return Edit(disposition, context);

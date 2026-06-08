@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -26,8 +26,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
-    private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
-    private readonly ISourceCatalog<CampaignAction> _actionCatalog;
+    private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
@@ -44,7 +43,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="campaignsCatalog">The campaigns catalog.</param>
     /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
-    /// <param name="actionCatalog">The campaign action catalog.</param>
+    /// <param name="actionCatalog">The subject action catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="clock">The clock.</param>
@@ -56,8 +55,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
-        ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
-        ISourceCatalog<CampaignAction> actionCatalog,
+        ISourceCatalog<SubjectAction> actionCatalog,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
@@ -69,7 +67,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     {
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
-        _channelEndpointsCatalog = channelEndpointsCatalog;
         _actionCatalog = actionCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
@@ -89,8 +86,8 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             model.CampaignId = activity.CampaignId;
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
-            ? (await _localClock.GetLocalNowAsync()).DateTime
-            : activity.ScheduledUtc;
+                ? (await _localClock.GetLocalNowAsync()).DateTime
+                : activity.ScheduledUtc;
             model.SubjectContentType = activity.SubjectContentType;
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
@@ -151,18 +148,18 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
 
-            // Derive distinct dispositions from campaign actions.
+            // Derive distinct dispositions from subject actions.
             var allActions = await _actionCatalog.GetAllAsync();
-            var campaignDispositionIds = allActions
-                .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+            var subjectDispositionIds = allActions
+                .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
                 .Select(a => a.DispositionId)
                 .Where(id => !string.IsNullOrEmpty(id))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (!string.IsNullOrEmpty(activity.DispositionId) && !campaignDispositionIds.Contains(activity.DispositionId))
+            if (!string.IsNullOrEmpty(activity.DispositionId) && !subjectDispositionIds.Contains(activity.DispositionId))
             {
-                campaignDispositionIds.Add(activity.DispositionId);
+                subjectDispositionIds.Add(activity.DispositionId);
             }
 
             model.CampaignId = activity.CampaignId;
@@ -184,7 +181,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 model.Subject = activity.Subject.DisplayText;
             }
 
-            model.Dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
+            model.Dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
             model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;
             model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
@@ -224,10 +221,10 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
             else
             {
-                // Derive valid dispositions from campaign actions.
+                // Derive valid dispositions from subject actions.
                 var allActions = await _actionCatalog.GetAllAsync();
-                var campaignDispositionIds = allActions
-                    .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+                var subjectDispositionIds = allActions
+                    .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
                     .Select(a => a.DispositionId)
                     .Where(id => !string.IsNullOrEmpty(id))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -235,10 +232,10 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
                 if (!string.IsNullOrEmpty(activity.DispositionId))
                 {
-                    campaignDispositionIds.Add(activity.DispositionId);
+                    subjectDispositionIds.Add(activity.DispositionId);
                 }
 
-                var dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
+                var dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
 
                 var disposition = dispositions.FirstOrDefault(d => d.ItemId == processModel.DispositionId);
 

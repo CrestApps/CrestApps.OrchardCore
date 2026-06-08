@@ -29,6 +29,6 @@ This feature depends on:
 ## How it fits with the other Omnichannel docs
 
 - Use [Omnichannel Communications](./) for the shared base concepts and webhook entry point.
-- Use [Management (Mini-CRM)](./management) for campaigns, activities, contact management, and bulk operations.
+- Use [Management (CRM)](./management) for campaigns, subject flows, activities, contact management, and bulk operations.
 - Use [SMS Automation](./sms) when you need AI-driven SMS activity handling.
 - Use [Azure Event Grid](./event-grid) when inbound events are delivered through Event Grid instead of direct provider delivery.

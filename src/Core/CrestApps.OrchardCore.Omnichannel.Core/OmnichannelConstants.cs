@@ -154,5 +154,10 @@ public static class OmnichannelConstants
         /// Gets the permission to manage channel endpoints.
         /// </summary>
         public readonly static Permission ManageChannelEndpoints = new("ManageChannelEndpoints", "Manage channel endpoints");
+
+        /// <summary>
+        /// Gets the permission to manage subject flows.
+        /// </summary>
+        public readonly static Permission ManageSubjectFlows = new("ManageSubjectFlows", "Manage subject flows");
     }
 }

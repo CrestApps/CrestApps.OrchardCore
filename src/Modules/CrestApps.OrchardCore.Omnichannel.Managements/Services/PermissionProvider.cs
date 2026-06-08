@@ -22,6 +22,7 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ManageCampaigns,
         OmnichannelConstants.Permissions.ManageChannelEndpoints,
         OmnichannelConstants.Permissions.ManageActivityBatches,
+        OmnichannelConstants.Permissions.ManageSubjectFlows,
     ];
 
     /// <summary>

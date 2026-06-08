@@ -1,4 +1,3 @@
-﻿using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -20,7 +19,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
-    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ILocalClock _localClock;
@@ -31,21 +29,18 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelActivityBatchDisplayDriver"/> class.
     /// </summary>
-    /// <param name="campaignCatalog">The campaign catalog.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
-        ICatalog<OmnichannelCampaign> campaignCatalog,
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
         ILocalClock localClock,
         ISession session,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
-        _campaignCatalog = campaignCatalog;
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
         _localClock = localClock;
@@ -75,7 +70,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {
             model.DisplayText = batch.DisplayText;
-            model.CampaignId = batch.CampaignId;
             model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
@@ -89,8 +83,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.LeadCreatedFrom = batch.LeadCreatedFrom;
             model.LeadCreatedTo = batch.LeadCreatedTo;
             model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
-
-            model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -157,11 +149,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
         }
 
-        if (string.IsNullOrEmpty(model.CampaignId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is required."]);
-        }
-
         if (string.IsNullOrEmpty(model.ContactContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
@@ -178,7 +165,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         }
 
         batch.DisplayText = model.DisplayText?.Trim();
-        batch.CampaignId = model.CampaignId;
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
 

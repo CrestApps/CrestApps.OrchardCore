@@ -44,6 +44,13 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Permission(OmnichannelConstants.Permissions.ManageActivityBatches)
                     .LocalNav()
                 )
+                .Add(S["Subject Flows"], S["Subject Flows"].PrefixPosition(), subjectFlows => subjectFlows
+                    .AddClass("subject-flows")
+                    .Id("subjectFlows")
+                    .Action("Index", "SubjectFlows", "CrestApps.OrchardCore.Omnichannel.Managements")
+                    .Permission(OmnichannelConstants.Permissions.ManageSubjectFlows)
+                    .LocalNav()
+                )
                 .Add(S["Campaigns"], S["Campaigns"].PrefixPosition(), campaigns => campaigns
                     .AddClass("Campaigns")
                     .Id("Campaigns")

@@ -83,7 +83,7 @@
         {
             id = "bulk-filter-assigned-user-selector",
             inputName = Html.NameFor(m => m.AssignedToUserIds),
-            endpoint = Url.Content(Model.UserSearchEndpoint),
+            endpoint = Model.UserSearchEndpoint,
             initialItemsJson = Model.SelectedAssignedUsersJson,
             multiple = true,
             enableSearch = true,

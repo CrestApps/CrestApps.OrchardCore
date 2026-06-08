@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
@@ -16,6 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<BulkManageOmnichannelActivityContainer>
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly LinkGenerator _linkGenerator;
 
     internal readonly IStringLocalizer S;
 
@@ -23,12 +25,15 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
     /// Initializes a new instance of the <see cref="BulkManageActivityActionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="linkGenerator">The link generator.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityActionsDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
+        LinkGenerator linkGenerator,
         IStringLocalizer<BulkManageActivityActionsDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _linkGenerator = linkGenerator;
         S = stringLocalizer;
     }
 
@@ -57,7 +62,7 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
-            vm.UserSearchEndpoint = "~/Admin/api/crestapps/users/search?valueType=userId";
+            vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
             vm.TotalCount = model.TotalCount;
         }).Location("Content:5");
     }

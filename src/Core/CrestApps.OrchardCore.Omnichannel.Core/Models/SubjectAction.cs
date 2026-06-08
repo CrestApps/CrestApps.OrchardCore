@@ -6,7 +6,10 @@ using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class CampaignAction : SourceCatalogEntry, IDisplayTextAwareModel, ICloneable<CampaignAction>
+/// <summary>
+/// Represents an action that executes when a subject disposition is selected during activity completion.
+/// </summary>
+public sealed class SubjectAction : SourceCatalogEntry, IDisplayTextAwareModel, ICloneable<SubjectAction>
 {
     /// <summary>
     /// Gets or sets the display text for this action.
@@ -14,9 +17,9 @@ public sealed class CampaignAction : SourceCatalogEntry, IDisplayTextAwareModel,
     public string DisplayText { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign identifier this action belongs to.
+    /// Gets or sets the subject content type this action belongs to.
     /// </summary>
-    public string CampaignId { get; set; }
+    public string SubjectContentType { get; set; }
 
     /// <summary>
     /// Gets or sets the disposition identifier that triggers this action.
@@ -43,20 +46,32 @@ public sealed class CampaignAction : SourceCatalogEntry, IDisplayTextAwareModel,
     /// </summary>
     public bool? SetDoNotChat { get; set; }
 
+    /// <summary>
+    /// Gets or sets the date and time the action was created.
+    /// </summary>
     public DateTime CreatedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the author who created this action.
+    /// </summary>
     public string Author { get; set; }
 
+    /// <summary>
+    /// Gets or sets the owner identifier.
+    /// </summary>
     public string OwnerId { get; set; }
 
-    public CampaignAction Clone()
+    /// <summary>
+    /// Creates a copy of the current subject action.
+    /// </summary>
+    public SubjectAction Clone()
     {
-        return new CampaignAction
+        return new SubjectAction
         {
             ItemId = ItemId,
             Source = Source,
             DisplayText = DisplayText,
-            CampaignId = CampaignId,
+            SubjectContentType = SubjectContentType,
             DispositionId = DispositionId,
             SetDoNotCall = SetDoNotCall,
             SetDoNotSms = SetDoNotSms,

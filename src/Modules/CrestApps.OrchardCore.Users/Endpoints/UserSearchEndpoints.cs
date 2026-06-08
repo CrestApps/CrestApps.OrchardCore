@@ -14,10 +14,13 @@ namespace CrestApps.OrchardCore.Users.Endpoints;
 
 internal static class UserSearchEndpoints
 {
+    public const string RouteName = "CrestApps.Users.Search";
+
     public static IEndpointRouteBuilder AddUserSearchEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapGet("Admin/api/crestapps/users/search", HandleAsync)
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .WithName(RouteName);
 
         return builder;
     }

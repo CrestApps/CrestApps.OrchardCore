@@ -249,7 +249,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // we use deferred task here to ensure that we don't hold current process for a longer running
                     // AI conclusion detection.
                     var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
-                    var actionCatalog = scope.ServiceProvider.GetRequiredService<ISourceCatalog<CampaignAction>>();
+                    var actionCatalog = scope.ServiceProvider.GetRequiredService<ISourceCatalog<SubjectAction>>();
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
 
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
@@ -257,13 +257,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
                     var allActions = await actionCatalog.GetAllAsync();
-                    var campaignDispositionIds = allActions
-                        .Where(a => string.Equals(a.CampaignId, campaign.ItemId, StringComparison.OrdinalIgnoreCase))
+                    var subjectDispositionIds = allActions
+                        .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
                         .Select(a => a.DispositionId)
                         .Where(id => !string.IsNullOrEmpty(id))
                         .Distinct()
                         .ToList();
-                    var dispositions = await dispositionCatalog.GetAsync(campaignDispositionIds);
+                    var dispositions = await dispositionCatalog.GetAsync(subjectDispositionIds);
 
                     var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, campaign.DeploymentName, campaign.ProviderName);
 
@@ -285,7 +285,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Campaign Goal: {campaign.CampaignGoal}
-                        List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, Name = x.DisplayText, x.Description }))}
+                        List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, x.Name, x.Description }))}
 
                         """;
 
@@ -294,7 +294,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
 
                         userPrompt +=
-
                             $"""
                             Subject: {JsonSerializer.Serialize(activity.Subject, _jsonSerializerOptions.SerializerOptions)}
                             """;
@@ -354,7 +353,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         if (result.Result.Concluded)
                         {
                             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-                            var executor = scope.ServiceProvider.GetRequiredService<ICampaignActionExecutor>();
+                            var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
 
                             omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
@@ -374,7 +373,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                             var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
 
-                            await executor.ExecuteAsync(new CampaignActionExecutionContext
+                            await executor.ExecuteAsync(new SubjectActionExecutionContext
                             {
                                 Activity = omnichannelActivity,
                                 Contact = contact,

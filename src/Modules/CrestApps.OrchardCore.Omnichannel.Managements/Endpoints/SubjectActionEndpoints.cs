@@ -14,25 +14,27 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 
-internal static class CampaignActionEndpoints
+internal static class SubjectActionEndpoints
 {
-    public static IEndpointRouteBuilder AddDispositionActionsEndpoint(this IEndpointRouteBuilder builder)
+    public const string SubjectDispositionActionsRouteName = "CrestApps.Omnichannel.SubjectDispositionActions";
+
+    public static IEndpointRouteBuilder AddSubjectDispositionActionsEndpoint(this IEndpointRouteBuilder builder)
     {
-        builder.MapPost("api/omnichannel/disposition-actions", HandleAsync)
+        builder.MapPost("api/omnichannel/subject-disposition-actions", HandleAsync)
             .AllowAnonymous()
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithName(SubjectDispositionActionsRouteName);
 
         return builder;
     }
 
     private static async Task<IResult> HandleAsync(
-        DispositionActionsRequest request,
+        SubjectDispositionActionsRequest request,
         IAuthorizationService authorizationService,
-        ISourceCatalog<CampaignAction> actionCatalog,
-        ICatalog<OmnichannelDisposition> dispositionCatalog,
-        IOptions<CampaignActionOptions> actionOptions,
+        ISourceCatalog<SubjectAction> actionCatalog,
+        IOptions<SubjectActionOptions> actionOptions,
         IContentDefinitionManager contentDefinitionManager,
-        IStringLocalizer<CampaignActionEndpointsMarker> S,
+        IStringLocalizer<SubjectActionEndpointsMarker> S,
         IClock clock,
         HttpContext httpContext)
     {
@@ -41,7 +43,7 @@ internal static class CampaignActionEndpoints
             return Results.Forbid();
         }
 
-        if (string.IsNullOrEmpty(request?.CampaignId) || string.IsNullOrEmpty(request?.DispositionId))
+        if (string.IsNullOrEmpty(request?.SubjectContentType) || string.IsNullOrEmpty(request?.DispositionId))
         {
             return Results.BadRequest();
         }
@@ -49,7 +51,7 @@ internal static class CampaignActionEndpoints
         var allActions = await actionCatalog.GetAllAsync();
 
         var actions = allActions
-            .Where(a => string.Equals(a.CampaignId, request.CampaignId, StringComparison.OrdinalIgnoreCase)
+            .Where(a => string.Equals(a.SubjectContentType, request.SubjectContentType, StringComparison.OrdinalIgnoreCase)
                      && string.Equals(a.DispositionId, request.DispositionId, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
@@ -100,7 +102,7 @@ internal static class CampaignActionEndpoints
 
             var previewTitle = await ResolvePreviewTitleAsync(action, request, contentDefinitionManager, S);
 
-            return new DispositionActionResponse
+            return new SubjectDispositionActionResponse
             {
                 ActionId = action.ItemId,
                 ActionType = action.Source,
@@ -112,7 +114,7 @@ internal static class CampaignActionEndpoints
         }));
 
         var result = responses
-            .OfType<DispositionActionResponse>()
+            .OfType<SubjectDispositionActionResponse>()
             .OrderBy(x => x.RequiresScheduleDate ? 1 : 0)
             .ThenBy(x => x.DefaultScheduleDate)
             .ToArray();
@@ -121,8 +123,8 @@ internal static class CampaignActionEndpoints
     }
 
     private static async Task<string> ResolvePreviewTitleAsync(
-        CampaignAction action,
-        DispositionActionsRequest request,
+        SubjectAction action,
+        SubjectDispositionActionsRequest request,
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer stringLocalizer)
     {
@@ -149,7 +151,7 @@ internal static class CampaignActionEndpoints
         }
         else
         {
-            subjectContentType = request?.CurrentSubjectContentType;
+            subjectContentType = request?.SubjectContentType;
         }
 
         if (string.IsNullOrWhiteSpace(subjectContentType))
@@ -184,36 +186,63 @@ internal static class CampaignActionEndpoints
         return $"{number}{suffix}";
     }
 
-    private sealed class CampaignActionEndpointsMarker
+    private sealed class SubjectActionEndpointsMarker
     {
-
     }
 }
 
-internal sealed class DispositionActionsRequest
+internal sealed class SubjectDispositionActionsRequest
 {
-    public string CampaignId { get; set; }
+    /// <summary>
+    /// Gets or sets the subject content type to look up actions for.
+    /// </summary>
+    public string SubjectContentType { get; set; }
 
+    /// <summary>
+    /// Gets or sets the disposition identifier.
+    /// </summary>
     public string DispositionId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the current subject title for preview purposes.
+    /// </summary>
     public string CurrentSubjectTitle { get; set; }
 
-    public string CurrentSubjectContentType { get; set; }
-
+    /// <summary>
+    /// Gets or sets the current attempt number for preview purposes.
+    /// </summary>
     public int CurrentAttempts { get; set; }
 }
 
-internal sealed class DispositionActionResponse
+internal sealed class SubjectDispositionActionResponse
 {
+    /// <summary>
+    /// Gets or sets the action identifier.
+    /// </summary>
     public string ActionId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the action type.
+    /// </summary>
     public string ActionType { get; set; }
 
+    /// <summary>
+    /// Gets or sets the action type display name.
+    /// </summary>
     public string ActionTypeDisplayName { get; set; }
 
+    /// <summary>
+    /// Gets or sets the preview title.
+    /// </summary>
     public string PreviewTitle { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this action requires a schedule date.
+    /// </summary>
     public bool RequiresScheduleDate { get; set; }
 
+    /// <summary>
+    /// Gets or sets the default schedule date.
+    /// </summary>
     public DateTime? DefaultScheduleDate { get; set; }
 }

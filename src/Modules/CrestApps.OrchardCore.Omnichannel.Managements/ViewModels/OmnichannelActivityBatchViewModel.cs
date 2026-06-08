@@ -22,11 +22,6 @@ public class OmnichannelActivityBatchViewModel
     public DateTime? ScheduleAt { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign id.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
     /// Gets or sets the subject content type.
     /// </summary>
     public string SubjectContentType { get; set; }
@@ -93,12 +88,6 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public OmnichannelActivityBatchStatus Status { get; set; }
-
-    /// <summary>
-    /// Gets or sets the campaigns.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Campaigns { get; set; }
 
     /// <summary>
     /// Gets or sets the subject content types.
