@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.DncRegistry.Indexes;
 
 /// <summary>
 /// Index provider that maps <see cref="LocalDncEntry"/> documents to <see cref="LocalDncEntryIndex"/>.
-/// Phone numbers are stored in E.164 format and indexed directly.
+/// Phone numbers are stored in E.164 format and indexed directly, with one index row per phone number.
 /// </summary>
 public sealed class LocalDncEntryIndexProvider : IndexProvider<LocalDncEntry>
 {
@@ -21,12 +21,40 @@ public sealed class LocalDncEntryIndexProvider : IndexProvider<LocalDncEntry>
     public override void Describe(DescribeContext<LocalDncEntry> context)
     {
         context.For<LocalDncEntryIndex>()
-            .Map(entry => new LocalDncEntryIndex
+            .Map(MapIndexes);
+    }
+
+    internal static IEnumerable<LocalDncEntryIndex> MapIndexes(LocalDncEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (entry.Records is { Count: > 0 })
+        {
+            return entry.Records
+                .Where(record => !string.IsNullOrWhiteSpace(record.PhoneNumber))
+                .Select(record => new LocalDncEntryIndex
+                {
+                    EntryId = record.EntryId,
+                    ListId = entry.ListId,
+                    CountryCode = entry.CountryCode,
+                    PhoneNumber = record.PhoneNumber,
+                });
+        }
+
+        if (string.IsNullOrWhiteSpace(entry.PhoneNumber))
+        {
+            return [];
+        }
+
+        return
+        [
+            new LocalDncEntryIndex
             {
                 EntryId = entry.EntryId,
                 ListId = entry.ListId,
                 CountryCode = entry.CountryCode,
                 PhoneNumber = entry.PhoneNumber,
-            });
+            }
+        ];
     }
 }

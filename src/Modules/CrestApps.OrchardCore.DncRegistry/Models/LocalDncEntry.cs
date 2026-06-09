@@ -1,13 +1,14 @@
 namespace CrestApps.OrchardCore.DncRegistry.Models;
 
 /// <summary>
-/// Represents a single phone number entry in a local do-not-call list.
-/// Phone numbers are stored in a normalized (digits-only) format for consistent matching.
+/// Represents a batch of phone number entries in a local do-not-call list.
+/// New documents store many phone numbers per document to reduce document-table usage
+/// while keeping one index row per phone number for lookups.
 /// </summary>
 public sealed class LocalDncEntry
 {
     /// <summary>
-    /// Gets or sets the unique identifier for this entry.
+    /// Gets or sets the unique identifier for this entry batch.
     /// </summary>
     public string EntryId { get; set; }
 
@@ -22,7 +23,13 @@ public sealed class LocalDncEntry
     public string CountryCode { get; set; }
 
     /// <summary>
-    /// Gets or sets the normalized phone number (digits only).
+    /// Gets or sets the legacy single phone number stored by older documents.
+    /// New batched documents leave this property empty and use <see cref="Records"/> instead.
     /// </summary>
     public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number records stored in this batch document.
+    /// </summary>
+    public List<LocalDncEntryRecord> Records { get; set; }
 }

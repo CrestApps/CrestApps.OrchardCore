@@ -70,6 +70,7 @@ The **Local DNC Registry** feature (`CrestApps.OrchardCore.DncRegistry.Local`) a
 - **Country-based organization**: Each list is associated with a specific country (ISO 3166-1 alpha-2 code)
 - **Filtering by country**: When checking numbers, you can filter against a specific country's list or check all countries
 - **List replacement**: Delete old lists and upload replacements (e.g., monthly DNC updates)
+- **Storage-efficient batching**: The importer stores up to 5,000 phone numbers per YesSql document while still creating one `LocalDncEntryIndex` row per number for fast duplicate and registry checks
 - **Phone number normalization**: Uploaded phone numbers are normalized to [E.164](https://en.wikipedia.org/wiki/E.164) format (`+<country code><subscriber number>`, e.g., `+17024993350`) using [libphonenumber](https://github.com/twcclegg/libphonenumber-csharp). This globally unique format eliminates ambiguity between countries and provides a consistent comparison key.
 
 ### Managing local lists
@@ -81,6 +82,8 @@ Navigate to **Interaction Center** -> **Local DNC Registry** to:
 3. **Delete a list** — remove a list and all its phone numbers from the list grid when it is no longer needed
 
 After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
+
+Internally, local DNC imports batch up to **5,000** normalized phone numbers into each stored YesSql document. Each phone number still gets its own `LocalDncEntryIndex` record, so duplicate detection and registry lookups continue to query one row per phone number while the backing document count stays much smaller.
 
 ### CSV file format
 

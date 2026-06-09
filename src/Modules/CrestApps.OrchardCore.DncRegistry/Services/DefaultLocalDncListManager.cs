@@ -17,7 +17,10 @@ namespace CrestApps.OrchardCore.DncRegistry.Services;
 /// </summary>
 internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 {
-    private const int BatchSize = 100;
+    // 5,000 records keeps each serialized batch document comfortably below 512 KB even
+    // with 26-character record ids and max-length E.164 phone numbers, which is far below
+    // the practical text-column limits of the databases supported by YesSql.
+    private const int BatchSize = 5000;
     private const int DeleteBatchSize = 500;
 
     private readonly ISession _session;
@@ -458,10 +461,12 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             try
             {
-                var entries = (await batchSession.Query<LocalDncEntry, LocalDncEntryIndex>(
+                var entries = (await batchSession.QueryIndex<LocalDncEntryIndex>(
                     i => i.ListId == listId, collection: DncRegistryConstants.CollectionName)
                     .Take(DeleteBatchSize)
                     .ListAsync(cancellationToken))
+                    .GroupBy(entry => entry.EntryId, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
                     .ToList();
 
                 if (entries.Count == 0)
@@ -548,7 +553,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         using var reader = new StreamReader(fileStream);
         var seenNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rowIndex = 0;
-        var batchEntries = new List<LocalDncEntry>(BatchSize);
+        var batchEntries = new List<LocalDncEntryRecord>(BatchSize);
 
         // When resuming, load already-imported phone numbers to prevent duplicates.
         if (skipRows > 0)
@@ -558,7 +563,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             try
             {
-                var existingEntries = await lookupSession.Query<LocalDncEntry, LocalDncEntryIndex>(
+                var existingEntries = await lookupSession.QueryIndex<LocalDncEntryIndex>(
                     i => i.ListId == list.ListId, collection: DncRegistryConstants.CollectionName)
                     .ListAsync(cancellationToken);
 
@@ -628,11 +633,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 continue;
             }
 
-            batchEntries.Add(new LocalDncEntry
+            batchEntries.Add(new LocalDncEntryRecord
             {
                 EntryId = IdGenerator.GenerateId(),
-                ListId = list.ListId,
-                CountryCode = list.CountryCode,
                 PhoneNumber = e164Number,
             });
 
@@ -662,7 +665,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     /// </summary>
     private async Task<bool> FlushBatchAndUpdateProgressAsync(
         LocalDncList list,
-        List<LocalDncEntry> entries,
+        List<LocalDncEntryRecord> entries,
         CancellationToken cancellationToken)
     {
         list.ProcessSaveUtc = _clock.UtcNow;
@@ -685,9 +688,11 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             if (trackedList.Status == LocalDncListStatus.Paused || trackedList.Status == LocalDncListStatus.Deleting)
             {
                 // Save entries that are already in this batch so we don't lose work.
-                foreach (var entry in entries)
+                var batchEntry = CreateBatchEntry(list, entries);
+
+                if (batchEntry != null)
                 {
-                    await batchSession.SaveAsync(entry, false, DncRegistryConstants.CollectionName, cancellationToken);
+                    await batchSession.SaveAsync(batchEntry, false, DncRegistryConstants.CollectionName, cancellationToken);
                 }
 
                 // Update progress counters but preserve the externally-set status.
@@ -715,9 +720,11 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             batchSession.Save(trackedList, collection: DncRegistryConstants.CollectionName);
 
-            foreach (var entry in entries)
+            var persistedEntry = CreateBatchEntry(list, entries);
+
+            if (persistedEntry != null)
             {
-                await batchSession.SaveAsync(entry, false, DncRegistryConstants.CollectionName, cancellationToken);
+                await batchSession.SaveAsync(persistedEntry, false, DncRegistryConstants.CollectionName, cancellationToken);
             }
 
             await batchSession.SaveChangesAsync(cancellationToken);
@@ -729,6 +736,24 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             entries.Clear();
             await batchSession.DisposeAsync();
         }
+    }
+
+    private static LocalDncEntry CreateBatchEntry(
+        LocalDncList list,
+        List<LocalDncEntryRecord> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return null;
+        }
+
+        return new LocalDncEntry
+        {
+            EntryId = IdGenerator.GenerateId(),
+            ListId = list.ListId,
+            CountryCode = list.CountryCode,
+            Records = new List<LocalDncEntryRecord>(entries),
+        };
     }
 
     private static void AddRowError(LocalDncList list, int rowIndex, string errorMessage)

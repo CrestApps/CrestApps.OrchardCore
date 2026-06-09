@@ -91,20 +91,20 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
 
         var e164Numbers = e164Map.Keys.ToList();
 
-        IQuery<LocalDncEntry> query;
+        IQueryIndex<LocalDncEntryIndex> query;
 
         if (!string.IsNullOrWhiteSpace(context?.CountryCode))
         {
             var upperCountry = context.CountryCode.ToUpperInvariant();
 
-            query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
+            query = _session.QueryIndex<LocalDncEntryIndex>(
                 i => i.PhoneNumber.IsIn(e164Numbers) &&
                      i.CountryCode == upperCountry,
                 collection: DncRegistryConstants.CollectionName);
         }
         else
         {
-            query = _session.Query<LocalDncEntry, LocalDncEntryIndex>(
+            query = _session.QueryIndex<LocalDncEntryIndex>(
                 i => i.PhoneNumber.IsIn(e164Numbers),
                 collection: DncRegistryConstants.CollectionName);
         }
