@@ -16,8 +16,10 @@
 <form asp-action="CreateAction" method="post">
     @await DisplayAsync(Model.Editor)
 
-    <div class="mb-3">
-        <button class="btn btn-primary" type="submit">@T["Create"]</button>
-        <a class="btn btn-secondary" asp-action="Configure" asp-controller="SubjectFlows" asp-route-subjectContentType="@Model.SubjectContentType">@T["Cancel"]</a>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Create"]</button>
+            <a class="btn btn-secondary" asp-action="Configure" asp-controller="SubjectFlows" asp-route-subjectContentType="@Model.SubjectContentType">@T["Cancel"]</a>
+        </div>
     </div>
 </form>

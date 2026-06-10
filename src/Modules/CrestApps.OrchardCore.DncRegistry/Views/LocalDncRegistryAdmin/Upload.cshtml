@@ -19,9 +19,11 @@
         <form asp-action="Upload" asp-controller="LocalDncRegistryAdmin" method="post" enctype="multipart/form-data">
             @await DisplayAsync(Model)
 
-            <div class="mb-3 mt-2">
-                <button type="submit" class="btn btn-primary">@T["Upload"]</button>
-                <a asp-action="Index" asp-controller="LocalDncRegistryAdmin" class="btn btn-secondary">@T["Cancel"]</a>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <button type="submit" class="btn btn-primary">@T["Upload"]</button>
+                    <a asp-action="Index" asp-controller="LocalDncRegistryAdmin" class="btn btn-secondary">@T["Cancel"]</a>
+                </div>
             </div>
         </form>
     </div>
