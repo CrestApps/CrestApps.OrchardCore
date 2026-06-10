@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -58,10 +59,8 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
 
             _evaluatedContentTypes[contentItem.ContentType] = contentTypeDefinition;
 
-            if (contentTypeDefinition.Parts.Any(x => x.Name == "ListPart"))
+            if (!contentTypeDefinition.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
             {
-                // When a content has a 'ListPart', we need a way to inject "List Activities" button into the 'ListPartNavigationAdmin' in OrchardCore.
-
                 return null;
             }
 

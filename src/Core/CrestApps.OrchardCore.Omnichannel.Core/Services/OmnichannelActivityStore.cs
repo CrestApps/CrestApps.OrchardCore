@@ -98,10 +98,23 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             .ThenBy(x => x.Id);
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
+        var totalCount = await filteredQuery.CountAsync(cancellationToken);
+
+        if (filter.Limit.HasValue && filter.Limit.Value > 0)
+        {
+            totalCount = Math.Min(totalCount, filter.Limit.Value);
+        }
+
+        var take = filter.Limit.HasValue && filter.Limit.Value > 0
+            ? Math.Min(pageSize, Math.Max(0, filter.Limit.Value - skip))
+            : pageSize;
+
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await filteredQuery.CountAsync(cancellationToken),
-            Entries = (await orderedQuery.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
+            Count = totalCount,
+            Entries = take > 0
+                ? (await orderedQuery.Skip(skip).Take(take).ListAsync(cancellationToken)).ToArray()
+                : [],
         };
     }
 

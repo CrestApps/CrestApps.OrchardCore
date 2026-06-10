@@ -9,6 +9,8 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -24,6 +26,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly LinkGenerator _linkGenerator;
     private readonly ISession _session;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -33,16 +36,19 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="linkGenerator">The link generator.</param>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityFilterDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         LinkGenerator linkGenerator,
         ISession session,
+        IClock clock,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _linkGenerator = linkGenerator;
         _session = session;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -65,6 +71,12 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd");
             model.CreatedFrom = filter.CreatedFrom?.ToString("yyyy-MM-dd");
             model.CreatedTo = filter.CreatedTo?.ToString("yyyy-MM-dd");
+            model.Limit = filter.Limit;
+            model.PhoneNumber = filter.PhoneNumber;
+            model.PhoneNumberMatchType = filter.PhoneNumberMatchType;
+            model.TimeZoneIds = filter.TimeZoneIds ?? [];
+            model.DoNotCallFrom = filter.DoNotCallFrom?.ToString("yyyy-MM-dd");
+            model.DoNotCallTo = filter.DoNotCallTo?.ToString("yyyy-MM-dd");
 
             model.ContactPublishedOptions =
             [
@@ -110,6 +122,13 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["5- attempts"], "5-"),
             ];
 
+            model.PhoneNumberMatchTypes =
+            [
+                new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
+                new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
+                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
+            ];
+
             var subjectContentTypes = new List<SelectListItem>()
             {
                 new(S["Any subject"], ""),
@@ -124,6 +143,15 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             }
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+
+            var timeZones = new List<SelectListItem>();
+
+            foreach (var timeZone in _clock.GetTimeZones())
+            {
+                timeZones.Add(new SelectListItem(timeZone.TimeZoneId, timeZone.TimeZoneId));
+            }
+
+            model.TimeZones = timeZones.OrderBy(x => x.Text);
 
             model.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
 
@@ -154,6 +182,17 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.ScheduledTo = null;
         filter.CreatedFrom = null;
         filter.CreatedTo = null;
+        filter.Limit = model.Limit;
+        filter.PhoneNumber = model.PhoneNumber?.Trim();
+        filter.PhoneNumberMatchType = model.PhoneNumberMatchType;
+        filter.TimeZoneIds = model.TimeZoneIds;
+        filter.DoNotCallFrom = null;
+        filter.DoNotCallTo = null;
+
+        if (!string.IsNullOrEmpty(filter.PhoneNumber) && !filter.PhoneNumber.StartsWith('+'))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+        }
 
         if (!string.IsNullOrEmpty(model.ContactIsPublished) && bool.TryParse(model.ContactIsPublished, out var isPublished))
         {
@@ -183,6 +222,16 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         if (!string.IsNullOrEmpty(model.CreatedTo) && DateTime.TryParseExact(model.CreatedTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdTo))
         {
             filter.CreatedTo = createdTo;
+        }
+
+        if (!string.IsNullOrEmpty(model.DoNotCallFrom) && DateTime.TryParseExact(model.DoNotCallFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncFrom))
+        {
+            filter.DoNotCallFrom = dncFrom;
+        }
+
+        if (!string.IsNullOrEmpty(model.DoNotCallTo) && DateTime.TryParseExact(model.DoNotCallTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncTo))
+        {
+            filter.DoNotCallTo = dncTo;
         }
 
         // Populate route values for pagination link generation.
@@ -238,6 +287,35 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             {
                 filter.RouteValues.TryAdd($"{Prefix}.AssignedToUserIds[{i}]", filter.AssignedToUserIds[i]);
             }
+        }
+
+        if (filter.Limit.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".Limit", filter.Limit.Value.ToString());
+        }
+
+        if (!string.IsNullOrEmpty(filter.PhoneNumber))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".PhoneNumber", filter.PhoneNumber);
+            filter.RouteValues.TryAdd(Prefix + ".PhoneNumberMatchType", filter.PhoneNumberMatchType.ToString());
+        }
+
+        if (filter.TimeZoneIds is { Length: > 0 })
+        {
+            for (var i = 0; i < filter.TimeZoneIds.Length; i++)
+            {
+                filter.RouteValues.TryAdd($"{Prefix}.TimeZoneIds[{i}]", filter.TimeZoneIds[i]);
+            }
+        }
+
+        if (filter.DoNotCallFrom.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallFrom", filter.DoNotCallFrom.Value.ToString("yyyy-MM-dd"));
+        }
+
+        if (filter.DoNotCallTo.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-dd"));
         }
 
         return Edit(filter, context);

@@ -18,7 +18,10 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
+using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
+using YesSql;
+using IYesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -26,6 +29,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
+    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
@@ -34,6 +38,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly UserManager<IUser> _userManager;
     private readonly IContentManager _contentManager;
+    private readonly IYesSqlSession _session;
 
     internal readonly IStringLocalizer S;
 
@@ -42,7 +47,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// </summary>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="campaignsCatalog">The campaigns catalog.</param>
-    /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
+    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
     /// <param name="actionCatalog">The subject action catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
@@ -50,11 +55,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="localClock">The local clock.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="contentManager">The content manager.</param>
+    /// <param name="session">The YesSql session.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
+        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
         ISourceCatalog<SubjectAction> actionCatalog,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
@@ -62,11 +69,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ILocalClock localClock,
         UserManager<IUser> userManager,
         IContentManager contentManager,
+        IYesSqlSession session,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<OmnichannelActivityDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
+        _flowSettingsCatalog = flowSettingsCatalog;
         _actionCatalog = actionCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
@@ -74,6 +83,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _localClock = localClock;
         _userManager = userManager;
         _contentManager = contentManager;
+        _session = session;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -84,7 +94,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
-            model.CampaignId = activity.CampaignId;
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
                 ? (await _localClock.GetLocalNowAsync()).DateTime
                 : activity.ScheduledUtc;
@@ -92,8 +101,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
             model.UrgencyLevel = activity.UrgencyLevel;
-
-            model.Campaigns = (await _campaignsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -116,17 +123,15 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
             }
 
-            var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
+            var users = await _session.Query<User, UserIndex>(x => x.IsEnabled).ListAsync();
 
             var usersListItems = new List<SelectListItem>();
 
             foreach (var user in users)
             {
-                var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
-
                 var displayName = await _displayNameProvider.GetAsync(user);
 
-                usersListItems.Add(new SelectListItem(displayName, userId));
+                usersListItems.Add(new SelectListItem(displayName, user.UserId));
             }
 
             model.UrgencyLevels =
@@ -272,19 +277,19 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             OmnichannelCampaign campaign = null;
 
-            if (string.IsNullOrEmpty(model.CampaignId))
+            if (!string.IsNullOrEmpty(model.SubjectContentType))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is required."]);
-            }
-            else
-            {
-                campaign = await _campaignsCatalog.FindByIdAsync(model.CampaignId);
+                // Resolve the campaign from SubjectFlowSettings based on the selected subject.
+                var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
+                var flowSettings = allFlowSettings.FirstOrDefault(f =>
+                    string.Equals(f.SubjectContentType, model.SubjectContentType, StringComparison.OrdinalIgnoreCase));
 
-                if (campaign is null)
+                if (flowSettings is not null && !string.IsNullOrEmpty(flowSettings.CampaignId))
                 {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected Campaign is invalid."]);
+                    campaign = await _campaignsCatalog.FindByIdAsync(flowSettings.CampaignId);
                 }
-                else
+
+                if (campaign is not null)
                 {
                     activity.Channel = campaign.Channel;
                 }
@@ -314,7 +319,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             {
                 activity.ChannelEndpointId = campaign.ChannelEndpointId;
                 activity.InteractionType = campaign.InteractionType;
-                activity.CampaignId = model.CampaignId;
+                activity.CampaignId = campaign.ItemId;
             }
 
             activity.SubjectContentType = model.SubjectContentType;

@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using System.Globalization
 
@@ -6,6 +7,7 @@
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 @{
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
@@ -22,6 +24,39 @@
             <select asp-for="ContactIsPublished" asp-items="Model.ContactPublishedOptions" class="form-select form-select-sm"></select>
         </div>
     }
+
+    <div class="col-lg-6">
+        <div class="input-group input-group-sm">
+            <select asp-for="PhoneNumberMatchType" asp-items="Model.PhoneNumberMatchTypes" class="form-select form-select-sm" style="max-width: 140px;"></select>
+            <input asp-for="PhoneNumber"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Phone number (E.164)"]" />
+        </div>
+        <span class="hint">@T["E.164 format required (e.g., +1702 for US/Canada). Searches cell and home phone."]</span>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-sm btn-outline-secondary" title="@T["Time zones"]">
+        </select>
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-dnc-from"
+               asp-for="DoNotCallFrom"
+               class="form-control form-control-sm"
+               placeholder="@T["Do not call from"]" />
+        <span class="hint">@T["Only include contacts marked as do-not-call on or after this date."]</span>
+    </div>
+
+    <div class="col-lg-3">
+        <input type="text"
+               id="bulk-dnc-to"
+               asp-for="DoNotCallTo"
+               class="form-control form-control-sm"
+               placeholder="@T["Do not call to"]" />
+        <span class="hint">@T["Only include contacts marked as do-not-call on or before this date."]</span>
+    </div>
 </div>
 
 <div class="row gx-2 gy-2 mt-1">
@@ -77,6 +112,17 @@
                placeholder="@T["Created to"]" />
     </div>
 
+    <div class="col-lg-3">
+        <label class="form-label form-label-sm mb-1" for="bulk-limit">@T["Limit"]</label>
+        <input type="number"
+               id="bulk-limit"
+               asp-for="Limit"
+               class="form-control form-control-sm"
+               placeholder="@T["Max records"]"
+               min="1" />
+        <span class="hint">@T["Limit the number of records to retrieve."]</span>
+    </div>
+
     <div class="col-12 mt-2">
         <label class="form-label form-label-sm mb-1">@T["Assigned to users"]</label>
         @await Component.InvokeAsync("ItemSelector", new
@@ -109,5 +155,7 @@
         flatpickr('#bulk-scheduled-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
         flatpickr('#bulk-created-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
         flatpickr('#bulk-created-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        flatpickr('#bulk-dnc-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        flatpickr('#bulk-dnc-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
     });
 </script>

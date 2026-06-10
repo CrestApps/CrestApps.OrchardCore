@@ -64,6 +64,40 @@ public sealed class BulkManageActivityFilter : Entity
     public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of records to retrieve.
+    /// When <see langword="null"/>, no limit is applied beyond normal pagination.
+    /// </summary>
+    public int? Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number to search for in contact records.
+    /// The value should be in E.164 format (e.g., +17025551234).
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the match type for the phone number filter.
+    /// </summary>
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zone identifiers to filter contacts by.
+    /// </summary>
+    public string[] TimeZoneIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the earliest Do Not Call date to filter by.
+    /// Matches contacts whose Do Not Call date is on or after this value.
+    /// </summary>
+    public DateTime? DoNotCallFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the latest Do Not Call date to filter by.
+    /// Matches contacts whose Do Not Call date is on or before this value.
+    /// </summary>
+    public DateTime? DoNotCallTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the route values for preserving filter state during pagination.
     /// </summary>
     [BindNever]

@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -21,8 +22,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 {
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
+    private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
 
     internal readonly IStringLocalizer S;
 
@@ -31,20 +34,26 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// </summary>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
+        IClock clock,
         ILocalClock localClock,
         ISession session,
+        INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
+        _clock = clock;
         _localClock = localClock;
         _session = session;
+        _dispositionsCatalog = dispositionsCatalog;
         S = stringLocalizer;
     }
 
@@ -83,6 +92,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.LeadCreatedFrom = batch.LeadCreatedFrom;
             model.LeadCreatedTo = batch.LeadCreatedTo;
             model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
+            model.Limit = batch.Limit;
+            model.PhoneNumber = batch.PhoneNumber;
+            model.PhoneNumberMatchType = batch.PhoneNumberMatchType;
+            model.TimeZoneIds = batch.TimeZoneIds ?? [];
+            model.LastActivitySubjectContentType = batch.LastActivitySubjectContentType;
+            model.LastActivityDispositionId = batch.LastActivityDispositionId;
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -127,6 +142,35 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
 
+            model.PhoneNumberMatchTypes =
+            [
+                new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
+                new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
+                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
+            ];
+
+            var timeZones = new List<SelectListItem>();
+
+            foreach (var timeZone in _clock.GetTimeZones())
+            {
+                timeZones.Add(new SelectListItem(timeZone.TimeZoneId, timeZone.TimeZoneId));
+            }
+
+            model.TimeZones = timeZones.OrderBy(x => x.Text);
+
+            var allDispositions = await _dispositionsCatalog.GetAllAsync();
+            var dispositionItems = new List<SelectListItem>
+            {
+                new(S["Any disposition"], ""),
+            };
+
+            foreach (var disposition in allDispositions.OrderBy(d => d.Name))
+            {
+                dispositionItems.Add(new SelectListItem(disposition.Name, disposition.ItemId));
+            }
+
+            model.Dispositions = dispositionItems;
+
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.SelectedUsers ??= [];
@@ -164,6 +208,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
         }
 
+        if (!string.IsNullOrEmpty(model.PhoneNumber) && !model.PhoneNumber.TrimStart().StartsWith('+'))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+        }
+
         batch.DisplayText = model.DisplayText?.Trim();
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
@@ -178,6 +227,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.LeadCreatedFrom = model.LeadCreatedFrom;
         batch.LeadCreatedTo = model.LeadCreatedTo;
         batch.OnlyPublishedLeads = model.OnlyPublishedLeads;
+        batch.Limit = model.Limit;
+        batch.PhoneNumber = model.PhoneNumber?.Trim();
+        batch.PhoneNumberMatchType = model.PhoneNumberMatchType;
+        batch.TimeZoneIds = model.TimeZoneIds;
+        batch.LastActivitySubjectContentType = model.LastActivitySubjectContentType;
+        batch.LastActivityDispositionId = model.LastActivityDispositionId;
 
         if (model.ScheduleAt.HasValue)
         {

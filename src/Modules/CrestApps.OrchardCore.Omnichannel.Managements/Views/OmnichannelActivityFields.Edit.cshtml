@@ -14,22 +14,13 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="ocat-wrapper">
-    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
-            <option value="">@T["Select a campaign"]</option>
-        </select>
-        <span asp-validation-for="CampaignId" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label asp-for="SubjectContentType" class="ocat-label">@T["Subject content type"]</label>
     <div class="ocat-end">
         <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
             <option value="">@T["Select a subject content type"]</option>
         </select>
         <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+        <span class="hint">@T["The subject determines the campaign and channel used for this activity."]</span>
     </div>
 </div>
 
@@ -58,7 +49,7 @@
 </script>
 
 <div class="ocat-wrapper">
-    <label asp-for="UserId" class="ocat-label">@T["User(s) to assign activities to"]</label>
+    <label asp-for="UserId" class="ocat-label">@T["User to assign activity to"]</label>
     <div class="ocat-end">
         <select asp-for="UserId" asp-items="Model.Users" class="form-select"></select>
         <span asp-validation-for="UserId" class="text-danger"></span>
