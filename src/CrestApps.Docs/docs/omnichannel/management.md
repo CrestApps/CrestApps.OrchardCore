@@ -81,6 +81,8 @@ An **Activity** is a task to be completed for a contact.
 
 When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
 
+Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
+
 ### Activity Batch
 An **Activity Batch** defines filters to find contacts and then **loads activities in the background**.
 
@@ -174,6 +176,8 @@ After creating your subject content types and campaigns, go to `Interaction Cent
 5. If the subject uses automated interactions, configure the channel endpoint.
 6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, and initial outbound prompt pattern fields.
 7. Save the subject flow.
+
+Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint for automated flows). Activity creation, batch loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
 
 ### 7) Manage Flow
 

@@ -1,6 +1,5 @@
 using System.Data;
 using System.Globalization;
-using System.Linq;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -15,7 +14,6 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
-using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Handlers;
 

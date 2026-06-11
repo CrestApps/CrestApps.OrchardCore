@@ -1,13 +1,14 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -16,18 +17,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+
+    internal readonly IStringLocalizer S;
 
     public NewActivitySubjectActionDisplayDriver(
-        IContentDefinitionManager contentDefinitionManager,
         ISession session,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
+        IStringLocalizer<NewActivitySubjectActionDisplayDriver> stringLocalizer)
     {
-        _contentDefinitionManager = contentDefinitionManager;
         _session = session;
         _displayNameProvider = displayNameProvider;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(SubjectAction action, BuildEditorContext context)
@@ -67,10 +72,9 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
                 }
             }
 
-            var subjectTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
+            var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
 
             model.SubjectContentTypes = subjectTypes
-                .Where(t => t.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
                 .Select(t => new SelectListItem
                 {
                     Text = t.DisplayName,
@@ -93,6 +97,12 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
         var model = new NewActivitySubjectActionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (!string.IsNullOrWhiteSpace(model.SubjectContentType) &&
+            await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before it can be used by a New Activity action."]);
+        }
 
         action.Put(new NewActivityActionMetadata
         {

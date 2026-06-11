@@ -4,9 +4,7 @@ using CrestApps.OrchardCore.DncRegistry.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data.Migration;
-using OrchardCore.FileStorage;
 using OrchardCore.Navigation;
-using Xunit;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.DncRegistry;

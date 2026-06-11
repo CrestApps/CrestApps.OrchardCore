@@ -1,11 +1,9 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,24 +14,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 /// </summary>
 internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<BulkManageOmnichannelActivityContainer>
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly LinkGenerator _linkGenerator;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkManageActivityActionsDisplayDriver"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="linkGenerator">The link generator.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityActionsDisplayDriver(
-        IContentDefinitionManager contentDefinitionManager,
         LinkGenerator linkGenerator,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<BulkManageActivityActionsDisplayDriver> stringLocalizer)
     {
-        _contentDefinitionManager = contentDefinitionManager;
         _linkGenerator = linkGenerator;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
 
@@ -53,12 +51,9 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
 
             var subjectContentTypes = new List<SelectListItem>();
 
-            foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
             {
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-                {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-                }
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);

@@ -51,6 +51,7 @@ public sealed class ActivityBatchesController : Controller
     private readonly IDisplayManager<OmnichannelActivityBatch> _batchDisplayDriver;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -64,6 +65,7 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="batchDisplayManager">The batch display manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
@@ -73,6 +75,7 @@ public sealed class ActivityBatchesController : Controller
         IDisplayManager<OmnichannelActivityBatch> batchDisplayManager,
         IClock clock,
         INotifier notifier,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer)
     {
@@ -82,6 +85,7 @@ public sealed class ActivityBatchesController : Controller
         _batchDisplayDriver = batchDisplayManager;
         _clock = clock;
         _notifier = notifier;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -422,19 +426,16 @@ public sealed class ActivityBatchesController : Controller
                 }
 
                 var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
-                var flowSettingsCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<SubjectFlowSettings>>();
+                var subjectFlowSettingsService = scope.ServiceProvider.GetRequiredService<ISubjectFlowSettingsService>();
+                var flowSettings = await subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
 
-                var allFlowSettings = await flowSettingsCatalog.GetAllAsync();
-                var flowSettings = allFlowSettings.FirstOrDefault(f =>
-                    string.Equals(f.SubjectContentType, batch.SubjectContentType, StringComparison.OrdinalIgnoreCase));
-
-                if (flowSettings == null || string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+                if (flowSettings is null)
                 {
                     batch.Status = OmnichannelActivityBatchStatus.New;
 
                     await catalog.UpdateAsync(batch);
 
-                    logger.LogError("Subject flow settings with a campaign are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
+                    logger.LogError("Configured subject flow settings are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
                     return;
                 }
 

@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -29,7 +28,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
@@ -47,7 +46,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// </summary>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="campaignsCatalog">The campaigns catalog.</param>
-    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="actionCatalog">The subject action catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
@@ -61,7 +60,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         ISourceCatalog<SubjectAction> actionCatalog,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
@@ -75,7 +74,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     {
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
-        _flowSettingsCatalog = flowSettingsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _actionCatalog = actionCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
@@ -105,18 +104,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
 
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+            {
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+            }
+
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (!contentType.TryGetStereotype(out var stereotype))
-                {
-                    continue;
-                }
-
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-                {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-                }
-
                 if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
@@ -151,7 +145,22 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
         var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
         {
-            var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
+            OmnichannelCampaign campaign = null;
+
+            if (!string.IsNullOrWhiteSpace(activity.CampaignId))
+            {
+                campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
+            }
+
+            if (campaign is null)
+            {
+                var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
+
+                if (flowSettings is not null && !string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+                {
+                    campaign = await _campaignsCatalog.FindByIdAsync(flowSettings.CampaignId);
+                }
+            }
 
             // Derive distinct dispositions from subject actions.
             var allActions = await _actionCatalog.GetAllAsync();
@@ -192,6 +201,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
             model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
             model.UrgencyLevel = activity.UrgencyLevel;
+            model.ShowWorkflowPreview = isCompletingActivity;
 
             if (activity.Status == ActivityStatus.Completed)
             {
@@ -275,33 +285,25 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
             }
 
-            OmnichannelCampaign campaign = null;
+            SubjectFlowSettings flowSettings = null;
 
             if (!string.IsNullOrEmpty(model.SubjectContentType))
             {
-                // Resolve the campaign from SubjectFlowSettings based on the selected subject.
-                var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
-                var flowSettings = allFlowSettings.FirstOrDefault(f =>
-                    string.Equals(f.SubjectContentType, model.SubjectContentType, StringComparison.OrdinalIgnoreCase));
+                flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
 
-                if (flowSettings is not null && !string.IsNullOrEmpty(flowSettings.CampaignId))
+                if (flowSettings is null)
                 {
-                    campaign = await _campaignsCatalog.FindByIdAsync(flowSettings.CampaignId);
-                }
-
-                if (campaign is not null)
-                {
-                    activity.Channel = campaign.Channel;
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activities can be created."]);
                 }
             }
 
-            if (campaign is not null)
+            if (flowSettings is not null)
             {
                 var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
-                if (!string.IsNullOrEmpty(campaign.Channel))
+                if (!string.IsNullOrEmpty(flowSettings.Channel))
                 {
-                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, campaign.Channel);
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
                 }
             }
 
@@ -315,11 +317,12 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
             }
 
-            if (campaign is not null)
+            if (flowSettings is not null)
             {
-                activity.ChannelEndpointId = campaign.ChannelEndpointId;
-                activity.InteractionType = campaign.InteractionType;
-                activity.CampaignId = campaign.ItemId;
+                activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
+                activity.InteractionType = flowSettings.InteractionType;
+                activity.Channel = flowSettings.Channel;
+                activity.CampaignId = flowSettings.CampaignId;
             }
 
             activity.SubjectContentType = model.SubjectContentType;

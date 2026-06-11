@@ -1,5 +1,5 @@
-using YesSql.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.DncRegistry.Indexes;
 

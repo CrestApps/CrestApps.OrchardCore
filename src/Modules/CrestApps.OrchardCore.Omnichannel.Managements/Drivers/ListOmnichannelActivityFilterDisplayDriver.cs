@@ -5,8 +5,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -15,22 +13,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver<ListOmnichannelActivityFilter>
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IClock _clock;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ListOmnichannelActivityFilterDisplayDriver"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
-        IContentDefinitionManager contentDefinitionManager,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IClock clock,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
     {
-        _contentDefinitionManager = contentDefinitionManager;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -96,12 +95,9 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Any subject"], ""),
             };
 
-            foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
             {
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-                {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-                }
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);

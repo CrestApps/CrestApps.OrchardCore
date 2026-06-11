@@ -5,6 +5,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,7 @@ public sealed class ActivitiesController : Controller
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly ISubjectActionExecutor _subjectActionExecutor;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
@@ -69,6 +71,7 @@ public sealed class ActivitiesController : Controller
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
     /// <param name="subjectActionExecutor">The subject action executor.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="notifier">The notifier.</param>
@@ -86,6 +89,7 @@ public sealed class ActivitiesController : Controller
         IContentItemDisplayManager contentItemDisplayManager,
         ISubjectActionExecutor subjectActionExecutor,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IClock clock,
         ILocalClock localClock,
         INotifier notifier,
@@ -103,6 +107,7 @@ public sealed class ActivitiesController : Controller
         _contentItemDisplayManager = contentItemDisplayManager;
         _subjectActionExecutor = subjectActionExecutor;
         _dispositionsCatalog = dispositionsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _clock = clock;
         _localClock = localClock;
         _notifier = notifier;
@@ -925,12 +930,31 @@ public sealed class ActivitiesController : Controller
             return 0;
         }
 
+        var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(newSubjectContentType);
+
+        if (flowSettings is null)
+        {
+            return 0;
+        }
+
         var processedCount = 0;
 
         foreach (var activity in activities)
         {
             activity.SubjectContentType = newSubjectContentType;
+            activity.CampaignId = flowSettings.CampaignId;
+            activity.Channel = flowSettings.Channel;
+            activity.InteractionType = flowSettings.InteractionType;
+            activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
             activity.Subject = null;
+
+            var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+            if (contact is not null)
+            {
+                activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+            }
+
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }

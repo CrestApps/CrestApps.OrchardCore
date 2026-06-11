@@ -1,8 +1,6 @@
 using System.Text.Json;
 using CrestApps.Core;
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
 
 namespace CrestApps.OrchardCore.AI.Services;
 

@@ -1,12 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -23,32 +22,32 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 /// </summary>
 internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<BulkManageActivityFilter>
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly LinkGenerator _linkGenerator;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkManageActivityFilterDisplayDriver"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="linkGenerator">The link generator.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityFilterDisplayDriver(
-        IContentDefinitionManager contentDefinitionManager,
         LinkGenerator linkGenerator,
         ISession session,
         IClock clock,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
-        _contentDefinitionManager = contentDefinitionManager;
         _linkGenerator = linkGenerator;
         _session = session;
         _clock = clock;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
 
@@ -134,12 +133,9 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["Any subject"], ""),
             };
 
-            foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
             {
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-                {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-                }
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);

@@ -12,7 +12,6 @@ using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
-using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Handlers;
 

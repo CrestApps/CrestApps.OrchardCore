@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public sealed class SubjectFlowsController : Controller
     private readonly IDisplayManager<SubjectAction> _actionDisplayDriver;
     private readonly SubjectActionOptions _actionOptions;
     private readonly INotifier _notifier;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -53,6 +55,7 @@ public sealed class SubjectFlowsController : Controller
     /// <param name="actionDisplayDriver">The subject action display driver.</param>
     /// <param name="actionOptions">The subject action options.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SubjectFlowsController(
@@ -68,6 +71,7 @@ public sealed class SubjectFlowsController : Controller
         IDisplayManager<SubjectAction> actionDisplayDriver,
         IOptions<SubjectActionOptions> actionOptions,
         INotifier notifier,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IHtmlLocalizer<SubjectFlowsController> htmlLocalizer,
         IStringLocalizer<SubjectFlowsController> stringLocalizer)
     {
@@ -83,6 +87,7 @@ public sealed class SubjectFlowsController : Controller
         _actionDisplayDriver = actionDisplayDriver;
         _actionOptions = actionOptions.Value;
         _notifier = notifier;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -122,7 +127,7 @@ public sealed class SubjectFlowsController : Controller
             {
                 ContentTypeName = t.Name,
                 DisplayName = t.DisplayName,
-                IsConfigured = flowSettingsMap.ContainsKey(t.Name),
+                IsConfigured = flowSettingsMap.TryGetValue(t.Name, out var flowSettings) && _subjectFlowSettingsService.IsConfigured(flowSettings),
                 HasActions = actionsPerSubject.TryGetValue(t.Name, out var count) && count > 0,
             }).ToList(),
         };

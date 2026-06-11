@@ -1,12 +1,12 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -26,6 +26,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
 
@@ -38,6 +39,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <param name="localClock">The local clock.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
@@ -46,6 +48,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ILocalClock localClock,
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -54,6 +57,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _localClock = localClock;
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
 
@@ -102,13 +106,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
 
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+            {
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+            }
+
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-                {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-                }
-
                 if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
@@ -191,6 +195,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
+        }
+        else if (await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activity batches can load activities."]);
         }
 
         if (string.IsNullOrEmpty(model.ContactContentType))
