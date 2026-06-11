@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 {
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -25,14 +25,14 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
         ISession session,
         IClock clock,
         ILogger<DefaultSubjectActionExecutor> logger)
     {
         _actionCatalog = actionCatalog;
-        _flowSettingsCatalog = flowSettingsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
         _session = session;
         _clock = clock;
@@ -190,10 +190,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
     private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)
     {
-        var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
-
-        return allFlowSettings.FirstOrDefault(f =>
-            string.Equals(f.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+        return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
     }
 
     private void ApplyCommunicationPreferences(SubjectAction action, ContentItem contact)

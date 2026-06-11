@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -18,6 +19,7 @@ using OrchardCore.Admin;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -49,6 +51,7 @@ public sealed class ActivityBatchesController : Controller
     private readonly IDisplayManager<OmnichannelActivityBatch> _batchDisplayDriver;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -62,6 +65,7 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="batchDisplayManager">The batch display manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
@@ -71,6 +75,7 @@ public sealed class ActivityBatchesController : Controller
         IDisplayManager<OmnichannelActivityBatch> batchDisplayManager,
         IClock clock,
         INotifier notifier,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer)
     {
@@ -80,6 +85,7 @@ public sealed class ActivityBatchesController : Controller
         _batchDisplayDriver = batchDisplayManager;
         _clock = clock;
         _notifier = notifier;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -420,19 +426,16 @@ public sealed class ActivityBatchesController : Controller
                 }
 
                 var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
-                var flowSettingsCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<SubjectFlowSettings>>();
+                var subjectFlowSettingsService = scope.ServiceProvider.GetRequiredService<ISubjectFlowSettingsService>();
+                var flowSettings = await subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
 
-                var allFlowSettings = await flowSettingsCatalog.GetAllAsync();
-                var flowSettings = allFlowSettings.FirstOrDefault(f =>
-                    string.Equals(f.SubjectContentType, batch.SubjectContentType, StringComparison.OrdinalIgnoreCase));
-
-                if (flowSettings == null || string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+                if (flowSettings is null)
                 {
                     batch.Status = OmnichannelActivityBatchStatus.New;
 
                     await catalog.UpdateAsync(batch);
 
-                    logger.LogError("Subject flow settings with a campaign are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
+                    logger.LogError("Configured subject flow settings are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
                     return;
                 }
 
@@ -445,6 +448,134 @@ public sealed class ActivityBatchesController : Controller
                 DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue
                     ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value)
                     : null;
+
+                // Pre-compute contact-level filter sets (phone, timezone, last activity).
+                HashSet<string> eligibleContactIds = null;
+
+                var hasPhoneFilter = !string.IsNullOrEmpty(batch.PhoneNumber);
+                var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
+                var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType);
+
+                if (hasPhoneFilter || hasTimeZoneFilter || hasLastActivityFilter)
+                {
+                    HashSet<string> phoneIds = null;
+                    HashSet<string> timeZoneIds = null;
+                    HashSet<string> lastActivityIds = null;
+
+                    if (hasPhoneFilter)
+                    {
+                        var phoneQuery = batch.PhoneNumberMatchType switch
+                        {
+                            PhoneNumberMatchType.Exact => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
+                                index.NormalizedPrimaryCellPhoneNumber == batch.PhoneNumber ||
+                                index.NormalizedPrimaryHomePhoneNumber == batch.PhoneNumber),
+                            PhoneNumberMatchType.EndsWith => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
+                                index.NormalizedPrimaryCellPhoneNumber.EndsWith(batch.PhoneNumber) ||
+                                index.NormalizedPrimaryHomePhoneNumber.EndsWith(batch.PhoneNumber)),
+                            _ => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
+                                index.NormalizedPrimaryCellPhoneNumber.StartsWith(batch.PhoneNumber) ||
+                                index.NormalizedPrimaryHomePhoneNumber.StartsWith(batch.PhoneNumber)),
+                        };
+
+                        var phoneContacts = await phoneQuery.ListAsync();
+                        phoneIds = phoneContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    if (hasTimeZoneFilter)
+                    {
+                        var tzContacts = await readonlySession.QueryIndex<OmnichannelContactIndex>(
+                            index => index.TimeZoneId.IsIn(batch.TimeZoneIds))
+                            .ListAsync();
+
+                        timeZoneIds = tzContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    if (hasLastActivityFilter)
+                    {
+                        // Use raw SQL to find contacts whose most recent completed activity
+                        // matches the given subject (and optional disposition). This avoids
+                        // materializing all completed activities in memory.
+                        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+                        var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
+
+                        var dialect = store.Configuration.SqlDialect;
+                        var dbSchema = store.Configuration.Schema;
+                        var activityTableName = store.Configuration.TableNameConvention.GetIndexTable(
+                            typeof(OmnichannelActivityIndex),
+                            OmnichannelConstants.CollectionName);
+                        var activityTable = dialect.QuoteForTableName(
+                            $"{store.Configuration.TablePrefix}{activityTableName}",
+                            dbSchema);
+                        var contactCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.ContactContentItemId));
+                        var statusCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status));
+                        var subjectCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.SubjectContentType));
+                        var dispositionCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DispositionId));
+                        var completedCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.CompletedUtc));
+
+                        var completedStatus = (int)ActivityStatus.Completed;
+
+                        // Find contacts where the most recent completed activity matches the subject/disposition.
+                        // Uses a correlated subquery to find the "latest per group" server-side.
+                        var sql = $@"SELECT DISTINCT a.{contactCol}
+                                    FROM {activityTable} a
+                                    WHERE a.{statusCol} = @CompletedStatus
+                                      AND a.{subjectCol} = @Subject
+                                      AND a.{completedCol} = (
+                                          SELECT MAX(a2.{completedCol})
+                                          FROM {activityTable} a2
+                                          WHERE a2.{contactCol} = a.{contactCol}
+                                            AND a2.{statusCol} = @CompletedStatus
+                                      )";
+
+                        var parameters = new DynamicParameters();
+                        parameters.Add("@CompletedStatus", completedStatus);
+                        parameters.Add("@Subject", batch.LastActivitySubjectContentType);
+
+                        if (!string.IsNullOrEmpty(batch.LastActivityDispositionId))
+                        {
+                            sql += $"\n  AND a.{dispositionCol} = @Disposition";
+                            parameters.Add("@Disposition", batch.LastActivityDispositionId);
+                        }
+
+                        await using var sqlConnection = dbConnectionAccessor.CreateConnection();
+                        await sqlConnection.OpenAsync();
+
+                        var command = new CommandDefinition(sql, parameters);
+                        var results = await sqlConnection.QueryAsync<string>(command);
+
+                        lastActivityIds = results
+                            .Where(id => !string.IsNullOrEmpty(id))
+                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    // Intersect all non-null filter sets.
+                    foreach (var set in new[] { phoneIds, timeZoneIds, lastActivityIds })
+                    {
+                        if (set is null)
+                        {
+                            continue;
+                        }
+
+                        if (eligibleContactIds is null)
+                        {
+                            eligibleContactIds = set;
+                        }
+                        else
+                        {
+                            eligibleContactIds.IntersectWith(set);
+                        }
+                    }
+
+                    // If filters are applied but no contacts match, mark as loaded immediately.
+                    if (eligibleContactIds is not null && eligibleContactIds.Count == 0)
+                    {
+                        batch.Status = OmnichannelActivityBatchStatus.Loaded;
+
+                        await catalog.UpdateAsync(batch);
+                        await session.SaveChangesAsync();
+                        return;
+                    }
+                }
 
                 var activityCounter = 0;
 
@@ -512,9 +643,25 @@ public sealed class ActivityBatchesController : Controller
                     {
                         documentId = Math.Max(documentId, contact.Id);
 
+                        // Skip contacts not in the pre-computed eligible set.
+                        if (eligibleContactIds is not null && !eligibleContactIds.Contains(contact.ContentItemId))
+                        {
+                            continue;
+                        }
+
                         if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
                         {
                             continue;
+                        }
+
+                        // Respect the limit if specified.
+                        if (batch.Limit.HasValue && batch.Limit.Value > 0 && batch.TotalLoaded >= batch.Limit.Value)
+                        {
+                            batch.Status = OmnichannelActivityBatchStatus.Loaded;
+
+                            await catalog.UpdateAsync(batch);
+                            await session.SaveChangesAsync();
+                            return;
                         }
 
                         var user = users[activityCounter++ % users.Length];

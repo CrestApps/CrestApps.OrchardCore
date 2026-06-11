@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -59,6 +60,36 @@ public class BulkManageActivityFilterViewModel
     public string UrgencyLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of records to retrieve.
+    /// </summary>
+    public int? Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number to search for.
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number match type.
+    /// </summary>
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zone identifiers to filter contacts by.
+    /// </summary>
+    public string[] TimeZoneIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the earliest Do Not Call date to filter by.
+    /// </summary>
+    public string DoNotCallFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the latest Do Not Call date to filter by.
+    /// </summary>
+    public string DoNotCallTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the available contact published options.
     /// </summary>
     [BindNever]
@@ -87,6 +118,18 @@ public class BulkManageActivityFilterViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available phone number match types.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> PhoneNumberMatchTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available time zones.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> TimeZones { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the user search endpoint URL for the item selector.

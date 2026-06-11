@@ -114,6 +114,8 @@ public sealed class Startup : StartupBase
         services
             .AddDisplayDriver<SubjectFlowSettings, SubjectFlowSettingsDisplayDriver>();
 
+        services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
+
         services.Configure<SubjectActionOptions>(options =>
         {
             options.AddActionType(OmnichannelConstants.ActionTypes.Finish, entry =>

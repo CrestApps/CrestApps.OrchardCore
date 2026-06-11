@@ -1,7 +1,6 @@
 using System.Data;
 using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 using OrchardCore.ContentManagement;
-using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContentTransfer;
 

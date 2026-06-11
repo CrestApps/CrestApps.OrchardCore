@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using AIStartup = CrestApps.OrchardCore.AI.Startup;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents.Models;
@@ -10,7 +9,6 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -18,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Liquid;
+using AIStartup = CrestApps.OrchardCore.AI.Startup;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 

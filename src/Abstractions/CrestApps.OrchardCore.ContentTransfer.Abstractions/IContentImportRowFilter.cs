@@ -1,8 +1,5 @@
 #nullable enable
 
-using System.Data;
-using OrchardCore.ContentManagement.Metadata.Models;
-
 namespace CrestApps.OrchardCore.ContentTransfer;
 
 /// <summary>

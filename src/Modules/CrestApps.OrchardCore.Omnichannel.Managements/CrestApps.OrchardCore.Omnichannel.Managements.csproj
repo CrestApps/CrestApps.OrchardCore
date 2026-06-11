@@ -37,6 +37,7 @@
     <ProjectReference Include="../CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel/CrestApps.OrchardCore.Omnichannel.csproj" PrivateAssets="none" />
     <ProjectReference Include="../CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
     <ProjectReference Include="../CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>
 

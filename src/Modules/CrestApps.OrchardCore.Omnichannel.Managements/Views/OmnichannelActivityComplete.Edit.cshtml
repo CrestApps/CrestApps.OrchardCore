@@ -108,114 +108,120 @@
             </select>
             <span asp-validation-for="DispositionId" class="text-danger"></span>
 
-            <div id="campaign-actions-preview" class="d-none my-3">
-                <h5 class="text-uppercase">@T["Workflow Results"]</h5>
-                <div id="actions-list"></div>
-            </div>
+            @if (Model.ShowWorkflowPreview)
+            {
+                <div id="campaign-actions-preview" class="d-none my-3">
+                    <h5 class="text-uppercase">@T["Workflow Results"]</h5>
+                    <div id="actions-list"></div>
+                </div>
+            }
         </div>
 
     </div>
 
 </div>
 
-<style asp-name="flatpickr"></style>
-<script asp-name="flatpickr" at="Foot"></script>
-<script asp-name="flatpickr-culture" at="Foot"></script>
+@if (Model.ShowWorkflowPreview)
+{
+    <style asp-name="flatpickr"></style>
+    <script asp-name="flatpickr" at="Foot"></script>
+    <script asp-name="flatpickr-culture" at="Foot"></script>
 
-<script at="Foot" depends-on="flatpickr,flatpickr-culture">
-    document.addEventListener("DOMContentLoaded", function () {
-        var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
-        var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
+    <script at="Foot" depends-on="flatpickr,flatpickr-culture">
+        document.addEventListener("DOMContentLoaded", function () {
+            var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
+            var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
 
-        const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
-        const previewContainer = document.getElementById("campaign-actions-preview");
-        const actionsList = document.getElementById("actions-list");
-        const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
-        const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
-        const currentAttempts = @Model.Attempts;
+            const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
+            const previewContainer = document.getElementById("campaign-actions-preview");
+            const actionsList = document.getElementById("actions-list");
+            const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
+            const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
+            const currentAttempts = @Model.Attempts;
 
-        function initFlatpickr(input) {
-            flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
-                altInputClass: input.className,
-            }));
-        }
-
-        async function loadDispositionActions() {
-            const dispositionId = dispositionMenu.value;
-
-            if (!dispositionId) {
-                previewContainer.classList.add("d-none");
-                actionsList.innerHTML = "";
-                return;
+            function initFlatpickr(input) {
+                flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
+                    altInputClass: input.className,
+                }));
             }
 
-            try {
-                const response = await fetch('@Url.RouteUrl("CrestApps.Omnichannel.SubjectDispositionActions")', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        dispositionId: dispositionId,
-                        currentSubjectTitle: currentSubjectTitle,
-                        subjectContentType: currentSubjectContentType,
-                        currentAttempts: currentAttempts
-                    })
-                });
+            async function loadDispositionActions() {
+                const dispositionId = dispositionMenu.value;
 
-                if (!response.ok) {
-                    previewContainer.classList.add("d-none");
-                    return;
-                }
-
-                const actions = await response.json();
-
-                if (!actions || actions.length === 0) {
+                if (!dispositionId) {
                     previewContainer.classList.add("d-none");
                     actionsList.innerHTML = "";
                     return;
                 }
 
-                actionsList.innerHTML = "";
+                try {
+                    const response = await fetch('@Url.RouteUrl("CrestApps.Omnichannel.SubjectDispositionActions")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            dispositionId: dispositionId,
+                            currentSubjectTitle: currentSubjectTitle,
+                            subjectContentType: currentSubjectContentType,
+                            currentAttempts: currentAttempts
+                        })
+                    });
 
-                actions.forEach(function (action) {
-                    const card = document.createElement("div");
-                    card.className = "card mb-2";
-
-                    let cardBody = '<div class="card-body"><strong>' + action.previewTitle + '</strong>';
-
-                    if (action.requiresScheduleDate) {
-                        const inputId = 'schedule-' + action.actionId;
-                        const inputName = 'ActionScheduleDates[' + action.actionId + ']';
-                        const defaultDate = action.defaultScheduleDate
-                            ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
-                            : '';
-
-                        cardBody += '<div class="mt-2">';
-                        cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule at"]</label>';
-                        cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule at"]" />';
-                        cardBody += '</div>';
+                    if (!response.ok) {
+                        previewContainer.classList.add("d-none");
+                        return;
                     }
 
-                    cardBody += '</div>';
-                    card.innerHTML = cardBody;
-                    actionsList.appendChild(card);
+                    const actions = await response.json();
 
-                    if (action.requiresScheduleDate) {
-                        const dateInput = card.querySelector('.schedule-date-input');
-                        if (dateInput) {
-                            initFlatpickr(dateInput);
+                    if (!actions || actions.length === 0) {
+                        previewContainer.classList.add("d-none");
+                        actionsList.innerHTML = "";
+                        return;
+                    }
+
+                    actionsList.innerHTML = "";
+
+                    actions.forEach(function (action) {
+                        const card = document.createElement("div");
+                        card.className = "card mb-2";
+
+                        let cardBody = '<div class="card-body"><strong>' + action.previewTitle + '</strong>';
+
+                        if (action.requiresScheduleDate) {
+                            const inputId = 'schedule-' + action.actionId;
+                            const inputName = 'ActionScheduleDates[' + action.actionId + ']';
+                            const defaultDate = action.defaultScheduleDate
+                                ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
+                                : '';
+
+                            cardBody += '<div class="mt-2">';
+                            cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule at"]</label>';
+                            cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule at"]" />';
+                            cardBody += '</div>';
                         }
-                    }
-                });
 
-                previewContainer.classList.remove("d-none");
-            } catch (e) {
-                previewContainer.classList.add("d-none");
+                        cardBody += '</div>';
+                        card.innerHTML = cardBody;
+                        actionsList.appendChild(card);
+
+                        if (action.requiresScheduleDate) {
+                            const dateInput = card.querySelector('.schedule-date-input');
+                            if (dateInput) {
+                                initFlatpickr(dateInput);
+                            }
+                        }
+                    });
+
+                    previewContainer.classList.remove("d-none");
+                } catch (e) {
+                    previewContainer.classList.add("d-none");
+                }
             }
-        }
 
-        dispositionMenu.addEventListener("change", loadDispositionActions);
+            dispositionMenu.addEventListener("change", loadDispositionActions);
 
-        // Load on page load if a disposition is already selected.
-        loadDispositionActions();
-    });
-</script>
+            // Load on page load if a disposition is already selected.
+            loadDispositionActions();
+        });
+    </script>
+}

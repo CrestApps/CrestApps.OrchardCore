@@ -115,6 +115,38 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public bool OnlyPublishedLeads { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the maximum number of leads to load into the batch.
+    /// When <see langword="null"/>, all matching leads are loaded.
+    /// </summary>
+    public int? Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number to filter leads by.
+    /// The value should be in E.164 format (e.g., +17025551234).
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the match type for the phone number filter.
+    /// </summary>
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zone identifiers to filter leads by.
+    /// </summary>
+    public string[] TimeZoneIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject content type of the last completed activity to filter leads by.
+    /// </summary>
+    public string LastActivitySubjectContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the disposition identifier of the last completed activity to filter leads by.
+    /// </summary>
+    public string LastActivityDispositionId { get; set; }
+
+    /// <summary>
     /// Creates a copy of the current activity batch.
     /// </summary>
     public OmnichannelActivityBatch Clone()
@@ -143,6 +175,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             LeadCreatedFrom = LeadCreatedFrom,
             LeadCreatedTo = LeadCreatedTo,
             OnlyPublishedLeads = OnlyPublishedLeads,
+            Limit = Limit,
+            PhoneNumber = PhoneNumber,
+            PhoneNumberMatchType = PhoneNumberMatchType,
+            TimeZoneIds = TimeZoneIds?.ToArray(),
+            LastActivitySubjectContentType = LastActivitySubjectContentType,
+            LastActivityDispositionId = LastActivityDispositionId,
         };
     }
 }

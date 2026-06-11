@@ -2,10 +2,12 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
-using OrchardCore.ContentManagement;
+using Dapper;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Data;
 using YesSql;
 using YesSql.Services;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
@@ -14,8 +16,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// </summary>
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
+    private const string ActivityAlias = "a";
+
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
     private readonly IEnumerable<IBulkManageActivityFilterHandler> _bulkManageHandlers;
+    private readonly IStore _store;
+    private readonly IDbConnectionAccessor _dbConnectionAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelActivityStore"/> class.
@@ -23,15 +29,21 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     /// <param name="session">The YesSql session.</param>
     /// <param name="handlers">The filter handlers applied when listing activities.</param>
     /// <param name="bulkManageHandlers">The filter handlers applied when bulk managing activities.</param>
+    /// <param name="store">The YesSql store for SQL configuration.</param>
+    /// <param name="dbConnectionAccessor">The database connection accessor.</param>
     public OmnichannelActivityStore(
         ISession session,
         IEnumerable<IListOmnichannelActivityFilterHandler> handlers,
-        IEnumerable<IBulkManageActivityFilterHandler> bulkManageHandlers)
+        IEnumerable<IBulkManageActivityFilterHandler> bulkManageHandlers,
+        IStore store,
+        IDbConnectionAccessor dbConnectionAccessor)
         : base(session)
     {
         CollectionName = OmnichannelConstants.CollectionName;
         _handlers = handlers;
         _bulkManageHandlers = bulkManageHandlers;
+        _store = store;
+        _dbConnectionAccessor = dbConnectionAccessor;
     }
 
     /// <inheritdoc/>
@@ -92,16 +104,57 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     {
         ArgumentNullException.ThrowIfNull(filter);
 
-        var filteredQuery = await BuildBulkManageableQueryAsync(filter, cancellationToken);
-        var orderedQuery = filteredQuery.With<OmnichannelActivityIndex>()
-            .OrderByDescending(x => x.ScheduledUtc)
-            .ThenBy(x => x.Id);
+        var context = await BuildBulkManageableContextAsync(filter, cancellationToken);
+
+        // Clone the builder for counting (without ORDER BY / pagination).
+        var countBuilder = context.SqlBuilder.Clone();
+        countBuilder.ClearOrder();
+        countBuilder.Selector("COUNT(*)");
+
+        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        var totalCount = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(countBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken));
+
+        if (filter.Limit.HasValue && filter.Limit.Value > 0)
+        {
+            totalCount = Math.Min(totalCount, filter.Limit.Value);
+        }
+
         var skip = (Math.Max(page, 1) - 1) * pageSize;
+
+        var take = filter.Limit.HasValue && filter.Limit.Value > 0
+            ? Math.Min(pageSize, Math.Max(0, filter.Limit.Value - skip))
+            : pageSize;
+
+        if (take <= 0)
+        {
+            return new PageResult<OmnichannelActivity>()
+            {
+                Count = totalCount,
+                Entries = [],
+            };
+        }
+
+        // Add pagination to the main query.
+        context.SqlBuilder.Skip(skip.ToString());
+        context.SqlBuilder.Take(take.ToString());
+
+        var documentIds = (await connection.QueryAsync<long>(
+            new CommandDefinition(context.SqlBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken)))
+            .ToArray();
+
+        var entries = documentIds.Length > 0
+            ? (await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                index => index.DocumentId.IsIn(documentIds), collection: OmnichannelConstants.CollectionName)
+                .ListAsync(cancellationToken)).ToArray()
+            : [];
 
         return new PageResult<OmnichannelActivity>()
         {
-            Count = await filteredQuery.CountAsync(cancellationToken),
-            Entries = (await orderedQuery.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
+            Count = totalCount,
+            Entries = entries,
         };
     }
 
@@ -110,64 +163,106 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     {
         ArgumentNullException.ThrowIfNull(filter);
 
-        var filteredQuery = await BuildBulkManageableQueryAsync(filter, cancellationToken);
+        var context = await BuildBulkManageableContextAsync(filter, cancellationToken);
 
-        var activities = await filteredQuery
-            .With<OmnichannelActivityIndex>()
-            .OrderByDescending(x => x.ScheduledUtc)
-            .ThenBy(x => x.Id)
+        if (filter.Limit.HasValue && filter.Limit.Value > 0)
+        {
+            context.SqlBuilder.Take(filter.Limit.Value.ToString());
+        }
+
+        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        var documentIds = (await connection.QueryAsync<long>(
+            new CommandDefinition(context.SqlBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken)))
+            .ToArray();
+
+        if (documentIds.Length == 0)
+        {
+            return [];
+        }
+
+        var activities = await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+            index => index.DocumentId.IsIn(documentIds), collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
 
         return activities.ToArray();
     }
 
-    private async Task<IQuery<OmnichannelActivity>> BuildBulkManageableQueryAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken)
+    private async Task<BulkManageActivityFilterContext> BuildBulkManageableContextAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken)
     {
-        var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(collection: OmnichannelConstants.CollectionName)
-            .Where(index => index.Status == ActivityStatus.NotStated && index.InteractionType == ActivityInteractionType.Manual);
+        var tableNameConvention = _store.Configuration.TableNameConvention;
+        var dialect = _store.Configuration.SqlDialect;
+        var tablePrefix = _store.Configuration.TablePrefix;
+        var schema = _store.Configuration.Schema;
+        var activityTableName = tableNameConvention.GetIndexTable(typeof(OmnichannelActivityIndex), OmnichannelConstants.CollectionName);
 
-        var context = new BulkManageActivityFilterContext(filter, query);
+        var sqlBuilder = new SqlBuilder(tablePrefix, dialect);
+        sqlBuilder.Select();
+        sqlBuilder.Selector($"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DocumentId))}");
+        sqlBuilder.Table(activityTableName, ActivityAlias, schema);
+
+        // Base conditions: only not-started manual activities.
+        var statusCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status))}";
+        var interactionCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.InteractionType))}";
+
+        sqlBuilder.WhereAnd($"{statusCol} = {(int)ActivityStatus.NotStated}");
+        sqlBuilder.WhereAnd($"{interactionCol} = {(int)ActivityInteractionType.Manual}");
+
+        // Default ordering.
+        var scheduledCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.ScheduledUtc))}";
+        var idCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Id))}";
+        sqlBuilder.OrderByDescending(scheduledCol);
+        sqlBuilder.ThenOrderBy(idCol);
+
+        var context = new BulkManageActivityFilterContext(filter, sqlBuilder, dialect, tablePrefix, tableNameConvention, schema, ActivityAlias);
 
         foreach (var handler in _bulkManageHandlers)
         {
             await handler.FilteringAsync(context, cancellationToken);
         }
 
-        var filteredQuery = context.Query;
-
+        // Handle ContactIsPublished filter if needed (requires cross-collection check with ContentItemIndex).
         if (filter.ContactIsPublished.HasValue)
         {
-            var contactContentItemIds = (await filteredQuery.ListAsync(cancellationToken))
-                .Select(activity => activity.ContactContentItemId)
-                .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
-                .Distinct()
-                .ToArray();
-
-            if (contactContentItemIds.Length == 0)
-            {
-                return Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.DocumentId == -1, collection: OmnichannelConstants.CollectionName);
-            }
-
-            var contactQuery = Session.Query<ContentItem, ContentItemIndex>(index => index.ContentItemId.IsIn(contactContentItemIds));
-
-            contactQuery = filter.ContactIsPublished.Value
-                ? contactQuery.Where(index => index.Published)
-                : contactQuery.Where(index => index.Latest && !index.Published);
-
-            var filteredContactContentItemIds = (await contactQuery.ListAsync(cancellationToken))
-                .Select(contentItem => contentItem.ContentItemId)
-                .Distinct()
-                .ToArray();
-
-            if (filteredContactContentItemIds.Length == 0)
-            {
-                return Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.DocumentId == -1, collection: OmnichannelConstants.CollectionName);
-            }
-
-            filteredQuery = filteredQuery.With<OmnichannelActivityIndex>(index => index.ContactContentItemId.IsIn(filteredContactContentItemIds));
+            await ApplyContactPublishedFilterAsync(context, filter.ContactIsPublished.Value);
         }
 
-        return filteredQuery;
+        return context;
+    }
+
+    private static Task ApplyContactPublishedFilterAsync(BulkManageActivityFilterContext context, bool published)
+    {
+        var dialect = context.Dialect;
+        var contactAlias = "ci";
+        var contentItemTable = context.TableNameConvention.GetIndexTable(typeof(ContentItemIndex));
+        var activityContactCol = nameof(OmnichannelActivityIndex.ContactContentItemId);
+        var contentItemIdCol = nameof(ContentItemIndex.ContentItemId);
+
+        context.SqlBuilder.Join(
+            JoinType.Inner,
+            contentItemTable,
+            contactAlias,
+            contentItemIdCol,
+            context.ActivityTableAlias,
+            activityContactCol,
+            context.Schema,
+            contactAlias,
+            context.ActivityTableAlias);
+
+        var publishedCol = $"{dialect.QuoteForAliasName(contactAlias)}.{dialect.QuoteForColumnName(nameof(ContentItemIndex.Published))}";
+        var latestCol = $"{dialect.QuoteForAliasName(contactAlias)}.{dialect.QuoteForColumnName(nameof(ContentItemIndex.Latest))}";
+
+        if (published)
+        {
+            context.SqlBuilder.WhereAnd($"{publishedCol} = 1");
+        }
+        else
+        {
+            context.SqlBuilder.WhereAnd($"{latestCol} = 1 AND {publishedCol} = 0");
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

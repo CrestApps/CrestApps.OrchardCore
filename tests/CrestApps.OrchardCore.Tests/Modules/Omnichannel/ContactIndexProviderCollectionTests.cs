@@ -1,5 +1,4 @@
 using System.Reflection;
-using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 

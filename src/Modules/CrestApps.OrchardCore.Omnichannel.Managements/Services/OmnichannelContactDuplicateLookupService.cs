@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement.Records;
@@ -47,11 +46,11 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         }
 
         var existingPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var cellPhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                index.NormalizedPrimaryCellPhoneNumber.IsIn(normalizedPhoneNumbers))
+        var cellPhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
+                index => index.NormalizedPrimaryCellPhoneNumber.IsIn(normalizedPhoneNumbers))
             .ListAsync(cancellationToken);
-        var homePhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                index.NormalizedPrimaryHomePhoneNumber.IsIn(normalizedPhoneNumbers))
+        var homePhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
+                index => index.NormalizedPrimaryHomePhoneNumber.IsIn(normalizedPhoneNumbers))
             .ListAsync(cancellationToken);
 
         foreach (var match in cellPhoneMatches)

@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
@@ -18,17 +18,17 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
             .Column<string>("ServiceAddress", column => column.WithLength(255))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<bool>("IsInbound", column => column.NotNull().WithDefault(false)),
-        collection: OmnichannelConstants.CollectionName
+            collection: OmnichannelConstants.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
             .CreateIndex("IDX_OmnichannelMessageIndex_DocumentId",
-        "DocumentId",
-        "Channel",
-        "CustomerAddress",
-        "ServiceAddress",
-        "CreatedUtc"),
-        collection: OmnichannelConstants.CollectionName
+                "DocumentId",
+                "Channel",
+                "CustomerAddress",
+                "ServiceAddress",
+                "CreatedUtc"),
+                collection: OmnichannelConstants.CollectionName
         );
 
         return 1;

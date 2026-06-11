@@ -81,6 +81,8 @@ An **Activity** is a task to be completed for a contact.
 
 When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
 
+Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
+
 ### Activity Batch
 An **Activity Batch** defines filters to find contacts and then **loads activities in the background**.
 
@@ -138,6 +140,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
+- upgrades now repair earlier preview tenants that accidentally created omnichannel contact index tables in the custom omnichannel collection, then reindex published contacts so phone, time-zone, and do-not-call filters continue to query the default Orchard content-item collection correctly
 
 Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 
@@ -173,6 +176,8 @@ After creating your subject content types and campaigns, go to `Interaction Cent
 5. If the subject uses automated interactions, configure the channel endpoint.
 6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, and initial outbound prompt pattern fields.
 7. Save the subject flow.
+
+Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint for automated flows). Activity creation, batch loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
 
 ### 7) Manage Flow
 

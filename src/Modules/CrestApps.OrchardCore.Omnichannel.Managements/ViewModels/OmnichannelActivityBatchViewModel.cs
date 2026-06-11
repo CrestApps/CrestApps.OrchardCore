@@ -84,6 +84,36 @@ public class OmnichannelActivityBatchViewModel
     public bool OnlyPublishedLeads { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of leads to load.
+    /// </summary>
+    public int? Limit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number to filter leads by.
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number match type.
+    /// </summary>
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time zone identifiers to filter leads by.
+    /// </summary>
+    public string[] TimeZoneIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the subject content type of the last completed activity to filter leads by.
+    /// </summary>
+    public string LastActivitySubjectContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the disposition identifier of the last completed activity to filter leads by.
+    /// </summary>
+    public string LastActivityDispositionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the status.
     /// </summary>
     [BindNever]
@@ -112,4 +142,22 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available phone number match types.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> PhoneNumberMatchTypes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available time zones.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> TimeZones { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available dispositions for last activity filter.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Dispositions { get; set; }
 }

@@ -72,9 +72,10 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
                 model.File = viewModel.File;
             }
 
-            var options = model.GetOrCreate<ImportContentOptionsPart>();
-            options.PublishImportedContent = viewModel.PublishImportedContent;
-            model.Put(options);
+            model.Alter<ImportContentOptionsPart>(options =>
+            {
+                options.PublishImportedContent = viewModel.PublishImportedContent;
+            });
         }
 
         return await EditAsync(model, context);

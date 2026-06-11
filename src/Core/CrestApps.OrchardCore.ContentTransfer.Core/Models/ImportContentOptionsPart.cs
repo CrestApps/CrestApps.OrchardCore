@@ -8,5 +8,5 @@ public sealed class ImportContentOptionsPart
     /// <summary>
     /// Gets or sets a value indicating whether imported content should be published after it is saved.
     /// </summary>
-    public bool PublishImportedContent { get; set; }
+    public bool PublishImportedContent { get; set; } = true;
 }
