@@ -47,6 +47,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProviderConnection connection = null;
+            var isNew = false;
 
             var id = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
 
@@ -83,6 +84,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
@@ -117,7 +119,10 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.CreateAsync(connection);
+            if (isNew)
+            {
+                await _manager.CreateAsync(connection);
+            }
         }
     }
 

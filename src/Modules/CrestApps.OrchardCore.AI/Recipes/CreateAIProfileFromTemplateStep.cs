@@ -38,6 +38,7 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
 
         foreach (var token in tokens)
         {
+            var isNew = false;
             var templateId = token[nameof(CreateAIProfileFromTemplateModel.TemplateId)]?.GetValue<string>()?.Trim();
 
             if (string.IsNullOrEmpty(templateId))
@@ -64,8 +65,13 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
             var tokenOverrides = token.DeepClone() as JsonObject ?? [];
             tokenOverrides.Remove(nameof(CreateAIProfileFromTemplateModel.TemplateId));
 
-            var profile = await GetExistingProfileAsync(tokenOverrides)
-                ?? await _profileManager.NewAsync(new JsonObject());
+            var profile = await GetExistingProfileAsync(tokenOverrides);
+
+            if (profile is null)
+            {
+                isNew = true;
+                profile = await _profileManager.NewAsync(new JsonObject());
+            }
 
             AIProfileTemplateApplicator.Apply(profile, template);
 
@@ -90,7 +96,10 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _profileManager.CreateAsync(profile);
+            if (isNew)
+            {
+                await _profileManager.CreateAsync(profile);
+            }
         }
     }
 
