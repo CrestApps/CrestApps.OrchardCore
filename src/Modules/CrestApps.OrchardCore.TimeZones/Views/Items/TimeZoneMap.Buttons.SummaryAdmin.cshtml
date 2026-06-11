@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.TimeZones.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TimeZoneMap>
+
+<a asp-action="Edit"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+<a asp-action="Delete"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-danger btn-sm"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this time zone map?"]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

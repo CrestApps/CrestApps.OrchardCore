@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
@@ -24,6 +23,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class OmnichannelContactPartContentImportHandler : ContentImportHandlerBase, IContentPartImportHandler
 {
     internal readonly IStringLocalizer S;
+
     private readonly IClock _clock;
     private readonly IPhoneNumberService _phoneNumberService;
 
@@ -277,7 +277,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             }
             else
             {
-                var normalizedTimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, rawTimeZoneId);
+                var normalizedTimeZoneId = NormalizeTimeZoneId(rawTimeZoneId);
 
                 if (!string.IsNullOrEmpty(normalizedTimeZoneId))
                 {
@@ -501,6 +501,16 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     private string InferTimeZoneId(string primaryPhoneNumber, string fallbackPhoneNumber)
         => GetFirstKnownTimeZoneId(primaryPhoneNumber) ?? GetFirstKnownTimeZoneId(fallbackPhoneNumber);
 
+    private static string NormalizeTimeZoneId(string timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return null;
+        }
+
+        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
+    }
+
     private string GetFirstKnownTimeZoneId(string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
@@ -510,7 +520,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 
         foreach (var timeZoneId in _phoneNumberService.GetTimeZones(phoneNumber))
         {
-            var normalizedTimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, timeZoneId);
+            var normalizedTimeZoneId = NormalizeTimeZoneId(timeZoneId);
 
             if (!string.IsNullOrEmpty(normalizedTimeZoneId))
             {

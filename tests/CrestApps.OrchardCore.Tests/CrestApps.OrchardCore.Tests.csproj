@@ -48,6 +48,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,6 +59,9 @@
     <Compile Remove="Extensions\**\*.cs" />
     <Compile Remove="Framework\**\*.cs" />
     <Compile Remove="Helpers\DocumentReaders\**\*.cs" />
+    <Compile Remove="OrchardCore\**" />
+    <EmbeddedResource Remove="OrchardCore\**" />
+    <None Remove="OrchardCore\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -74,7 +78,6 @@
 
   <ItemGroup>
     <Folder Include="Modules\AI.Memory\" />
-    <Folder Include="OrchardCore\AI\ChatInteractions\" />
   </ItemGroup>
 
 </Project>

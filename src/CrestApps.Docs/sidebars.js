@@ -105,6 +105,7 @@ const sidebars = {
                 'modules/resources',
                 'modules/roles',
                 'modules/signalr',
+                'modules/time-zones',
                 'modules/users',
             ],
         },

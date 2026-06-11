@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.TimeZones;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -27,6 +28,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
         "OrchardCore.Flows",
         "OrchardCore.Users",
+        TimeZonesConstants.Features.Area,
         "CrestApps.OrchardCore.Users",
     ]
 )]

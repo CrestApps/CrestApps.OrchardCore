@@ -41,6 +41,7 @@ The AI modules add Orchard admin experiences and feature wiring on top of CrestA
 - **[Resources](modules/resources)**
 - **[Roles](modules/roles)**
 - **[SignalR](modules/signalr)**
+- **[Time Zones](modules/time-zones)**
 - **[Users](modules/users)**
 
 ### Omnichannel Communications
