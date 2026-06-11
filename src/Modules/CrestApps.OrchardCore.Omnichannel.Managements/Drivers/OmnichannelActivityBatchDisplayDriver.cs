@@ -22,7 +22,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 {
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
@@ -44,7 +44,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ILocalClock localClock,
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
@@ -53,7 +53,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     {
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _localClock = localClock;
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
@@ -153,14 +153,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
             ];
 
-            var timeZones = new List<SelectListItem>();
-
-            foreach (var timeZone in _clock.GetTimeZones())
-            {
-                timeZones.Add(new SelectListItem(timeZone.TimeZoneId, timeZone.TimeZoneId));
-            }
-
-            model.TimeZones = timeZones.OrderBy(x => x.Text);
+            model.TimeZones = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
+                .Select(x => new SelectListItem(x.Value, x.Key)
+                {
+                    Selected = model.TimeZoneIds?.Contains(x.Key, StringComparer.OrdinalIgnoreCase) == true,
+                });
 
             var allDispositions = await _dispositionsCatalog.GetAllAsync();
             var dispositionItems = new List<SelectListItem>
