@@ -47,6 +47,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIDeployment deployment = null;
+            var isNew = false;
 
             var id = token[nameof(AIDeployment.ItemId)]?.GetValue<string>();
 
@@ -93,6 +94,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
@@ -139,7 +141,10 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.CreateAsync(deployment);
+            if (isNew)
+            {
+                await _manager.CreateAsync(deployment);
+            }
         }
     }
 

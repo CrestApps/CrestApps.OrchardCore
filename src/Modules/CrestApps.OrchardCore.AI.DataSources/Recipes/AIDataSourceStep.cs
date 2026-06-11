@@ -38,6 +38,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIDataSource dataSource = null;
+            var isNew = false;
 
             var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
 
@@ -54,6 +55,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 dataSource = await _dataManager.NewAsync(token);
 
                 if (hasId && UniqueId.IsValid(id))
@@ -74,7 +76,10 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _dataManager.CreateAsync(dataSource);
+            if (isNew)
+            {
+                await _dataManager.CreateAsync(dataSource);
+            }
         }
     }
 

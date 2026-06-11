@@ -41,6 +41,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProfileTemplate template = null;
+            var isNew = false;
 
             var id = token[nameof(AIProfileTemplate.ItemId)]?.GetValue<string>();
 
@@ -67,6 +68,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 template = await _templateManager.NewAsync(token);
 
                 if (hasId && UniqueId.IsValid(id))
@@ -87,7 +89,10 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _templateManager.CreateAsync(template);
+            if (isNew)
+            {
+                await _templateManager.CreateAsync(template);
+            }
         }
     }
 
