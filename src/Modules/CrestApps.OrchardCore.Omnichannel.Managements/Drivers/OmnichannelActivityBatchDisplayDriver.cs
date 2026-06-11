@@ -148,9 +148,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.PhoneNumberMatchTypes =
             [
+                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
-                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
             ];
 
             var timeZones = new List<SelectListItem>();

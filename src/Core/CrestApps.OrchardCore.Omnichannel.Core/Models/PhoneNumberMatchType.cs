@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 public enum PhoneNumberMatchType
 {
     /// <summary>
+    /// Match phone numbers that exactly equal the given value.
+    /// </summary>
+    Exact,
+
+    /// <summary>
     /// Match phone numbers that start with the given value.
     /// </summary>
     BeginsWith,
@@ -14,9 +19,4 @@ public enum PhoneNumberMatchType
     /// Match phone numbers that end with the given value.
     /// </summary>
     EndsWith,
-
-    /// <summary>
-    /// Match phone numbers that exactly equal the given value.
-    /// </summary>
-    Exact,
 }

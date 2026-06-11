@@ -123,9 +123,9 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
             model.PhoneNumberMatchTypes =
             [
+                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
-                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
             ];
 
             var subjectContentTypes = new List<SelectListItem>()
