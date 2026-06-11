@@ -138,6 +138,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
+- upgrades now repair earlier preview tenants that accidentally created omnichannel contact index tables in the custom omnichannel collection, then reindex published contacts so phone, time-zone, and do-not-call filters continue to query the default Orchard content-item collection correctly
 
 Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 

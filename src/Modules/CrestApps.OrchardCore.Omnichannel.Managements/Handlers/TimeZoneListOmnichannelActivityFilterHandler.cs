@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using YesSql;
@@ -29,7 +30,8 @@ public sealed class TimeZoneListOmnichannelActivityFilterHandler : IListOmnichan
             return;
         }
 
-        var contactContentItemIds = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.TimeZoneId == context.Filter.TimeZoneId)
+        var contactContentItemIds = (await _session.QueryIndex<OmnichannelContactIndex>(
+            index => index.TimeZoneId == context.Filter.TimeZoneId)
             .ListAsync(cancellationToken))
             .Select(index => index.ContentItemId)
             .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
