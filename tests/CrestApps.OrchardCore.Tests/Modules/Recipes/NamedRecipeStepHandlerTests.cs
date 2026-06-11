@@ -8,7 +8,6 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.TimeZones.Models;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Recipes.Models;
@@ -32,9 +31,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<IAIProfileManager>();
         manager.Setup(x => x.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(profile));
+            .Returns(() => ValueTask.FromResult(profile));
         manager.Setup(x => x.ValidateAsync(profile, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIProfileStep, CrestApps.OrchardCore.AI",
@@ -74,9 +73,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
         manager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(template));
+            .Returns(() => ValueTask.FromResult(template));
         manager.Setup(x => x.ValidateAsync(template, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIProfileTemplateStep, CrestApps.OrchardCore.AI",
@@ -117,9 +116,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<INamedSourceCatalogManager<AIProviderConnection>>();
         manager.Setup(x => x.FindByIdAsync("connection-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(connection));
+            .Returns(() => ValueTask.FromResult(connection));
         manager.Setup(x => x.ValidateAsync(connection, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIProviderConnectionsStep, CrestApps.OrchardCore.AI",
@@ -162,9 +161,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<IAIDeploymentManager>();
         manager.Setup(x => x.FindByIdAsync("deployment-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(deployment));
+            .Returns(() => ValueTask.FromResult(deployment));
         manager.Setup(x => x.ValidateAsync(deployment, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIDeploymentStep, CrestApps.OrchardCore.AI",
@@ -207,7 +206,7 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<IAIDeploymentManager>();
         manager.Setup(x => x.FindByNameAsync("default-chat", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(deployment));
+            .Returns(() => ValueTask.FromResult(deployment));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.DeleteAIDeploymentStep, CrestApps.OrchardCore.AI",
@@ -247,13 +246,13 @@ public sealed class NamedRecipeStepHandlerTests
 
         var profileManager = new Mock<IAIProfileManager>();
         profileManager.Setup(x => x.FindByNameAsync("support", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(profile));
+            .Returns(() => ValueTask.FromResult(profile));
         profileManager.Setup(x => x.ValidateAsync(profile, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var templateManager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
         templateManager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(template));
+            .Returns(() => ValueTask.FromResult(template));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.CreateAIProfileFromTemplateStep, CrestApps.OrchardCore.AI",
@@ -293,9 +292,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<ICatalogManager<AIDataSource>>();
         manager.Setup(x => x.FindByIdAsync("data-source-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(dataSource));
+            .Returns(() => ValueTask.FromResult(dataSource));
         manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
@@ -334,9 +333,9 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<ISourceCatalogManager<McpConnection>>();
         manager.Setup(x => x.FindByIdAsync("mcp-connection-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(connection));
+            .Returns(() => ValueTask.FromResult(connection));
         manager.Setup(x => x.ValidateAsync(connection, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
         var options = Options.Create(new McpClientAIOptions());
 
@@ -379,7 +378,7 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<INamedCatalogManager<McpPrompt>>();
         manager.Setup(x => x.FindByIdAsync("prompt-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(prompt));
+            .Returns(() => ValueTask.FromResult(prompt));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Mcp.Recipes.McpPromptStep, CrestApps.OrchardCore.AI.Mcp",
@@ -422,7 +421,7 @@ public sealed class NamedRecipeStepHandlerTests
 
         var manager = new Mock<ISourceCatalogManager<McpResource>>();
         manager.Setup(x => x.FindByIdAsync("resource-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(resource));
+            .Returns(() => ValueTask.FromResult(resource));
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Mcp.Recipes.McpResourceStep, CrestApps.OrchardCore.AI.Mcp",
@@ -453,50 +452,6 @@ public sealed class NamedRecipeStepHandlerTests
         Assert.Empty(context.Errors);
         manager.Verify(x => x.UpdateAsync(resource, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(It.IsAny<McpResource>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task TimeZoneMapStep_WhenMapExists_ShouldUpdateInsteadOfCreate()
-    {
-        // Arrange
-        var map = new TimeZoneMap
-        {
-            ItemId = "map-1",
-            Name = "Eastern Time (US & Canada)",
-            TimeZoneId = "America/New_York",
-        };
-
-        var manager = new Mock<INamedCatalogManager<TimeZoneMap>>();
-        manager.Setup(x => x.FindByIdAsync("map-1", It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(map));
-        manager.Setup(x => x.ValidateAsync(map, It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(new ValidationResultDetails()));
-
-        var handler = CreateHandler(
-            "CrestApps.OrchardCore.TimeZones.Recipes.TimeZoneMapStep, CrestApps.OrchardCore.TimeZones",
-            manager.Object,
-            null);
-
-        var context = CreateContext("TimeZoneMaps", new JsonObject
-        {
-            ["Maps"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    [nameof(TimeZoneMap.ItemId)] = "map-1",
-                    [nameof(TimeZoneMap.Name)] = "Eastern Time (US & Canada)",
-                    [nameof(TimeZoneMap.TimeZoneId)] = "America/New_York",
-                },
-            },
-        });
-
-        // Act
-        await ExecuteAsync(handler, context);
-
-        // Assert
-        Assert.Empty(context.Errors);
-        manager.Verify(x => x.UpdateAsync(map, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
-        manager.Verify(x => x.CreateAsync(It.IsAny<TimeZoneMap>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
