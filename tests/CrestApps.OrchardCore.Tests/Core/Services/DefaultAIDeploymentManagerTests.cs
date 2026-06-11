@@ -40,7 +40,7 @@ public sealed class DefaultAIDeploymentManagerTests
     {
         var deployment = CreateDeployment("dep-1", "gpt-4", AIDeploymentPurpose.Chat);
 
-        _storeMock.Setup(m => m.FindByIdAsync("dep-1"))
+        _storeMock.Setup(m => m.FindByIdAsync("dep-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployment);
 
         var result = await _manager.FindByIdAsync("dep-1", TestContext.Current.CancellationToken);
@@ -61,7 +61,7 @@ public sealed class DefaultAIDeploymentManagerTests
     [Fact]
     public async Task FindByIdAsync_WithInvalidId_ReturnsNull()
     {
-        _storeMock.Setup(m => m.FindByIdAsync("nonexistent"))
+        _storeMock.Setup(m => m.FindByIdAsync("nonexistent", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
 
         var result = await _manager.FindByIdAsync("nonexistent", TestContext.Current.CancellationToken);
@@ -83,7 +83,7 @@ public sealed class DefaultAIDeploymentManagerTests
             CreateDeployment("dep-conn", "gpt-4o", AIDeploymentPurpose.Chat, isDefault: true, connectionName: "conn-1"),
         };
 
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(connectionDeployments);
 
         var result = await _manager.ResolveOrDefaultAsync(
@@ -101,9 +101,9 @@ public sealed class DefaultAIDeploymentManagerTests
     {
         var deployment = CreateDeployment("dep-explicit", "azure-chat", AIDeploymentPurpose.Chat, modelName: "gpt-4.1");
 
-        _storeMock.Setup(m => m.FindByIdAsync("azure-chat"))
+        _storeMock.Setup(m => m.FindByIdAsync("azure-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
-        _storeMock.Setup(m => m.FindByNameAsync("azure-chat"))
+        _storeMock.Setup(m => m.FindByNameAsync("azure-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployment);
 
         var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: "azure-chat", cancellationToken: TestContext.Current.CancellationToken);
@@ -125,11 +125,11 @@ public sealed class DefaultAIDeploymentManagerTests
 
         var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentPurpose.Utility, modelName: "gpt-4.1-mini");
 
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(deployments);
-        _storeMock.Setup(m => m.FindByIdAsync("global-utility"))
+        _storeMock.Setup(m => m.FindByIdAsync("global-utility", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
-        _storeMock.Setup(m => m.FindByNameAsync("global-utility"))
+        _storeMock.Setup(m => m.FindByNameAsync("global-utility", It.IsAny<CancellationToken>()))
             .ReturnsAsync(globalDeployment);
 
         var result = await _manager.ResolveOrDefaultAsync(
@@ -147,7 +147,7 @@ public sealed class DefaultAIDeploymentManagerTests
         var scopedDeployment = CreateDeployment("dep-scoped", "gpt-4-turbo", AIDeploymentPurpose.Utility, connectionName: "conn-1");
         var otherDeployment = CreateDeployment("dep-other", "gpt-4o", AIDeploymentPurpose.Utility, clientName: "azure", connectionName: "conn-2");
 
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([otherDeployment, scopedDeployment]);
 
         var result = await _manager.ResolveOrDefaultAsync(
@@ -166,11 +166,11 @@ public sealed class DefaultAIDeploymentManagerTests
 
         var chatDeployment = CreateDeployment("dep-chat-first", "openai-chat", AIDeploymentPurpose.Chat, modelName: "gpt-4.1");
 
-        _storeMock.Setup(m => m.FindByIdAsync("missing-chat"))
+        _storeMock.Setup(m => m.FindByIdAsync("missing-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
-        _storeMock.Setup(m => m.FindByNameAsync("missing-chat"))
+        _storeMock.Setup(m => m.FindByNameAsync("missing-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([chatDeployment]);
 
         var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken);
@@ -185,10 +185,10 @@ public sealed class DefaultAIDeploymentManagerTests
         // No utility deployment exists, but a chat deployment does.
         var chatDeployment = CreateDeployment("dep-chat", "gpt-4o", AIDeploymentPurpose.Chat, isDefault: true, connectionName: "conn-1");
 
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { chatDeployment });
 
-        _storeMock.Setup(m => m.FindByIdAsync("dep-chat"))
+        _storeMock.Setup(m => m.FindByIdAsync("dep-chat", It.IsAny<CancellationToken>()))
             .ReturnsAsync(chatDeployment);
 
         var result = await _manager.ResolveUtilityOrDefaultAsync(clientName: "openai");
@@ -201,7 +201,7 @@ public sealed class DefaultAIDeploymentManagerTests
     [Fact]
     public async Task ResolveOrDefaultAsync_UtilityWithoutFallbacks_ReturnsNull()
     {
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Utility, cancellationToken: TestContext.Current.CancellationToken);
@@ -212,7 +212,7 @@ public sealed class DefaultAIDeploymentManagerTests
     [Fact]
     public async Task ResolveAsync_WithNoFallbacks_ReturnsNull()
     {
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var result = await _manager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken);
@@ -223,7 +223,7 @@ public sealed class DefaultAIDeploymentManagerTests
     [Fact]
     public async Task ResolveAsync_WithNoFallbacks_ThrowsInvalidOperationException()
     {
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var manager = (IAIDeploymentManager)_manager;
@@ -243,7 +243,7 @@ public sealed class DefaultAIDeploymentManagerTests
             CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentPurpose.Image, clientName: "openai"),
         };
 
-        _storeMock.Setup(m => m.GetAllAsync())
+        _storeMock.Setup(m => m.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(allDeployments);
 
         var result = (await _manager.GetAllByPurposeAsync(AIDeploymentPurpose.Chat, cancellationToken: TestContext.Current.CancellationToken)).ToList();
