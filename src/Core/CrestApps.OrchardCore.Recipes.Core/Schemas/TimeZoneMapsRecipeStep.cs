@@ -17,7 +17,9 @@ public sealed class TimeZoneMapsRecipeStep : RecipeStepSchemaBase
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique friendly time zone name.")),
-                ("TimeZoneId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchard Core time zone identifier to store for this map.")))
+                ("TimeZoneId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("IANA time zone identifier to store for this map.")),
+                ("OwnerId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The user id of the user creating the entry. Leave it blank to use the current user's Id.")),
+                ("Author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The username of the user creating the entry. Leave it blank to use the current username.")))
             .Required("Name", "TimeZoneId")
             .AdditionalProperties(true);
 
