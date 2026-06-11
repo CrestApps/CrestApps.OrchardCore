@@ -43,6 +43,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             McpConnection connection = null;
+            var isNew = false;
 
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
 
@@ -62,6 +63,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
@@ -96,7 +98,10 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.CreateAsync(connection);
+            if (isNew)
+            {
+                await _manager.CreateAsync(connection);
+            }
         }
     }
 
