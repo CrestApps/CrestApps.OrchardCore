@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDriver<OmnichannelContactPart>
 {
     private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -21,16 +22,18 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelContactPartDisplayDriver(
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IClock clock,
         IStringLocalizer<OmnichannelContactPartDisplayDriver> stringLocalizer)
     {
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _clock = clock;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(OmnichannelContactPart part, BuildPartEditorContext context)
     {
-        return Initialize<OmnichannelContactPartViewModel>(GetEditorShapeType(context), model =>
+        return Initialize<OmnichannelContactPartViewModel>(GetEditorShapeType(context), async model =>
         {
             var settings = context.TypePartDefinition.GetSettings<OmnichannelContactPartSettings>();
 
@@ -39,8 +42,8 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.UseDoNotSms = settings.UseDoNotSms;
             model.UseDoNotChat = settings.UseDoNotChat;
             model.UseDoNotEmail = settings.UseDoNotEmail;
-            model.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, part.TimeZoneId);
-            model.AvailableTimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S["Select time zone"], model.TimeZoneId);
+            model.TimeZoneId = NormalizeTimeZoneId(part.TimeZoneId);
+            model.AvailableTimeZones = await GetTimeZoneOptionsAsync(model.TimeZoneId);
             model.DoNotCall = part.DoNotCall;
             model.DoNotCallUtc = part.DoNotCallUtc;
             model.DoNotSms = part.DoNotSms;
@@ -60,7 +63,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
 
         var settings = context.TypePartDefinition.GetSettings<OmnichannelContactPartSettings>();
 
-        part.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, model.TimeZoneId);
+        part.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
 
         if (settings.RequireTimeZone && string.IsNullOrEmpty(part.TimeZoneId))
         {
@@ -90,5 +93,48 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
         }
 
         return Edit(part, context);
+    }
+
+    private static string NormalizeTimeZoneId(string timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return null;
+        }
+
+        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
+    }
+
+    private async Task<IEnumerable<SelectListItem>> GetTimeZoneOptionsAsync(string selectedTimeZoneId)
+    {
+        var selectedIds = selectedTimeZoneId is null
+            ? []
+            : new[] { selectedTimeZoneId };
+        var options = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
+            .Select(x => new SelectListItem(x.Value, x.Key))
+            .ToList();
+        var normalizedSelectedIds = selectedIds
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var selectedTimeZoneIdValue in normalizedSelectedIds)
+        {
+            if (options.Any(x => string.Equals(x.Value, selectedTimeZoneIdValue, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            options.Add(new SelectListItem(selectedTimeZoneIdValue, selectedTimeZoneIdValue));
+        }
+
+        foreach (var option in options)
+        {
+            option.Selected = normalizedSelectedIds.Contains(option.Value);
+        }
+
+        return options
+            .OrderBy(x => x.Text, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Value, StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -1301,3 +1301,15 @@ public sealed class AIRecipeStartup : StartupBase
         services.AddScoped<IRecipeStep, AIProviderConnectionsRecipeStep>();
     }
 }
+
+/// <summary>
+/// Registers services and configuration for the TimeZones recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.TimeZones")]
+public sealed class TimeZonesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, TimeZoneMapsRecipeStep>();
+    }
+}

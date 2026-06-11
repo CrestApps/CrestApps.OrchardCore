@@ -1,0 +1,23 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.TimeZones.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TimeZoneMap>
+
+@{
+    var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Time zone ID"]">
+    <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@Model.Value.TimeZoneId
+</span>
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@modifiedAt.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: modifiedAt))</time>
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Author))
+{
+    <user-display-name user-name="@(Model.Value.Author)" display-type="SummaryAdmin" cache-id="user-display-name-author" />
+}

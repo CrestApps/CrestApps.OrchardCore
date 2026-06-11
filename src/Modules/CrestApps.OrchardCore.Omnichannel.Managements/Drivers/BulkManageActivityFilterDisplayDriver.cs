@@ -24,7 +24,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 {
     private readonly LinkGenerator _linkGenerator;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
@@ -40,13 +40,13 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     public BulkManageActivityFilterDisplayDriver(
         LinkGenerator linkGenerator,
         ISession session,
-        IClock clock,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
         _linkGenerator = linkGenerator;
         _session = session;
-        _clock = clock;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
@@ -140,14 +140,11 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
 
-            var timeZones = new List<SelectListItem>();
-
-            foreach (var timeZone in _clock.GetTimeZones())
-            {
-                timeZones.Add(new SelectListItem(timeZone.TimeZoneId, timeZone.TimeZoneId));
-            }
-
-            model.TimeZones = timeZones.OrderBy(x => x.Text);
+            model.TimeZones = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
+                .Select(x => new SelectListItem(x.Value, x.Key)
+                {
+                    Selected = model.TimeZoneIds?.Contains(x.Key, StringComparer.OrdinalIgnoreCase) == true,
+                });
 
             model.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
 

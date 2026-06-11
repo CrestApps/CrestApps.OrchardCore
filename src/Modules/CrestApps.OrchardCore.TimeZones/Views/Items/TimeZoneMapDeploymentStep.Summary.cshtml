@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.TimeZones.Deployments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TimeZoneMapDeploymentStep>
+
+<h5>@T["Time Zone Maps"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All time zone maps"]</span>
+}
+else if (Model.Value.MapIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@(Model.Value.MapIds.Length == 1 ? T["1 selected time zone map."] : T["{0} selected time zone maps.", Model.Value.MapIds.Length])</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected time zone maps."]</span>
+}

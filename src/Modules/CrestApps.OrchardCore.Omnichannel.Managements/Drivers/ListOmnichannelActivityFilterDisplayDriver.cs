@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver<ListOmnichannelActivityFilter>
 {
     private readonly IClock _clock;
+    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
@@ -26,10 +27,12 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IClock clock,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
     {
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -47,7 +50,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.SubjectContentType = filter.SubjectContentType;
             model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
-            model.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, filter.TimeZoneId);
+            model.TimeZoneId = NormalizeTimeZoneId(filter.TimeZoneId);
             model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -70,7 +73,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
 
-            model.TimeZones = OmnichannelTimeZoneHelper.GetTimeZoneOptions(_clock, S["Any time zone"], model.TimeZoneId);
+            model.TimeZones = await GetTimeZoneOptionsAsync(S["Any time zone"], model.TimeZoneId);
 
             model.AttemptFilters =
             [
@@ -113,7 +116,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.SubjectContentType = model.SubjectContentType;
         filter.UrgencyLevel = model.UrgencyLevel;
         filter.Channel = model.Channel;
-        filter.TimeZoneId = OmnichannelTimeZoneHelper.NormalizeTimeZoneId(_clock, model.TimeZoneId);
+        filter.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
         filter.AttemptFilter = model.AttemptFilter;
         filter.ScheduledFrom = null;
         filter.ScheduledTo = null;
@@ -166,5 +169,65 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         }
 
         return Edit(filter, context);
+    }
+
+    private static string NormalizeTimeZoneId(string timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return null;
+        }
+
+        return NodaTime.DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId.Trim())?.Id;
+    }
+
+    private async Task<IEnumerable<SelectListItem>> GetTimeZoneOptionsAsync(LocalizedString emptyOptionText, string selectedTimeZoneId)
+    {
+        var selectedIds = selectedTimeZoneId is null
+            ? []
+            : new[] { selectedTimeZoneId };
+        var options = new List<SelectListItem>
+        {
+            new()
+            {
+                Text = emptyOptionText.Value,
+                Value = string.Empty,
+                Selected = string.IsNullOrEmpty(selectedTimeZoneId),
+            },
+        };
+
+        options.AddRange(await GetMappedTimeZoneOptionsAsync(selectedIds));
+
+        return options;
+    }
+
+    private async Task<IEnumerable<SelectListItem>> GetMappedTimeZoneOptionsAsync(IEnumerable<string> selectedTimeZoneIds)
+    {
+        var selectedIds = selectedTimeZoneIds
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var options = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
+            .Select(x => new SelectListItem(x.Value, x.Key))
+            .ToList();
+
+        foreach (var selectedTimeZoneId in selectedIds)
+        {
+            if (options.Any(x => string.Equals(x.Value, selectedTimeZoneId, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            options.Add(new SelectListItem(selectedTimeZoneId, selectedTimeZoneId));
+        }
+
+        foreach (var option in options)
+        {
+            option.Selected = selectedIds.Contains(option.Value);
+        }
+
+        return options
+            .OrderBy(x => x.Text, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Value, StringComparer.OrdinalIgnoreCase);
     }
 }
