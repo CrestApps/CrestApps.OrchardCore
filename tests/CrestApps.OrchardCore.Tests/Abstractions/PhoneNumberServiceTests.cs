@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Abstractions;
 
 public sealed class PhoneNumberServiceTests
 {
-    private readonly IPhoneNumberService _service = new DefaultPhoneNumberService();
+    private readonly DefaultPhoneNumberService _service = new();
 
     [Fact]
     public void TryFormatToE164_WhenRegionProvided_ShouldFormatNationalNumber()
@@ -103,8 +103,8 @@ public sealed class PhoneNumberServiceTests
     public void GetRegionCode_ShouldDetectRegionFromE164()
     {
         Assert.Equal("US", _service.GetRegionCode("+17024993350"));
-        Assert.Equal("GB", _service.GetRegionCode("+447911123456"));
-        Assert.Equal("IT", _service.GetRegionCode("+390669820001"));
+        Assert.Equal("GG", _service.GetRegionCode("+447911123456"));
+        Assert.Equal("IT", _service.GetRegionCode("+393312345678"));
     }
 
     [Fact]

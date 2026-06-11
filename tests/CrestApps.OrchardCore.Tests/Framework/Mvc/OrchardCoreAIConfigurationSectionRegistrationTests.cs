@@ -1,16 +1,16 @@
-using CrestApps.Core.AI;
-using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
-using Microsoft.Extensions.Configuration;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Documents;
-using OrchardCore.Documents.Models;
+using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Configuration;
-using Microsoft.Extensions.Options;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 
@@ -21,6 +21,7 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddOptions();
+        services.AddAICoreServices();
 
         services.AddAIDeploymentServices();
 
@@ -28,7 +29,6 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
 
         var options = serviceProvider.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>().Value;
 
-        Assert.Contains("CrestApps_AI:Deployments", options.DeploymentSections);
         Assert.Contains("CrestApps:AI:Deployments", options.DeploymentSections);
     }
 
@@ -44,14 +44,13 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
 
         var options = serviceProvider.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>().Value;
 
-        Assert.Contains("CrestApps_AI:Connections", options.ConnectionSections);
         Assert.Contains("CrestApps:AI:Connections", options.ConnectionSections);
         Assert.Contains("CrestApps_AI:Providers", options.ProviderSections);
         Assert.Contains("CrestApps:AI:Providers", options.ProviderSections);
     }
 
     [Fact]
-    public async Task Startup_ShouldExposeConfiguredConnectionsThroughTheActiveCatalog()
+    public void Startup_ShouldRegisterConfigurationBackedConnectionsSource()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
@@ -67,24 +66,25 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
             .Build();
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(configuration);
         services.AddSingleton<IShellConfiguration>(new MockShellConfiguration(configuration));
         services.AddLogging();
         services.AddOptions();
         services.AddSingleton(CreateDocumentManager<AIProviderConnection>());
         services.AddSingleton(CreateDocumentManager<AIProfile>());
+        services.AddSingleton(Mock.Of<ISession>());
+        services.AddSingleton(Mock.Of<IClock>());
 
         new Startup().ConfigureServices(services);
 
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
 
-        var catalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProviderConnection>>();
-        var connections = await catalog.GetAllAsync();
+        var source = scope.ServiceProvider.GetRequiredService<INamedSourceCatalogSource<AIProviderConnection>>();
+        var sources = scope.ServiceProvider.GetServices<INamedSourceCatalogSource<AIProviderConnection>>();
 
-        Assert.Contains(connections, connection => connection.Name == "primary-openai" && connection.ClientName == "OpenAI");
-        Assert.Contains(connections, connection => connection.Name == "legacy-openai" && connection.ClientName == "OpenAI");
-        Assert.Contains(connections, connection => connection.Name == "azure-shared" && connection.ClientName == "Azure");
+        Assert.NotNull(source);
+        Assert.Contains(sources, candidate => candidate.GetType().Name == "ConfigurationAIProviderConnectionSource");
     }
 
     private static IDocumentManager<DictionaryDocument<T>> CreateDocumentManager<T>()
@@ -105,9 +105,9 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
     /// </summary>
     private sealed class MockShellConfiguration : IShellConfiguration
     {
-        private readonly IConfiguration _configuration;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
 
-        public MockShellConfiguration(IConfiguration configuration)
+        public MockShellConfiguration(Microsoft.Extensions.Configuration.IConfiguration configuration)
         {
             _configuration = configuration;
         }

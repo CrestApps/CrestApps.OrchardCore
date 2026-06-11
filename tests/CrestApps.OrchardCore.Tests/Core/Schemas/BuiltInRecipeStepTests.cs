@@ -190,7 +190,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaProfilesRecipeStep), "MediaProfiles")]
     [InlineData(typeof(RolesRecipeStep), "Roles")]
     [InlineData(typeof(UsersRecipeStep), "Users")]
-    [InlineData(typeof(SettingsRecipeStep), "Settings")]
+    [InlineData(typeof(SettingsRecipeStep), "settings")]
     [InlineData(typeof(CustomUserSettingsRecipeStep), "custom-user-settings")]
     [InlineData(typeof(CustomSettingsRecipeStep), "custom-settings")]
     [InlineData(typeof(AzureADSettingsRecipeStep), "AzureADSettings")]
@@ -296,7 +296,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task GetSchemaAsync_ProducesValidSerializableSchema(Type stepType)
     {
         var step = CreateStep(stepType);
-        var schema = await step.GetSchemaAsync();
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
         Assert.NotNull(schema);
 
         var json = JsonSerializer.Serialize(schema);
@@ -362,8 +362,8 @@ public sealed class BuiltInRecipeStepTests
     public async Task GetSchemaAsync_CachesResult(Type stepType)
     {
         var step = CreateStep(stepType);
-        var first = await step.GetSchemaAsync();
-        var second = await step.GetSchemaAsync();
+        var first = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+        var second = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
         Assert.Same(first, second);
     }
 
@@ -371,7 +371,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task FeatureRecipeStep_SchemaContainsEnableDisableAndFeatureEnums()
     {
         var step = new FeatureRecipeStep(CreateShellFeaturesManager());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"enable\"", json);
         Assert.Contains("\"disable\"", json);
         Assert.Contains("\"OrchardCore.Contents\"", json);
@@ -382,7 +382,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task ThemesRecipeStep_SchemaContainsSiteAdminAndThemeEnums()
     {
         var step = new ThemesRecipeStep(new StubFeatureSchemaProvider());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"site\"", json);
         Assert.Contains("\"admin\"", json);
         Assert.Contains("\"TheAdmin\"", json);
@@ -393,7 +393,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task ContentRecipeStep_SchemaRequiresDataWithContentType()
     {
         var step = new ContentRecipeStep(CreateContentDefinitionManager());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"ContentType\"", json);
         Assert.Contains("\"data\"", json);
     }
@@ -402,7 +402,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task RolesRecipeStep_SchemaContainsPermissionBehavior()
     {
         var step = new RolesRecipeStep(CreatePermissionService());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"PermissionBehavior\"", json);
         Assert.Contains("\"Add\"", json);
         Assert.Contains("\"Replace\"", json);
@@ -413,7 +413,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task MediaRecipeStep_SchemaContainsSourceOptions()
     {
         var step = new MediaRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"TargetPath\"", json);
         Assert.Contains("\"SourcePath\"", json);
         Assert.Contains("\"SourceUrl\"", json);
@@ -424,7 +424,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task AdminMenuRecipeStep_SchemaContainsMenuItems()
     {
         var step = new AdminMenuRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"MenuItems\"", json);
         Assert.Contains("\"ContentType\"", json);
     }
@@ -433,7 +433,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task DeleteContentDefinitionRecipeStep_SchemaHasStringArrays()
     {
         var step = new DeleteContentDefinitionRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"ContentTypes\"", json);
         Assert.Contains("\"ContentParts\"", json);
     }
@@ -442,7 +442,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task ReplaceContentDefinitionRecipeStep_SchemaMatchesExpandedContentDefinitionShape()
     {
         var step = new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"ContentTypePartDefinitionRecords\"", json);
         Assert.Contains("\"ContentPartFieldDefinitionRecords\"", json);
@@ -455,7 +455,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task CustomUserSettingsRecipeStep_SchemaAllowsNamedCollectionsOfUserSettings()
     {
         var step = new CustomUserSettingsRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"userId\"", json);
         Assert.Contains("\"user-custom-user-settings\"", json);
@@ -466,7 +466,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task OpenIdClientSettingsRecipeStep_SchemaContainsValidatedResponseEnums()
     {
         var step = new OpenIdClientSettingsRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"ResponseType\"", json);
         Assert.Contains("\"code id_token token\"", json);
@@ -478,7 +478,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task OpenIdApplicationRecipeStep_SchemaContainsKnownClientAndConsentOptions()
     {
         var step = new OpenIdApplicationRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"ConsentType\"", json);
         Assert.Contains("\"explicit\"", json);
@@ -490,7 +490,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task UsersRecipeStep_SchemaContainsUserShape()
     {
         var step = new UsersRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"Users\"", json);
         Assert.Contains("\"UserName\"", json);
@@ -501,7 +501,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task SettingsRecipeStep_SchemaContainsBuiltInAndContributedSettings()
     {
         var step = new SettingsRecipeStep(CreateAllSiteSettingsSchemaDefinitions());
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"HomeRoute\"", json);
         Assert.Contains("\"AdminSettings\"", json);
@@ -513,7 +513,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task TranslationsRecipeStep_SchemaContainsNewFormatTranslationEntries()
     {
         var step = new TranslationsRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"translations\"", json);
         Assert.Contains("\"culture\"", json);
@@ -524,7 +524,7 @@ public sealed class BuiltInRecipeStepTests
     public async Task DynamicDataTranslationsRecipeStep_SchemaContainsLegacyTranslationEntries()
     {
         var step = new DynamicDataTranslationsRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"Translations\"", json);
         Assert.Contains("\"Translation\"", json);
@@ -551,28 +551,28 @@ public sealed class BuiltInRecipeStepTests
         .ToArray();
 
     private static StubContentSchemaProvider CreateContentSchemaProvider()
-        => new StubContentSchemaProvider(
+        => new(
             CreateContentDefinitionSchemaDefinitions()
             .Select(definition => definition.Name)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray(),
-    [
-        "BooleanField",
-        "ContentPickerField",
-        "DateField",
-        "DateTimeField",
-        "HtmlField",
-        "LinkField",
-        "LocalizationSetContentPickerField",
-        "MediaField",
-        "MultiTextField",
-        "NumericField",
-        "TaxonomyField",
-        "TextField",
-        "TimeField",
-        "UserPickerField",
-        "YoutubeField",
+        [
+            "BooleanField",
+            "ContentPickerField",
+            "DateField",
+            "DateTimeField",
+            "HtmlField",
+            "LinkField",
+            "LocalizationSetContentPickerField",
+            "MediaField",
+            "MultiTextField",
+            "NumericField",
+            "TaxonomyField",
+            "TextField",
+            "TimeField",
+            "UserPickerField",
+            "YoutubeField",
         ]);
 
     private sealed class StubContentSchemaProvider(

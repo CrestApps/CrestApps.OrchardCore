@@ -1,7 +1,10 @@
 using System.Reflection;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +23,7 @@ public sealed class DataSourceIndexingServiceTests
     public async Task ResolveEmbeddingDeploymentAsync_WhenSelectedProfileNeedsReload_UsesEmbeddingFromStoredIndexProfile()
     {
         // Arrange
-        var indexProfileStore = new Mock<IIndexProfileStore>();
+        var indexProfileManager = new Mock<IIndexProfileManager>();
         var deploymentManager = new Mock<IAIDeploymentManager>();
 
         var listProfile = new IndexProfile
@@ -29,7 +32,7 @@ public sealed class DataSourceIndexingServiceTests
             Name = "knowledgebaseindex-jt-7",
             IndexName = "knowledgebaseindex-jt-7",
             ProviderName = "Elasticsearch",
-            Type = DataSourceConstants.IndexingTaskType,
+            Type = "AIDataSource",
         };
 
         var storedProfile = new IndexProfile
@@ -38,7 +41,7 @@ public sealed class DataSourceIndexingServiceTests
             Name = "knowledgebaseindex-jt-7",
             IndexName = "knowledgebaseindex-jt-7",
             ProviderName = "Elasticsearch",
-            Type = DataSourceConstants.IndexingTaskType,
+            Type = "AIDataSource",
         };
 
         IndexProfileEmbeddingMetadataAccessor.StoreMetadata(storedProfile, new DataSourceIndexProfileMetadata
@@ -50,11 +53,11 @@ public sealed class DataSourceIndexingServiceTests
         {
             ItemId = "deployment-1",
             Name = "text-embedding-3-small",
-            DeploymentType = AIDeploymentPurpose.Embedding,
+            Purpose = AIDeploymentPurpose.Embedding,
         };
 
-        indexProfileStore
-            .Setup(store => store.FindByIdAsync(listProfile.Id))
+        indexProfileManager
+            .Setup(manager => manager.FindByIdAsync(listProfile.Id))
             .ReturnsAsync(storedProfile);
 
         deploymentManager
@@ -62,7 +65,7 @@ public sealed class DataSourceIndexingServiceTests
             .ReturnsAsync(deployment);
 
         var service = new DataSourceIndexingService(
-            indexProfileStore.Object,
+            indexProfileManager.Object,
             Mock.Of<IAIDataSourceStore>(),
             deploymentManager.Object,
             Mock.Of<IAIClientFactory>(),
@@ -85,7 +88,7 @@ public sealed class DataSourceIndexingServiceTests
     public async Task ResolveEmbeddingDeploymentAsync_WhenStoredSelectorUsesModelName_ResolvesAndPersistsTechnicalDeploymentName()
     {
         // Arrange
-        var indexProfileStore = new Mock<IIndexProfileStore>();
+        var indexProfileManager = new Mock<IIndexProfileManager>();
         var deploymentManager = new Mock<IAIDeploymentManager>();
 
         var storedProfile = new IndexProfile
@@ -94,7 +97,7 @@ public sealed class DataSourceIndexingServiceTests
             Name = "knowledgebaseindex-jt-7",
             IndexName = "knowledgebaseindex-jt-7",
             ProviderName = "Elasticsearch",
-            Type = DataSourceConstants.IndexingTaskType,
+            Type = "AIDataSource",
         };
 
         IndexProfileEmbeddingMetadataAccessor.StoreMetadata(storedProfile, new DataSourceIndexProfileMetadata
@@ -110,9 +113,12 @@ public sealed class DataSourceIndexingServiceTests
             Purpose = AIDeploymentPurpose.Embedding,
         };
 
-        indexProfileStore
-            .Setup(store => store.FindByIdAsync(storedProfile.Id))
+        indexProfileManager
+            .Setup(manager => manager.FindByIdAsync(storedProfile.Id))
             .ReturnsAsync(storedProfile);
+        indexProfileManager
+            .Setup(manager => manager.UpdateAsync(storedProfile))
+            .Returns(ValueTask.CompletedTask);
 
         deploymentManager
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small", It.IsAny<CancellationToken>()))
@@ -122,7 +128,7 @@ public sealed class DataSourceIndexingServiceTests
             .ReturnsAsync([deployment]);
 
         var service = new DataSourceIndexingService(
-            indexProfileStore.Object,
+            indexProfileManager.Object,
             Mock.Of<IAIDataSourceStore>(),
             deploymentManager.Object,
             Mock.Of<IAIClientFactory>(),
@@ -139,9 +145,9 @@ public sealed class DataSourceIndexingServiceTests
         // Assert
         Assert.NotNull(resolvedDeployment);
         Assert.Equal("Azure-text-embedding-3-small", resolvedDeployment.Name);
-        Assert.True(storedProfile.TryGet(out DataSourceIndexProfileMetadata metadata));
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(storedProfile);
         Assert.Equal("Azure-text-embedding-3-small", metadata.GetEmbeddingDeploymentName());
-        indexProfileStore.Verify(store => store.UpdateAsync(storedProfile), Times.Once);
+        indexProfileManager.Verify(manager => manager.UpdateAsync(storedProfile), Times.Once);
     }
 
     private static async Task<AIDeployment> InvokeResolveEmbeddingDeploymentAsync(

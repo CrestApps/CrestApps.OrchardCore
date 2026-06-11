@@ -11,14 +11,14 @@ public sealed class SettingsRecipeStepTests
     {
         var step = new SettingsRecipeStep([]);
 
-        Assert.Equal("Settings", step.Name);
+        Assert.Equal("settings", step.Name);
     }
 
     [Fact]
     public async Task GetSchemaAsync_ReturnsValidSchema()
     {
         var step = new SettingsRecipeStep([]);
-        var schema = await step.GetSchemaAsync();
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(schema);
 
@@ -33,8 +33,8 @@ public sealed class SettingsRecipeStepTests
     public async Task GetSchemaAsync_ReturnsCachedInstance()
     {
         var step = new SettingsRecipeStep([]);
-        var first = await step.GetSchemaAsync();
-        var second = await step.GetSchemaAsync();
+        var first = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+        var second = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         Assert.Same(first, second);
     }
@@ -48,7 +48,7 @@ public sealed class SettingsRecipeStepTests
             new GeneralAISettingsSchema(),
         ]);
 
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"AdminSettings\"", json);
         Assert.Contains("\"DisplayThemeToggler\"", json);
