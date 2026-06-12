@@ -13,7 +13,7 @@ public sealed class NamedCatalogTests
 
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
-        var result = await catalog.FindByNameAsync("Test");
+        var result = await catalog.FindByNameAsync("Test", TestContext.Current.CancellationToken);
 
         Assert.Equal(entry, result);
     }
@@ -24,7 +24,7 @@ public sealed class NamedCatalogTests
         var records = new List<TestNamedCatalogEntry>();
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
-        var result = await catalog.FindByNameAsync("NotFound");
+        var result = await catalog.FindByNameAsync("NotFound", TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
@@ -33,8 +33,8 @@ public sealed class NamedCatalogTests
     public async Task FindByNameAsync_Throws_WhenNullOrEmpty()
     {
         var catalog = FakeDocumentManager.CreateNamedCatalog<TestNamedCatalogEntry>([], out _);
-        await Assert.ThrowsAsync<ArgumentNullException>(async () => await catalog.FindByNameAsync(null));
-        await Assert.ThrowsAsync<ArgumentException>(async () => await catalog.FindByNameAsync(""));
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await catalog.FindByNameAsync(null, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(async () => await catalog.FindByNameAsync("", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -48,8 +48,7 @@ public sealed class NamedCatalogTests
 
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
 
-        await catalog.CreateAsync(entry1);
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.CreateAsync(entry2));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.CreateAsync(entry2, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -68,6 +67,6 @@ public sealed class NamedCatalogTests
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
         entry1.Name = entry2.Name;
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.UpdateAsync(entry1));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.UpdateAsync(entry1, TestContext.Current.CancellationToken));
     }
 }

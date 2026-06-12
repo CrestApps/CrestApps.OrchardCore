@@ -63,7 +63,7 @@ public sealed class PartSchemaDefinitionTests
     public async Task GetSettingsSchemaAsync_ReturnsNonNullSerializableSchema(Type definitionType)
     {
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
-        var schema = await instance.GetSettingsSchemaAsync();
+        var schema = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(schema);
 
@@ -90,8 +90,8 @@ public sealed class PartSchemaDefinitionTests
     public async Task GetSettingsSchemaAsync_CachesResult(Type definitionType)
     {
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
-        var first = await instance.GetSettingsSchemaAsync();
-        var second = await instance.GetSettingsSchemaAsync();
+        var first = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var second = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
 
         Assert.Same(first, second);
     }
@@ -100,7 +100,7 @@ public sealed class PartSchemaDefinitionTests
     public async Task TitlePartSchema_ContainsExpectedOptions()
     {
         var def = new TitlePartSchema();
-        var schema = await def.GetSettingsSchemaAsync();
+        var schema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
         var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("TitlePartSettings", json);
@@ -114,7 +114,7 @@ public sealed class PartSchemaDefinitionTests
     public async Task AliasPartSchema_ContainsPatternAndOptions()
     {
         var def = new AliasPartSchema();
-        var schema = await def.GetSettingsSchemaAsync();
+        var schema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
         var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("AliasPartSettings", json);
@@ -126,7 +126,7 @@ public sealed class PartSchemaDefinitionTests
     public async Task HtmlBodyPartSchema_HasSanitizeDefault()
     {
         var def = new HtmlBodyPartSchema();
-        var schema = await def.GetSettingsSchemaAsync();
+        var schema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
         var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("SanitizeHtml", json);

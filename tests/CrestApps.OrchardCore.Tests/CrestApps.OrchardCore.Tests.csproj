@@ -22,11 +22,6 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
-    <PackageReference Include="CrestApps.Core.AI.Claude" />
-    <PackageReference Include="CrestApps.Core.AI.Copilot" />
-    <PackageReference Include="CrestApps.Core.AI.Markdown" />
-    <PackageReference Include="CrestApps.Core.AI.Documents.OpenXml" />
-    <PackageReference Include="CrestApps.Core.AI.Documents.Pdf" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
@@ -53,32 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Abstractions\**\*.cs" />
-    <Compile Remove="AITemplates\**\*.cs" />
-    <Compile Remove="ChatNotifications\**\*.cs" />
-    <Compile Remove="Core\**\*.cs" />
-    <Compile Remove="Extensions\**\*.cs" />
-    <Compile Remove="Framework\**\*.cs" />
-    <Compile Remove="Helpers\DocumentReaders\**\*.cs" />
-    <Compile Remove="OrchardCore\**" />
-    <EmbeddedResource Remove="OrchardCore\**" />
-    <None Remove="OrchardCore\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="Core\Services\OrchardCoreSearchIndexProfileStoreTests.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Using Include="Xunit" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Templates\Prompts\*.md" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Modules\AI.Memory\" />
   </ItemGroup>
 
 </Project>

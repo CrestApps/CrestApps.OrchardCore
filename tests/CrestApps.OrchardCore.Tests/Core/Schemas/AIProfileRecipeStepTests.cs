@@ -9,7 +9,7 @@ public sealed class AIProfileRecipeStepTests
     public async Task GetSchemaAsync_ContainsCurrentAndLegacyDeploymentSelectors()
     {
         var step = new AIProfileRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"ChatDeploymentName\"", json);
         Assert.Contains("\"UtilityDeploymentName\"", json);
@@ -21,7 +21,7 @@ public sealed class AIProfileRecipeStepTests
     public async Task CreateFromTemplateSchema_ContainsRequiredTemplateId()
     {
         var step = new CreateAIProfileFromTemplateRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"CreateAIProfileFromTemplate\"", json);
         Assert.Contains("\"TemplateId\"", json);
