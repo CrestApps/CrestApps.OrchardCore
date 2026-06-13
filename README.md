@@ -4,12 +4,15 @@
 
 ## Documentation
 
-- **Orchard Core Documentation:** https://orchardcore.crestapps.com
-- **Core Framework Documentation:** https://core.crestapps.com
+- **CrestApps Orchard Core Documentation:** https://orchardcore.crestapps.com
+- **CrestApps Core Documentation:** https://core.crestapps.com
+- **Orchard Core Documentation:** https://docs.orchardcore.net
 
-Use the Orchard Core documentation for module installation, feature configuration, administration, and application development guidance.
+Use the CrestApps Orchard Core documentation for module installation, feature configuration, administration, and application development guidance.
 
-The Core Framework documentation covers shared infrastructure, reusable APIs, orchestration components, and cross-platform libraries used across the CrestApps ecosystem.
+Refer to the Orchard Core documentation for framework concepts, CMS features, and core platform documentation.
+
+The CrestApps Core documentation covers shared infrastructure, reusable APIs, orchestration components, and cross-platform libraries used across the CrestApps ecosystem.
 
 ## Repository Scope
 
