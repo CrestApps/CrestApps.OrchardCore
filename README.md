@@ -1,10 +1,10 @@
-# CrestApps.OrchardCore
+# CrestApp's Orchard Core Modules
 
 `CrestApps.OrchardCore` contains the Orchard Core packages, modules, startup apps, and docs that build on top of the shared **CrestApps.Core** framework.
 
 ## Documentation
 
-- **Orchard Core docs:** <https://crestapps.crestapps.com>
+- **Orchard Core docs:** <https://orchardcore.crestapps.com>
 - **CrestApps.Core docs:** <https://core.crestapps.com>
 
 Use the Orchard site for Orchard module setup, admin configuration, startup apps, and CMS integration guidance. Use the Core site for shared framework concepts, APIs, orchestration internals, and reusable .NET building blocks.
