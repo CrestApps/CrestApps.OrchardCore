@@ -162,6 +162,7 @@
   <ItemGroup>
     <!-- Transitive Packages -->
     <PackageVersion Include="MailKit" Version="4.16.0" />
+    <PackageVersion Include="MessagePack" Version="2.5.301" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
   </ItemGroup>
   <ItemGroup>
