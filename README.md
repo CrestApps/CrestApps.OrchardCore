@@ -1,26 +1,31 @@
-# CrestApps.OrchardCore
+# Orchard Core Modules by CrestApps
 
-`CrestApps.OrchardCore` contains the Orchard Core packages, modules, startup apps, and docs that build on top of the shared **CrestApps.Core** framework.
+`CrestApps.OrchardCore` is a collection of modules and extensions that expand the capabilities of the Orchard Core framework and accelerate the development of modern, enterprise-ready applications.
 
 ## Documentation
 
-- **Orchard Core docs:** <https://crestapps.crestapps.com>
-- **CrestApps.Core docs:** <https://core.crestapps.com>
+- **CrestApps Orchard Core Documentation:** https://orchardcore.crestapps.com
+- **CrestApps Core Documentation:** https://core.crestapps.com
+- **Orchard Core Documentation:** https://docs.orchardcore.net
 
-Use the Orchard site for Orchard module setup, admin configuration, startup apps, and CMS integration guidance. Use the Core site for shared framework concepts, APIs, orchestration internals, and reusable .NET building blocks.
+Use the CrestApps Orchard Core documentation for module installation, feature configuration, administration, and application development guidance.
 
-## Repository scope
+Refer to the Orchard Core documentation for framework concepts, CMS features, and core platform documentation.
 
-This repository focuses on:
+The CrestApps Core documentation covers shared infrastructure, reusable APIs, orchestration components, and cross-platform libraries used across the CrestApps ecosystem.
 
-- Orchard Core abstractions and integration libraries
-- Orchard Core modules and feature wiring
-- Orchard-specific startup applications and samples
-- Orchard Core targets, tests, benchmarks, and documentation
+## Repository Scope
 
-The underlying framework also powers non-Orchard hosts and is documented separately in the `CrestApps.Core` repository.
+This repository includes:
 
-## Current solution structure
+- Orchard Core modules and features
+- Framework extensions and enhancements
+- Orchard Core integration libraries
+- Startup applications and reference implementations
+- Package targets and module bundles
+- Tests, benchmarks, and documentation
+
+## Solution Structure
 
 ```text
 src/
@@ -37,36 +42,43 @@ tests/
 └── CrestApps.OrchardCore.Tests/
 ```
 
-## Main project areas
+## Project Areas
 
-| Area | Purpose |
+| Area | Description |
 | --- | --- |
-| `src\Abstractions` | Shared Orchard Core abstractions |
-| `src\Common` | Shared support code used by Orchard projects |
-| `src\Core` | Orchard-focused core libraries |
-| `src\Modules` | Orchard Core modules such as AI, Omnichannel, Roles, Users, and SignalR |
-| `src\Startup` | Runnable apps including the CMS host, Aspire host, and sample clients |
-| `src\Targets` | Package targets that bundle module references |
-| `src\CrestApps.Docs` | Docusaurus site for Orchard-specific documentation |
+| `src/Abstractions` | Shared abstractions for Orchard Core integrations |
+| `src/Common` | Common utilities and supporting components |
+| `src/Core` | Core Orchard Core integration libraries |
+| `src/Modules` | Orchard Core modules and framework extensions |
+| `src/Startup` | Sample applications, CMS hosts, and development environments |
+| `src/Targets` | Package targets that simplify module installation and composition |
+| `src/CrestApps.Docs` | Documentation source for Orchard Core modules and extensions |
 
-## Getting started
+## Getting Started
 
 ```powershell
 git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
 cd CrestApps.OrchardCore
+
 npm install
 npm run rebuild
+
 dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
 dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
 ```
 
-The .NET build restores Orchard Core preview packages from Cloudsmith, so network access to the configured feeds is required.
+> Note: Some builds may restore preview packages from the CrestApps Cloudsmith feed. Ensure the required NuGet sources are configured and accessible.
 
-## Package feeds
+## Package Feeds
 
-- **Stable:** <https://www.nuget.org/>
-- **Preview feed:** <https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore>
-- **Preview source URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`
+### Stable Packages
+
+- https://www.nuget.org/
+
+### Preview Packages
+
+- https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore
+- https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json
 
 ## License
 
