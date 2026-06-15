@@ -29,6 +29,39 @@
 
         var telephoneInput = window.intlTelInput(telInput, options);
 
+        function syncHiddenInputs() {
+            if (!telInput.value) {
+                if (e164Input) {
+                    e164Input.value = '';
+                }
+
+                if (countryInput) {
+                    countryInput.value = '';
+                }
+
+                if (nationalInput) {
+                    nationalInput.value = '';
+                }
+
+                return;
+            }
+
+            var e164Number = telephoneInput.getNumber();
+            var countryData = telephoneInput.getSelectedCountryData();
+
+            if (e164Input) {
+                e164Input.value = e164Number || '';
+            }
+
+            if (countryInput) {
+                countryInput.value = (countryData.iso2 || '').toUpperCase();
+            }
+
+            if (nationalInput) {
+                nationalInput.value = telInput.value || '';
+            }
+        }
+
         if (telInput.disabled) {
             telephoneInput.setDisabled(true);
         }
@@ -36,39 +69,13 @@
             telephoneInput.setReadonly(true);
         }
 
+        telInput.addEventListener('input', syncHiddenInputs);
+        telInput.addEventListener('blur', syncHiddenInputs);
+        telInput.addEventListener('countrychange', syncHiddenInputs);
+        syncHiddenInputs();
+
         if (telInput.form) {
-            telInput.form.addEventListener('submit', function () {
-                if (!telInput.value) {
-                    if (e164Input) {
-                        e164Input.value = '';
-                    }
-
-                    if (countryInput) {
-                        countryInput.value = '';
-                    }
-
-                    if (nationalInput) {
-                        nationalInput.value = '';
-                    }
-
-                    return;
-                }
-
-                var e164Number = telephoneInput.getNumber();
-                var countryData = telephoneInput.getSelectedCountryData();
-
-                if (e164Input) {
-                    e164Input.value = e164Number || '';
-                }
-
-                if (countryInput) {
-                    countryInput.value = (countryData.iso2 || '').toUpperCase();
-                }
-
-                if (nationalInput) {
-                    nationalInput.value = telInput.value || '';
-                }
-            });
+            telInput.form.addEventListener('submit', syncHiddenInputs);
         }
     }
 

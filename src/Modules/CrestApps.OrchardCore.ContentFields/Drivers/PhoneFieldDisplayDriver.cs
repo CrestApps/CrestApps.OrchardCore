@@ -62,10 +62,16 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
         return Initialize<EditPhoneFieldViewModel>(GetEditorShapeType(context), model =>
         {
             var settings = context.PartFieldDefinition.GetSettings<PhoneFieldSettings>();
+            var countryCode = field.CountryCode;
+
+            if (string.IsNullOrWhiteSpace(countryCode) && !string.IsNullOrWhiteSpace(field.PhoneNumber))
+            {
+                countryCode = _phoneNumberService.GetRegionCode(field.PhoneNumber);
+            }
 
             model.PhoneNumber = field.PhoneNumber;
-            model.CountryCode = field.CountryCode;
-            model.NationalNumber = field.NationalNumber;
+            model.CountryCode = countryCode?.ToUpperInvariant();
+            model.NationalNumber = ResolveNationalNumber(field.PhoneNumber, model.CountryCode, field.NationalNumber);
             model.Field = field;
             model.Part = context.ContentPart;
             model.PartFieldDefinition = context.PartFieldDefinition;
@@ -87,37 +93,46 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
     {
         var viewModel = new EditPhoneFieldViewModel();
 
-        await context.Updater.TryUpdateModelAsync(viewModel, Prefix, m => m.PhoneNumber, m => m.CountryCode, m => m.NationalNumber);
+        await context.Updater.TryUpdateModelAsync(viewModel, Prefix,
+            m => m.PhoneNumber,
+            m => m.CountryCode,
+            m => m.NationalNumber);
+
+        var phoneNumber = viewModel.PhoneNumber?.Trim();
+        var countryCode = viewModel.CountryCode?.Trim()?.ToUpperInvariant();
+        var nationalNumber = viewModel.NationalNumber?.Trim();
+
+        field.PhoneNumber = phoneNumber;
+        field.CountryCode = countryCode;
+        field.NationalNumber = nationalNumber;
 
         var settings = context.PartFieldDefinition.GetSettings<PhoneFieldSettings>();
 
-        if (settings.Required && string.IsNullOrWhiteSpace(viewModel.PhoneNumber))
+        var hasPhoneNumber = !string.IsNullOrWhiteSpace(phoneNumber);
+
+        if (settings.Required && !hasPhoneNumber)
         {
             context.Updater.ModelState.AddModelError(
                 Prefix,
                 nameof(viewModel.PhoneNumber),
                 S["The {0} field is required.", context.PartFieldDefinition.DisplayName()]);
         }
-        else if (!string.IsNullOrWhiteSpace(viewModel.PhoneNumber))
+        else if (hasPhoneNumber && !string.IsNullOrWhiteSpace(countryCode))
         {
-            var regionCode = viewModel.CountryCode;
-
-            if (!_phoneNumberService.IsValidNumber(viewModel.PhoneNumber, regionCode))
+            if (!_phoneNumberService.IsValidNumber(phoneNumber, countryCode))
             {
                 context.Updater.ModelState.AddModelError(
                     Prefix,
                     nameof(viewModel.PhoneNumber),
                     S["The {0} field does not contain a valid phone number.", context.PartFieldDefinition.DisplayName()]);
             }
-            else if (_phoneNumberService.TryFormatToE164(viewModel.PhoneNumber, regionCode, out var e164Number))
+            else if (_phoneNumberService.TryFormatToE164(phoneNumber, countryCode, out var e164Number))
             {
                 viewModel.PhoneNumber = e164Number;
+                viewModel.CountryCode = _phoneNumberService.GetRegionCode(e164Number) ?? countryCode;
+                viewModel.NationalNumber = ResolveNationalNumber(e164Number, viewModel.CountryCode, null);
             }
         }
-
-        field.PhoneNumber = viewModel.PhoneNumber;
-        field.CountryCode = viewModel.CountryCode?.ToUpperInvariant();
-        field.NationalNumber = viewModel.NationalNumber;
 
         return Edit(field, context);
     }
@@ -130,6 +145,32 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
             InitialCountryMode.Specific => settings.SpecificCountryCode,
             _ => null,
         };
+    }
+
+    private string ResolveNationalNumber(string phoneNumber, string regionCode, string fallbackNationalNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(fallbackNationalNumber))
+        {
+            return fallbackNationalNumber;
+        }
+
+        if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(regionCode))
+        {
+            return phoneNumber;
+        }
+
+        var countryCode = _phoneNumberService.GetCountryCode(regionCode);
+
+        if (countryCode <= 0)
+        {
+            return phoneNumber;
+        }
+
+        var prefix = $"+{countryCode}";
+
+        return phoneNumber.StartsWith(prefix, StringComparison.Ordinal)
+            ? phoneNumber[prefix.Length..]
+            : phoneNumber;
     }
 
     private static string GetCountryCodeFromCulture()
