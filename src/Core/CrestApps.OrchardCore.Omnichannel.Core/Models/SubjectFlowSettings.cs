@@ -112,4 +112,3 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
         };
     }
 }
-

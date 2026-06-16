@@ -1,7 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using Json.Schema;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -73,10 +78,12 @@ public sealed class BuiltInRecipeStepTests
             new AzureAISearchDefaultSettingsSchema(),
             new AzureEmailSettingsSchema(),
             new AzureSmsSettingsSchema(),
+            new CanadaDnclRegistrySettingsSchema(),
             new ChangeEmailSettingsSchema(),
             new ContentAuditTrailSettingsSchema(),
             new ContentCulturePickerSettingsSchema(),
             new ContentRequestCultureProviderSettingsSchema(),
+            new DncRegistrySettingsSchema(),
             new EmailAuthenticatorLoginSettingsSchema(),
             new EmailSettingsSchema(),
             new ExportContentToDeploymentTargetSettingsSchema(),
@@ -114,6 +121,7 @@ public sealed class BuiltInRecipeStepTests
             new TwitterSigninSettingsSchema(),
             new TwilioSettingsSchema(),
             new TwoFactorLoginSettingsSchema(),
+            new UsaFtcDncRegistrySettingsSchema(),
             new WorkflowTrimmingSettingsSchema(),
             new GeneralAISettingsSchema(),
             new DefaultAIDeploymentSettingsSchema(),
@@ -139,7 +147,7 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(ContentDefinitionRecipeStep))
         {
-            return new ContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
+            return new ContentDefinitionRecipeStep(CreateContentSchemaDefinitions(), CreateContentSchemaProvider());
         }
 
         if (stepType == typeof(FeatureRecipeStep))
@@ -154,12 +162,12 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(ContentRecipeStep))
         {
-            return new ContentRecipeStep(CreateContentDefinitionManager());
+            return new ContentRecipeStep(CreateContentDefinitionManager(), CreateContentSchemaDefinitions());
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
         {
-            return new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
+            return new ReplaceContentDefinitionRecipeStep(CreateContentSchemaDefinitions(), CreateContentSchemaProvider());
         }
 
         if (stepType == typeof(RecipesRecipeStep))
@@ -392,10 +400,173 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaRequiresDataWithContentType()
     {
-        var step = new ContentRecipeStep(CreateContentDefinitionManager());
+        var step = new ContentRecipeStep(CreateContentDefinitionManager(), CreateContentSchemaDefinitions());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"ContentType\"", json);
         Assert.Contains("\"data\"", json);
+    }
+
+    [Fact]
+    public async Task ContentRecipeStep_SchemaIncludesKnownPartAndFieldPropertiesPerContentType()
+    {
+        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+            CreateContentTypeDefinition(
+                "BlogPost",
+                CreateTypePartDefinition("TitlePart"),
+                CreateTypePartDefinition("ContainedPart"),
+                CreateTypePartDefinition("MarkdownBodyPart"),
+                CreateTypePartDefinition("AutoroutePart"),
+                CreateTypePartDefinition("BlogPost",
+                    CreateFieldDefinition("Subtitle"),
+                    CreateFieldDefinition("Image", "MediaField"),
+                    CreateFieldDefinition("Tags", "TaxonomyField"),
+                    CreateFieldDefinition("Category", "TaxonomyField"))),
+            CreateContentTypeDefinition(
+                "Article",
+                CreateTypePartDefinition("TitlePart"),
+                CreateTypePartDefinition("HtmlBodyPart"),
+                CreateTypePartDefinition("AutoroutePart"),
+                CreateTypePartDefinition("Article",
+                    CreateFieldDefinition("Subtitle"),
+                    CreateFieldDefinition("Image", "MediaField"),
+                    CreateFieldDefinition("Location", "GeoPointField"),
+                    CreateFieldDefinition("Categories", "TaxonomyField"),
+                    CreateFieldDefinition("Summary", "MarkdownField"))),
+            CreateContentTypeDefinition(
+                "Widget",
+                CreateTypePartDefinition("HtmlMenuItemPart"),
+                CreateTypePartDefinition("LayerMetadata"),
+                CreateTypePartDefinition("PublishLaterPart"))),
+            CreateContentSchemaDefinitions());
+
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("\"BlogPost\"", json);
+        Assert.Contains("\"ContainedPart\"", json);
+        Assert.Contains("\"MarkdownBodyPart\"", json);
+        Assert.Contains("\"Article\"", json);
+        Assert.Contains("\"HtmlBodyPart\"", json);
+        Assert.Contains("\"Title\"", json);
+        Assert.Contains("\"Html\"", json);
+        Assert.Contains("\"Path\"", json);
+        Assert.Contains("\"SetHomepage\"", json);
+        Assert.Contains("\"Subtitle\"", json);
+        Assert.Contains("\"Image\"", json);
+        Assert.Contains("\"Text\"", json);
+        Assert.Contains("\"Paths\"", json);
+        Assert.Contains("\"MediaTexts\"", json);
+        Assert.Contains("\"Anchors\"", json);
+        Assert.Contains("\"Latitude\"", json);
+        Assert.Contains("\"Longitude\"", json);
+        Assert.Contains("\"TermContentItemIds\"", json);
+        Assert.Contains("\"TagNames\"", json);
+        Assert.Contains("\"Markdown\"", json);
+        Assert.Contains("\"ScheduledPublishUtc\"", json);
+        Assert.Contains("\"RenderTitle\"", json);
+        Assert.Contains("\"Position\"", json);
+        Assert.Contains("\"Url\"", json);
+        Assert.Contains("\"Target\"", json);
+    }
+
+    [Fact]
+    public async Task ContentRecipeStep_SchemaValidatesContentItemsWithContentTypeSpecificProperties()
+    {
+        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+            CreateContentTypeDefinition(
+                "Article",
+                CreateTypePartDefinition("TitlePart"),
+                CreateTypePartDefinition("HtmlBodyPart"),
+                CreateTypePartDefinition("AutoroutePart"),
+                CreateTypePartDefinition("Article",
+                    CreateFieldDefinition("Subtitle"),
+                    CreateFieldDefinition("Image", "MediaField")))),
+            CreateContentSchemaDefinitions());
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse("""
+            {
+              "name": "content",
+              "data": [
+                {
+                  "ContentType": "Article",
+                  "DisplayText": "About",
+                  "TitlePart": {
+                    "Title": "About"
+                  },
+                  "HtmlBodyPart": {
+                    "Html": "<p>About</p>"
+                  },
+                  "Article": {
+                    "Subtitle": {
+                      "Text": "This is what I do."
+                    },
+                    "Image": {
+                      "Paths": [
+                        "about-bg.jpg"
+                      ],
+                      "MediaTexts": [
+                        "About background"
+                      ],
+                      "Anchors": [
+                        {
+                          "X": 0.5,
+                          "Y": 0.5
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+            """);
+
+        var result = schema.Evaluate(document.RootElement);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ContentRecipeStep_SchemaValidatesKnownPartPayloadProperties()
+    {
+        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+            CreateContentTypeDefinition(
+                "BlogPost",
+                CreateTypePartDefinition("TitlePart"),
+                CreateTypePartDefinition("MarkdownBodyPart"),
+                CreateTypePartDefinition("AutoroutePart"),
+                CreateTypePartDefinition("ContainedPart"))),
+            CreateContentSchemaDefinitions());
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse("""
+            {
+              "name": "content",
+              "data": [
+                {
+                  "ContentType": "BlogPost",
+                  "TitlePart": {
+                    "Title": "Hello world"
+                  },
+                  "MarkdownBodyPart": {
+                    "Markdown": "# Hello"
+                  },
+                  "AutoroutePart": {
+                    "Path": "blog/hello-world",
+                    "SetHomepage": false
+                  },
+                  "ContainedPart": {
+                    "ListContentItemId": "abc",
+                    "ListContentType": "Blog",
+                    "Order": 0
+                  }
+                }
+              ]
+            }
+            """);
+
+        var result = schema.Evaluate(document.RootElement);
+
+        Assert.True(result.IsValid);
     }
 
     [Fact]
@@ -441,7 +612,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ReplaceContentDefinitionRecipeStep_SchemaMatchesExpandedContentDefinitionShape()
     {
-        var step = new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
+        var step = new ReplaceContentDefinitionRecipeStep(CreateContentSchemaDefinitions(), CreateContentSchemaProvider());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"ContentTypePartDefinitionRecords\"", json);
@@ -449,6 +620,86 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"ContentTypeSettings\"", json);
         Assert.Contains("\"AliasPartSettings\"", json);
         Assert.Contains("\"FieldName\"", json);
+        Assert.Contains("\"TextFieldSettings\"", json);
+        Assert.Contains("\"MediaFieldSettings\"", json);
+        Assert.Contains("\"TaxonomyFieldSettings\"", json);
+        Assert.Contains("\"GeoPointFieldSettings\"", json);
+        Assert.Contains("\"MarkdownFieldSettings\"", json);
+    }
+
+    [Fact]
+    public async Task ContentDefinitionRecipeStep_SchemaCombinesPartSettingsDefinitionsWithSameName()
+    {
+        var step = new ContentDefinitionRecipeStep(
+        [
+            new TestSharedPartSchema(),
+            new TestSharedPartAdvancedSchema(),
+        ],
+            new StubContentSchemaProvider(["SharedPart"], []));
+
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("\"PartName\":{\"const\":\"SharedPart\"}", json);
+        Assert.Contains("\"SharedPartSettings\"", json);
+        Assert.Contains("\"SharedPartAdvancedSettings\"", json);
+        Assert.Contains("\"Headline\"", json);
+        Assert.Contains("\"Theme\"", json);
+    }
+
+    [Fact]
+    public async Task ContentDefinitionRecipeStep_SchemaCombinesFieldSettingsDefinitionsWithSameName()
+    {
+        var step = new ContentDefinitionRecipeStep(
+        [
+            new TestSharedFieldSchema(),
+            new TestSharedFieldAdvancedSchema(),
+        ],
+            new StubContentSchemaProvider([], ["SharedField"]));
+
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("\"FieldName\":{\"const\":\"SharedField\"}", json);
+        Assert.Contains("\"SharedFieldSettings\"", json);
+        Assert.Contains("\"SharedFieldAdvancedSettings\"", json);
+        Assert.Contains("\"Alpha\"", json);
+        Assert.Contains("\"Beta\"", json);
+    }
+
+    [Fact]
+    public async Task ContentRecipeStep_SchemaCombinesFieldValueDefinitionsWithSameName()
+    {
+        var step = new ContentRecipeStep(
+            CreateContentDefinitionManager(
+                CreateContentTypeDefinition(
+                    "Article",
+                    CreateTypePartDefinition("Article",
+                        CreateFieldDefinition("Shared", "SharedField")))),
+        [
+            new TestSharedFieldSchema(),
+            new TestSharedFieldAdvancedSchema(),
+        ]);
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse("""
+            {
+              "name": "content",
+              "data": [
+                {
+                  "ContentType": "Article",
+                  "Article": {
+                    "Shared": {
+                      "Alpha": "one",
+                      "Beta": "two"
+                    }
+                  }
+                }
+              ]
+            }
+            """);
+
+        var result = schema.Evaluate(document.RootElement);
+
+        Assert.True(result.IsValid);
     }
 
     [Fact]
@@ -531,28 +782,56 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"Context\"", json);
     }
 
-    private static IContentDefinitionManager CreateContentDefinitionManager()
+    private static IContentDefinitionManager CreateContentDefinitionManager(params ContentTypeDefinition[] definitions)
     {
         var manager = new Mock<IContentDefinitionManager>();
-        var definitions = Array.Empty<ContentTypeDefinition>();
 
         manager.Setup(m => m.ListTypeDefinitionsAsync()).ReturnsAsync(definitions);
 
         return manager.Object;
     }
 
-    private static IContentDefinitionSchemaDefinition[] CreateContentDefinitionSchemaDefinitions()
-        => typeof(IContentDefinitionSchemaDefinition).Assembly.ExportedTypes
+    private static ContentTypeDefinition CreateContentTypeDefinition(
+        string name,
+        params ContentTypePartDefinition[] parts)
+    {
+        var definition = new ContentTypeDefinition(name, name, parts, new JsonObject());
+
+        foreach (var part in parts)
+        {
+            part.ContentTypeDefinition = definition;
+        }
+
+        return definition;
+    }
+
+    private static ContentTypePartDefinition CreateTypePartDefinition(
+        string name,
+        params ContentPartFieldDefinition[] fields)
+    {
+        var partDefinition = new ContentPartDefinition(name, fields, new JsonObject());
+
+        return new ContentTypePartDefinition(name, partDefinition, new JsonObject());
+    }
+
+    private static ContentPartFieldDefinition CreateFieldDefinition(
+        string fieldName,
+        string fieldType = "TextField")
+        => new(new ContentFieldDefinition(fieldType), fieldName, []);
+
+    private static IContentSchemaDefinition[] CreateContentSchemaDefinitions()
+        => typeof(IContentSchemaDefinition).Assembly.ExportedTypes
         .Where(type =>
-    typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
+    typeof(IContentSchemaDefinition).IsAssignableFrom(type) &&
         type is { IsAbstract: false, IsInterface: false })
         .OrderBy(type => type.Name, StringComparer.Ordinal)
-        .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type))
+        .Select(type => (IContentSchemaDefinition)Activator.CreateInstance(type))
         .ToArray();
 
     private static StubContentSchemaProvider CreateContentSchemaProvider()
         => new(
-            CreateContentDefinitionSchemaDefinitions()
+            CreateContentSchemaDefinitions()
+            .Where(definition => definition.Type == ContentDefinitionSchemaType.Part)
             .Select(definition => definition.Name)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
@@ -562,9 +841,11 @@ public sealed class BuiltInRecipeStepTests
             "ContentPickerField",
             "DateField",
             "DateTimeField",
+            "GeoPointField",
             "HtmlField",
             "LinkField",
             "LocalizationSetContentPickerField",
+            "MarkdownField",
             "MediaField",
             "MultiTextField",
             "NumericField",
@@ -584,5 +865,83 @@ public sealed class BuiltInRecipeStepTests
 
         public Task<IEnumerable<string>> GetFieldTypeNamesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
+    }
+
+    private sealed class TestSharedPartSchema : PartSchemaDefinitionBase
+    {
+        public override string Name => "SharedPart";
+
+        protected override JsonSchemaBuilder BuildSettingsCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("SharedPartSettings", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(("Headline", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                        .AdditionalProperties(false)))
+                .AdditionalProperties(true);
+    }
+
+    private sealed class TestSharedPartAdvancedSchema : PartSchemaDefinitionBase
+    {
+        public override string Name => "SharedPart";
+
+        protected override JsonSchemaBuilder BuildSettingsCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("SharedPartAdvancedSettings", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(("Theme", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                        .AdditionalProperties(false)))
+                .AdditionalProperties(true);
+    }
+
+    private sealed class TestSharedFieldSchema : FieldSchemaDefinitionBase
+    {
+        public override string Name => "SharedField";
+
+        protected override JsonSchemaBuilder BuildSettingsCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("SharedFieldSettings", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                            ("Alpha", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                        .AdditionalProperties(false)))
+                .AdditionalProperties(true);
+
+        protected override JsonSchemaBuilder BuildFieldSchemaCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(("Alpha", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                .AdditionalProperties(true);
+    }
+
+    private sealed class TestSharedFieldAdvancedSchema : FieldSchemaDefinitionBase
+    {
+        public override string Name => "SharedField";
+
+        protected override JsonSchemaBuilder BuildSettingsCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("SharedFieldAdvancedSettings", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Required", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                            ("Beta", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                        .AdditionalProperties(false)))
+                .AdditionalProperties(true);
+
+        protected override JsonSchemaBuilder BuildFieldSchemaCore()
+            => new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(("Beta", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                .AdditionalProperties(true);
     }
 }

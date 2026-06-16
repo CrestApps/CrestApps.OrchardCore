@@ -1,6 +1,6 @@
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
+namespace CrestApps.OrchardCore.Recipes.Core;
 
 /// <summary>
 /// Defines a site settings schema fragment that can be contributed to the generic

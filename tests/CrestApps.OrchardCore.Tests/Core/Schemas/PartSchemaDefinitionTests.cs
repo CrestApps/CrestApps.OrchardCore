@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -12,16 +13,20 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(AliasPartSchema), "AliasPart")]
     [InlineData(typeof(HtmlBodyPartSchema), "HtmlBodyPart")]
     [InlineData(typeof(MarkdownBodyPartSchema), "MarkdownBodyPart")]
+    [InlineData(typeof(ContainedPartSchema), "ContainedPart")]
     [InlineData(typeof(ListPartSchema), "ListPart")]
     [InlineData(typeof(FlowPartSchema), "FlowPart")]
     [InlineData(typeof(BagPartSchema), "BagPart")]
     [InlineData(typeof(WidgetsListPartSchema), "WidgetsListPart")]
+    [InlineData(typeof(LayerMetadataSchema), "LayerMetadata")]
     [InlineData(typeof(PreviewPartSchema), "PreviewPart")]
+    [InlineData(typeof(PublishLaterPartSchema), "PublishLaterPart")]
     [InlineData(typeof(SeoMetaPartSchema), "SeoMetaPart")]
     [InlineData(typeof(AuditTrailPartSchema), "AuditTrailPart")]
+    [InlineData(typeof(HtmlMenuItemPartSchema), "HtmlMenuItemPart")]
     public void Name_ReturnsExpectedValue(Type definitionType, string expectedName)
     {
-        var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
 
         Assert.Equal(expectedName, instance.Name);
     }
@@ -33,16 +38,20 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(AliasPartSchema))]
     [InlineData(typeof(HtmlBodyPartSchema))]
     [InlineData(typeof(MarkdownBodyPartSchema))]
+    [InlineData(typeof(ContainedPartSchema))]
     [InlineData(typeof(ListPartSchema))]
     [InlineData(typeof(FlowPartSchema))]
     [InlineData(typeof(BagPartSchema))]
     [InlineData(typeof(WidgetsListPartSchema))]
+    [InlineData(typeof(LayerMetadataSchema))]
     [InlineData(typeof(PreviewPartSchema))]
+    [InlineData(typeof(PublishLaterPartSchema))]
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
+    [InlineData(typeof(HtmlMenuItemPartSchema))]
     public void Type_AlwaysReturnsPart(Type definitionType)
     {
-        var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
 
         Assert.Equal(ContentDefinitionSchemaType.Part, instance.Type);
     }
@@ -54,16 +63,20 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(AliasPartSchema))]
     [InlineData(typeof(HtmlBodyPartSchema))]
     [InlineData(typeof(MarkdownBodyPartSchema))]
+    [InlineData(typeof(ContainedPartSchema))]
     [InlineData(typeof(ListPartSchema))]
     [InlineData(typeof(FlowPartSchema))]
     [InlineData(typeof(BagPartSchema))]
     [InlineData(typeof(WidgetsListPartSchema))]
+    [InlineData(typeof(LayerMetadataSchema))]
     [InlineData(typeof(PreviewPartSchema))]
+    [InlineData(typeof(PublishLaterPartSchema))]
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
+    [InlineData(typeof(HtmlMenuItemPartSchema))]
     public async Task GetSettingsSchemaAsync_ReturnsNonNullSerializableSchema(Type definitionType)
     {
-        var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
         var schema = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(schema);
@@ -81,16 +94,20 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(AliasPartSchema))]
     [InlineData(typeof(HtmlBodyPartSchema))]
     [InlineData(typeof(MarkdownBodyPartSchema))]
+    [InlineData(typeof(ContainedPartSchema))]
     [InlineData(typeof(ListPartSchema))]
     [InlineData(typeof(FlowPartSchema))]
     [InlineData(typeof(BagPartSchema))]
     [InlineData(typeof(WidgetsListPartSchema))]
+    [InlineData(typeof(LayerMetadataSchema))]
     [InlineData(typeof(PreviewPartSchema))]
+    [InlineData(typeof(PublishLaterPartSchema))]
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
+    [InlineData(typeof(HtmlMenuItemPartSchema))]
     public async Task GetSettingsSchemaAsync_CachesResult(Type definitionType)
     {
-        var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
         var first = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
         var second = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
 
@@ -132,5 +149,62 @@ public sealed class PartSchemaDefinitionTests
 
         Assert.Contains("SanitizeHtml", json);
         Assert.Contains("\"default\":true", json);
+        Assert.Contains("RenderLiquid", json);
+        Assert.Contains("HtmlBodyPartMonacoEditorSettings", json);
+        Assert.Contains("HtmlBodyPartTrumbowygEditorSettings", json);
+    }
+
+    [Fact]
+    public async Task MarkdownBodyPartSchema_ContainsRenderLiquidAndMarkdownValue()
+    {
+        var def = new MarkdownBodyPartSchema();
+        var settingsSchema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RenderLiquid", settingsJson);
+        Assert.Contains("MarkdownBodyPartWysiwygEditorSettings", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("Markdown", partJson);
+    }
+
+    [Fact]
+    public async Task HtmlMenuItemPartSchema_ContainsSettingsAndPayload()
+    {
+        var def = new HtmlMenuItemPartSchema();
+        var settingsSchema = await def.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("HtmlMenuItemPartSettings", settingsJson);
+        Assert.Contains("SanitizeHtml", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("Url", partJson);
+        Assert.Contains("Target", partJson);
+        Assert.Contains("Html", partJson);
+    }
+
+    [Fact]
+    public async Task PublishLaterAndLayerMetadataSchemas_ContainPayloadProperties()
+    {
+        var publishLaterSchema = await ((IContentPartSchemaDefinition)new PublishLaterPartSchema())
+            .GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var publishLaterJson = publishLaterSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("ScheduledPublishUtc", publishLaterJson);
+        Assert.Contains("\"type\":\"null\"", publishLaterJson);
+
+        var layerMetadataSchema = await ((IContentPartSchemaDefinition)new LayerMetadataSchema())
+            .GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var layerMetadataJson = layerMetadataSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RenderTitle", layerMetadataJson);
+        Assert.Contains("Position", layerMetadataJson);
+        Assert.Contains("Zone", layerMetadataJson);
+        Assert.Contains("Layer", layerMetadataJson);
     }
 }

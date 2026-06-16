@@ -37,6 +37,27 @@ The module splits settings by responsibility:
 
 When global enforcement is enabled, Omnichannel imports always perform DNC checks even if the importer does not opt in on the import form.
 
+The same settings can now be provisioned through the Recipes module's generic `Settings` step by using the `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, and `CanadaDnclRegistrySettings` objects when the matching features are enabled.
+
+```json
+{
+  "steps": [
+    {
+      "name": "settings",
+      "DncRegistrySettings": {
+        "EnforceGlobally": true,
+        "EnforcedRegistryKeys": ["usa-ftc", "canada-dncl"]
+      },
+      "UsaFtcDncRegistrySettings": {
+        "OrganizationId": "example-org",
+        "BaseUrl": "https://telemarketing.donotcall.gov/api/",
+        "ProtectedApiKey": "encrypted-api-key"
+      }
+    }
+  ]
+}
+```
+
 ## Provider credentials and protected API keys
 
 Each provider stores its API key as a protected value. After a key is saved:

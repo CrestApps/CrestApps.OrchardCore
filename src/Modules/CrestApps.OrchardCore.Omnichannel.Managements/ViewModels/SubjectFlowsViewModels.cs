@@ -133,4 +133,3 @@ public class ManageSubjectActionsViewModel
     /// </summary>
     public IEnumerable<SubjectActionTypeEntry> ActionTypes { get; set; } = [];
 }
-

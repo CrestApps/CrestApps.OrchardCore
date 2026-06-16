@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 

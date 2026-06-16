@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
@@ -36,9 +37,11 @@ internal sealed class Program
         "ContentPickerField",
         "DateField",
         "DateTimeField",
+        "GeoPointField",
         "HtmlField",
         "LinkField",
         "LocalizationSetContentPickerField",
+        "MarkdownField",
         "MediaField",
         "MultiTextField",
         "NumericField",
@@ -199,8 +202,9 @@ internal sealed class Program
 
     private static IRecipeStep[] CreateRecipeSteps()
     {
-        var schemaDefinitions = CreateContentDefinitionSchemaDefinitions();
+        var schemaDefinitions = CreateContentSchemaDefinitions();
         var partNames = schemaDefinitions
+            .Where(definition => definition.Type == ContentDefinitionSchemaType.Part)
             .Select(definition => definition.Name)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
@@ -215,14 +219,14 @@ internal sealed class Program
                     .ToArray();
     }
 
-    private static IContentDefinitionSchemaDefinition[] CreateContentDefinitionSchemaDefinitions()
+    private static IContentSchemaDefinition[] CreateContentSchemaDefinitions()
     {
-        return typeof(IContentDefinitionSchemaDefinition).Assembly.ExportedTypes
+        return typeof(IContentSchemaDefinition).Assembly.ExportedTypes
             .Where(type =>
-                typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
+                typeof(IContentSchemaDefinition).IsAssignableFrom(type) &&
                     type is { IsAbstract: false, IsInterface: false })
                     .OrderBy(type => type.Name, StringComparer.Ordinal)
-                    .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type)!)
+                    .Select(type => (IContentSchemaDefinition)Activator.CreateInstance(type)!)
                     .ToArray();
     }
 
@@ -239,7 +243,7 @@ internal sealed class Program
 
     private static IRecipeStep CreateRecipeStep(
         Type stepType,
-        IReadOnlyList<IContentDefinitionSchemaDefinition> schemaDefinitions,
+        IReadOnlyList<IContentSchemaDefinition> schemaDefinitions,
         IReadOnlyList<string> partNames)
     {
         if (stepType == typeof(SettingsRecipeStep))
@@ -256,7 +260,7 @@ internal sealed class Program
 
         if (stepType == typeof(ContentRecipeStep))
         {
-            return new ContentRecipeStep(CreateContentDefinitionManager());
+            return new ContentRecipeStep(CreateContentDefinitionManager(), schemaDefinitions);
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))

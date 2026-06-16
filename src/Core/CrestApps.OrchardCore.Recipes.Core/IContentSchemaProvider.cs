@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
+namespace CrestApps.OrchardCore.Recipes.Core;
 
 /// <summary>
 /// Abstraction that supplies the list of known content parts and field types
