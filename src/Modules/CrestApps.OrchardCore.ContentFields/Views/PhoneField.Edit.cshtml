@@ -16,7 +16,7 @@
                class="form-control"
                data-intl-tel-input="true"
                data-initial-country="@initialCountry"
-               value="@Model.NationalNumber" />
+               value="@(Model.NationalNumber ?? Model.PhoneNumber)" />
         <input type="hidden" asp-for="PhoneNumber" data-phone-e164="true" />
         <input type="hidden" asp-for="CountryCode" data-phone-country="true" />
         <input type="hidden" asp-for="NationalNumber" data-phone-national="true" />
