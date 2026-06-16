@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -190,13 +189,7 @@ public sealed class ContactMethodMigrations : DataMigration
                     Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })));
 
-        ShellScope.AddDeferredTask(s =>
-        {
-            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("migrate-phone-numbers", async scope =>
-            {
-                await MigratePhoneNumberDataAsync(scope);
-            });
-        });
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
 
         return 2;
     }
@@ -206,13 +199,7 @@ public sealed class ContactMethodMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        ShellScope.AddDeferredTask(s =>
-        {
-            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("migrate-phone-numbers", async scope =>
-            {
-                await MigratePhoneNumberDataAsync(scope);
-            });
-        });
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
 
         return 3;
     }
