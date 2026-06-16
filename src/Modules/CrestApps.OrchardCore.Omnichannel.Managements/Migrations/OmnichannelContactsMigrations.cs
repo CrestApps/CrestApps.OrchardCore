@@ -58,10 +58,17 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .WithDescription("Provides a way to configure a content type to act as an omnichannel contact record.")
         );
 
-        await EnsureDefaultContactIndexTableAsync();
-        ShellScope.AddDeferredTask(ReindexPublishedContactsAsync);
+        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("TimeZoneId", column => column.WithLength(64))
+        );
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -144,6 +151,17 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         ShellScope.AddDeferredTask(ReindexPublishedContactsAsync);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Re-runs the default contact index repair for upgraded tenants to recover from earlier incomplete schema updates.
+    /// </summary>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await EnsureDefaultContactIndexTableAsync();
+        ShellScope.AddDeferredTask(ReindexPublishedContactsAsync);
+
+        return 6;
     }
 
     private async Task EnsureDefaultContactIndexTableAsync()

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -157,7 +158,7 @@ public sealed class ContactMethodMigrations : DataMigration
             .WithPart(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part.WithPosition("5"))
         );
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -189,9 +190,31 @@ public sealed class ContactMethodMigrations : DataMigration
                     Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })));
 
-        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
+        ShellScope.AddDeferredTask(s =>
+        {
+            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("migrate-phone-numbers", async scope =>
+            {
+                await MigratePhoneNumberDataAsync(scope);
+            });
+        });
 
         return 2;
+    }
+
+    /// <summary>
+    /// Re-runs the phone number backfill for upgraded tenants to recover from earlier failed deferred migrations.
+    /// </summary>
+    public static int UpdateFrom2()
+    {
+        ShellScope.AddDeferredTask(s =>
+        {
+            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("migrate-phone-numbers", async scope =>
+            {
+                await MigratePhoneNumberDataAsync(scope);
+            });
+        });
+
+        return 3;
     }
 
     private static async Task MigratePhoneNumberDataAsync(ShellScope scope)
@@ -239,6 +262,7 @@ public sealed class ContactMethodMigrations : DataMigration
                     if (TryMigrateContactPhoneNumbers(contentItem, phoneNumberService))
                     {
                         await session.SaveAsync(contentItem);
+                        await session.SaveChangesAsync();
                         batchMigrated++;
                     }
                     else
@@ -256,8 +280,6 @@ public sealed class ContactMethodMigrations : DataMigration
                     skippedCount++;
                 }
             }
-
-            await session.SaveChangesAsync();
 
             migratedCount += batchMigrated;
         }
@@ -282,7 +304,7 @@ public sealed class ContactMethodMigrations : DataMigration
             .ToArray();
     }
 
-    private static bool TryMigrateContactPhoneNumbers(ContentItem contentItem, IPhoneNumberService phoneNumberService)
+    internal static bool TryMigrateContactPhoneNumbers(ContentItem contentItem, IPhoneNumberService phoneNumberService)
     {
         var bagNode = contentItem.Content[OmnichannelConstants.NamedParts.ContactMethods] as JsonObject;
 
@@ -323,7 +345,7 @@ public sealed class ContactMethodMigrations : DataMigration
         return anyMigrated;
     }
 
-    private static bool TryMigratePhoneNumberField(JsonObject innerContentItem, IPhoneNumberService phoneNumberService)
+    internal static bool TryMigratePhoneNumberField(JsonObject innerContentItem, IPhoneNumberService phoneNumberService)
     {
         var partNode = innerContentItem[OmnichannelConstants.ContentParts.PhoneNumberInfo] as JsonObject;
 
@@ -352,12 +374,7 @@ public sealed class ContactMethodMigrations : DataMigration
             return false;
         }
 
-        if (!phoneNumberService.IsValidNumber(textValue, _defaultRegionCode))
-        {
-            return false;
-        }
-
-        if (!phoneNumberService.TryFormatToE164(textValue, _defaultRegionCode, out var e164Number))
+        if (!TryFormatLegacyPhoneNumber(phoneNumberService, textValue, out var e164Number))
         {
             return false;
         }
@@ -382,6 +399,81 @@ public sealed class ContactMethodMigrations : DataMigration
         numberNode["PhoneNumber"] = e164Number;
         numberNode["CountryCode"] = regionCode;
         numberNode["NationalNumber"] = nationalNumber;
+
+        return true;
+    }
+
+    private static string GetFormattingRegionCode(string phoneNumber)
+        => !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber.TrimStart().StartsWith('+')
+            ? null
+            : _defaultRegionCode;
+
+    private static bool TryFormatLegacyPhoneNumber(
+        IPhoneNumberService phoneNumberService,
+        string phoneNumber,
+        out string e164Number)
+    {
+        var regionCode = GetFormattingRegionCode(phoneNumber);
+
+        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out e164Number))
+        {
+            return true;
+        }
+
+        if (regionCode is null)
+        {
+            return false;
+        }
+
+        if (phoneNumberService.TryFormatToE164(phoneNumber, "CA", out e164Number))
+        {
+            return true;
+        }
+
+        foreach (var supportedRegion in phoneNumberService.GetSupportedRegions())
+        {
+            if (string.Equals(supportedRegion, regionCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(supportedRegion, "CA", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (phoneNumberService.TryFormatToE164(phoneNumber, supportedRegion, out e164Number))
+            {
+                return true;
+            }
+        }
+
+        return TryFormatNorthAmericanPhoneNumber(phoneNumberService, phoneNumber, out e164Number);
+    }
+
+    private static bool TryFormatNorthAmericanPhoneNumber(
+        IPhoneNumberService phoneNumberService,
+        string phoneNumber,
+        out string e164Number)
+    {
+        e164Number = null;
+
+        var digits = string.Concat(phoneNumber.Where(char.IsDigit));
+
+        if (digits.Length == 10)
+        {
+            digits = $"1{digits}";
+        }
+
+        if (digits.Length != 11 || digits[0] != '1')
+        {
+            return false;
+        }
+
+        var candidate = $"+{digits}";
+
+        if (string.IsNullOrWhiteSpace(phoneNumberService.GetRegionCode(candidate)))
+        {
+            return false;
+        }
+
+        e164Number = candidate;
 
         return true;
     }
