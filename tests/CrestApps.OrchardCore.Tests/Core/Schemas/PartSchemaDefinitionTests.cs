@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;

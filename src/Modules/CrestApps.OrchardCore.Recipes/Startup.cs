@@ -60,17 +60,6 @@ public sealed class ContentTypesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentSchemaProvider, OrchardContentSchemaProvider>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the ContentDefinitionRecipe feature.
-/// </summary>
-[RequireFeatures("OrchardCore.ContentTypes")]
-public sealed class ContentDefinitionRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
         services.AddScoped<IRecipeStep, ContentDefinitionRecipeStep>();
         services.AddScoped<IRecipeStep, ReplaceContentDefinitionRecipeStep>();
         services.AddScoped<IRecipeStep, DeleteContentDefinitionRecipeStep>();

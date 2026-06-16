@@ -153,6 +153,116 @@ services.AddScoped<IRecipeStep, SettingsSchemaStep>();
 * **Retrieve available recipe steps:** Use the `RecipeSchemaService` to get a list of all registered recipe step names.
 * **Validate and execute recipes:** Use the `RecipeExecutionService` alongside the step schemas to validate a recipe payload before importing.
 
+## Extending content definition schemas
+
+`IContentDefinitionSchemaDefinition` is the extension point that contributes schema fragments to the `ContentDefinition` and `ReplaceContentDefinition` recipe steps.
+
+Use it when your feature adds a custom content part or content field and you want recipe validation, editor tooling, and AI-generated recipes to understand that feature's `Settings` object.
+
+Use `PartSettingsSchemaBase` when the schema belongs to a **content part**. It already marks the definition as `ContentDefinitionSchemaType.Part`, caches the built schema, and gives you helpers such as `Envelope()`, `Obj()`, `BoolProp()`, and `StringArray()` so your implementation only needs to describe the part-specific settings.
+
+Implement `IContentDefinitionSchemaDefinition` directly when the contribution is **not** a part settings schema, such as a field settings schema or another custom definition shape that needs a different `ContentDefinitionSchemaType`.
+
+### Why these types exist
+
+The `ContentDefinition` and `ReplaceContentDefinition` recipe steps have two nested settings surfaces:
+
+- `ContentTypePartDefinitionRecords[].Settings` for settings that apply when a part is attached to a content type
+- `ContentParts[].Settings` for the reusable content part definition itself
+
+The Recipes module gathers all registered `IContentDefinitionSchemaDefinition` services and merges their schema fragments into those nested `Settings` objects only when the owning feature is enabled. That keeps validation aligned with the actual Orchard Core features available to the tenant.
+
+### Implementing a part settings schema
+
+This example adds schema support for a fictional `ContactCardPart`:
+
+```csharp
+using Json.Schema;
+
+namespace MyModule.Schemas;
+
+public sealed class ContactCardPartSchema : PartSettingsSchemaBase
+{
+    public override string Name { get; } = "ContactCardPart";
+
+    protected override JsonSchemaBuilder BuildSettingsCore()
+    {
+        return Envelope("ContactCardPartSettings",
+            Obj(
+                Prop("ShowPhoneNumber", BoolProp()),
+                Prop("Layout", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum("Compact", "Full")
+                    .Default("Compact")))
+            );
+    }
+}
+```
+
+Register it from the feature startup so it only contributes schema when the part is actually available:
+
+```csharp
+services.AddScoped<IContentDefinitionSchemaDefinition, ContactCardPartSchema>();
+```
+
+### Defining the reusable part and attaching it to a type
+
+`ContentParts` defines the reusable part definition. `ContentTypes[].ContentTypePartDefinitionRecords` attaches that part to a content type and adds placement or per-type part settings.
+
+```json
+{
+  "name": "ContentDefinition",
+  "ContentParts": [
+    {
+      "Name": "ContactCardPart",
+      "Settings": {
+        "ContactCardPartSettings": {
+          "ShowPhoneNumber": true,
+          "Layout": "Compact"
+        }
+      },
+      "ContentPartFieldDefinitionRecords": []
+    }
+  ],
+  "ContentTypes": [
+    {
+      "Name": "PersonPage",
+      "DisplayName": "Person Page",
+      "Settings": {
+        "ContentTypeSettings": {
+          "Creatable": true,
+          "Listable": true,
+          "Draftable": true,
+          "Versionable": true,
+          "Securable": false
+        }
+      },
+      "ContentTypePartDefinitionRecords": [
+        {
+          "PartName": "ContactCardPart",
+          "Name": "ContactCardPart",
+          "Settings": {
+            "ContentTypePartSettings": {
+              "Position": "3"
+            },
+            "ContactCardPartSettings": {
+              "ShowPhoneNumber": true,
+              "Layout": "Full"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+In that example:
+
+- `ContentParts[].Settings.ContactCardPartSettings` describes the reusable part definition
+- `ContentTypePartDefinitionRecords[].Settings.ContentTypePartSettings` controls Orchard placement metadata for that type attachment
+- `ContentTypePartDefinitionRecords[].Settings.ContactCardPartSettings` contributes the part-specific settings object validated by `ContactCardPartSchema`
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.
