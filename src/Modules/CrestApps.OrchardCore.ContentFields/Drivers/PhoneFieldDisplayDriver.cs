@@ -102,10 +102,6 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
         var countryCode = viewModel.CountryCode?.Trim()?.ToUpperInvariant();
         var nationalNumber = viewModel.NationalNumber?.Trim();
 
-        field.PhoneNumber = phoneNumber;
-        field.CountryCode = countryCode;
-        field.NationalNumber = nationalNumber;
-
         var settings = context.PartFieldDefinition.GetSettings<PhoneFieldSettings>();
 
         var hasPhoneNumber = !string.IsNullOrWhiteSpace(phoneNumber);
@@ -117,7 +113,7 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
                 nameof(viewModel.PhoneNumber),
                 S["The {0} field is required.", context.PartFieldDefinition.DisplayName()]);
         }
-        else if (hasPhoneNumber && !string.IsNullOrWhiteSpace(countryCode))
+        else if (hasPhoneNumber)
         {
             if (!_phoneNumberService.IsValidNumber(phoneNumber, countryCode))
             {
@@ -133,6 +129,10 @@ public sealed class PhoneFieldDisplayDriver : ContentFieldDisplayDriver<PhoneFie
                 viewModel.NationalNumber = ResolveNationalNumber(e164Number, viewModel.CountryCode, null);
             }
         }
+
+        field.PhoneNumber = viewModel.PhoneNumber?.Trim();
+        field.CountryCode = viewModel.CountryCode?.Trim()?.ToUpperInvariant();
+        field.NationalNumber = viewModel.NationalNumber?.Trim();
 
         return Edit(field, context);
     }
