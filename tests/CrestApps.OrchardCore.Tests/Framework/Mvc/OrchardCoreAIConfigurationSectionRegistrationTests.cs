@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Documents;
-using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;

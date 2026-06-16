@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContentFields.Drivers;
 using CrestApps.OrchardCore.ContentFields.Fields;
+using CrestApps.OrchardCore.ContentFields.Schemas;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -21,5 +23,14 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<PhoneFieldDisplayDriver>();
 
         services.AddScoped<IContentPartFieldDefinitionDisplayDriver, PhoneFieldSettingsDriver>();
+    }
+}
+
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, PhoneFieldSchemaDefinition>();
     }
 }

@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Recipes.Core;
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -60,17 +62,6 @@ public sealed class ContentTypesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentSchemaProvider, OrchardContentSchemaProvider>();
-    }
-}
-
-/// <summary>
-/// Registers services and configuration for the ContentDefinitionRecipe feature.
-/// </summary>
-[RequireFeatures("OrchardCore.ContentTypes")]
-public sealed class ContentDefinitionRecipeStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
         services.AddScoped<IRecipeStep, ContentDefinitionRecipeStep>();
         services.AddScoped<IRecipeStep, ReplaceContentDefinitionRecipeStep>();
         services.AddScoped<IRecipeStep, DeleteContentDefinitionRecipeStep>();
@@ -469,7 +460,30 @@ public sealed class ContentsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, CommonPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, CommonPartSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the content fields schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.ContentFields")]
+public sealed class ContentFieldsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, BooleanFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, ContentPickerFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, DateFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, DateTimeFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, HtmlFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, LinkFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, MultiTextFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, NumericFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, TextFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, TimeFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, UserPickerFieldSchema>();
+        services.AddScoped<IContentSchemaDefinition, YoutubeFieldSchema>();
     }
 }
 
@@ -481,7 +495,7 @@ public sealed class TitleSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, TitlePartSchema>();
+        services.AddScoped<IContentSchemaDefinition, TitlePartSchema>();
     }
 }
 
@@ -493,7 +507,7 @@ public sealed class AutorouteSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AutoroutePartSchema>();
+        services.AddScoped<IContentSchemaDefinition, AutoroutePartSchema>();
     }
 }
 
@@ -505,7 +519,7 @@ public sealed class AliasSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AliasPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, AliasPartSchema>();
     }
 }
 
@@ -517,7 +531,7 @@ public sealed class HtmlSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, HtmlBodyPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, HtmlBodyPartSchema>();
     }
 }
 
@@ -529,7 +543,20 @@ public sealed class MarkdownSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, MarkdownBodyPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, MarkdownBodyPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, MarkdownFieldSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the media schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Media")]
+public sealed class MediaSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, MediaFieldSchema>();
     }
 }
 
@@ -541,7 +568,8 @@ public sealed class ListSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, ListPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, ListPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, ContainedPartSchema>();
     }
 }
 
@@ -553,8 +581,8 @@ public sealed class FlowsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, FlowPartSchema>();
-        services.AddScoped<IContentDefinitionSchemaDefinition, BagPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, FlowPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, BagPartSchema>();
     }
 }
 
@@ -566,7 +594,8 @@ public sealed class WidgetsSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, WidgetsListPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, WidgetsListPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, LayerMetadataSchema>();
     }
 }
 
@@ -578,7 +607,31 @@ public sealed class PreviewSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, PreviewPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, PreviewPartSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the publish later schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.PublishLater")]
+public sealed class PublishLaterSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, PublishLaterPartSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the menu schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Menu")]
+public sealed class MenuSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, HtmlMenuItemPartSchema>();
     }
 }
 
@@ -590,7 +643,19 @@ public sealed class SeoSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, SeoMetaPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, SeoMetaPartSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the spatial schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Spatial")]
+public sealed class SpatialSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, GeoPointFieldSchema>();
     }
 }
 
@@ -602,7 +667,31 @@ public sealed class AuditTrailSchemaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AuditTrailPartSchema>();
+        services.AddScoped<IContentSchemaDefinition, AuditTrailPartSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the taxonomy schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Taxonomies")]
+public sealed class TaxonomiesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, TaxonomyFieldSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the content localization schema feature.
+/// </summary>
+[RequireFeatures("OrchardCore.ContentLocalization")]
+public sealed class ContentLocalizationSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, LocalizationSetContentPickerFieldSchema>();
     }
 }
 
@@ -1258,6 +1347,42 @@ public sealed class AIMemorySiteSettingsSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, AIMemorySettingsSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the DNC registry site settings schema feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.DncRegistry")]
+public sealed class DncRegistrySiteSettingsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, DncRegistrySettingsSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the USA FTC DNC registry site settings schema feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.DncRegistry.UsaFtc")]
+public sealed class UsaFtcDncRegistrySiteSettingsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, UsaFtcDncRegistrySettingsSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the Canada DNCL registry site settings schema feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.DncRegistry.CanadaDncl")]
+public sealed class CanadaDnclRegistrySiteSettingsSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, CanadaDnclRegistrySettingsSchema>();
     }
 }
 

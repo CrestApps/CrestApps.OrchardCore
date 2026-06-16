@@ -1,0 +1,59 @@
+using Json.Schema;
+using OrchardCore.Environment.Shell;
+
+namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+
+/// <summary>
+/// Schema for the "feature" recipe step — enables or disables Orchard Core features.
+/// </summary>
+public sealed class FeatureRecipeStep : IRecipeStep
+{
+    private readonly IShellFeaturesManager _shellFeaturesManager;
+
+    private JsonSchema _cached;
+    public string Name => "feature";
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeatureRecipeStep"/> class.
+    /// </summary>
+    /// <param name="shellFeaturesManager">The shell features manager.</param>
+    public FeatureRecipeStep(IShellFeaturesManager shellFeaturesManager)
+    {
+        _shellFeaturesManager = shellFeaturesManager;
+    }
+
+    /// <summary>
+    /// Retrieves the schema async.
+    /// </summary>
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cached is not null)
+        {
+            return _cached;
+        }
+
+        var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
+
+        var featureItemSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(features.Select(f => f.Id));
+
+        _cached = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
+                ("enable", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(featureItemSchema)
+                    .Description("Feature IDs to enable.")),
+                ("disable", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(featureItemSchema)
+                    .Description("Feature IDs to disable.")))
+            .Required("name")
+            .AdditionalProperties(true)
+            .Build();
+
+        return _cached;
+    }
+}

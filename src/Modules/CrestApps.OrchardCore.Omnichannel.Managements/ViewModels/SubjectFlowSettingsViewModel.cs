@@ -84,4 +84,3 @@ public class SubjectFlowSettingsViewModel
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
 }
-

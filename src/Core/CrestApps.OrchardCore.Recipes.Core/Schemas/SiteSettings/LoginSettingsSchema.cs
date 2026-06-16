@@ -22,6 +22,7 @@ public sealed class LoginSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("UseSiteTheme", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to use the site theme for the login page.")),
                 ("DisableLocalLogin", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to disable local username/password login.")),
+                ("AllowRememberMe", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow users to be remembered across browser sessions during login.").Default(true)),
                 ("AllowChangingUsername", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow users to change their username.")),
                 ("AllowChangingEmail", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow users to change their email address.")),
                 ("AllowChangingPhoneNumber", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether to allow users to change their phone number.").Default(true)))
