@@ -89,5 +89,3 @@ public sealed class RecipesRecipeStep : IRecipeStep
                         && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
     }
 }
-
-

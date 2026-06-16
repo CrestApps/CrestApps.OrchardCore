@@ -38,5 +38,3 @@ public sealed class OpenIdClientSettingsRecipeStep : RecipeStepSchemaBase
                         ["Name", "Value"]))),
             ]);
 }
-
-

@@ -37,5 +37,3 @@ public sealed class TimeZoneMapsRecipeStep : RecipeStepSchemaBase
             .Build();
     }
 }
-
-

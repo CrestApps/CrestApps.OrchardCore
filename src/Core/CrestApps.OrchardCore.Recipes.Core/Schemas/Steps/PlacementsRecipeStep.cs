@@ -33,5 +33,3 @@ public sealed class PlacementsRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

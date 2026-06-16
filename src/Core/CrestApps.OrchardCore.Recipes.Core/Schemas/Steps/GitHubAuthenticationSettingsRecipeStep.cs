@@ -17,5 +17,3 @@ public sealed class GitHubAuthenticationSettingsRecipeStep : RecipeStepSchemaBas
                 ("CallbackPath", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

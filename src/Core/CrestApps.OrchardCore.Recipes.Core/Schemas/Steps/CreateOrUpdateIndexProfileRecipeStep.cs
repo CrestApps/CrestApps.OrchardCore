@@ -39,5 +39,3 @@ public sealed class CreateOrUpdateIndexProfileRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

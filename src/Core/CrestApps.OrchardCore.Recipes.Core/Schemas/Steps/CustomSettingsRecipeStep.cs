@@ -31,5 +31,3 @@ public sealed class CustomSettingsRecipeStep : IRecipeStep
             .Description("Each additional property is a custom settings content type name with its content item data.")
             .Build();
 }
-
-

@@ -98,5 +98,3 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
                 .Properties(("Name", new JsonSchemaBuilder().Enum(taskNames))));
     }
 }
-
-

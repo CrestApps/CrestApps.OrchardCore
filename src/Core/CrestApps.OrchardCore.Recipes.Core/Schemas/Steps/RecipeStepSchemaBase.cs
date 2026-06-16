@@ -26,5 +26,3 @@ public abstract class RecipeStepSchemaBase : IRecipeStep
 
     protected abstract JsonSchema CreateSchema();
 }
-
-

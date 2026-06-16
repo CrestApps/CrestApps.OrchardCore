@@ -38,5 +38,3 @@ public sealed class UsersRecipeStep : RecipeStepSchemaBase
             ],
             ["Users"]);
 }
-
-

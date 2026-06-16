@@ -57,5 +57,3 @@ public sealed class FeatureRecipeStep : IRecipeStep
         return _cached;
     }
 }
-
-

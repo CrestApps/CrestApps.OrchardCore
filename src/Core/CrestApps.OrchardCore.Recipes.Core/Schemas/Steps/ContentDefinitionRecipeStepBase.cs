@@ -226,5 +226,3 @@ public abstract class ContentDefinitionRecipeStepBase(
             .AdditionalProperties(true);
     }
 }
-
-

@@ -66,5 +66,3 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

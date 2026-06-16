@@ -32,5 +32,3 @@ public sealed class AzureAIIndexCreateRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

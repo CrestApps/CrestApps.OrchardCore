@@ -46,5 +46,3 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

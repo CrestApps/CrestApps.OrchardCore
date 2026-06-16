@@ -40,5 +40,3 @@ public sealed class TemplatesRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

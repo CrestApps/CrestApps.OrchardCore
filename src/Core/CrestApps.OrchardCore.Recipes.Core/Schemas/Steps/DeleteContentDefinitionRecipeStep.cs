@@ -35,5 +35,3 @@ public sealed class DeleteContentDefinitionRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

@@ -43,5 +43,3 @@ public sealed class ShortcodeTemplatesRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

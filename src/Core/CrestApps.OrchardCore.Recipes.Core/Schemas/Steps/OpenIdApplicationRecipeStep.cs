@@ -44,5 +44,3 @@ public sealed class OpenIdApplicationRecipeStep : RecipeStepSchemaBase
                 ("RequirePushedAuthorizationRequests", RecipeStepSchemaBuilders.Boolean()),
             ]);
 }
-
-

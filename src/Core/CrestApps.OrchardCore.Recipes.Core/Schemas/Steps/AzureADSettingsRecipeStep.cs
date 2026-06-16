@@ -18,5 +18,3 @@ public sealed class AzureADSettingsRecipeStep : RecipeStepSchemaBase
                 ("CallbackPath", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

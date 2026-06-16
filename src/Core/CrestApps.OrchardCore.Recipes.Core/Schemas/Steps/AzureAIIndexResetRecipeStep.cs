@@ -33,5 +33,3 @@ public sealed class AzureAIIndexResetRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

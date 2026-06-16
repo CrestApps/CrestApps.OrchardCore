@@ -51,5 +51,3 @@ public sealed class LayersRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

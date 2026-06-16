@@ -14,6 +14,3 @@ public sealed class ContentDefinitionRecipeStep(
 
     protected override IReadOnlyList<string> RequiredProperties => ["name", "ContentTypes"];
 }
-
-
-

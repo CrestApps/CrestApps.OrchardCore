@@ -19,5 +19,3 @@ public sealed class OpenIdValidationSettingsRecipeStep : RecipeStepSchemaBase
                 ("Tenant", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

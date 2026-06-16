@@ -65,5 +65,3 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
         public static readonly string[] OutputFormats = ["Undefined", "Bmp", "Gif", "Jpg", "Png", "Tga", "WebP"];
     }
 }
-
-

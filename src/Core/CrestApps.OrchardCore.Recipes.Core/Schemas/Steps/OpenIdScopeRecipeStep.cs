@@ -18,5 +18,3 @@ public sealed class OpenIdScopeRecipeStep : RecipeStepSchemaBase
                 ("Resources", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

@@ -44,5 +44,3 @@ public sealed class OpenIdServerSettingsRecipeStep : RecipeStepSchemaBase
                 ("UseReferenceAccessTokens", RecipeStepSchemaBuilders.Boolean()),
             ]);
 }
-
-

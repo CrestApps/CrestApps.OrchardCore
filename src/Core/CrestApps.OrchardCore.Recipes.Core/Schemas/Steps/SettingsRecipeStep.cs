@@ -74,5 +74,3 @@ public sealed class SettingsRecipeStep(IEnumerable<ISiteSettingsSchemaDefinition
         requiredProperties: ["Area", "Controller", "Action"],
         additionalProperties: true);
 }
-
-

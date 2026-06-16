@@ -52,5 +52,3 @@ public sealed class ThemesRecipeStep : IRecipeStep
         return _cached;
     }
 }
-
-

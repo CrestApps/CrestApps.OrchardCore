@@ -33,5 +33,3 @@ public sealed class LuceneIndexResetRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

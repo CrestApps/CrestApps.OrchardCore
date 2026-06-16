@@ -35,5 +35,3 @@ public sealed class CommandRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

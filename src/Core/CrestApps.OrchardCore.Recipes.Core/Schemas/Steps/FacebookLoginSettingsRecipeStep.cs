@@ -15,5 +15,3 @@ public sealed class FacebookLoginSettingsRecipeStep : RecipeStepSchemaBase
                 ("CallbackPath", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

@@ -32,5 +32,3 @@ public sealed class UrlRewritingRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

@@ -34,5 +34,3 @@ public sealed class SitemapsRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

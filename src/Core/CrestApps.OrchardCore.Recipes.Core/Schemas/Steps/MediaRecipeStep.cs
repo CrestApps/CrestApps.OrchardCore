@@ -51,5 +51,3 @@ public sealed class MediaRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

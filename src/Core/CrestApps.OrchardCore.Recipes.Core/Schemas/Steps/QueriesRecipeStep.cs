@@ -42,5 +42,3 @@ public sealed class QueriesRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

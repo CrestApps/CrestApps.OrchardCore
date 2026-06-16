@@ -126,5 +126,3 @@ internal static class RecipeStepSchemaBuilders
     public static JsonSchemaBuilder StringArray(int? minItems = null)
         => Array(String(), minItems);
 }
-
-

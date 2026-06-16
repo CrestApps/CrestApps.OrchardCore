@@ -48,5 +48,3 @@ public sealed class DeploymentRecipeStep : IRecipeStep
             .Build();
     }
 }
-
-

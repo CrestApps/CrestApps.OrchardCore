@@ -33,5 +33,3 @@ public sealed class RebuildIndexRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

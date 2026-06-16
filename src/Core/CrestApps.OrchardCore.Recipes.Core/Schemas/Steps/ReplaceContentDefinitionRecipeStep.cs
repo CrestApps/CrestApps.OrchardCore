@@ -10,6 +10,3 @@ public sealed class ReplaceContentDefinitionRecipeStep(
 {
     public override string Name => "ReplaceContentDefinition";
 }
-
-
-

@@ -32,5 +32,3 @@ public sealed class ElasticIndexSettingsRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

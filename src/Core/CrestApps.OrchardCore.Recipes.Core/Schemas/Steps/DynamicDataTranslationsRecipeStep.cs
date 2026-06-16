@@ -30,5 +30,3 @@ public sealed class DynamicDataTranslationsRecipeStep : RecipeStepSchemaBase
             ],
             ["Translations"]);
 }
-
-

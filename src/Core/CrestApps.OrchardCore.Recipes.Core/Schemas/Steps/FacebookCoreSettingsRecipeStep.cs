@@ -20,5 +20,3 @@ public sealed class FacebookCoreSettingsRecipeStep : RecipeStepSchemaBase
                 ("Version", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

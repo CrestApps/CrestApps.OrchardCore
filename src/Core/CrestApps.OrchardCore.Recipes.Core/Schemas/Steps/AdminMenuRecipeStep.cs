@@ -43,5 +43,3 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

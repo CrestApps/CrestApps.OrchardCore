@@ -17,5 +17,3 @@ public sealed class MicrosoftAccountSettingsRecipeStep : RecipeStepSchemaBase
                 ("CallbackPath", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

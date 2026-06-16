@@ -18,5 +18,3 @@ public sealed class TwitterSettingsRecipeStep : RecipeStepSchemaBase
                 ("AccessTokenSecret", RecipeStepSchemaBuilders.String()),
             ]);
 }
-
-

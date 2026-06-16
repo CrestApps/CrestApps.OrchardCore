@@ -38,5 +38,3 @@ public sealed class AdminTemplatesRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-

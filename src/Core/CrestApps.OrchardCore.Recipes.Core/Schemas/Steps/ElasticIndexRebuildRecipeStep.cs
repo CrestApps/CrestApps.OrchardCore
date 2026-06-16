@@ -33,5 +33,3 @@ public sealed class ElasticIndexRebuildRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
 }
-
-
