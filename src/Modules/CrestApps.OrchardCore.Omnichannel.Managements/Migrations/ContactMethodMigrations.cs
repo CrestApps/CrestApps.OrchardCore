@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -27,8 +26,7 @@ public sealed class ContactMethodMigrations : DataMigration
     private static readonly PhoneNumberUtil _phoneNumberUtil = PhoneNumberUtil.GetInstance();
 
     private const int _batchSize = 100;
-    private const string _defaultRegionCode = "US";
-    private const string _migrationJobName = "omnichannel-contact-phonefield-backfill";
+    private const string _defaultRegionCode = "CA";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
@@ -194,9 +192,9 @@ public sealed class ContactMethodMigrations : DataMigration
                     Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
                 })));
 
-        SchedulePhoneNumberDataMigration();
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
 
-        return 2;
+        return 4;
     }
 
     /// <summary>
@@ -204,9 +202,21 @@ public sealed class ContactMethodMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        SchedulePhoneNumberDataMigration();
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
 
-        return 3;
+        return 4;
+    }
+
+    /// <summary>
+    /// Re-runs the phone number backfill for upgraded tenants using a direct
+    /// deferred task after earlier background-job scheduling could report the
+    /// migration as complete before the data rewrite actually ran.
+    /// </summary>
+    public static int UpdateFrom3()
+    {
+        ShellScope.AddDeferredTask(MigratePhoneNumberDataAsync);
+
+        return 4;
     }
 
     private static async Task MigratePhoneNumberDataAsync(ShellScope scope)
@@ -412,9 +422,19 @@ public sealed class ContactMethodMigrations : DataMigration
         out string e164Number,
         out string regionCode)
     {
-        regionCode = GetFormattingRegionCode(phoneNumber);
+        var sanitizedPhoneNumber = SanitizeLegacyPhoneNumber(phoneNumber);
 
-        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out e164Number))
+        if (string.IsNullOrWhiteSpace(sanitizedPhoneNumber))
+        {
+            e164Number = null;
+            regionCode = null;
+
+            return false;
+        }
+
+        regionCode = GetFormattingRegionCode(sanitizedPhoneNumber);
+
+        if (phoneNumberService.TryFormatToE164(sanitizedPhoneNumber, regionCode, out e164Number))
         {
             regionCode = phoneNumberService.GetRegionCode(e164Number) ?? regionCode;
             return true;
@@ -422,49 +442,70 @@ public sealed class ContactMethodMigrations : DataMigration
 
         if (regionCode is null)
         {
-            return TryFormatPossiblePhoneNumber(phoneNumber, null, out e164Number, out regionCode);
+            return TryFormatPossiblePhoneNumber(sanitizedPhoneNumber, null, out e164Number, out regionCode);
         }
 
-        if (phoneNumberService.TryFormatToE164(phoneNumber, "CA", out e164Number))
+        if (phoneNumberService.TryFormatToE164(sanitizedPhoneNumber, _defaultRegionCode, out e164Number))
         {
-            regionCode = phoneNumberService.GetRegionCode(e164Number) ?? "CA";
+            regionCode = phoneNumberService.GetRegionCode(e164Number) ?? _defaultRegionCode;
             return true;
         }
 
-        if (TryFormatPossiblePhoneNumber(phoneNumber, regionCode, out e164Number, out var possibleRegionCode))
+        if (TryFormatPossiblePhoneNumber(sanitizedPhoneNumber, regionCode, out e164Number, out var possibleRegionCode))
         {
             regionCode = possibleRegionCode ?? regionCode;
             return true;
         }
 
-        if (TryFormatPossiblePhoneNumber(phoneNumber, "CA", out e164Number, out possibleRegionCode))
+        if (TryFormatPossiblePhoneNumber(sanitizedPhoneNumber, _defaultRegionCode, out e164Number, out possibleRegionCode))
         {
-            regionCode = possibleRegionCode ?? "CA";
+            regionCode = possibleRegionCode ?? _defaultRegionCode;
             return true;
         }
 
         foreach (var supportedRegion in phoneNumberService.GetSupportedRegions())
         {
             if (string.Equals(supportedRegion, regionCode, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(supportedRegion, "CA", StringComparison.OrdinalIgnoreCase))
+                string.Equals(supportedRegion, _defaultRegionCode, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            if (phoneNumberService.TryFormatToE164(phoneNumber, supportedRegion, out e164Number))
+            if (phoneNumberService.TryFormatToE164(sanitizedPhoneNumber, supportedRegion, out e164Number))
             {
                 regionCode = phoneNumberService.GetRegionCode(e164Number) ?? supportedRegion;
                 return true;
             }
 
-            if (TryFormatPossiblePhoneNumber(phoneNumber, supportedRegion, out e164Number, out possibleRegionCode))
+            if (TryFormatPossiblePhoneNumber(sanitizedPhoneNumber, supportedRegion, out e164Number, out possibleRegionCode))
             {
                 regionCode = possibleRegionCode ?? supportedRegion;
                 return true;
             }
         }
 
-        return TryFormatNorthAmericanPhoneNumber(phoneNumberService, phoneNumber, out e164Number, out regionCode);
+        return TryFormatNorthAmericanPhoneNumber(phoneNumberService, sanitizedPhoneNumber, out e164Number, out regionCode);
+    }
+
+    private static string SanitizeLegacyPhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return null;
+        }
+
+        var trimmedPhoneNumber = phoneNumber.Trim();
+        var keepLeadingPlus = trimmedPhoneNumber.StartsWith('+');
+        var digits = string.Concat(trimmedPhoneNumber.Where(char.IsDigit));
+
+        if (string.IsNullOrEmpty(digits))
+        {
+            return null;
+        }
+
+        return keepLeadingPlus
+            ? $"+{digits}"
+            : digits;
     }
 
     private static bool TryFormatNorthAmericanPhoneNumber(
@@ -494,7 +535,7 @@ public sealed class ContactMethodMigrations : DataMigration
 
         if (string.IsNullOrWhiteSpace(regionCode))
         {
-            regionCode = "CA";
+            regionCode = _defaultRegionCode;
         }
 
         if (string.IsNullOrWhiteSpace(regionCode))
@@ -505,14 +546,6 @@ public sealed class ContactMethodMigrations : DataMigration
         e164Number = candidate;
 
         return true;
-    }
-
-    private static void SchedulePhoneNumberDataMigration()
-    {
-        ShellScope.AddDeferredTask(_ =>
-            HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
-                _migrationJobName,
-                MigratePhoneNumberDataAsync));
     }
 
     private static bool TryFormatPossiblePhoneNumber(

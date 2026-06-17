@@ -141,7 +141,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
 - upgrades now repair earlier preview tenants that accidentally created omnichannel contact index tables in the custom omnichannel collection, then reindex published contacts so phone, time-zone, and do-not-call filters continue to query the default Orchard content-item collection correctly
-- upgrades also rerun the `PhoneNumberInfoPart.Number` backfill as an end-of-request background job so legacy `Number.Text` values inside the `ContactMethods` bag are reparsed into `PhoneField` storage (`PhoneNumber`, `CountryCode`, and `NationalNumber`) even when an earlier in-request migration was interrupted
+- upgrades also rerun the `PhoneNumberInfoPart.Number` backfill as a direct deferred migration task so legacy `Number.Text` values inside the `ContactMethods` bag are deterministically reparsed into `PhoneField` storage (`PhoneNumber`, `CountryCode`, and `NationalNumber`) even when an earlier preview only advanced the migration version without rewriting the stored JSON
 
 Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 
