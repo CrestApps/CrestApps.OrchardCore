@@ -26,27 +26,7 @@ This is especially useful when recipes are generated programmatically (e.g., by 
 
 At runtime the feature can compose all known step schemas into a single "recipe" schema for an object with a `steps` array.
 
-## Exporting recipe step schemas for AI skills
-
-This repository also includes an exporter utility for synchronizing the runtime recipe schemas into the Orchard Core AgentSkills repository:
-
-```powershell
-dotnet run --project .\utilities\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
-```
-
-By default, the tool first locates the `CrestApps.OrchardCore` repository root by walking up from the running process directory until it finds a marker such as `global.json`, `NuGet.config`, `CrestApps.OrchardCore.sln`, or `CrestApps.OrchardCore.slnx`. It then writes:
-
-- one `<step>.schema.json` file per `IRecipeStep`
-- `recipe.schema.json` for the root recipe contract
-- `index.json` for step-to-file lookup
-
-to the sibling AgentSkills repository path:
-
-`..\CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas`
-
-This keeps the `orchardcore-recipes` skill aligned with the runtime JSON schema definitions used by `RecipeSchemaService`.
-
-If the sibling `CrestApps.AgentSkills` repository is missing, the exporter throws a `DirectoryNotFoundException` that tells contributors to clone `https://github.com/CrestApps/CrestApps.AgentSkills.git` next to `CrestApps.OrchardCore`, or to pass an explicit output directory manually.
+## Schema coverage
 
 The `ReplaceContentDefinition` step uses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
 
@@ -56,7 +36,7 @@ The `ContentDefinition` and `ReplaceContentDefinition` steps now also include bu
 
 The generic `Settings` step now composes feature-gated site settings schema fragments in the same way `ContentDefinition` composes part and field settings. Base site settings such as `HomeRoute`, `CacheMode`, and `ResourceDebugMode` are modeled directly, while feature-specific settings objects such as `AdminSettings`, `GeneralAISettings`, `DisplayNameSettings`, `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, `CanadaDnclRegistrySettings`, and other contributed settings only appear when their owning feature registers a schema definition. Built-in login settings now also include `LoginSettings.AllowRememberMe` with its default `true` behavior.
 
-The exported set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
+The schema set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
 
 ## AI profile creation from templates
 
@@ -180,9 +160,9 @@ The Recipes module gathers all registered `IContentSchemaDefinition` services an
 
 The separate `IContentPartSchemaDefinition` and `IContentFieldSchemaDefinition` interfaces are still used by the `content` recipe step. They provide the part and field payload schemas for actual content item JSON, while `IContentSchemaDefinition` remains the shared contract for content-definition settings schemas.
 
-### Implementing a part settings schema
+### Implementing a part schema
 
-This example adds schema support for a fictional `ContactCardPart`:
+This example adds schema support for a fictional `ContactCardPart`, including both the part settings envelope used by `ContentDefinition` and the content item payload used by the `Content` recipe step:
 
 ```csharp
 using Json.Schema;
@@ -207,6 +187,16 @@ public sealed class ContactCardPartSchema : PartSchemaDefinitionBase
                             .Enum("Compact", "Full")
                             .Default("Compact")))
                     .AdditionalProperties(false)))
+            .AdditionalProperties(true);
+    }
+
+    protected override JsonSchemaBuilder BuildPartSchemaCore()
+    {
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Heading", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                ("PhoneNumber", new JsonSchemaBuilder().Type(SchemaValueType.String)))
             .AdditionalProperties(true);
     }
 }
@@ -275,6 +265,123 @@ In that example:
 - `ContentParts[].Settings.ContactCardPartSettings` describes the reusable part definition
 - `ContentTypePartDefinitionRecords[].Settings.ContentTypePartSettings` controls Orchard placement metadata for that type attachment
 - `ContentTypePartDefinitionRecords[].Settings.ContactCardPartSettings` contributes the part-specific settings object validated by `ContactCardPartSchema`
+
+The same schema definition also shapes the `Content` recipe step payload for the part itself:
+
+```json
+{
+  "name": "Content",
+  "data": [
+    {
+      "ContentType": "PersonPage",
+      "DisplayText": "Jane Doe",
+      "Published": true,
+      "Latest": true,
+      "ContactCardPart": {
+        "Heading": "Primary contact",
+        "PhoneNumber": "+1-555-0100"
+      }
+    }
+  ]
+}
+```
+
+In that payload, `ContactCardPart.Heading` and `ContactCardPart.PhoneNumber` come from `BuildPartSchemaCore()`, while `ContactCardPartSettings` still belongs only to the `ContentDefinition` and `ReplaceContentDefinition` recipe steps.
+
+### Implementing a field schema
+
+Use `FieldSchemaDefinitionBase` when you need both:
+
+- a field settings envelope under `ContentPartFieldDefinitionRecords[].Settings`
+- a field value schema for the field payload inside a content item
+
+This example adds schema support for a fictional `SocialLinkField`:
+
+```csharp
+using Json.Schema;
+
+namespace MyModule.Schemas;
+
+public sealed class SocialLinkFieldSchema : FieldSchemaDefinitionBase
+{
+    public override string Name { get; } = "SocialLinkField";
+
+    protected override JsonSchemaBuilder BuildSettingsCore()
+    {
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("SocialLinkFieldSettings", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("AllowedHost", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                        ("OpenInNewTab", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                    .AdditionalProperties(false)))
+            .AdditionalProperties(true);
+    }
+
+    protected override JsonSchemaBuilder BuildFieldSchemaCore()
+    {
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Text", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                ("Url", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+            .AdditionalProperties(true);
+    }
+}
+```
+
+Register it the same way:
+
+```csharp
+services.AddScoped<IContentSchemaDefinition, SocialLinkFieldSchema>();
+```
+
+Then the field settings and content payload can be expressed like this:
+
+```json
+{
+  "name": "ContentDefinition",
+  "ContentParts": [
+    {
+      "Name": "ProfilePart",
+      "ContentPartFieldDefinitionRecords": [
+        {
+          "Name": "SupportLink",
+          "DisplayName": "Support link",
+          "ContentFieldDefinition": {
+            "Name": "SocialLinkField"
+          },
+          "Settings": {
+            "SocialLinkFieldSettings": {
+              "AllowedHost": "example.com",
+              "OpenInNewTab": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```json
+{
+  "name": "Content",
+  "data": [
+    {
+      "ContentType": "PersonPage",
+      "ProfilePart": {
+        "SupportLink": {
+          "Text": "Contact support",
+          "Url": "https://example.com/support"
+        }
+      }
+    }
+  ]
+}
+```
 
 ## How schemas stay accurate
 
