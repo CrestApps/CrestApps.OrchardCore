@@ -75,7 +75,7 @@
   },
   {
     "inputs": [
-      "./node_modules/marked/marked.min.js"
+      "node_modules/marked/lib/marked.umd.js"
     ],
     "output": "wwwroot/scripts/marked.js"
   },
@@ -193,57 +193,43 @@
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/js/intlTelInputWithUtils.js"
+      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js"
     ],
     "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.js"
   },
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/js/intlTelInputWithUtils.min.js"
+      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.min.js"
     ],
     "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.min.js"
   },
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/css/intlTelInput.css"
+      "node_modules/intl-tel-input/dist/css/intlTelInput.css"
     ],
     "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.css"
   },
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/css/intlTelInput.min.css"
+      "node_modules/intl-tel-input/dist/css/intlTelInput.min.css"
     ],
     "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.min.css"
   },
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/img/flags.webp"
+      "node_modules/intl-tel-input/dist/img/flags.webp"
     ],
     "output": "wwwroot/vendors/intl-tel-input/img/flags.webp"
   },
   {
     "copy": true,
     "inputs": [
-      "node_modules/intl-tel-input/build/img/flags@2x.webp"
+      "node_modules/intl-tel-input/dist/img/flags@2x.webp"
     ],
     "output": "wwwroot/vendors/intl-tel-input/img/flags@2x.webp"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/intl-tel-input/build/img/globe.webp"
-    ],
-    "output": "wwwroot/vendors/intl-tel-input/img/globe.webp"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/intl-tel-input/build/img/globe@2x.webp"
-    ],
-    "output": "wwwroot/vendors/intl-tel-input/img/globe@2x.webp"
   }
 ]

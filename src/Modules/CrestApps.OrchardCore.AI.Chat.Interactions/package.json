@@ -9,12 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "1.0.0-preview.34"
+    "@crestapps/ai-chat-ui": "1.0.0-rc.3"
   },
   "devDependencies": {
-    "eslint": "^9.39.2"
+    "eslint": "^10.5.0"
   },
   "overrides": {
+    "ajv": "^6.14.0",
+    "brace-expansion": "^5.0.6",
     "minimatch": "^10.0.1"
   }
 }
