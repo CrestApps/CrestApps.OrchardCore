@@ -32,7 +32,7 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step.";
+    public override string Description => "Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call this immediately before importOrchardCoreRecipe whenever it is available, then build the recipe JSON to match that schema.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 

@@ -35,7 +35,12 @@ public sealed class RolesRecipeStep : IRecipeStep
 
     private async Task<JsonSchema> CreateSchemaAsync()
     {
-        var permission = await _permissionService.GetPermissionsAsync();
+        var permissionNames = (await _permissionService.GetPermissionsAsync())
+            .Select(permission => permission?.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -50,8 +55,9 @@ public sealed class RolesRecipeStep : IRecipeStep
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
                             ("Permissions", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                                .Enum(permission.Select(x => x.Name))),
+                                .Items(new JsonSchemaBuilder()
+                                    .Type(SchemaValueType.String)
+                                    .Enum(permissionNames))),
                             ("PermissionBehavior", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Enum("Add", "Replace", "Remove")

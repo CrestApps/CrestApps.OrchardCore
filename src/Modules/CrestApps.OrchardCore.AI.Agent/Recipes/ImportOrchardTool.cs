@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
@@ -11,5 +11,5 @@ public sealed class ImportOrchardTool : ImportRecipeBaseTool
 
     public override string Name => TheName;
 
-    public override string Description => "Imports any Orchard Core JSON recipe.";
+    public override string Description => $"Imports any Orchard Core JSON recipe. Before calling this tool, call '{GetRecipeJsonSchemaTool.TheName}' first whenever it is available, then build the recipe JSON to match that schema exactly.";
 }

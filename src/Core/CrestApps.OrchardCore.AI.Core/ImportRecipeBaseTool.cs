@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -15,19 +15,21 @@ namespace CrestApps.OrchardCore.AI.Core;
 /// </summary>
 public abstract class ImportRecipeBaseTool : AIFunction
 {
+    private const string RecipeSchemaInstruction = $"If the 'getOrchardCoreRecipeJsonSchema' tool is available, call it first to fetch the current Orchard Core recipe schema before building the recipe JSON.";
+
     protected readonly static JsonSerializerOptions RecipeSerializerOptions = new(JOptions.Default)
     {
         PropertyNameCaseInsensitive = true,
     };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-    """
+    $$"""
     {
       "type": "object",
       "properties": {
         "recipe": {
           "type": "string",
-          "description": "A JSON string representing an Orchard Core recipe to import."
+          "description": "A JSON string representing an Orchard Core recipe to import. {{RecipeSchemaInstruction}}"
         }
       },
       "required": [
@@ -35,7 +37,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
       ],
       "additionalProperties": false
     }
-
     """);
 
     public override JsonElement JsonSchema => _jsonSchema;
@@ -166,11 +167,12 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
             return
             $"""
-Invalid recipe format. The recipe must match the expected schema shown below.
-Please generate a valid recipe and try again:
-{schemaStructure}
+            Invalid recipe format. The recipe must match the expected schema shown below.
+            {RecipeSchemaInstruction}
+            Please generate a valid recipe and try again:
+            {schemaStructure}
 
-""";
+            """;
         }
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))

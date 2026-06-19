@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Settings;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using Usr = OrchardCore.Users;
 using YSession = YesSql.ISession;
 
@@ -20,6 +22,8 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 /// </summary>
 public sealed class CreateOrUpdateContentTool : AIFunction
 {
+    private const string ContentItemArgumentDescription = "The top-level Orchard Core content item to create or update. Can be a JSON object or a JSON-encoded string, but it must match the Orchard Core ContentItem JSON shape for the target content type. Before calling this function, call the 'getContentItemSchema' tool first whenever it is available and request the parent content type plus any nested content types you plan to include so the payload matches the current Orchard Core schema. If the item contains nested or contained content items, include them inside this parent payload instead of calling the function separately for each nested item. To perform an update, include a valid 'ContentItemId'.";
+
     /// <summary>
     /// The name constant.
     /// </summary>
@@ -31,12 +35,12 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-    """
+    $$"""
     {
       "type": "object",
       "properties": {
         "contentItem": {
-          "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
+          "description": "{{ContentItemArgumentDescription}}"
         },
         "isDraft": {
           "type": "boolean",
@@ -65,7 +69,13 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
+    public override string Description
+        =>
+        $"""
+        Creates a new content item or updates an existing one by creating a new version. {ContentItemToolGuidance.ContentSchemaInstruction}
+        {ContentItemToolGuidance.NestedContentInstruction}
+        Rejects payloads when the JSON does not match the expected Orchard Core content item structure.
+        """;
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -83,6 +93,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
+        var payloadAssistanceService = arguments.Services.GetRequiredService<IContentItemPayloadAssistanceService>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
@@ -122,32 +133,76 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         using var doc = JsonDocument.ParseValue(ref reader);
 
+        var inputNode = JsonNode.Parse(doc.RootElement.GetRawText()) as JsonObject;
+
+        if (inputNode is null)
+        {
+            logger.LogWarning("AI tool '{ToolName}': The contentItem argument must be a JSON object.", TheName);
+
+            return "The contentItem argument must be a JSON object.";
+        }
+
         var model = doc.RootElement.Deserialize<ContentItem>(JsonSerializerOptions);
 
+        if (model is null)
+        {
+            logger.LogWarning("AI tool '{ToolName}': The contentItem argument could not be mapped to a content item.", TheName);
+
+            return "The contentItem argument could not be mapped to a content item.";
+        }
+
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
+        var resolvedContentType = contentItem?.ContentType ?? model.ContentType;
 
         if (contentItem is null)
         {
-            if (string.IsNullOrEmpty(model?.ContentType))
+            if (string.IsNullOrEmpty(resolvedContentType))
             {
                 logger.LogWarning("AI tool '{ToolName}': A Content type is required to create a new content item.", TheName);
 
                 return "A Content type is required";
             }
+        }
 
-            var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-            var contentDefintions = await contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType);
+        var contentType = resolvedContentType!;
+        var contentDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(contentType);
 
-            if (contentDefintions is null)
-            {
-                logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, model.ContentType);
+        if (contentDefinition is null)
+        {
+            logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, contentType);
 
-                return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
-            }
+            return $"Invalid content type '{contentType}'. In this is a new content type, first create content type definition then created the content item.";
+        }
 
-            contentItem = await contentManager.NewAsync(model.ContentType);
+        var payloadValidationResult = await payloadAssistanceService.ValidateAsync(
+            contentDefinition,
+            inputNode,
+            cancellationToken);
+
+        if (!payloadValidationResult.IsValid)
+        {
+            logger.LogWarning(
+                "AI tool '{ToolName}': The content item JSON failed validation for '{ContentType}'. Messages: {Messages}. Unmapped paths: {Paths}.",
+                TheName,
+                contentDefinition.Name,
+                string.Join(" | ", payloadValidationResult.Messages),
+                payloadValidationResult.UnmappedPaths.Count == 0
+                    ? "(none)"
+                    : string.Join(", ", payloadValidationResult.UnmappedPaths));
+
+            return await CreateIncorrectStructureResponseAsync(
+                payloadAssistanceService,
+                contentDefinition,
+                payloadValidationResult,
+                cancellationToken);
+        }
+
+        if (contentItem is null)
+        {
+            contentItem = await contentManager.NewAsync(contentType);
 
             contentItem.Merge(model);
 
@@ -161,16 +216,15 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             {
                 logger.LogWarning("AI tool '{ToolName}': Unable to create content item due to validation errors: {Errors}.", TheName, string.Join(", ", result.Errors.Select(x => x.ErrorMessage)));
 
-                return
-                $"""
-Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
-For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
-""";
+                return await CreateValidationFailureResponseAsync(
+                    payloadAssistanceService,
+                    contentDefinition,
+                    "Unable to create the content item",
+                    result.Errors.Select(x => x.ErrorMessage),
+                    cancellationToken);
             }
-            else
-            {
-                await contentManager.CreateAsync(contentItem, VersionOptions.Draft);
-            }
+
+            await contentManager.CreateAsync(contentItem, VersionOptions.Draft);
         }
 
         else
@@ -185,7 +239,12 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
             {
                 logger.LogWarning("AI tool '{ToolName}': Unable to update content item due to validation errors: {Errors}.", TheName, string.Join("; ", result.Errors.Select(x => x.ErrorMessage)));
 
-                return $"Unable to update the content item due to the following errors: {string.Join(';', result.Errors.Select(x => x.ErrorMessage))}";
+                return await CreateValidationFailureResponseAsync(
+                    payloadAssistanceService,
+                    contentDefinition,
+                    "Unable to update the content item",
+                    result.Errors.Select(x => x.ErrorMessage),
+                    cancellationToken);
             }
         }
 
@@ -221,17 +280,17 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
             if (metadata.AdminRouteValues is not null)
             {
                 response = $"""
-{response}
-The edit URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues)}
-""";
+                {response}
+                The edit URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues)}
+                """;
             }
 
             if (metadata.DisplayRouteValues is not null)
             {
                 response = $"""
-{response}
-The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues)}
-""";
+                {response}
+                The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues)}
+                """;
             }
         }
         else if (logger.IsEnabled(LogLevel.Debug))
@@ -286,5 +345,52 @@ The view URI is: {linkGenerator.GetUriByRouteValues(httpContext, null, metadata.
             contentItem.Owner = await userManager.GetUserIdAsync(user);
             contentItem.Author = user.UserName;
         }
+    }
+
+    private static async Task<string> CreateIncorrectStructureResponseAsync(
+        IContentItemPayloadAssistanceService payloadAssistanceService,
+        ContentTypeDefinition contentDefinition,
+        ContentItemPayloadValidationResult validationResult,
+        CancellationToken cancellationToken)
+    {
+        var details = new List<string>(validationResult.Messages);
+        var guidance = validationResult.Guidance;
+
+        if (validationResult.UnmappedPaths.Count > 0)
+        {
+            details.Add($"Unmapped or misplaced paths: {string.Join(", ", validationResult.UnmappedPaths)}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(guidance))
+        {
+            guidance = await payloadAssistanceService.GetGuidanceAsync(contentDefinition, cancellationToken);
+        }
+
+        return
+        $"""
+        The provided content item JSON could not be mapped completely.
+        This usually means the JSON shape does not match the Orchard Core content item structure for '{contentDefinition.Name}'.
+        {string.Join(Environment.NewLine, details)}
+        Please call the function again using the valid structure shown below. When a JSON schema is provided, treat it as the contract for the retry payload.
+
+        {ContentItemToolGuidance.EnsureNestedContentInstruction(guidance)}
+        """;
+    }
+
+    private static async Task<string> CreateValidationFailureResponseAsync(
+        IContentItemPayloadAssistanceService payloadAssistanceService,
+        ContentTypeDefinition contentDefinition,
+        string operation,
+        IEnumerable<string> errors,
+        CancellationToken cancellationToken)
+    {
+        var guidance = await payloadAssistanceService.GetGuidanceAsync(contentDefinition, cancellationToken);
+
+        return
+        $"""
+        {operation} due to the following errors: {string.Join(", ", errors)}.
+
+        {ContentItemToolGuidance.EnsureNestedContentInstruction(guidance)}
+        """;
     }
 }

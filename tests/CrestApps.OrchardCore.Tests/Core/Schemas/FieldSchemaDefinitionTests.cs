@@ -1,6 +1,8 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
+using OrchardCore.ContentManagement.Metadata.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -122,11 +124,16 @@ public sealed class FieldSchemaDefinitionTests
 
     private static async Task<string> GetFieldSchemaJsonAsync(object definition)
     {
-        var interfaceType = definition.GetType().Assembly.GetType(
+        var interfaceType = typeof(IContentSchemaDefinition).Assembly.GetType(
             "CrestApps.OrchardCore.Recipes.Core.Schemas.Fields.IContentFieldSchemaDefinition",
             throwOnError: true);
         var method = interfaceType.GetMethod("GetFieldSchemaAsync");
-        var task = (ValueTask<Json.Schema.JsonSchemaBuilder>)method.Invoke(definition, [TestContext.Current.CancellationToken]);
+        var task = (ValueTask<Json.Schema.JsonSchemaBuilder>)method.Invoke(
+            definition,
+        [
+            CreateFieldContext(((IContentSchemaDefinition)definition).Name),
+            TestContext.Current.CancellationToken,
+        ]);
         var schema = await task;
 
         return schema.Build().Root.Source.GetRawText();
@@ -165,5 +172,94 @@ public sealed class FieldSchemaDefinitionTests
         Assert.Contains("TaxonomyFieldTagsEditorSettings", json);
         Assert.Contains("TaxonomyContentItemId", json);
         Assert.Contains("LeavesOnly", json);
+    }
+
+    [Fact]
+    public async Task PhoneFieldSchemaDefinition_FieldSchemaContainsCountryCodeEnum()
+    {
+        // Arrange — resolve the internal PhoneFieldSchemaDefinition via reflection.
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var phoneFieldSchemaType = contentFieldsAssembly.GetType(
+            "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
+            throwOnError: true);
+        var instance = Activator.CreateInstance(phoneFieldSchemaType);
+
+        // Act — get the field payload schema via the internal IContentFieldSchemaDefinition interface.
+        var schemaJson = await GetFieldSchemaJsonAsync(instance);
+
+        // Assert — CountryCode should be constrained to ISO 3166-1 alpha-2 country codes.
+        Assert.Contains("\"CountryCode\"", schemaJson);
+        Assert.Contains("\"US\"", schemaJson);
+        Assert.Contains("\"CA\"", schemaJson);
+        Assert.Contains("\"GB\"", schemaJson);
+        Assert.Contains("\"DE\"", schemaJson);
+        Assert.Contains("\"JP\"", schemaJson);
+        Assert.Contains("\"AU\"", schemaJson);
+        Assert.Contains("\"BR\"", schemaJson);
+        Assert.Contains("\"ZW\"", schemaJson);
+    }
+
+    [Fact]
+    public async Task PhoneFieldSchemaDefinition_SettingsSchemaContainsCountryCodeEnum()
+    {
+        // Arrange
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var phoneFieldSchemaType = contentFieldsAssembly.GetType(
+            "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
+            throwOnError: true);
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(phoneFieldSchemaType);
+
+        // Act
+        var schema = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var json = schema.Build().Root.Source.GetRawText();
+
+        // Assert — SpecificCountryCode should also be constrained to country codes.
+        Assert.Contains("\"SpecificCountryCode\"", json);
+        Assert.Contains("\"US\"", json);
+        Assert.Contains("\"InitialCountryMode\"", json);
+        Assert.Contains("\"Globe\"", json);
+        Assert.Contains("\"CurrentCulture\"", json);
+        Assert.Contains("\"Specific\"", json);
+    }
+
+    [Fact]
+    public async Task PhoneFieldSchemaDefinition_FieldSchemaContainsPhoneNumberProperties()
+    {
+        // Arrange
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.PhoneField).Assembly;
+        var phoneFieldSchemaType = contentFieldsAssembly.GetType(
+            "CrestApps.OrchardCore.ContentFields.Schemas.PhoneFieldSchemaDefinition",
+            throwOnError: true);
+        var instance = Activator.CreateInstance(phoneFieldSchemaType);
+
+        // Act
+        var schemaJson = await GetFieldSchemaJsonAsync(instance);
+
+        // Assert
+        Assert.Contains("\"PhoneNumber\"", schemaJson);
+        Assert.Contains("\"CountryCode\"", schemaJson);
+        Assert.Contains("\"NationalNumber\"", schemaJson);
+    }
+
+    private static ContentFieldSchemaContext CreateFieldContext(string fieldDefinitionName, string fieldName = null)
+    {
+        var contentTypeDefinition = new ContentTypeDefinition("TestType", "TestType", [], new JsonObject());
+        var contentTypePartDefinition = new ContentTypePartDefinition(
+            "TestPart",
+            new ContentPartDefinition("TestPart", [], new JsonObject()),
+            new JsonObject())
+        {
+            ContentTypeDefinition = contentTypeDefinition,
+        };
+        var contentPartFieldDefinition = new ContentPartFieldDefinition(
+            new ContentFieldDefinition(fieldDefinitionName),
+            fieldName ?? fieldDefinitionName,
+            new JsonObject());
+
+        return new ContentFieldSchemaContext
+        {
+            ContentPartFieldDefinition = contentPartFieldDefinition,
+            ContentTypePartDefinition = contentTypePartDefinition,
+        };
     }
 }

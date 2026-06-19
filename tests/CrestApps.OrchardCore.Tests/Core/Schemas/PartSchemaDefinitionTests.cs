@@ -1,6 +1,11 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Omnichannel.Managements.Schemas;
+using Moq;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -164,7 +169,9 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("RenderLiquid", settingsJson);
         Assert.Contains("MarkdownBodyPartWysiwygEditorSettings", settingsJson);
 
-        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(
+            CreatePartContext(def.Name),
+            TestContext.Current.CancellationToken);
         var partJson = partSchema.Build().Root.Source.GetRawText();
 
         Assert.Contains("Markdown", partJson);
@@ -180,7 +187,9 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("HtmlMenuItemPartSettings", settingsJson);
         Assert.Contains("SanitizeHtml", settingsJson);
 
-        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        var partSchema = await ((IContentPartSchemaDefinition)def).GetPartSchemaAsync(
+            CreatePartContext(def.Name),
+            TestContext.Current.CancellationToken);
         var partJson = partSchema.Build().Root.Source.GetRawText();
 
         Assert.Contains("Url", partJson);
@@ -192,19 +201,86 @@ public sealed class PartSchemaDefinitionTests
     public async Task PublishLaterAndLayerMetadataSchemas_ContainPayloadProperties()
     {
         var publishLaterSchema = await ((IContentPartSchemaDefinition)new PublishLaterPartSchema())
-            .GetPartSchemaAsync(TestContext.Current.CancellationToken);
+        .GetPartSchemaAsync(CreatePartContext("PublishLaterPart"), TestContext.Current.CancellationToken);
         var publishLaterJson = publishLaterSchema.Build().Root.Source.GetRawText();
 
         Assert.Contains("ScheduledPublishUtc", publishLaterJson);
         Assert.Contains("\"type\":\"null\"", publishLaterJson);
 
         var layerMetadataSchema = await ((IContentPartSchemaDefinition)new LayerMetadataSchema())
-            .GetPartSchemaAsync(TestContext.Current.CancellationToken);
+            .GetPartSchemaAsync(CreatePartContext("LayerMetadata"), TestContext.Current.CancellationToken);
         var layerMetadataJson = layerMetadataSchema.Build().Root.Source.GetRawText();
 
         Assert.Contains("RenderTitle", layerMetadataJson);
         Assert.Contains("Position", layerMetadataJson);
         Assert.Contains("Zone", layerMetadataJson);
         Assert.Contains("Layer", layerMetadataJson);
+    }
+
+    [Fact]
+    public async Task OmnichannelContactPartSchema_ContainsTimeZoneEnumAndPreferences()
+    {
+        var timeZoneProvider = new Mock<ITimeZoneSelectListProvider>();
+        timeZoneProvider.Setup(provider => provider.GetTimeZoneSelectListAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new KeyValuePair<string, string>("America/Denver", "Mountain Time"),
+                new KeyValuePair<string, string>("America/Los_Angeles", "Pacific Time"),
+            ]);
+
+        var definition = new OmnichannelContactPartSchemaDefinition(timeZoneProvider.Object);
+        var settingsSchema = await definition.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("OmnichannelContactPartSettings", settingsJson);
+        Assert.Contains("RequireTimeZone", settingsJson);
+        Assert.Contains("UseDoNotCall", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("TimeZoneId", partJson);
+        Assert.Contains("America/Denver", partJson);
+        Assert.Contains("America/Los_Angeles", partJson);
+        Assert.Contains("DoNotCallUtc", partJson);
+        Assert.Contains("DoNotEmail", partJson);
+        Assert.Contains("DoNotSms", partJson);
+        Assert.Contains("DoNotChat", partJson);
+    }
+
+    [Fact]
+    public async Task PhoneNumberInfoPartSchema_ContainsE164PhoneNumberDescription()
+    {
+        var definition = new PhoneNumberInfoPartSchemaDefinition();
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("PhoneNumber", partJson);
+        Assert.Contains("E.164 format", partJson);
+        Assert.Contains("CountryCode", partJson);
+        Assert.Contains("NationalNumber", partJson);
+        Assert.Contains("Extension", partJson);
+        Assert.Contains("Type", partJson);
+    }
+
+    private static ContentPartSchemaContext CreatePartContext(string partDefinitionName, string partName = null)
+    {
+        var contentTypeDefinition = new ContentTypeDefinition("TestType", "TestType", [], new JsonObject());
+        var contentTypePartDefinition = new ContentTypePartDefinition(
+            partName ?? partDefinitionName,
+            new ContentPartDefinition(partDefinitionName, [], new JsonObject()),
+            new JsonObject())
+        {
+            ContentTypeDefinition = contentTypeDefinition,
+        };
+
+        return new ContentPartSchemaContext
+        {
+            ContentTypePartDefinition = contentTypePartDefinition,
+        };
     }
 }

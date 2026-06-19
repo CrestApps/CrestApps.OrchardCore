@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
@@ -54,8 +55,9 @@ public sealed class BuiltInRecipeStepTests
     {
         var permissions = new[]
         {
-            new Permission("PermissionA", "Permission A"),
-            new Permission("PermissionB", "Permission B")
+            new Permission("EditContent", "Edit content"),
+            new Permission("ViewContent", "View content"),
+            new Permission("ViewMediaContent", "View media content"),
         };
 
         var permissionService = new Mock<IPermissionService>();
@@ -162,7 +164,21 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(ContentRecipeStep))
         {
-            return new ContentRecipeStep(CreateContentDefinitionManager(), CreateContentSchemaDefinitions());
+            return new ContentRecipeStep(new ContentItemSchemaService(
+                CreateContentDefinitionManager(),
+                CreateContentSchemaDefinitions()));
+        }
+
+        if (stepType == typeof(AdminMenuRecipeStep))
+        {
+            var schemaService = new Mock<IContentItemSchemaService>();
+            schemaService
+                .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
+
+            return new AdminMenuRecipeStep(schemaService.Object);
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
@@ -196,6 +212,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(ContentRecipeStep), "content")]
     [InlineData(typeof(MediaRecipeStep), "media")]
     [InlineData(typeof(MediaProfilesRecipeStep), "MediaProfiles")]
+    [InlineData(typeof(MoveAttachedMediaFieldsRecipeStep), "move-attached-media-fields")]
     [InlineData(typeof(RolesRecipeStep), "Roles")]
     [InlineData(typeof(UsersRecipeStep), "Users")]
     [InlineData(typeof(SettingsRecipeStep), "settings")]
@@ -257,6 +274,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(ContentRecipeStep))]
     [InlineData(typeof(MediaRecipeStep))]
     [InlineData(typeof(MediaProfilesRecipeStep))]
+    [InlineData(typeof(MoveAttachedMediaFieldsRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
     [InlineData(typeof(UsersRecipeStep))]
     [InlineData(typeof(SettingsRecipeStep))]
@@ -323,6 +341,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(ContentRecipeStep))]
     [InlineData(typeof(MediaRecipeStep))]
     [InlineData(typeof(MediaProfilesRecipeStep))]
+    [InlineData(typeof(MoveAttachedMediaFieldsRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
     [InlineData(typeof(UsersRecipeStep))]
     [InlineData(typeof(SettingsRecipeStep))]
@@ -400,7 +419,9 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaRequiresDataWithContentType()
     {
-        var step = new ContentRecipeStep(CreateContentDefinitionManager(), CreateContentSchemaDefinitions());
+        var step = new ContentRecipeStep(new ContentItemSchemaService(
+            CreateContentDefinitionManager(),
+            CreateContentSchemaDefinitions()));
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"ContentType\"", json);
         Assert.Contains("\"data\"", json);
@@ -409,7 +430,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaIncludesKnownPartAndFieldPropertiesPerContentType()
     {
-        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+        var step = new ContentRecipeStep(new ContentItemSchemaService(CreateContentDefinitionManager(
             CreateContentTypeDefinition(
                 "BlogPost",
                 CreateTypePartDefinition("TitlePart"),
@@ -437,7 +458,7 @@ public sealed class BuiltInRecipeStepTests
                 CreateTypePartDefinition("HtmlMenuItemPart"),
                 CreateTypePartDefinition("LayerMetadata"),
                 CreateTypePartDefinition("PublishLaterPart"))),
-            CreateContentSchemaDefinitions());
+            CreateContentSchemaDefinitions()));
 
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
@@ -471,7 +492,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaValidatesContentItemsWithContentTypeSpecificProperties()
     {
-        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+        var step = new ContentRecipeStep(new ContentItemSchemaService(CreateContentDefinitionManager(
             CreateContentTypeDefinition(
                 "Article",
                 CreateTypePartDefinition("TitlePart"),
@@ -480,7 +501,7 @@ public sealed class BuiltInRecipeStepTests
                 CreateTypePartDefinition("Article",
                     CreateFieldDefinition("Subtitle"),
                     CreateFieldDefinition("Image", "MediaField")))),
-            CreateContentSchemaDefinitions());
+            CreateContentSchemaDefinitions()));
         var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         using var document = JsonDocument.Parse("""
@@ -528,14 +549,14 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaValidatesKnownPartPayloadProperties()
     {
-        var step = new ContentRecipeStep(CreateContentDefinitionManager(
+        var step = new ContentRecipeStep(new ContentItemSchemaService(CreateContentDefinitionManager(
             CreateContentTypeDefinition(
                 "BlogPost",
                 CreateTypePartDefinition("TitlePart"),
                 CreateTypePartDefinition("MarkdownBodyPart"),
                 CreateTypePartDefinition("AutoroutePart"),
                 CreateTypePartDefinition("ContainedPart"))),
-            CreateContentSchemaDefinitions());
+            CreateContentSchemaDefinitions()));
         var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         using var document = JsonDocument.Parse("""
@@ -578,6 +599,33 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"Add\"", json);
         Assert.Contains("\"Replace\"", json);
         Assert.Contains("\"Remove\"", json);
+        Assert.Contains("\"ViewContent\"", json);
+        Assert.Contains("\"ViewMediaContent\"", json);
+    }
+
+    [Fact]
+    public async Task RolesRecipeStep_SchemaValidatesPermissionItems()
+    {
+        var step = new RolesRecipeStep(CreatePermissionService());
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse("""
+            {
+              "name": "Roles",
+              "Roles": [
+                {
+                  "Name": "Anonymous",
+                  "PermissionBehavior": "Remove",
+                  "Permissions": [
+                    "ViewContent",
+                    "ViewMediaContent"
+                  ]
+                }
+              ]
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
     }
 
     [Fact]
@@ -592,12 +640,617 @@ public sealed class BuiltInRecipeStepTests
     }
 
     [Fact]
+    public async Task MoveAttachedMediaFieldsRecipeStep_SchemaContainsContentTypes()
+    {
+        var step = new MoveAttachedMediaFieldsRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+        Assert.Contains("\"ContentTypes\"", json);
+        Assert.Contains("\"move-attached-media-fields\"", json);
+    }
+
+    [Fact]
     public async Task AdminMenuRecipeStep_SchemaContainsMenuItems()
     {
-        var step = new AdminMenuRecipeStep();
+        var schemaService = new Mock<IContentItemSchemaService>();
+        schemaService
+            .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
+
+        var step = new AdminMenuRecipeStep(schemaService.Object);
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"MenuItems\"", json);
         Assert.Contains("\"ContentType\"", json);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_BagPartUsesContainedContentTypesForNestedItems()
+    {
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("Slide"),
+            },
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var slide = CreateContentTypeDefinition("Slide");
+        var article = CreateContentTypeDefinition("Article");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page, slide, article),
+            CreateContentSchemaDefinitions());
+
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+        using var allowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Slide"
+                  }
+                ]
+              }
+            }
+            """);
+        using var disallowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Article"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(allowedDocument.RootElement).IsValid);
+        Assert.False(schema.Evaluate(disallowedDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_BagPartUsesContainedStereotypesForNestedItems()
+    {
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedStereotypes"] = new JsonArray("Widget"),
+            },
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var widget = new ContentTypeDefinition(
+            "HeroWidget",
+            "HeroWidget",
+            [],
+            new JsonObject
+            {
+                ["ContentTypeSettings"] = new JsonObject
+                {
+                    ["Stereotype"] = "Widget",
+                },
+            });
+        var article = CreateContentTypeDefinition("Article");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page, widget, article),
+            CreateContentSchemaDefinitions());
+
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+        using var allowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "HeroWidget"
+                  }
+                ]
+              }
+            }
+            """);
+        using var disallowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Article"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(allowedDocument.RootElement).IsValid);
+        Assert.False(schema.Evaluate(disallowedDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_NamedBagPartUsesBagPartSchemaContributors()
+    {
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("Slide"),
+            },
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("ContactMethods", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var slide = CreateContentTypeDefinition("Slide");
+        var article = CreateContentTypeDefinition("Article");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page, slide, article),
+            CreateContentSchemaDefinitions());
+
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+        using var allowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "ContactMethods": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Slide"
+                  }
+                ]
+              }
+            }
+            """);
+        using var disallowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "ContactMethods": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Article"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(allowedDocument.RootElement).IsValid);
+        Assert.False(schema.Evaluate(disallowedDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_FlowPartUsesContainedContentTypesForNestedItems()
+    {
+        var flowSettings = new JsonObject
+        {
+            ["FlowPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("HeroWidget"),
+            },
+        };
+        var landingPage = new ContentTypeDefinition(
+            "LandingPage",
+            "LandingPage",
+            [new ContentTypePartDefinition("Body", new ContentPartDefinition("FlowPart", [], new JsonObject()), flowSettings)],
+            new JsonObject());
+        landingPage.Parts.First().ContentTypeDefinition = landingPage;
+        var heroWidget = CreateContentTypeDefinition("HeroWidget");
+        var article = CreateContentTypeDefinition("Article");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(landingPage, heroWidget, article),
+            CreateContentSchemaDefinitions());
+
+        var schema = await service.GetSchemaAsync("LandingPage", TestContext.Current.CancellationToken);
+        using var allowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "LandingPage",
+              "Body": {
+                "Widgets": [
+                  {
+                    "ContentType": "HeroWidget"
+                  }
+                ]
+              }
+            }
+            """);
+        using var disallowedDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "LandingPage",
+              "Body": {
+                "Widgets": [
+                  {
+                    "ContentType": "Article"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(allowedDocument.RootElement).IsValid);
+        Assert.False(schema.Evaluate(disallowedDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_GetSchemaAsync_ContentTypeEnumContainsAllKnownTypes()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(
+                CreateContentTypeDefinition("Article"),
+                CreateContentTypeDefinition("BlogPost"),
+                CreateContentTypeDefinition("Page")),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync(TestContext.Current.CancellationToken);
+        var json = JsonSerializer.Serialize(schema.Build());
+
+        // Assert — ContentType enum should list all three content types.
+        Assert.Contains("\"Article\"", json);
+        Assert.Contains("\"BlogPost\"", json);
+        Assert.Contains("\"Page\"", json);
+
+        // Valid: any known content type.
+        using var validArticle = JsonDocument.Parse("""{ "ContentType": "Article" }""");
+        using var validBlogPost = JsonDocument.Parse("""{ "ContentType": "BlogPost" }""");
+        using var validPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
+
+        Assert.True(schema.Evaluate(validArticle.RootElement).IsValid);
+        Assert.True(schema.Evaluate(validBlogPost.RootElement).IsValid);
+        Assert.True(schema.Evaluate(validPage.RootElement).IsValid);
+
+        // Invalid: unknown content type.
+        using var invalidType = JsonDocument.Parse("""{ "ContentType": "UnknownType" }""");
+
+        Assert.False(schema.Evaluate(invalidType.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_GetSchemaByContentType_ContentTypeEnumContainsOnlyRequestedType()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(
+                CreateContentTypeDefinition("Article"),
+                CreateContentTypeDefinition("BlogPost"),
+                CreateContentTypeDefinition("Page")),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync("Article", TestContext.Current.CancellationToken);
+
+        // Assert — only "Article" is a valid content type.
+        using var validArticle = JsonDocument.Parse("""{ "ContentType": "Article" }""");
+        using var invalidBlogPost = JsonDocument.Parse("""{ "ContentType": "BlogPost" }""");
+        using var invalidPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
+
+        Assert.True(schema.Evaluate(validArticle.RootElement).IsValid);
+        Assert.False(schema.Evaluate(invalidBlogPost.RootElement).IsValid);
+        Assert.False(schema.Evaluate(invalidPage.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_GetSchemaByContentType_ReturnsNullForUnknownType()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(
+                CreateContentTypeDefinition("Article")),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync("DoesNotExist", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(schema);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_GetGenericSchemaAsync_ConstrainsContentTypeEnum()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetGenericSchemaAsync(["Article", "Page"], TestContext.Current.CancellationToken);
+
+        // Assert
+        using var validArticle = JsonDocument.Parse("""{ "ContentType": "Article" }""");
+        using var validPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
+        using var invalidType = JsonDocument.Parse("""{ "ContentType": "Widget" }""");
+
+        Assert.True(schema.Evaluate(validArticle.RootElement).IsValid);
+        Assert.True(schema.Evaluate(validPage.RootElement).IsValid);
+        Assert.False(schema.Evaluate(invalidType.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_GetGenericSchemaAsync_AllowsAnyTypeWhenNoContentTypesSpecified()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetGenericSchemaAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert — ContentType is just a string, no enum constraint.
+        using var anyType = JsonDocument.Parse("""{ "ContentType": "AnythingGoes" }""");
+
+        Assert.True(schema.Evaluate(anyType.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_BagPartWithEmptyContainedTypes_AllowsAnyContentType()
+    {
+        // Arrange — BagPart with no ContainedContentTypes or ContainedStereotypes.
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject(),
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+
+        // Assert — nested items should accept any content type since nothing is restricted.
+        using var anyDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "AnythingGoes"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(anyDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_SelfReferencingBagPart_DoesNotCauseInfiniteRecursion()
+    {
+        // Arrange — Page has a BagPart that allows Page (self-referencing).
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("Page"),
+            },
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page),
+            CreateContentSchemaDefinitions());
+
+        // Act — should not throw or hang due to cycle protection.
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+
+        // Assert — schema should still validate basic structure.
+        Assert.NotNull(schema);
+
+        using var validDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "Page"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(validDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_MutuallyReferencingTypes_HandlesCyclesGracefully()
+    {
+        // Arrange — TypeA contains TypeB, TypeB contains TypeA.
+        var bagSettingsA = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("TypeB"),
+            },
+        };
+        var bagSettingsB = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("TypeA"),
+            },
+        };
+        var typeA = new ContentTypeDefinition(
+            "TypeA",
+            "TypeA",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettingsA)],
+            new JsonObject());
+        typeA.Parts.First().ContentTypeDefinition = typeA;
+        var typeB = new ContentTypeDefinition(
+            "TypeB",
+            "TypeB",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettingsB)],
+            new JsonObject());
+        typeB.Parts.First().ContentTypeDefinition = typeB;
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(typeA, typeB),
+            CreateContentSchemaDefinitions());
+
+        // Act — should not throw or hang due to cycle protection.
+        var schema = await service.GetSchemaAsync("TypeA", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(schema);
+
+        using var validDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "TypeA",
+              "BagPart": {
+                "ContentItems": [
+                  {
+                    "ContentType": "TypeB"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(validDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_BagPartWithMultipleContainedTypes_AllowsOnlyThoseTypes()
+    {
+        // Arrange
+        var bagSettings = new JsonObject
+        {
+            ["BagPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("Slide", "Testimonial"),
+            },
+        };
+        var page = new ContentTypeDefinition(
+            "Page",
+            "Page",
+            [new ContentTypePartDefinition("BagPart", new ContentPartDefinition("BagPart", [], new JsonObject()), bagSettings)],
+            new JsonObject());
+        page.Parts.First().ContentTypeDefinition = page;
+        var slide = CreateContentTypeDefinition("Slide");
+        var testimonial = CreateContentTypeDefinition("Testimonial");
+        var article = CreateContentTypeDefinition("Article");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(page, slide, testimonial, article),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync("Page", TestContext.Current.CancellationToken);
+
+        // Assert
+        using var validSlide = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [{ "ContentType": "Slide" }]
+              }
+            }
+            """);
+        using var validTestimonial = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [{ "ContentType": "Testimonial" }]
+              }
+            }
+            """);
+        using var invalidArticle = JsonDocument.Parse("""
+            {
+              "ContentType": "Page",
+              "BagPart": {
+                "ContentItems": [{ "ContentType": "Article" }]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(validSlide.RootElement).IsValid);
+        Assert.True(schema.Evaluate(validTestimonial.RootElement).IsValid);
+        Assert.False(schema.Evaluate(invalidArticle.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_FlowPartWidgets_UsesWidgetsPropertyName()
+    {
+        // Arrange
+        var flowSettings = new JsonObject
+        {
+            ["FlowPartSettings"] = new JsonObject
+            {
+                ["ContainedContentTypes"] = new JsonArray("Banner"),
+            },
+        };
+        var landingPage = new ContentTypeDefinition(
+            "LandingPage",
+            "LandingPage",
+            [new ContentTypePartDefinition("FlowPart", new ContentPartDefinition("FlowPart", [], new JsonObject()), flowSettings)],
+            new JsonObject());
+        landingPage.Parts.First().ContentTypeDefinition = landingPage;
+        var banner = CreateContentTypeDefinition("Banner");
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(landingPage, banner),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync("LandingPage", TestContext.Current.CancellationToken);
+        var json = JsonSerializer.Serialize(schema.Build());
+
+        // Assert — FlowPart uses "Widgets" (not "ContentItems") as the nested items property.
+        Assert.Contains("\"Widgets\"", json);
+
+        using var validDocument = JsonDocument.Parse("""
+            {
+              "ContentType": "LandingPage",
+              "FlowPart": {
+                "Widgets": [
+                  {
+                    "ContentType": "Banner"
+                  }
+                ]
+              }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(validDocument.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentItemSchemaService_RequiresContentTypeProperty()
+    {
+        // Arrange
+        var service = new ContentItemSchemaService(
+            CreateContentDefinitionManager(
+                CreateContentTypeDefinition("Article")),
+            CreateContentSchemaDefinitions());
+
+        // Act
+        var schema = await service.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        // Assert — ContentType is required.
+        using var missingContentType = JsonDocument.Parse("""{ "DisplayText": "Hello" }""");
+
+        Assert.False(schema.Evaluate(missingContentType.RootElement).IsValid);
     }
 
     [Fact]
@@ -625,6 +1278,43 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"TaxonomyFieldSettings\"", json);
         Assert.Contains("\"GeoPointFieldSettings\"", json);
         Assert.Contains("\"MarkdownFieldSettings\"", json);
+    }
+
+    [Fact]
+    public async Task ContentDefinitionRecipeStep_AllowsContentPartsWithoutContentTypes()
+    {
+        var step = new ContentDefinitionRecipeStep(CreateContentSchemaDefinitions(), CreateContentSchemaProvider());
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse("""
+            {
+              "name": "ContentDefinition",
+              "ContentParts": [
+                {
+                  "Name": "SeoPart",
+                  "Settings": {},
+                  "ContentPartFieldDefinitionRecords": []
+                }
+              ]
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ContentDefinitionRecipeStep_RequiresAtLeastOneOfContentTypesOrContentParts()
+    {
+        var step = new ContentDefinitionRecipeStep(CreateContentSchemaDefinitions(), CreateContentSchemaProvider());
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+
+        using var missingBoth = JsonDocument.Parse("""
+            {
+              "name": "ContentDefinition"
+            }
+            """);
+
+        Assert.False(schema.Evaluate(missingBoth.RootElement).IsValid);
     }
 
     [Fact]
@@ -668,7 +1358,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaCombinesFieldValueDefinitionsWithSameName()
     {
-        var step = new ContentRecipeStep(
+        var step = new ContentRecipeStep(new ContentItemSchemaService(
             CreateContentDefinitionManager(
                 CreateContentTypeDefinition(
                     "Article",
@@ -677,7 +1367,7 @@ public sealed class BuiltInRecipeStepTests
         [
             new TestSharedFieldSchema(),
             new TestSharedFieldAdvancedSchema(),
-        ]);
+        ]));
         var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         using var document = JsonDocument.Parse("""

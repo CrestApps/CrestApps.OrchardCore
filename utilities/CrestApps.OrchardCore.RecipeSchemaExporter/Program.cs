@@ -260,7 +260,7 @@ internal sealed class Program
 
         if (stepType == typeof(ContentRecipeStep))
         {
-            return new ContentRecipeStep(CreateContentDefinitionManager(), schemaDefinitions);
+            return new ContentRecipeStep(new ContentItemSchemaService(CreateContentDefinitionManager(), schemaDefinitions));
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
@@ -326,8 +326,9 @@ internal sealed class Program
     {
         var permissions = new[]
         {
-            new Permission("PermissionA", "Permission A"),
-            new Permission("PermissionB", "Permission B"),
+            new Permission("EditContent", "Edit content"),
+            new Permission("ViewContent", "View content"),
+            new Permission("ViewMediaContent", "View media content"),
         };
 
         var permissionService = new Mock<IPermissionService>();

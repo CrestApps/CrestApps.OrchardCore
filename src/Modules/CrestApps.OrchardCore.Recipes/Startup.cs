@@ -19,6 +19,7 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<RecipeExecutionService>();
         services.AddScoped<RecipeSchemaService>();
+        services.AddScoped<IContentItemSchemaService, ContentItemSchemaService>();
         services.AddSingleton<IViewLocationExpanderProvider, DeploymentJsonViewLocationExpander>();
 
         services.AddScoped<IRecipeStep, SettingsRecipeStep>();
@@ -114,6 +115,7 @@ public sealed class MediaRecipeStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, MediaRecipeStep>();
         services.AddScoped<IRecipeStep, MediaProfilesRecipeStep>();
+        services.AddScoped<IRecipeStep, MoveAttachedMediaFieldsRecipeStep>();
     }
 }
 

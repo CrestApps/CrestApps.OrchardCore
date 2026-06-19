@@ -1,7 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using Json.Schema;
-using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
@@ -10,23 +7,19 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class ContentRecipeStep : IRecipeStep
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IEnumerable<IContentSchemaDefinition> _schemaDefinitions;
+    private readonly IContentItemSchemaService _contentItemSchemaService;
 
     private JsonSchema _cached;
+
     public string Name => "content";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContentRecipeStep"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
-    /// <param name="schemaDefinitions">The content definition schema definitions.</param>
-    public ContentRecipeStep(
-        IContentDefinitionManager contentDefinitionManager,
-        IEnumerable<IContentSchemaDefinition> schemaDefinitions)
+    /// <param name="contentItemSchemaService">The content item schema service.</param>
+    public ContentRecipeStep(IContentItemSchemaService contentItemSchemaService)
     {
-        _contentDefinitionManager = contentDefinitionManager;
-        _schemaDefinitions = schemaDefinitions;
+        _contentItemSchemaService = contentItemSchemaService;
     }
 
     /// <summary>
@@ -39,10 +32,7 @@ public sealed class ContentRecipeStep : IRecipeStep
             return _cached;
         }
 
-        var definitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-        var partSchemas = await BuildPartSchemasAsync(cancellationToken);
-        var fieldSchemas = await BuildFieldSchemasAsync(cancellationToken);
-        var contentItemSchema = ContentCommonSchemas.CreateContentItemSchema(definitions, partSchemas, fieldSchemas);
+        var contentItemSchema = await _contentItemSchemaService.GetSchemaAsync(cancellationToken);
 
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -57,53 +47,5 @@ public sealed class ContentRecipeStep : IRecipeStep
             .Build();
 
         return _cached;
-    }
-
-    private async ValueTask<IReadOnlyDictionary<string, JsonSchemaBuilder>> BuildFieldSchemasAsync(CancellationToken cancellationToken)
-    {
-        var fieldSchemas = new Dictionary<string, List<JsonSchemaBuilder>>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var schemaDefinition in _schemaDefinitions.OfType<IContentFieldSchemaDefinition>())
-        {
-            if (!fieldSchemas.TryGetValue(schemaDefinition.Name, out var fragments))
-            {
-                fragments = [];
-                fieldSchemas[schemaDefinition.Name] = fragments;
-            }
-
-            fragments.Add(await schemaDefinition.GetFieldSchemaAsync(cancellationToken));
-        }
-
-        return fieldSchemas.ToDictionary(
-            pair => pair.Key,
-            pair => new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .AllOf(pair.Value.ToArray())
-                .AdditionalProperties(true),
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    private async ValueTask<IReadOnlyDictionary<string, JsonSchemaBuilder>> BuildPartSchemasAsync(CancellationToken cancellationToken)
-    {
-        var partSchemas = new Dictionary<string, List<JsonSchemaBuilder>>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var schemaDefinition in _schemaDefinitions.OfType<IContentPartSchemaDefinition>())
-        {
-            if (!partSchemas.TryGetValue(schemaDefinition.Name, out var fragments))
-            {
-                fragments = [];
-                partSchemas[schemaDefinition.Name] = fragments;
-            }
-
-            fragments.Add(await schemaDefinition.GetPartSchemaAsync(cancellationToken));
-        }
-
-        return partSchemas.ToDictionary(
-            pair => pair.Key,
-            pair => new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .AllOf(pair.Value.ToArray())
-                .AdditionalProperties(true),
-            StringComparer.OrdinalIgnoreCase);
     }
 }

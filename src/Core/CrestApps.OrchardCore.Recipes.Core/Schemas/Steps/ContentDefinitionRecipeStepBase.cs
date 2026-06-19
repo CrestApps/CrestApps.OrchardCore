@@ -44,7 +44,10 @@ public abstract class ContentDefinitionRecipeStepBase(
                 ("ContentTypes", BuildContentTypesArray(partsItem)),
                 ("ContentParts", BuildContentPartsArray(fieldsItem)))
             .Required(RequiredProperties.ToArray())
-            .AdditionalProperties(true)
+            .AnyOf(
+                new JsonSchemaBuilder().Required("ContentTypes"),
+                new JsonSchemaBuilder().Required("ContentParts"))
+            .AdditionalProperties(false)
             .Build();
 
         return _cached;

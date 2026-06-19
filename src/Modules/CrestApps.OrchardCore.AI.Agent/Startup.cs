@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Agent.Analytics;
 using CrestApps.OrchardCore.AI.Agent.Communications;
 using CrestApps.OrchardCore.AI.Agent.Contents;
@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -22,7 +23,6 @@ namespace CrestApps.OrchardCore.AI.Agent;
 /// <summary>
 /// Registers services and configuration for this feature.
 /// </summary>
-[Feature(AIConstants.Feature.OrchardCoreAIAgent)]
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -43,13 +43,25 @@ public sealed class Startup : StartupBase
             .WithDescription(S["Retrieves a list of the available time zones in the system."])
             .WithCategory(S["System"])
             .Selectable();
+
+        services.AddCoreAITool<ListAIProfilesTool>(ListAIProfilesTool.TheName)
+            .WithTitle(S["List AI Profiles"])
+            .WithDescription(S["Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
+
+        services.AddCoreAITool<ViewAIProfileTool>(ViewAIProfileTool.TheName)
+            .WithTitle(S["View AI Profile"])
+            .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
     }
 }
 
 /// <summary>
 /// Registers services and configuration for the Recipes feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -73,7 +85,7 @@ public sealed class RecipesStartup : StartupBase
 
         services.AddCoreAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
             .WithTitle(S["Get Orchard Core Recipe JSON Schema"])
-            .WithDescription(S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step."])
+            .WithDescription(S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call this immediately before importOrchardCoreRecipe whenever that tool is available, then build the recipe JSON to match the schema."])
             .WithCategory(S["Recipes"])
             .Selectable();
 
@@ -85,8 +97,9 @@ public sealed class RecipesStartup : StartupBase
 
         services.AddCoreAITool<ImportOrchardTool>(ImportOrchardTool.TheName)
             .WithTitle(S["Import Orchard Core Recipe"])
-            .WithDescription(S["Enables AI agents to import and run Orchard Core recipes within your site."])
+            .WithDescription(S["Enables AI agents to import and run Orchard Core recipes within your site. Before calling this tool, call getOrchardCoreRecipeJsonSchema first whenever it is available, then build the recipe JSON to match that schema exactly."])
             .WithCategory(S["Recipes"])
+            .WithDependency(GetRecipeJsonSchemaTool.TheName)
             .Selectable();
 
         services.AddCoreAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName)
@@ -106,7 +119,7 @@ public sealed class RecipesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Tenants feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Tenants")]
+[RequireFeatures("OrchardCore.Tenants")]
 public sealed class TenantsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -181,7 +194,7 @@ public sealed class TenantsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Contents feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Contents")]
+[RequireFeatures("OrchardCore.Contents")]
 public sealed class ContentsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -197,15 +210,17 @@ public sealed class ContentsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddScoped<IContentItemPayloadAssistanceService, DefaultContentItemPayloadAssistanceService>();
+
         services.AddCoreAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
             .WithTitle(S["Search Content Items"])
             .WithDescription(S["Provides a way to search for content items."])
             .WithCategory(S["Content Management"])
             .Selectable();
 
-        services.AddCoreAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName)
+        services.AddCoreAITool<GetSampleContentItemForContentTypeTool>(GetSampleContentItemForContentTypeTool.TheName)
             .WithTitle(S["Generate Content Item Sample"])
-            .WithDescription(S["Generates a structured sample content item for a specified content type."])
+            .WithDescription(S["Generates a structured sample content item for a specified content type. Before calling createOrUpdateContentItem, call getContentItemSchema first whenever it is available to inspect the exact schema contract. If the sample contains nested or contained content items, include them in the parent payload when calling createOrUpdateContentItem instead of creating them separately."])
             .WithCategory(S["Content Management"])
             .Selectable();
 
@@ -241,8 +256,9 @@ public sealed class ContentsStartup : StartupBase
 
         services.AddCoreAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName)
             .WithTitle(S["Create or Update Content Item"])
-            .WithDescription(S["Creates a new content item or updates an existing one."])
+            .WithDescription(S["Creates a new content item or updates an existing one. Before calling this tool, call getContentItemSchema first whenever it is available and request the parent content type plus any nested content types you plan to include. Call this tool once for the top-level content item and include any nested or contained content items in the same payload instead of calling it separately for each nested item."])
             .WithCategory(S["Content Management"])
+            .WithDependency(GetContentItemSchemaTool.TheName)
             .Selectable();
 
         services.AddCoreAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName)
@@ -254,9 +270,37 @@ public sealed class ContentsStartup : StartupBase
 }
 
 /// <summary>
+/// Registers recipe-backed content payload assistance when the Recipes feature is enabled.
+/// </summary>
+[RequireFeatures("OrchardCore.Contents", "CrestApps.OrchardCore.Recipes")]
+public sealed class ContentRecipesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentRecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ContentRecipesStartup(IStringLocalizer<ContentRecipesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Scoped<IContentItemPayloadAssistanceService, RecipeContentItemPayloadAssistanceService>());
+
+        services.AddCoreAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName)
+            .WithTitle(S["Get Content Item Schema"])
+            .WithDescription(S["Returns the current content-item JSON schema for one or more Orchard Core content types. Call this immediately before createOrUpdateContentItem whenever that tool is available so the payload follows the exact schema contract for the parent content type and any nested content types."])
+            .WithCategory(S["Content Management"]);
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the ContentDefinitions feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes")]
+[RequireFeatures("OrchardCore.ContentTypes")]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -309,7 +353,7 @@ public sealed class ContentDefinitionsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the ContentDefinitionRecipesTools feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
 public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -348,7 +392,7 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Features feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Features")]
+[RequireFeatures("OrchardCore.Features")]
 public sealed class FeaturesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -399,7 +443,7 @@ public sealed class FeaturesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Notifications feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Notifications")]
+[RequireFeatures("OrchardCore.Notifications")]
 public sealed class NotificationsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -426,7 +470,7 @@ public sealed class NotificationsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Email feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Email")]
+[RequireFeatures("OrchardCore.Email")]
 public sealed class EmailStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -453,7 +497,7 @@ public sealed class EmailStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Sms feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Sms")]
+[RequireFeatures("OrchardCore.Sms")]
 public sealed class SmsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -480,7 +524,7 @@ public sealed class SmsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Users feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Users")]
+[RequireFeatures("OrchardCore.Users")]
 public sealed class UsersStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -513,7 +557,7 @@ public sealed class UsersStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Roles feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Roles")]
+[RequireFeatures("OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -540,7 +584,7 @@ public sealed class RolesStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Workflows feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows")]
+[RequireFeatures("OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -573,7 +617,7 @@ public sealed class WorkflowsStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the WorkflowsRecipes feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
 public sealed class WorkflowsRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -604,42 +648,9 @@ public sealed class WorkflowsRecipesStartup : StartupBase
 }
 
 /// <summary>
-/// Registers services and configuration for the Profiles feature.
-/// </summary>
-[Feature(AIConstants.Feature.OrchardCoreAIAgent)]
-public sealed class ProfilesStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProfilesStartup"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ProfilesStartup(IStringLocalizer<ProfilesStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddCoreAITool<ListAIProfilesTool>(ListAIProfilesTool.TheName)
-            .WithTitle(S["List AI Profiles"])
-            .WithDescription(S["Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing."])
-            .WithCategory(S["AI Profiles"])
-            .Selectable();
-
-        services.AddCoreAITool<ViewAIProfileTool>(ViewAIProfileTool.TheName)
-            .WithTitle(S["View AI Profile"])
-            .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
-            .WithCategory(S["AI Profiles"])
-            .Selectable();
-    }
-}
-
-/// <summary>
 /// Registers services and configuration for the ChatAnalyticsTools feature.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, AIConstants.Feature.ChatAnalytics)]
+[RequireFeatures(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
