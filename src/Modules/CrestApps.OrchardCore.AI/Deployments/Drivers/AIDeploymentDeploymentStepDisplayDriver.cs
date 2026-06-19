@@ -54,8 +54,8 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
         var model = new AIDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-        p => p.IncludeAll,
-        p => p.DeploymentNames);
+            p => p.IncludeAll,
+            p => p.DeploymentNames);
 
         if (model.IncludeAll)
         {

@@ -10,15 +10,15 @@ description: Azure AI Inference integration for GitHub models using Azure AI pro
 | **Feature Name** | Azure AI Inference Chat |
 | **Feature ID** | `CrestApps.OrchardCore.AzureAIInference` |
 
-Provides a way to interact with GitHub Models using the Azure AI Inference provider.
+Provides access to GitHub Models and other Azure AI Inference endpoints.
 
 ## Overview
 
-The **Azure AI Inference Chat** feature enhances the **AI Services** functionality by integrating GitHub models using Azure AI Inference provider. It provides a suite of services to interact with these models, enabling advanced AI capabilities.
+The Azure AI Inference provider integrates Azure-hosted model inference endpoints into Orchard Core.
 
-### Configuration
+## Configuration
 
-To configure an Azure AI Inference connection, add the following settings to `appsettings.json`:
+Add the following settings to `appsettings.json`:
 
 ```json
 {
@@ -30,12 +30,20 @@ To configure an Azure AI Inference connection, add the following settings to `ap
             "DefaultConnectionName": "default",
             "Connections": {
               "default": {
-                "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
+                "Endpoint": "https://your-resource.services.ai.azure.com/models",
                 "AuthenticationType": "ApiKey",
-                "ApiKey": "<!-- Your GitHub Access Token goes here -->",
+                "ApiKey": "your-api-key",
                 "Deployments": [
-                  { "Name": "Phi-3-medium-4k-instruct", "Type": "Chat", "IsDefault": true },
-                  { "Name": "Phi-3-medium-4k-instruct", "Type": "Utility", "IsDefault": true }
+                  {
+                    "Name": "github-models-chat",
+                    "ModelName": "Phi-3-medium-4k-instruct",
+                    "Purpose": "Chat"
+                  },
+                  {
+                    "Name": "github-models-utility",
+                    "ModelName": "Phi-3-medium-4k-instruct",
+                    "Purpose": "Utility"
+                  }
                 ]
               }
             }
@@ -47,9 +55,9 @@ To configure an Azure AI Inference connection, add the following settings to `ap
 }
 ```
 
-Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
+`AuthenticationType` can be `Default`, `ManagedIdentity`, or `ApiKey`. When using `ApiKey`, the `ApiKey` field is required.
 
-When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.
+When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a user-assigned managed identity. If `IdentityId` is omitted or empty, the system-assigned managed identity is used.
 
 ```json
 {
@@ -57,12 +65,12 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
     "default": {
       "Endpoint": "https://my-resource.services.ai.azure.com/models",
       "AuthenticationType": "ManagedIdentity",
-      "IdentityId": "<!-- Optional: client ID of a user-assigned managed identity -->"
+      "IdentityId": "optional-user-assigned-managed-identity-client-id"
     }
   }
 }
 ```
 
-For detailed instructions on creating Azure AI Inference and obtaining the Endpoint, refer to the official [documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/model-inference/how-to/configure-project-connection?pivots=ai-foundry-portal).
+For detailed instructions on creating Azure AI Inference and obtaining the endpoint, refer to the official [documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/model-inference/how-to/configure-project-connection?pivots=ai-foundry-portal).
 
-When you import Azure AI Inference connections through the `AIProviderConnections` recipe step, the schema and import pipeline now recognize the common root-level `Endpoint`, `AuthenticationType`, optional `IdentityId`, and `ApiKey` fields in addition to the exported `Properties.AzureAIInferenceConnectionMetadata` shape.
+You can also provision the same connection through the `AIProviderConnections` recipe step by storing the provider settings under `Properties.AzureAIInferenceConnectionMetadata`.

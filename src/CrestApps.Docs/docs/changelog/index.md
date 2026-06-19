@@ -2,12 +2,12 @@
 sidebar_label: Overview
 sidebar_position: 0
 title: Changelog
-description: Release history and migration guides for CrestApps.OrchardCore modules.
+description: Release history and release notes for CrestApps.OrchardCore modules.
 ---
 
 # Changelog
 
-This section contains release notes, migration guides, and documentation updates for **CrestApps.OrchardCore**.
+This section contains release notes and version highlights for **CrestApps.OrchardCore**.
 
 | Version | Highlights |
 | --- | --- |

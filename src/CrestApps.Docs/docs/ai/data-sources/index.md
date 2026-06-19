@@ -40,10 +40,6 @@ When selecting a **Source Index**, the admin UI excludes internal AI-managed ind
 
 The **Source Index** and **Knowledge Base Index** selectors group profiles by the provider's localized display name (for example **Azure AI Search** instead of the internal provider key) so multi-provider setups are easier to scan.
 
-:::tip
-When upgrading older tenants, the data-source migrations now backfill missing **Source Index**, **Knowledge Base Index**, and default key/title/content field mappings from the current index-profile configuration when those values were not stored in the original legacy document payload.
-:::
-
 ## Configuration
 
 ### Site Settings
@@ -142,6 +138,8 @@ The resolver receives the `referenceId` and optional metadata, and returns a URL
   ]
 }
 ```
+
+When **OrchardCore.Deployment** is enabled, the deployment-plan editor groups the **AIDataSource** export step under the **Artificial Intelligence** category.
 
 ## Provider Modules
 

@@ -14,11 +14,11 @@ Provides AI services using Azure OpenAI models.
 
 ## Overview
 
-The Azure OpenAI Chat feature integrates seamlessly with Azure OpenAI. Enable this feature to use Azure OpenAI models for AI chat profiles, deployments, and connections.
+Enable this feature when you want Orchard Core to use Azure OpenAI for chat, utility, embedding, or image workloads.
 
-### Configuration
+## Configuration
 
-Add the following section to your `appsettings.json` to configure Azure OpenAI:
+Add the following section to `appsettings.json`:
 
 ```json
 {
@@ -27,17 +27,17 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
       "AI": {
         "Providers": {
           "Azure": {
-            "DefaultConnectionName": "<!-- Default connection name -->",
+            "DefaultConnectionName": "azure-openai",
             "Connections": {
-              "<!-- Unique connection name, ideally your Azure AccountName -->": {
-                "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+              "azure-openai": {
+                "Endpoint": "https://your-resource.openai.azure.com/",
                 "AuthenticationType": "ApiKey",
-                "ApiKey": "<!-- API Key for your Azure AI instance -->",
+                "ApiKey": "your-api-key",
                 "Deployments": [
-                  { "Name": "<!-- chat model deployment -->", "Type": "Chat", "IsDefault": true },
-                  { "Name": "<!-- utility model deployment -->", "Type": "Utility", "IsDefault": true },
-                  { "Name": "<!-- embedding model deployment -->", "Type": "Embedding", "IsDefault": true },
-                  { "Name": "<!-- image model deployment -->", "Type": "Image", "IsDefault": true }
+                  { "Name": "chat-deployment", "Purpose": "Chat" },
+                  { "Name": "utility-deployment", "Purpose": "Utility" },
+                  { "Name": "embedding-deployment", "Purpose": "Embedding" },
+                  { "Name": "image-deployment", "Purpose": "Image" }
                 ]
               }
             }
@@ -49,64 +49,87 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
 }
 ```
 
-Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
+Valid values for `AuthenticationType` are `Default`, `ManagedIdentity`, and `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
-When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.
+When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a user-assigned managed identity. If `IdentityId` is omitted or empty, the system-assigned managed identity is used.
 
 ```json
 {
   "Connections": {
-    "my-azure-account": {
+    "azure-openai": {
       "Endpoint": "https://my-account.openai.azure.com/",
       "AuthenticationType": "ManagedIdentity",
-      "IdentityId": "<!-- Optional: client ID of a user-assigned managed identity -->"
+      "IdentityId": "optional-user-assigned-managed-identity-client-id"
     }
   }
 }
 ```
 
-### How to Retrieve Azure OpenAI Credentials
+## How to retrieve Azure OpenAI credentials
 
-#### Get the API Key and Endpoint
+### Get the API key and endpoint
 
-1. Open the Azure Portal and navigate to your Azure OpenAI instance.
-2. Go to **Resource Management** > **Keys and Endpoint**.
+1. Open the Azure Portal and navigate to your Azure OpenAI resource.
+2. Go to **Resource Management** -> **Keys and Endpoint**.
 3. Copy the **Endpoint**.
-4. Copy one of the two available **API keys**.
+4. Copy one of the available **API keys**.
 
-## Azure OpenAI Chat Feature
+## Recipe configuration
 
-This feature allows the creation of AI profiles using Azure OpenAI chat capabilities.
-
-### Recipe Configuration
-
-Define an AI profile with the following step in your recipe:
+Use `AIProviderConnections` to create the connection, `AIDeployment` to create the deployments, and `AIProfile` when you want to provision a profile that references those deployments.
 
 ```json
 {
   "steps": [
     {
-      "name": "AIProfile",
-      "profiles": [
+      "name": "AIProviderConnections",
+      "Connections": [
         {
-          "Name": "ExampleProfile",
-          "DisplayText": "Example Profile",
+          "Source": "Azure",
+          "Name": "azure-openai",
+          "DisplayText": "Azure OpenAI",
+          "Properties": {
+            "AzureConnectionMetadata": {
+              "Endpoint": "https://my-account.openai.azure.com/",
+              "AuthenticationType": "ApiKey",
+              "ApiKey": "your-api-key"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AIDeployment",
+      "Deployments": [
+        {
+          "Name": "chat-deployment",
+          "ClientName": "Azure",
+          "ConnectionName": "azure-openai",
+          "Purpose": "Chat"
+        },
+        {
+          "Name": "utility-deployment",
+          "ClientName": "Azure",
+          "ConnectionName": "azure-openai",
+          "Purpose": "Utility"
+        }
+      ]
+    },
+    {
+      "name": "AIProfile",
+      "Profiles": [
+        {
+          "Source": "Azure",
+          "Name": "support-assistant",
+          "DisplayText": "Support Assistant",
           "WelcomeMessage": "What do you want to know?",
           "Type": "Chat",
           "TitleType": "InitialPrompt",
-          "PromptTemplate": null,
-          "ConnectionName": "<!-- Optional connection fallback -->",
-          "ChatDeploymentId": "<!-- Optional chat deployment ID -->",
-          "UtilityDeploymentId": "<!-- Optional utility deployment ID -->",
+          "ChatDeploymentName": "chat-deployment",
+          "UtilityDeploymentName": "utility-deployment",
           "Properties": {
             "AIProfileMetadata": {
-              "SystemMessage": "You are an AI assistant that helps people find information.",
-              "Temperature": null,
-              "TopP": null,
-              "FrequencyPenalty": null,
-              "PresencePenalty": null,
-              "MaxTokens": null,
-              "PastMessagesCount": null
+              "SystemMessage": "You are an AI assistant that helps people find information."
             }
           }
         }
@@ -122,43 +145,37 @@ Data sources and RAG are implemented in the provider-agnostic `CrestApps.Orchard
 
 See: [AI Data Sources](../data-sources/)
 
-## Azure Speech Deployments (Contained Connection)
+## Azure Speech deployments
 
-The **Azure Speech** deployment provider allows you to register [Azure AI Speech Service](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/) deployments as standalone, self-contained speech-to-text endpoints. Unlike standard Azure OpenAI deployments that reference a shared connection, Azure Speech deployments embed their own connection parameters (endpoint, authentication, credentials) directly within the deployment configuration.
-
-Under the hood, this provider uses the [Azure Speech SDK for .NET](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech) (`Microsoft.CognitiveServices.Speech`) with continuous recognition for real-time streaming transcription. The SDK automatically handles audio format detection, WebSocket connections, and supports multiple authentication methods (API Key, Managed Identity, Default Azure credentials).
-
-For recipe-driven imports, contained `AIDeployment` entries using `ClientName: "AzureSpeech"` can now provide `Endpoint`, `AuthenticationType`, optional `IdentityId`, and `ApiKey` directly on the deployment entry. Those values are normalized into the deployment `Properties` bag during import, and the legacy `Properties` form continues to work.
+The Azure Speech deployment provider lets you register [Azure AI Speech Service](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/) deployments as standalone, self-contained speech-to-text endpoints. Unlike standard Azure OpenAI deployments that reference a shared connection, Azure Speech deployments embed their own connection parameters directly within the deployment configuration.
 
 This is useful when:
 
-- You want to use **Azure AI Speech Service** for speech-to-text rather than an Azure OpenAI Whisper deployment.
-- Your speech-to-text service is on a **separate Azure resource** from your chat models.
-- You want a **self-contained deployment** without creating a full provider connection.
+- you want to use Azure AI Speech Service for speech-to-text
+- your speech-to-text service is on a separate Azure resource from your chat models
+- you want a self-contained deployment without creating a shared provider connection
 
-### How to Create an Azure Speech Deployment
+### How to create an Azure Speech deployment
 
-1. Navigate to **AI Services** → **Deployments** in the admin dashboard.
+1. Navigate to **AI Services** -> **Deployments** in the admin dashboard.
 2. Click **Add Deployment** and select **Azure Speech** as the provider.
-3. Enter a **deployment name** (a friendly identifier for this deployment).
-4. Set the **deployment type** to **SpeechToText**.
-5. Provide the **Endpoint URL** of your Azure Speech Service resource (e.g., `https://{region}.stt.speech.microsoft.com/`, `https://{region}.api.cognitive.microsoft.com/`, or your custom domain endpoint). The region is automatically extracted from the endpoint to configure the Speech SDK.
-6. Select the **Authentication type**: `Default`, `Managed Identity`, or `API Key`.
-   - For **API Key**: provide the Speech Service subscription key.
-   - For **Managed Identity**: optionally provide a **user-assigned identity client ID**. If omitted, the system-assigned identity is used.
+3. Enter a deployment name.
+4. Set the deployment purpose to **SpeechToText**.
+5. Provide the endpoint URL of your Azure Speech Service resource.
+6. Select the authentication type: `Default`, `ManagedIdentity`, or `ApiKey`.
 7. Save the deployment.
 
 :::tip
 You can find your Speech Service endpoint and API key in the [Azure AI Foundry portal](https://ai.azure.com/) or the Azure Portal under your Speech Service resource's **Keys and Endpoint** section.
 :::
 
-### Setting as Default Speech-to-Text Deployment
+### Setting the default speech-to-text deployment
 
-After creating the deployment, go to **Settings** → **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.
+After creating the deployment, go to **Settings** -> **Artificial Intelligence** and select this deployment under **Default Speech-to-Text Deployment**.
 
 ### Configuring Azure Speech via appsettings.json
 
-Instead of creating Azure Speech deployments through the admin UI, you can define them in `appsettings.json`. This is useful for sharing speech-to-text deployments across all tenants without per-tenant configuration.
+Instead of creating Azure Speech deployments through the admin UI, you can define them in `appsettings.json`:
 
 ```json
 {
@@ -169,8 +186,7 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
           {
             "ClientName": "AzureSpeech",
             "Name": "my-speech-to-text",
-            "Type": "SpeechToText",
-            "IsDefault": true,
+            "Purpose": "SpeechToText",
             "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
             "AuthenticationType": "ApiKey",
             "ApiKey": "your-speech-service-api-key"
@@ -184,19 +200,19 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
 
 Deployments defined in configuration are read-only and appear alongside database-managed deployments in the UI and API.
 
-### GStreamer Requirement
+### GStreamer requirement
 
-The Azure Speech SDK uses [GStreamer](https://gstreamer.freedesktop.org) to decode compressed audio formats (OGG/Opus, WebM/Opus, MP3, FLAC). Because browsers send compressed audio (typically WebM/Opus or OGG/Opus) via MediaRecorder, **GStreamer must be installed on every platform** where the application runs — including Windows, Linux, and macOS.
+The Azure Speech SDK uses [GStreamer](https://gstreamer.freedesktop.org) to decode compressed audio formats (OGG/Opus, WebM/Opus, MP3, FLAC). Because browsers send compressed audio through `MediaRecorder`, GStreamer must be installed on every platform where the application runs.
 
-If GStreamer is missing, speech-to-text requests will fail with error code `0x29 (SPXERR_GSTREAMER_NOT_FOUND_ERROR)`.
+If GStreamer is missing, speech-to-text requests fail with error code `0x29 (SPXERR_GSTREAMER_NOT_FOUND_ERROR)`.
 
 For more details, see the [Azure Speech SDK compressed audio documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams).
 
 #### Windows
 
-1. Download the GStreamer installer from [https://gstreamer.freedesktop.org/download/](https://gstreamer.freedesktop.org/download/). Choose the **MSVC 64-bit** runtime installer (e.g., `gstreamer-1.0-msvc-x86_64-X.X.X.msi`).
-2. Run the installer. During setup, ensure the installation directory is added to the system `PATH` (the installer offers this option).
-3. Verify that the GStreamer `bin` directory (e.g., `C:\gstreamer\1.0\msvc_x86_64\bin`) is in your `PATH`. The Speech SDK looks for `libgstreamer-1.0-0.dll` or `gstreamer-1.0-0.dll` at runtime.
+1. Download the GStreamer installer from [https://gstreamer.freedesktop.org/download/](https://gstreamer.freedesktop.org/download/). Choose the **MSVC 64-bit** runtime installer.
+2. Run the installer and add the installation directory to the system `PATH`.
+3. Verify that the GStreamer `bin` directory is in your `PATH`.
 4. Restart any running applications or terminals after installation.
 
 To verify:
@@ -267,7 +283,7 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "CrestApps.OrchardCore.Cms.Web.dll"]
 ```
 
-#### Verifying GStreamer Installation
+#### Verifying GStreamer installation
 
 Run the following command to confirm GStreamer is available:
 

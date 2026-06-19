@@ -144,11 +144,11 @@ Image and chart generation are handled by AI tools that the orchestrator can inv
 
 ### Configuration
 
-To enable image generation, create an `AIDeployment` record with type `Image` for your image model (e.g., `dall-e-3`). You can set it as the default Image deployment globally, or select it explicitly on each chat interaction.
+To enable image generation, create an `AIDeployment` record with the `Image` purpose for your image model (for example `dall-e-3`). You can set it as the default Image deployment globally, or select it explicitly on each chat interaction.
 
 **Option 1: Admin UI**
 
-1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment with type **Image** (e.g., name `dall-e-3`, connection `openai-main`).
+1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment with purpose **Image** (for example, name `dall-e-3`, connection `openai-main`).
 2. Optionally, set it as the default Image deployment in **Settings > Artificial Intelligence > Default Deployments**.
 
 **Option 2: Configuration (appsettings.json)**
@@ -165,18 +165,15 @@ To enable image generation, create an `AIDeployment` record with type `Image` fo
                 "Deployments": [
                   {
                     "Name": "gpt-4o",
-                    "Type": "Chat",
-                    "IsDefault": true
+                    "Purpose": "Chat"
                   },
                   {
                     "Name": "gpt-4o-mini",
-                    "Type": "Utility",
-                    "IsDefault": true
+                    "Purpose": "Utility"
                   },
                   {
                     "Name": "dall-e-3",
-                    "Type": "Image",
-                    "IsDefault": true
+                    "Purpose": "Image"
                   }
                 ]
               }

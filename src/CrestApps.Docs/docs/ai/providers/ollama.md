@@ -10,26 +10,26 @@ description: Ollama integration for local AI model support in Orchard Core.
 | **Feature Name** | Ollama AI Chat |
 | **Feature ID** | `CrestApps.OrchardCore.Ollama` |
 
-Manages AI chat profiles for Ollama services.
+Provides local AI model integration through Ollama.
 
 ## Overview
 
-The **Ollama AI Chat** allows developers to interact with any Ollama model seamlessly. You can explore all supported models at [Ollama Search](https://ollama.com/search).  
+The Ollama provider lets Orchard Core use any model exposed by your Ollama host. You can explore available models at [Ollama Search](https://ollama.com/search).
 
-### Running Ollama Locally  
+## Running Ollama locally
 
-To run an Ollama model locally, you'll need a tool to manage Docker containers. **Docker Desktop** is one of the easiest ways to get started, but you may use other tools such as **Podman** or **Docker Engine on WSL 2**. Visit the official [documentation](https://docs.docker.com/desktop/setup/install/windows-install/) for instructions on how to install Docker Desktop.
+To run an Ollama model locally, you need a container runtime such as Docker Desktop, Podman, or Docker Engine on WSL 2. See the official [Docker Desktop installation guide](https://docs.docker.com/desktop/setup/install/windows-install/) if you need a starting point.
 
-Next, do the following steps in the project:  
+Next, do the following in this project:
 
-1. Set `CrestApps.Aspire.AppHost` as your startup project.  
-2. Run the project to start the Aspire host, which sets up the necessary environment to connect to any Ollama model locally.  
+1. Set `CrestApps.Aspire.AppHost` as your startup project.
+2. Run the project to start the Aspire host, which sets up the local Ollama environment.
 
-By default, the project uses the `deepseek-v2:16b` model (8.9GB). Ensure your system has enough storage space before running it. The model will be downloaded automatically on the first run. You can monitor the download and service statuses from the **Resources** tab in the Aspire dashboard.  
+By default, the project uses the `deepseek-v2:16b` model (8.9GB). Ensure your system has enough storage space before running it. The model downloads automatically on the first run. You can monitor the download and service statuses from the **Resources** tab in the Aspire dashboard.
 
-### Configuration
+## Configuration
 
-To configure the Ollama connection, add the following settings to the `appsettings.json` file:
+To configure the Ollama connection manually, add the following settings to `appsettings.json`:
 
 ```json
 {
@@ -41,10 +41,18 @@ To configure the Ollama connection, add the following settings to the `appsettin
             "DefaultConnectionName": "Default",
             "Connections": {
               "Default": {
-                "Endpoint": "<!-- Ollama host address -->",
+                "Endpoint": "http://localhost:11434",
                 "Deployments": [
-                  { "Name": "deepseek-v2:16b", "Type": "Chat", "IsDefault": true },
-                  { "Name": "deepseek-v2:16b", "Type": "Utility", "IsDefault": true }
+                  {
+                    "Name": "local-chat",
+                    "ModelName": "deepseek-v2:16b",
+                    "Purpose": "Chat"
+                  },
+                  {
+                    "Name": "local-utility",
+                    "ModelName": "deepseek-v2:16b",
+                    "Purpose": "Utility"
+                  }
                 ]
               }
             }
@@ -56,6 +64,6 @@ To configure the Ollama connection, add the following settings to the `appsettin
 }
 ```
 
-### Aspire
+## Aspire
 
-If you are running this project using Aspire, Ollama will be automatically configured for you without needing to manually set the `appsettings.json` file.
+If you are running this project with Aspire, Ollama is configured automatically and you do not need to add the `appsettings.json` section manually.

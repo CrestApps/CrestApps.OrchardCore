@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.TimeZones.Deployments;
@@ -13,6 +14,16 @@ public sealed class TimeZoneMapDeploymentStep : DeploymentStep
     public TimeZoneMapDeploymentStep()
     {
         Name = TimeZonesConstants.Recipes.TimeZoneMaps;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TimeZoneMapDeploymentStep"/> class.
+    /// </summary>
+    /// <param name="S">The string localizer.</param>
+    public TimeZoneMapDeploymentStep(IStringLocalizer<TimeZoneMapDeploymentStep> S)
+        : this()
+    {
+        Category = S["Infrastructure"];
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
@@ -210,12 +211,14 @@ internal sealed class Program
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        using var serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+
         return typeof(IRecipeStep).Assembly.ExportedTypes
             .Where(type =>
                 typeof(IRecipeStep).IsAssignableFrom(type) &&
                     type is { IsAbstract: false, IsInterface: false })
                     .OrderBy(type => type.Name, StringComparer.Ordinal)
-                    .Select(type => CreateRecipeStep(type, schemaDefinitions, partNames))
+                    .Select(type => CreateRecipeStep(type, serviceProvider))
                     .ToArray();
     }
 
@@ -241,61 +244,46 @@ internal sealed class Program
                     .ToArray();
     }
 
-    private static IRecipeStep CreateRecipeStep(
-        Type stepType,
+    private static ServiceProvider CreateRecipeStepServiceProvider(
         IReadOnlyList<IContentSchemaDefinition> schemaDefinitions,
         IReadOnlyList<string> partNames)
     {
-        if (stepType == typeof(SettingsRecipeStep))
+        var services = new ServiceCollection();
+        var siteSettingsSchemaDefinitions = CreateSiteSettingsSchemaDefinitions();
+        var contentDefinitionManager = CreateContentDefinitionManager();
+        var contentSchemaProvider = new StubContentSchemaProvider(partNames, _fieldTypeNames);
+        var contentItemSchemaService = new ContentItemSchemaService(contentDefinitionManager, schemaDefinitions);
+
+        services.AddSingleton<IContentItemSchemaService>(contentItemSchemaService);
+        services.AddSingleton<IContentSchemaProvider>(contentSchemaProvider);
+        services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
+        services.AddSingleton(CreateShellFeaturesManager());
+        services.AddSingleton(CreatePermissionService());
+        services.AddSingleton(CreateActivityLibrary());
+
+        foreach (var schemaDefinition in schemaDefinitions)
         {
-            return new SettingsRecipeStep(CreateSiteSettingsSchemaDefinitions());
+            services.AddSingleton<IContentSchemaDefinition>(schemaDefinition);
         }
 
-        if (stepType == typeof(ContentDefinitionRecipeStep))
+        foreach (var siteSettingsSchemaDefinition in siteSettingsSchemaDefinitions)
         {
-            return new ContentDefinitionRecipeStep(
-                schemaDefinitions,
-                new StubContentSchemaProvider(partNames, _fieldTypeNames));
+            services.AddSingleton<ISiteSettingsSchemaDefinition>(siteSettingsSchemaDefinition);
         }
 
-        if (stepType == typeof(ContentRecipeStep))
+        foreach (var recipeHarvester in CreateRecipeHarvesters())
         {
-            return new ContentRecipeStep(new ContentItemSchemaService(CreateContentDefinitionManager(), schemaDefinitions));
+            services.AddSingleton<IRecipeHarvester>(recipeHarvester);
         }
 
-        if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
-        {
-            return new ReplaceContentDefinitionRecipeStep(
-                schemaDefinitions,
-                new StubContentSchemaProvider(partNames, _fieldTypeNames));
-        }
+        return services.BuildServiceProvider();
+    }
 
-        if (stepType == typeof(FeatureRecipeStep))
-        {
-            return new FeatureRecipeStep(CreateShellFeaturesManager());
-        }
-
-        if (stepType == typeof(RecipesRecipeStep))
-        {
-            return new RecipesRecipeStep(CreateRecipeHarvesters(), CreateShellFeaturesManager());
-        }
-
-        if (stepType == typeof(RolesRecipeStep))
-        {
-            return new RolesRecipeStep(CreatePermissionService());
-        }
-
-        if (stepType == typeof(ThemesRecipeStep))
-        {
-            return new ThemesRecipeStep(new StubFeatureSchemaProvider());
-        }
-
-        if (stepType == typeof(WorkflowTypeRecipeStep))
-        {
-            return new WorkflowTypeRecipeStep(CreateActivityLibrary());
-        }
-
-        return (IRecipeStep)Activator.CreateInstance(stepType)!;
+    private static IRecipeStep CreateRecipeStep(
+        Type stepType,
+        IServiceProvider serviceProvider)
+    {
+        return (IRecipeStep)ActivatorUtilities.CreateInstance(serviceProvider, stepType);
     }
 
     private static IContentDefinitionManager CreateContentDefinitionManager()

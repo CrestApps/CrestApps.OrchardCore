@@ -18,6 +18,8 @@ The **MCP Server Feature** allows your Orchard Core application to expose its AI
 
 The Orchard Core server feature builds on the shared `AddCoreAIMcpServer()` registrations from `CrestApps.Core.AI.Mcp`, then layers Orchard-specific prompt, resource, admin, and permission services on top.
 
+When **OrchardCore.Deployment** is enabled, the deployment-plan editor groups the MCP **Connection**, **Prompt**, and **Resource** export steps under the **Artificial Intelligence** category.
+
 ## Supported Capabilities
 
 The MCP server exposes the following capabilities:
