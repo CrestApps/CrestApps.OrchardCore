@@ -162,6 +162,10 @@ The Recipes module gathers all registered `IContentSchemaDefinition` services an
 
 The separate `IContentPartSchemaDefinition` and `IContentFieldSchemaDefinition` interfaces are still used by the `content` recipe step. They now receive `ContentPartSchemaContext` and `ContentFieldSchemaContext`, so payload contributors can inspect the concrete `ContentTypePartDefinition` and `ContentPartFieldDefinition` for the exact definition instance being rendered. `IContentSchemaDefinition` remains the shared contract for content-definition settings schemas.
 
+In this repository, feature-gated contributors now cover custom field payloads such as `PhoneField` and custom part payloads/settings such as `AIProfilePart`, `RolePickerPart`, `UserFullNamePart`, `OmnichannelContactPart`, and `RolePickerPartContentAccessControlSettings`.
+
+If a part only contains content fields, do not add a dedicated part payload contributor just to restate those field shapes. The content-item schema already composes each attached field through its registered field schema definitions, so dedicated part contributors are only needed when the part also exposes non-field C# properties or other part-level payload that fields alone cannot describe.
+
 ### Implementing a part schema
 
 This example adds schema support for a fictional `ContactCardPart`, including both the part settings envelope used by `ContentDefinition` and the content item payload used by the `Content` recipe step:

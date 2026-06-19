@@ -14,6 +14,5 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentSchemaDefinition, OmnichannelContactPartSchemaDefinition>();
-        services.AddScoped<IContentSchemaDefinition, PhoneNumberInfoPartSchemaDefinition>();
     }
 }

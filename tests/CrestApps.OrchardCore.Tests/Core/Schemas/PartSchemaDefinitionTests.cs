@@ -1,8 +1,12 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Chat.Schemas;
+using CrestApps.OrchardCore.ContentAccessControl.Schemas;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Omnichannel.Managements.Schemas;
+using CrestApps.OrchardCore.Roles.Schemas;
+using CrestApps.OrchardCore.Users.Schemas;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Modules;
@@ -29,6 +33,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(SeoMetaPartSchema), "SeoMetaPart")]
     [InlineData(typeof(AuditTrailPartSchema), "AuditTrailPart")]
     [InlineData(typeof(HtmlMenuItemPartSchema), "HtmlMenuItemPart")]
+    [InlineData(typeof(AIProfilePartSchemaDefinition), "AIProfilePart")]
+    [InlineData(typeof(RolePickerPartSchemaDefinition), "RolePickerPart")]
+    [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition), "RolePickerPart")]
+    [InlineData(typeof(UserFullNamePartSchemaDefinition), "UserFullNamePart")]
     public void Name_ReturnsExpectedValue(Type definitionType, string expectedName)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -54,6 +62,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
     [InlineData(typeof(HtmlMenuItemPartSchema))]
+    [InlineData(typeof(AIProfilePartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
+    [InlineData(typeof(UserFullNamePartSchemaDefinition))]
     public void Type_AlwaysReturnsPart(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -79,6 +91,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
     [InlineData(typeof(HtmlMenuItemPartSchema))]
+    [InlineData(typeof(AIProfilePartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
+    [InlineData(typeof(UserFullNamePartSchemaDefinition))]
     public async Task GetSettingsSchemaAsync_ReturnsNonNullSerializableSchema(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -110,6 +126,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(SeoMetaPartSchema))]
     [InlineData(typeof(AuditTrailPartSchema))]
     [InlineData(typeof(HtmlMenuItemPartSchema))]
+    [InlineData(typeof(AIProfilePartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartSchemaDefinition))]
+    [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
+    [InlineData(typeof(UserFullNamePartSchemaDefinition))]
     public async Task GetSettingsSchemaAsync_CachesResult(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -251,20 +271,57 @@ public sealed class PartSchemaDefinitionTests
     }
 
     [Fact]
-    public async Task PhoneNumberInfoPartSchema_ContainsE164PhoneNumberDescription()
+    public async Task AIProfilePartSchema_ContainsProfilePayloadProperties()
     {
-        var definition = new PhoneNumberInfoPartSchemaDefinition();
+        var definition = new AIProfilePartSchemaDefinition();
         var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
             CreatePartContext(definition.Name),
             TestContext.Current.CancellationToken);
         var partJson = partSchema.Build().Root.Source.GetRawText();
 
-        Assert.Contains("PhoneNumber", partJson);
-        Assert.Contains("E.164 format", partJson);
-        Assert.Contains("CountryCode", partJson);
-        Assert.Contains("NationalNumber", partJson);
-        Assert.Contains("Extension", partJson);
-        Assert.Contains("Type", partJson);
+        Assert.Contains("ProfileId", partJson);
+        Assert.Contains("TotalHistory", partJson);
+        Assert.Contains("\"type\":\"integer\"", partJson);
+        Assert.Contains("\"type\":\"null\"", partJson);
+    }
+
+    [Fact]
+    public async Task RolePickerPartSchemas_ContainSettingsPayloadAndContentAccessControlSettings()
+    {
+        var definition = new RolePickerPartSchemaDefinition();
+        var settingsSchema = await definition.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RolePickerPartSettings", settingsJson);
+        Assert.Contains("AllowSelectMultiple", settingsJson);
+        Assert.Contains("ExcludedRoles", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RoleNames", partJson);
+
+        var accessControlSchema = await new RolePickerPartContentAccessControlSchemaDefinition()
+            .GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var accessControlJson = accessControlSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RolePickerPartContentAccessControlSettings", accessControlJson);
+        Assert.Contains("IsContentRestricted", accessControlJson);
+    }
+
+    [Fact]
+    public async Task UserPartSchemas_ContainExpectedPayloadProperties()
+    {
+        var fullNameSchema = await ((IContentPartSchemaDefinition)new UserFullNamePartSchemaDefinition())
+            .GetPartSchemaAsync(CreatePartContext("UserFullNamePart"), TestContext.Current.CancellationToken);
+        var fullNameJson = fullNameSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("DisplayName", fullNameJson);
+        Assert.Contains("FirstName", fullNameJson);
+        Assert.Contains("LastName", fullNameJson);
+        Assert.Contains("MiddleName", fullNameJson);
     }
 
     private static ContentPartSchemaContext CreatePartContext(string partDefinitionName, string partName = null)
