@@ -27,7 +27,7 @@ internal sealed class DefaultContentItemPayloadAssistanceService : IContentItemP
     {
         ArgumentNullException.ThrowIfNull(contentDefinition);
         ArgumentNullException.ThrowIfNull(inputNode);
-        
+
         return ValidateCoreAsync(contentDefinition, inputNode);
     }
 

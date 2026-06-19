@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -11,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Deployment;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Tests.Agent.Recipes;

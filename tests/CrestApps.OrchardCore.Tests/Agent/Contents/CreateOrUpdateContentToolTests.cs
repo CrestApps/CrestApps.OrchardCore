@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Agent.Contents;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Agent.Contents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Handlers;
 using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.Services;
@@ -30,7 +31,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using CrestApps.OrchardCore.Recipes.Core;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
