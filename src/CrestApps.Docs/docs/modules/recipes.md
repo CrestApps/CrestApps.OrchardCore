@@ -26,20 +26,6 @@ This is especially useful when recipes are generated programmatically (e.g., by 
 
 At runtime the feature can compose all known step schemas into a single "recipe" schema for an object with a `steps` array.
 
-## Schema coverage
-
-The `ReplaceContentDefinition` step uses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
-
-The `content` step now enumerates `ContentType` from the tenant's available content definitions and, for each enum value, contributes the known attached part names plus any configured field names nested under those parts. Common content item metadata such as `ContentItemId`, `DisplayText`, `Published`, `CreatedUtc`, and related properties remain available for every item, while the selected `ContentType` drives the extra IntelliSense hints for part and field payloads. Built-in part payloads such as `TitlePart.Title`, `MarkdownBodyPart.Markdown`, `HtmlBodyPart.Html`, `AutoroutePart.Path`, `AutoroutePart.SetHomepage`, `AliasPart.Alias`, `ContainedPart.ListContentItemId`, `PublishLaterPart.ScheduledPublishUtc`, `LayerMetadata.Zone`, `HtmlMenuItemPart.Html`, and `SeoMetaPart.PageTitle` now surface their expected properties alongside built-in field payloads such as `TextField.Text`, `MediaField.Paths`, `MediaField.MediaTexts`, `TaxonomyField.TermContentItemIds`, `GeoPointField.Latitude`, and `MarkdownField.Markdown` instead of falling back to untyped empty objects. When a `BagPart` limits nested items through `ContainedContentTypes` or `ContainedStereotypes`, the generated `ContentItems` schema now narrows nested `ContentType` values to that allowed set so recipe authors and AI tooling see the real bag contract.
-
-The `ContentDefinition` and `ReplaceContentDefinition` steps now also include built-in field and part schema contributors for Orchard Core settings. This covers the standard `OrchardCore.ContentFields` field types plus feature-gated contributors for `MediaField`, `MarkdownField`, `TaxonomyField`, `GeoPointField`, `LocalizationSetContentPickerField`, `PublishLaterPart`, `LayerMetadata`, and `HtmlMenuItemPart`, along with editor settings such as `HtmlBodyPartMonacoEditorSettings`, `HtmlBodyPartTrumbowygEditorSettings`, `MarkdownBodyPartWysiwygEditorSettings`, `BagPartBlocksEditorSettings`, `TextFieldHeaderDisplaySettings`, and `TextFieldMonacoEditorSettings`, so recipe authors get discoverable settings objects such as `TextFieldSettings`, `MediaFieldSettings`, `TaxonomyFieldSettings`, `GeoPointFieldSettings`, `MarkdownFieldSettings`, `HtmlBodyPartSettings`, `MarkdownBodyPartSettings`, and `HtmlMenuItemPartSettings` alongside the generic `ContentPartFieldSettings`.
-
-The generic `Settings` step now composes feature-gated site settings schema fragments in the same way `ContentDefinition` composes part and field settings. Base site settings such as `HomeRoute`, `CacheMode`, and `ResourceDebugMode` are modeled directly, while feature-specific settings objects such as `AdminSettings`, `GeneralAISettings`, `DisplayNameSettings`, `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, `CanadaDnclRegistrySettings`, and other contributed settings only appear when their owning feature registers a schema definition. Built-in login settings now also include `LoginSettings.AllowRememberMe` with its default `true` behavior.
-
-The schema set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
-
-The Media schema coverage now also includes the `move-attached-media-fields` step so recipe authors can describe attached-media migrations with an optional `ContentTypes` filter. The exported/reference `Roles` schemas also no longer use placeholder permission names, the `Roles.Permissions` schema now constrains each array item instead of the whole array value, `ContentDefinition` now accepts either `ContentTypes` or `ContentParts` instead of requiring `ContentTypes`, and Omnichannel recipe content-item schemas now understand `OmnichannelContactPart.TimeZoneId` as a mapped time-zone enum sourced from `ITimeZoneSelectListProvider` plus `PhoneNumberInfoPart.Number.PhoneNumber` as an E.164 value.
-
 ## AI profile creation from templates
 
 The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**.
@@ -68,7 +54,7 @@ Behavior:
 
 This means the step behaves like: **create profile from profile template, then apply explicit recipe overrides**.
 
-The schema for this step intentionally mirrors the regular `AIProfile` step for profile fields such as `Name`, `DisplayText`, `Description`, `Type`, `PromptTemplate`, `PromptSubject`, `OrchestratorName`, `ChatDeploymentName`, `UtilityDeploymentName`, `Properties`, and `Settings`, while adding the required `TemplateId` selector that must resolve to a Profile template.
+The schema for this step intentionally mirrors the regular `AIProfile` step for profile fields such as `Name`, `DisplayText`, `Description`, `Type`, `PromptTemplate`, `PromptSubject`, `OrchestratorName`, `ChatDeploymentName`, `UtilityDeploymentName`, `CreatedUtc`, `OwnerId`, `Author`, `Properties`, and `Settings`, while adding the required `TemplateId` selector that must resolve to a Profile template.
 
 ## Creating a Recipe Step
 

@@ -44,7 +44,7 @@ Use this catalog to see which Orchard feature makes each AI function available a
 | Function | Description |
 | --- | --- |
 | `applySiteSettings` | Applies predefined system configurations and settings using AI assistance. |
-| `getOrchardCoreRecipeJsonSchema` | Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call it first before building recipe JSON. |
+| `getOrchardCoreRecipeJsonSchema` | Returns the Orchard Core recipe root JSON Schema with a `steps` array. It can limit the schema to one step definition while still exposing every valid recipe step name. Call it first before building recipe JSON. |
 | `listOrchardCoreRecipeStepsAndSchemas` | Lists all available Orchard Core recipe steps and returns their JSON schema definitions. |
 | `importOrchardCoreRecipe` | Imports and runs Orchard Core recipes within your site. Call `getOrchardCoreRecipeJsonSchema` first and match that schema. |
 | `listNonStartupRecipes` | Retrieves all available Orchard Core recipes that are not executed during startup. |
@@ -83,7 +83,7 @@ Use this catalog to see which Orchard feature makes each AI function available a
 | `createOrUpdateContentItem` | Creates a new content item or updates an existing one. Before calling it, call `getContentItemSchema` first whenever available, then call it once for the top-level item and include nested or contained items in the same payload. |
 | `getLinkForContentItem` | Retrieves a link for a content item. |
 
-`getOrchardCoreRecipeJsonSchema` should be called immediately before `importOrchardCoreRecipe` whenever recipe-backed JSON needs to be generated.
+`getOrchardCoreRecipeJsonSchema` should be called immediately before `importOrchardCoreRecipe` whenever recipe-backed JSON needs to be generated. Its response always describes the root recipe object with a `steps` array; when you request a specific step, the schema still lists every valid step name in `steps[].name` but only expands the selected step's payload contract. If you ask for an unknown step, the tool returns an error that includes the available step names so the request can be retried with a valid identifier.
 
 When `createOrUpdateContentItem` is available alongside recipe-backed content schema support, call `getContentItemSchema` immediately before it and request the parent content type plus any nested content types that will appear in the payload so the model can inspect the current content-item contract.
 

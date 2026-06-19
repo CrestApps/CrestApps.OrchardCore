@@ -6,15 +6,22 @@ namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 public sealed class AIProfileRecipeStepTests
 {
     [Fact]
-    public async Task GetSchemaAsync_ContainsCurrentAndLegacyDeploymentSelectors()
+    public async Task GetSchemaAsync_ContainsCurrentProfileFields()
     {
         var step = new AIProfileRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
+        Assert.Contains("\"Agent\"", json);
+        Assert.Contains("\"Description\"", json);
+        Assert.Contains("\"PromptSubject\"", json);
+        Assert.Contains("\"OrchestratorName\"", json);
         Assert.Contains("\"ChatDeploymentName\"", json);
         Assert.Contains("\"UtilityDeploymentName\"", json);
-        Assert.Contains("\"ChatDeploymentId\"", json);
-        Assert.Contains("\"UtilityDeploymentId\"", json);
+        Assert.Contains("\"CreatedUtc\"", json);
+        Assert.Contains("\"OwnerId\"", json);
+        Assert.Contains("\"Author\"", json);
+        Assert.DoesNotContain("\"ChatDeploymentId\"", json);
+        Assert.DoesNotContain("\"UtilityDeploymentId\"", json);
     }
 
     [Fact]

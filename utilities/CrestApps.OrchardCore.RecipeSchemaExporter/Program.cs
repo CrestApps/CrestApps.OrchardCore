@@ -84,7 +84,7 @@ internal sealed class Program
 
         await WriteSchemaAsync(
             Path.Combine(outputPath, "recipe.schema.json"),
-            await schemaService.GetRecipeSchemaAsync());
+            await schemaService.GetRecipeSchemaAsync(CancellationToken.None));
 
         var indexPath = Path.Combine(outputPath, "index.json");
         var indexDocument = new RecipeSchemaIndexDocument(
