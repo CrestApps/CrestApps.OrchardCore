@@ -125,7 +125,7 @@ public sealed class FieldSchemaDefinitionTests
     private static async Task<string> GetFieldSchemaJsonAsync(object definition)
     {
         var interfaceType = typeof(IContentSchemaDefinition).Assembly.GetType(
-            "CrestApps.OrchardCore.Recipes.Core.Schemas.Fields.IContentFieldSchemaDefinition",
+            "CrestApps.OrchardCore.Recipes.Core.IContentFieldSchemaDefinition",
             throwOnError: true);
         var method = interfaceType.GetMethod("GetFieldSchemaAsync");
         var task = (ValueTask<Json.Schema.JsonSchemaBuilder>)method.Invoke(

@@ -127,7 +127,7 @@ public sealed class LocalToolRegistryProviderTests
     }
 
     [Fact]
-    public async Task GetToolsAsync_WhenCreateOrUpdateContentItemRequested_AddsContentItemSchemaTool()
+    public async Task GetToolsAsync_WhenCreateOrUpdateContentItemRequested_DoesNotAutoAddDependencies()
     {
         var options = new AIToolDefinitionOptions();
         options.SetTool("createOrUpdateContentItem", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
@@ -149,13 +149,13 @@ public sealed class LocalToolRegistryProviderTests
         new AICompletionContext { ToolNames = ["createOrUpdateContentItem"] },
         TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
+        Assert.Single(result);
         Assert.Contains(result, entry => entry.Name == "createOrUpdateContentItem");
-        Assert.Contains(result, entry => entry.Name == "getContentItemSchema");
+        Assert.DoesNotContain(result, entry => entry.Name == "getContentItemSchema");
     }
 
     [Fact]
-    public async Task GetToolsAsync_WhenImportRecipeRequested_AddsRecipeSchemaTool()
+    public async Task GetToolsAsync_WhenImportRecipeRequested_DoesNotAutoAddDependencies()
     {
         var options = new AIToolDefinitionOptions();
         options.SetTool("importOrchardCoreRecipe", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
@@ -177,9 +177,9 @@ public sealed class LocalToolRegistryProviderTests
         new AICompletionContext { ToolNames = ["importOrchardCoreRecipe"] },
         TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
+        Assert.Single(result);
         Assert.Contains(result, entry => entry.Name == "importOrchardCoreRecipe");
-        Assert.Contains(result, entry => entry.Name == "getOrchardCoreRecipeJsonSchema");
+        Assert.DoesNotContain(result, entry => entry.Name == "getOrchardCoreRecipeJsonSchema");
     }
 
     private static LocalToolRegistryProvider CreateProvider((string name, string title, string description)[] tools)
