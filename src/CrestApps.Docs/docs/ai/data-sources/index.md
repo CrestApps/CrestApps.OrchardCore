@@ -143,6 +143,8 @@ The resolver receives the `referenceId` and optional metadata, and returns a URL
 }
 ```
 
+When **OrchardCore.Deployment** is enabled, the deployment-plan editor groups the **AIDataSource** export step under the **Artificial Intelligence** category.
+
 ## Provider Modules
 
 Enable one of the following provider modules to get started:

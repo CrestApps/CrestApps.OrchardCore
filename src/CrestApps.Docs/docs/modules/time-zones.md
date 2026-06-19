@@ -67,6 +67,8 @@ Recipe imports update existing entries by `ItemId` when provided, then fall back
 
 When **OrchardCore.Deployment** is enabled, deployment plans can export all time zone maps or a selected subset. The exported plan uses the same `TimeZoneMaps` recipe step shape, so it can be imported directly into another tenant.
 
+The deployment-plan editor groups the **TimeZoneMaps** export step under the **Infrastructure** category.
+
 ## Seeded starter maps
 
 The initial migration runs an embedded partial recipe through Orchard Core's recipe executor and creates a starter set of common worldwide mappings. The seed recipe sets `OwnerId` from `parameters('AdminUserId')`, `Author` from `parameters('AdminUsername')`, and shares a single `utcNow()` value through recipe variables so all seeded entries keep consistent audit metadata. The starter mappings include:
