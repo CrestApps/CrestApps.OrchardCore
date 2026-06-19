@@ -126,6 +126,62 @@ public sealed class LocalToolRegistryProviderTests
         Assert.Equal("my_tool", result[0].Name);
     }
 
+    [Fact]
+    public async Task GetToolsAsync_WhenCreateOrUpdateContentItemRequested_DoesNotAutoAddDependencies()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("createOrUpdateContentItem", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "createOrUpdateContentItem",
+            Title = "Primary Tool",
+            Description = "Primary tool",
+        });
+        options.Tools["createOrUpdateContentItem"].AddDependency("getContentItemSchema");
+        options.SetTool("getContentItemSchema", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "getContentItemSchema",
+            Title = "Content Schema",
+            Description = "Schema tool",
+        });
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["createOrUpdateContentItem"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Contains(result, entry => entry.Name == "createOrUpdateContentItem");
+        Assert.DoesNotContain(result, entry => entry.Name == "getContentItemSchema");
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenImportRecipeRequested_DoesNotAutoAddDependencies()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("importOrchardCoreRecipe", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "importOrchardCoreRecipe",
+            Title = "Primary Tool",
+            Description = "Primary tool",
+        });
+        options.Tools["importOrchardCoreRecipe"].AddDependency("getOrchardCoreRecipeJsonSchema");
+        options.SetTool("getOrchardCoreRecipeJsonSchema", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "getOrchardCoreRecipeJsonSchema",
+            Title = "Recipe Schema",
+            Description = "Schema tool",
+        });
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["importOrchardCoreRecipe"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Contains(result, entry => entry.Name == "importOrchardCoreRecipe");
+        Assert.DoesNotContain(result, entry => entry.Name == "getOrchardCoreRecipeJsonSchema");
+    }
+
     private static LocalToolRegistryProvider CreateProvider((string name, string title, string description)[] tools)
     {
         var options = new AIToolDefinitionOptions();

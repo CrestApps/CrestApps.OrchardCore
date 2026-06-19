@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
@@ -14,7 +15,6 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 /// </remarks>
 public abstract class PartSchemaDefinitionBase : IContentSchemaDefinition, IContentPartSchemaDefinition
 {
-    private JsonSchemaBuilder _cachedPartSchema;
     private JsonSchemaBuilder _cachedSchema;
 
     /// <summary>
@@ -38,11 +38,13 @@ public abstract class PartSchemaDefinitionBase : IContentSchemaDefinition, ICont
         return ValueTask.FromResult(_cachedSchema);
     }
 
-    ValueTask<JsonSchemaBuilder> IContentPartSchemaDefinition.GetPartSchemaAsync(CancellationToken cancellationToken)
+    ValueTask<JsonSchemaBuilder> IContentPartSchemaDefinition.GetPartSchemaAsync(
+        ContentPartSchemaContext context,
+        CancellationToken cancellationToken)
     {
-        _cachedPartSchema ??= BuildPartSchemaCore();
+        ArgumentNullException.ThrowIfNull(context);
 
-        return ValueTask.FromResult(_cachedPartSchema);
+        return BuildPartSchemaAsync(context, cancellationToken);
     }
 
     /// <summary>
@@ -55,9 +57,45 @@ public abstract class PartSchemaDefinitionBase : IContentSchemaDefinition, ICont
 
     /// <summary>
     /// Builds the content item payload schema for the content part.
+    /// Override this method when the schema requires asynchronous work.
+    /// </summary>
+    /// <param name="context">The context describing the concrete part attachment.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    protected virtual ValueTask<JsonSchemaBuilder> BuildPartSchemaAsync(
+        ContentPartSchemaContext context,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(BuildPartSchemaCore());
+
+    /// <summary>
+    /// Builds the content item payload schema for the content part.
     /// </summary>
     protected virtual JsonSchemaBuilder BuildPartSchemaCore()
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .AdditionalProperties(true);
+
+    /// <summary>
+    /// Reads a string-array settings value from the supplied part settings object.
+    /// </summary>
+    /// <param name="settings">The settings object to inspect.</param>
+    /// <param name="settingsName">The nested settings object name.</param>
+    /// <param name="propertyName">The string-array property name.</param>
+    protected static string[] GetStringSettings(JsonObject settings, string settingsName, string propertyName)
+    {
+        if (settings is null ||
+            !settings.TryGetPropertyValue(settingsName, out var settingsNode) ||
+            settingsNode is not JsonObject settingsObject ||
+            !settingsObject.TryGetPropertyValue(propertyName, out var propertyNode) ||
+            propertyNode is not JsonArray propertyArray)
+        {
+            return [];
+        }
+
+        return propertyArray
+            .Select(node => node?.GetValue<string>())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+    }
 }

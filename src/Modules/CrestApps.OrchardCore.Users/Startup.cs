@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Users.Indexes;
 using CrestApps.OrchardCore.Users.Migrations;
 using CrestApps.OrchardCore.Users.Models;
 using CrestApps.OrchardCore.Users.Recipes;
+using CrestApps.OrchardCore.Users.Schemas;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using CrestApps.OrchardCore.Recipes.Core;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
@@ -173,5 +175,18 @@ public sealed class AvatarStartup : StartupBase
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers recipe schema contributors for the DisplayName feature.
+/// </summary>
+[Feature(UsersConstants.Feature.DisplayName)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class DisplayNameRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, UserFullNamePartSchemaDefinition>();
     }
 }

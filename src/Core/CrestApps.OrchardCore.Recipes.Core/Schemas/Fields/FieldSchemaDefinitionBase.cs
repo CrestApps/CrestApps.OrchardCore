@@ -7,7 +7,6 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 /// </summary>
 public abstract class FieldSchemaDefinitionBase : IContentSchemaDefinition, IContentFieldSchemaDefinition
 {
-    private JsonSchemaBuilder _cachedFieldSchema;
     private JsonSchemaBuilder _cachedSettingsSchema;
 
     /// <summary>
@@ -31,17 +30,30 @@ public abstract class FieldSchemaDefinitionBase : IContentSchemaDefinition, ICon
         return ValueTask.FromResult(_cachedSettingsSchema);
     }
 
-    ValueTask<JsonSchemaBuilder> IContentFieldSchemaDefinition.GetFieldSchemaAsync(CancellationToken cancellationToken)
+    ValueTask<JsonSchemaBuilder> IContentFieldSchemaDefinition.GetFieldSchemaAsync(
+        ContentFieldSchemaContext context,
+        CancellationToken cancellationToken)
     {
-        _cachedFieldSchema ??= BuildFieldSchemaCore();
+        ArgumentNullException.ThrowIfNull(context);
 
-        return ValueTask.FromResult(_cachedFieldSchema);
+        return BuildFieldSchemaAsync(context, cancellationToken);
     }
 
     /// <summary>
     /// Builds the field-specific settings schema.
     /// </summary>
     protected abstract JsonSchemaBuilder BuildSettingsCore();
+
+    /// <summary>
+    /// Builds the field value schema used by content item recipe payloads.
+    /// Override this method when the schema requires asynchronous work.
+    /// </summary>
+    /// <param name="context">The context describing the concrete field attachment.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    protected virtual ValueTask<JsonSchemaBuilder> BuildFieldSchemaAsync(
+        ContentFieldSchemaContext context,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(BuildFieldSchemaCore());
 
     /// <summary>
     /// Builds the field value schema used by content item recipe payloads.

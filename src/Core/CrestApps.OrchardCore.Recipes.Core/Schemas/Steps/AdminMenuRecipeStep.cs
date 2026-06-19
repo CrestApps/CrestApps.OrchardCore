@@ -7,21 +7,36 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class AdminMenuRecipeStep : IRecipeStep
 {
+    private readonly IContentItemSchemaService _contentItemSchemaService;
+
     private JsonSchema _cached;
+
     public string Name => "AdminMenu";
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminMenuRecipeStep"/> class.
+    /// </summary>
+    /// <param name="contentItemSchemaService">The content item schema service.</param>
+    public AdminMenuRecipeStep(IContentItemSchemaService contentItemSchemaService)
+    {
+        _contentItemSchemaService = contentItemSchemaService;
+    }
 
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
-        _cached ??= CreateSchema();
+        _cached ??= await CreateSchemaAsync(cancellationToken);
 
-        return ValueTask.FromResult(_cached);
+        return _cached;
     }
 
-    private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    private async ValueTask<JsonSchema> CreateSchemaAsync(CancellationToken cancellationToken)
+    {
+        var contentItemSchema = await _contentItemSchemaService.GetGenericSchemaAsync(cancellationToken: cancellationToken);
+
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminMenu")),
@@ -35,11 +50,12 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
                             ("MenuItems", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(ContentCommonSchemas.ContentItemSchema)
+                                .Items(contentItemSchema)
                                 .Description("The list of menu item content items.")))
                         .Required("Id", "Name", "MenuItems")
                         .AdditionalProperties(true))))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();
+    }
 }

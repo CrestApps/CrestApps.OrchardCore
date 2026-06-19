@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>[3.0.0-preview-19048, )</OrchardCoreVersion>
-    <CrestAppsCoreVersion>1.0.0-preview.121</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview.139</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>1.4.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -134,11 +134,11 @@
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.9" />
   </ItemGroup>
   <ItemGroup>
     <!-- Testing Packages -->
@@ -154,15 +154,17 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.4" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.5" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.3.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.4" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.5" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.4.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
-    <PackageVersion Include="MessagePack" Version="2.5.301" />
+    <PackageVersion Include="MessagePack" Version="3.1.7" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
   </ItemGroup>
   <ItemGroup>
     <!-- Sample Packages -->

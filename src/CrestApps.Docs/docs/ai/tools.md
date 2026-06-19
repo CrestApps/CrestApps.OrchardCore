@@ -44,9 +44,9 @@ Use this catalog to see which Orchard feature makes each AI function available a
 | Function | Description |
 | --- | --- |
 | `applySiteSettings` | Applies predefined system configurations and settings using AI assistance. |
-| `getOrchardCoreRecipeJsonSchema` | Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. |
+| `getOrchardCoreRecipeJsonSchema` | Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call it first before building recipe JSON. |
 | `listOrchardCoreRecipeStepsAndSchemas` | Lists all available Orchard Core recipe steps and returns their JSON schema definitions. |
-| `importOrchardCoreRecipe` | Imports and runs Orchard Core recipes within your site. |
+| `importOrchardCoreRecipe` | Imports and runs Orchard Core recipes within your site. Call `getOrchardCoreRecipeJsonSchema` first and match that schema. |
 | `listNonStartupRecipes` | Retrieves all available Orchard Core recipes that are not executed during startup. |
 | `executeNonStartupRecipe` | Executes Orchard Core recipes that are not configured to run at application startup. |
 
@@ -74,13 +74,20 @@ Use this catalog to see which Orchard feature makes each AI function available a
 | --- | --- |
 | `searchForContentItems` | Searches for content items. |
 | `getSampleContentItemForContentType` | Generates a structured sample content item for a specified content type. |
+| `getContentItemSchema` | Returns the current content-item JSON schema for one or more Orchard Core content types. Call it immediately before `createOrUpdateContentItem` whenever that tool is available. |
 | `publishContentItem` | Publishes a draft or previously unpublished content item. |
 | `unpublishContentItem` | Unpublishes a currently published content item. |
 | `getContentItemById` | Retrieves a specific content item by its ID or type. |
 | `deleteContentItem` | Deletes a content item from the system. |
 | `cloneContentItem` | Creates a duplicate of an existing content item. |
-| `createOrUpdateContentItem` | Creates a new content item or updates an existing one. |
+| `createOrUpdateContentItem` | Creates a new content item or updates an existing one. Before calling it, call `getContentItemSchema` first whenever available, then call it once for the top-level item and include nested or contained items in the same payload. |
 | `getLinkForContentItem` | Retrieves a link for a content item. |
+
+`getOrchardCoreRecipeJsonSchema` should be called immediately before `importOrchardCoreRecipe` whenever recipe-backed JSON needs to be generated.
+
+When `createOrUpdateContentItem` is available alongside recipe-backed content schema support, call `getContentItemSchema` immediately before it and request the parent content type plus any nested content types that will appear in the payload so the model can inspect the current content-item contract.
+
+`createOrUpdateContentItem` must be called for the parent content item only. When the payload contains nested or contained content items such as `BagPart`, `FlowPart`, widgets, or blocks, include those child items inside the parent JSON instead of invoking the tool once per child item. The tool also rejects payloads when the submitted JSON does not match the expected Orchard Core content-item shape. By default it uses dropped-value detection after `ContentItem` mapping to catch misplaced or unmapped values. If `CrestApps.OrchardCore.Recipes` is enabled, the tool validates the payload against the content type's recipe-backed JSON schema as authored, without forcing stricter `additionalProperties` rules than the schema declares, and returns the same schema contract in its corrective guidance so the model can retry with the correct structure.
 
 ### Content definition tools
 

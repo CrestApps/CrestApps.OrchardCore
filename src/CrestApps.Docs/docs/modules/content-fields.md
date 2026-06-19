@@ -68,6 +68,8 @@ await _contentDefinitionManager.AlterPartDefinitionAsync("MyPart", part => part
 );
 ```
 
+When `CrestApps.OrchardCore.Recipes` is also enabled, recipe schemas now understand both the `PhoneFieldSettings` envelope used by `ContentDefinition` and the `PhoneNumber` / `CountryCode` / `NationalNumber` payload stored on content items.
+
 #### Server-side validation
 
 When the field value is submitted, the display driver uses `IPhoneNumberService` (from `CrestApps.OrchardCore.PhoneNumbers`) to validate that the entered number is a well-formed phone number. Invalid numbers produce a model-state error and the editor is re-displayed.

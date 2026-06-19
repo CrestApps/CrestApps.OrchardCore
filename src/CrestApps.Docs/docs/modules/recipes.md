@@ -30,13 +30,15 @@ At runtime the feature can compose all known step schemas into a single "recipe"
 
 The `ReplaceContentDefinition` step uses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
 
-The `content` step now enumerates `ContentType` from the tenant's available content definitions and, for each enum value, contributes the known attached part names plus any configured field names nested under those parts. Common content item metadata such as `ContentItemId`, `DisplayText`, `Published`, `CreatedUtc`, and related properties remain available for every item, while the selected `ContentType` drives the extra IntelliSense hints for part and field payloads. Built-in part payloads such as `TitlePart.Title`, `MarkdownBodyPart.Markdown`, `HtmlBodyPart.Html`, `AutoroutePart.Path`, `AutoroutePart.SetHomepage`, `AliasPart.Alias`, `ContainedPart.ListContentItemId`, `PublishLaterPart.ScheduledPublishUtc`, `LayerMetadata.Zone`, `HtmlMenuItemPart.Html`, and `SeoMetaPart.PageTitle` now surface their expected properties alongside built-in field payloads such as `TextField.Text`, `MediaField.Paths`, `MediaField.MediaTexts`, `TaxonomyField.TermContentItemIds`, `GeoPointField.Latitude`, and `MarkdownField.Markdown` instead of falling back to untyped empty objects.
+The `content` step now enumerates `ContentType` from the tenant's available content definitions and, for each enum value, contributes the known attached part names plus any configured field names nested under those parts. Common content item metadata such as `ContentItemId`, `DisplayText`, `Published`, `CreatedUtc`, and related properties remain available for every item, while the selected `ContentType` drives the extra IntelliSense hints for part and field payloads. Built-in part payloads such as `TitlePart.Title`, `MarkdownBodyPart.Markdown`, `HtmlBodyPart.Html`, `AutoroutePart.Path`, `AutoroutePart.SetHomepage`, `AliasPart.Alias`, `ContainedPart.ListContentItemId`, `PublishLaterPart.ScheduledPublishUtc`, `LayerMetadata.Zone`, `HtmlMenuItemPart.Html`, and `SeoMetaPart.PageTitle` now surface their expected properties alongside built-in field payloads such as `TextField.Text`, `MediaField.Paths`, `MediaField.MediaTexts`, `TaxonomyField.TermContentItemIds`, `GeoPointField.Latitude`, and `MarkdownField.Markdown` instead of falling back to untyped empty objects. When a `BagPart` limits nested items through `ContainedContentTypes` or `ContainedStereotypes`, the generated `ContentItems` schema now narrows nested `ContentType` values to that allowed set so recipe authors and AI tooling see the real bag contract.
 
 The `ContentDefinition` and `ReplaceContentDefinition` steps now also include built-in field and part schema contributors for Orchard Core settings. This covers the standard `OrchardCore.ContentFields` field types plus feature-gated contributors for `MediaField`, `MarkdownField`, `TaxonomyField`, `GeoPointField`, `LocalizationSetContentPickerField`, `PublishLaterPart`, `LayerMetadata`, and `HtmlMenuItemPart`, along with editor settings such as `HtmlBodyPartMonacoEditorSettings`, `HtmlBodyPartTrumbowygEditorSettings`, `MarkdownBodyPartWysiwygEditorSettings`, `BagPartBlocksEditorSettings`, `TextFieldHeaderDisplaySettings`, and `TextFieldMonacoEditorSettings`, so recipe authors get discoverable settings objects such as `TextFieldSettings`, `MediaFieldSettings`, `TaxonomyFieldSettings`, `GeoPointFieldSettings`, `MarkdownFieldSettings`, `HtmlBodyPartSettings`, `MarkdownBodyPartSettings`, and `HtmlMenuItemPartSettings` alongside the generic `ContentPartFieldSettings`.
 
 The generic `Settings` step now composes feature-gated site settings schema fragments in the same way `ContentDefinition` composes part and field settings. Base site settings such as `HomeRoute`, `CacheMode`, and `ResourceDebugMode` are modeled directly, while feature-specific settings objects such as `AdminSettings`, `GeneralAISettings`, `DisplayNameSettings`, `DncRegistrySettings`, `UsaFtcDncRegistrySettings`, `CanadaDnclRegistrySettings`, and other contributed settings only appear when their owning feature registers a schema definition. Built-in login settings now also include `LoginSettings.AllowRememberMe` with its default `true` behavior.
 
 The schema set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
+
+The Media schema coverage now also includes the `move-attached-media-fields` step so recipe authors can describe attached-media migrations with an optional `ContentTypes` filter. The exported/reference `Roles` schemas also no longer use placeholder permission names, the `Roles.Permissions` schema now constrains each array item instead of the whole array value, `ContentDefinition` now accepts either `ContentTypes` or `ContentParts` instead of requiring `ContentTypes`, and Omnichannel recipe content-item schemas now understand `OmnichannelContactPart.TimeZoneId` as a mapped time-zone enum sourced from `ITimeZoneSelectListProvider` plus `PhoneNumberInfoPart.Number.PhoneNumber` as an E.164 value.
 
 ## AI profile creation from templates
 
@@ -143,9 +145,9 @@ services.AddScoped<IRecipeStep, SettingsSchemaStep>();
 
 Use it when your feature adds a custom content part or content field and you want recipe validation, editor tooling, and AI-generated recipes to understand that feature's `Settings` object.
 
-Use `PartSchemaDefinitionBase` when the schema belongs to a **content part**. It already marks the definition as `ContentDefinitionSchemaType.Part`, caches both the part settings schema and the content-item payload schema, and lets the implementation focus on the part-specific fragments.
+Use `PartSchemaDefinitionBase` when the schema belongs to a **content part**. It already marks the definition as `ContentDefinitionSchemaType.Part`, caches the part settings schema, and lets the implementation focus on the part-specific fragments.
 
-Use `FieldSchemaDefinitionBase` when the schema belongs to a **content field**. It marks the definition as `ContentDefinitionSchemaType.Field`, caches both the field settings schema and the content-item payload schema, and lets the implementation describe the field-specific fragments.
+Use `FieldSchemaDefinitionBase` when the schema belongs to a **content field**. It marks the definition as `ContentDefinitionSchemaType.Field`, caches the field settings schema, and lets the implementation describe the field-specific fragments.
 
 Implement `IContentSchemaDefinition` directly only when the contribution does **not** fit either base class.
 
@@ -158,13 +160,19 @@ The `ContentDefinition` and `ReplaceContentDefinition` recipe steps have two nes
 
 The Recipes module gathers all registered `IContentSchemaDefinition` services and merges their schema fragments into those nested `Settings` objects only when the owning feature is enabled. Definitions are grouped by `Name`, so if multiple contributors target the same part or field type, their schema fragments are combined into the final schema for that single Orchard name instead of replacing each other. That keeps validation aligned with the actual Orchard Core features available to the tenant.
 
-The separate `IContentPartSchemaDefinition` and `IContentFieldSchemaDefinition` interfaces are still used by the `content` recipe step. They provide the part and field payload schemas for actual content item JSON, while `IContentSchemaDefinition` remains the shared contract for content-definition settings schemas.
+The separate `IContentPartSchemaDefinition` and `IContentFieldSchemaDefinition` interfaces are still used by the `content` recipe step. They now receive `ContentPartSchemaContext` and `ContentFieldSchemaContext`, so payload contributors can inspect the concrete `ContentTypePartDefinition` and `ContentPartFieldDefinition` for the exact definition instance being rendered. `IContentSchemaDefinition` remains the shared contract for content-definition settings schemas.
+
+In this repository, feature-gated contributors now cover custom field payloads such as `PhoneField` and custom part payloads/settings such as `AIProfilePart`, `RolePickerPart`, `UserFullNamePart`, `OmnichannelContactPart`, and `RolePickerPartContentAccessControlSettings`.
+
+If a part only contains content fields, do not add a dedicated part payload contributor just to restate those field shapes. The content-item schema already composes each attached field through its registered field schema definitions, so dedicated part contributors are only needed when the part also exposes non-field C# properties or other part-level payload that fields alone cannot describe.
 
 ### Implementing a part schema
 
 This example adds schema support for a fictional `ContactCardPart`, including both the part settings envelope used by `ContentDefinition` and the content item payload used by the `Content` recipe step:
 
 ```csharp
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using Json.Schema;
 
 namespace MyModule.Schemas;
@@ -288,6 +296,10 @@ The same schema definition also shapes the `Content` recipe step payload for the
 
 In that payload, `ContactCardPart.Heading` and `ContactCardPart.PhoneNumber` come from `BuildPartSchemaCore()`, while `ContactCardPartSettings` still belongs only to the `ContentDefinition` and `ReplaceContentDefinition` recipe steps.
 
+For simple parts, the context can be ignored.
+
+For container-style parts such as `BagPart` or `FlowPart`, implement the optional `IContainedContentPartSchemaDefinition` interface alongside `PartSchemaDefinitionBase`. That secondary interface lets the contributor declare which payload property contains nested items and which content types are allowed for the current attachment, while `ContentItemSchemaService` stays responsible for recursive schema composition and cycle protection.
+
 ### Implementing a field schema
 
 Use `FieldSchemaDefinitionBase` when you need both:
@@ -298,6 +310,8 @@ Use `FieldSchemaDefinitionBase` when you need both:
 This example adds schema support for a fictional `SocialLinkField`:
 
 ```csharp
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using Json.Schema;
 
 namespace MyModule.Schemas;
