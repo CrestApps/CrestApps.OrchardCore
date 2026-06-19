@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Extensions;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -74,85 +74,21 @@ public abstract class ImportRecipeBaseTool : AIFunction
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
-#pragma warning disable IDE0060 // Remove unused parameter
     protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, CancellationToken cancellationToken)
-#pragma warning restore IDE0060 // Remove unused parameter
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
 
         var recipeExecutionService = services.GetRequiredService<RecipeExecutionService>();
-
         var recipeSchemaService = services.GetRequiredService<RecipeSchemaService>();
-
-        var recipeSteps = services.GetRequiredService<IEnumerable<IRecipeStep>>();
-
         var data = JsonSerializer.Deserialize<JsonObject>(json, RecipeSerializerOptions);
+        var rootSchema = await recipeSchemaService.GetRecipeSchemaAsync(cancellationToken);
 
-        var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var stepName in recipeSchemaService.GetStepNames())
+        if (data is null)
         {
-            if (stepSchemas.ContainsKey(stepName))
-            {
-                continue;
-            }
+            logger.LogWarning("AI tool recipe import failed: recipe payload could not be deserialized.");
 
-            var added = false;
-
-            foreach (var recipeStep in recipeSteps)
-            {
-                if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var stepSchema = await recipeStep.GetSchemaAsync(cancellationToken);
-
-                if (stepSchema is not null)
-                {
-                    stepSchemas[stepName] = stepSchema;
-                    added = true;
-                    break;
-                }
-            }
-
-            if (added)
-            {
-                continue;
-            }
-
-            var simpleStepBuilder = new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("name", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.String)
-                        .Enum(stepName))
-            )
-                .Required("name");
-
-            stepSchemas[stepName] = simpleStepBuilder.Build();
+            return "Invalid recipe format. The recipe payload could not be deserialized.";
         }
-
-        var stepsBuilder = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
-                    .Enum(stepSchemas.Keys)))
-                    .Required("name")
-                    .AdditionalProperties(true);
-
-        var schemaBuilder = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("steps", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(stepsBuilder)
-                    .MinItems(1)
-        )
-        ).Required("steps");
-
-        var rootSchema = schemaBuilder.Build();
 
         var result = rootSchema.Evaluate(JsonSerializer.SerializeToElement(data, RecipeSerializerOptions), new EvaluationOptions()
         {
@@ -171,19 +107,45 @@ public abstract class ImportRecipeBaseTool : AIFunction
             {RecipeSchemaInstruction}
             Please generate a valid recipe and try again:
             {schemaStructure}
-
             """;
         }
 
-        if (await recipeExecutionService.ExecuteRecipeAsync(data))
+        if (ShellScope.Current is null)
         {
-            logger.LogInformation("AI tool recipe import completed successfully.");
+            if (await recipeExecutionService.ExecuteRecipeAsync(data))
+            {
+                logger.LogInformation("AI tool recipe import completed successfully.");
 
-            return "Recipe was successfully imported";
+                return "Recipe was successfully imported";
+            }
+
+            logger.LogWarning("AI tool recipe import failed: error occurred during execution.");
+
+            return "Error occurred while trying to import the recipe.";
         }
 
-        logger.LogWarning("AI tool recipe import failed: error occurred during execution.");
+        var serializedRecipe = JsonSerializer.Serialize(data, RecipeSerializerOptions);
 
-        return "Error occurred while trying to import the recipe.";
+        ShellScope.AddDeferredTask(scope => ExecuteDeferredRecipeAsync(scope, serializedRecipe));
+
+        logger.LogInformation("AI tool recipe import scheduled for deferred execution.");
+
+        return "Recipe was successfully imported";
+    }
+
+    private static async Task ExecuteDeferredRecipeAsync(ShellScope scope, string serializedRecipe)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serializedRecipe);
+
+        var recipe = JsonSerializer.Deserialize<JsonObject>(serializedRecipe, RecipeSerializerOptions);
+        if (recipe is null)
+        {
+            return;
+        }
+
+        var recipeExecutionService = scope.ServiceProvider.GetRequiredService<RecipeExecutionService>();
+
+        await recipeExecutionService.ExecuteRecipeAsync(recipe);
     }
 }

@@ -1,8 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
-using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
-using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +21,7 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
       "properties": {
         "step": {
           "type": "string",
-          "description": "Optional. A recipe step name to return only that step schema. If omitted, returns the full recipe schema (steps array) composed from all known step schemas."
+          "description": "Optional. A recipe step name whose definition should be included in the recipe schema. The returned schema always describes the root recipe object with a steps array, and the step name suggestions still include every known recipe step."
         }
       },
       "additionalProperties": false
@@ -32,7 +30,7 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call this immediately before importOrchardCoreRecipe whenever it is available, then build the recipe JSON to match that schema.";
+    public override string Description => "Returns the Orchard Core recipe JSON Schema. The response always describes the root recipe object with a steps array; optionally limit it to one step definition while keeping all valid step names available. Call this immediately before importOrchardCoreRecipe whenever it is available, then build the recipe JSON to match that schema.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -52,94 +50,17 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
+        var hasStep = arguments.TryGetFirstString("step", out var requestedStep) && !string.IsNullOrWhiteSpace(requestedStep);
         var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
-        var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
+        var rootSchema = await recipeSchemaService.GetRecipeSchemaAsync(hasStep ? requestedStep : null, cancellationToken);
 
-        arguments.TryGetFirstString("step", out var requestedStep);
-
-        var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var stepName in recipeSchemaService.GetStepNames())
+        if (rootSchema is null)
         {
-            if (!string.IsNullOrWhiteSpace(requestedStep)
-                && !string.Equals(requestedStep, stepName, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+            var availableSteps = string.Join(", ", recipeSchemaService.GetStepNames());
+            logger.LogWarning("AI tool '{ToolName}': unknown recipe step '{StepName}'.", Name, requestedStep);
 
-            if (stepSchemas.ContainsKey(stepName))
-            {
-                continue;
-            }
-
-            JsonSchema stepSchema = null;
-
-            foreach (var recipeStep in recipeSteps)
-            {
-                if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                stepSchema = await recipeStep.GetSchemaAsync(cancellationToken);
-                break;
-            }
-
-            if (stepSchema is null)
-            {
-                stepSchema = new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .Properties(
-                        ("name", new JsonSchemaBuilder()
-                            .Type(SchemaValueType.String)
-                            .Enum(stepName)))
-                            .Required("name")
-                            .Build();
-            }
-
-            stepSchemas[stepName] = stepSchema;
-
-            if (!string.IsNullOrWhiteSpace(requestedStep))
-            {
-                break;
-            }
+            return $"Unknown recipe step '{requestedStep}'. Available steps: {availableSteps}";
         }
-
-        if (!string.IsNullOrWhiteSpace(requestedStep))
-        {
-            if (!stepSchemas.TryGetValue(requestedStep, out var schema))
-            {
-                logger.LogWarning("AI tool '{ToolName}': unknown recipe step '{StepName}'.", Name, requestedStep);
-
-                return $"Unknown recipe step '{requestedStep}'.";
-            }
-
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
-            }
-
-            return JsonSerializer.Serialize(schema);
-        }
-
-        var stepsBuilder = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
-                    .Enum(stepSchemas.Keys)))
-                    .Required("name")
-                    .AdditionalProperties(true);
-
-        var rootSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("steps", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(stepsBuilder)
-                    .MinItems(1)))
-                    .Required("steps")
-                    .Build();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {

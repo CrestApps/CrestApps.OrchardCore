@@ -61,30 +61,61 @@ public sealed class RecipeSchemaService
     /// <summary>
     /// Gets the full JSON schema for an Orchard Core recipe, including metadata and step definitions.
     /// </summary>
-    public async ValueTask<JsonSchema> GetRecipeSchemaAsync()
+    public ValueTask<JsonSchema> GetRecipeSchemaAsync(CancellationToken cancellationToken = default)
+        => GetRecipeSchemaAsync(null, cancellationToken);
+
+    /// <summary>
+    /// Gets the full JSON schema for an Orchard Core recipe, optionally narrowing the composed step definitions to a single step.
+    /// </summary>
+    /// <param name="requestedStep">The optional recipe step name whose definition should be included.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async ValueTask<JsonSchema> GetRecipeSchemaAsync(string requestedStep, CancellationToken cancellationToken = default)
     {
+        var stepNames = GetStepNames()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (!string.IsNullOrWhiteSpace(requestedStep) &&
+            !stepNames.Contains(requestedStep, StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var recipeStepsByName = _recipeSteps
+            .GroupBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        var selectedStepNames = string.IsNullOrWhiteSpace(requestedStep)
+            ? stepNames
+            : stepNames
+                .Where(stepName => string.Equals(stepName, requestedStep, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
         var stepSchemas = new List<JsonSchema>();
 
-        foreach (var step in _recipeSteps)
+        foreach (var stepName in selectedStepNames)
         {
-            var schema = await step.GetSchemaAsync();
+            JsonSchema schema = null;
+
+            if (recipeStepsByName.TryGetValue(stepName, out var recipeStep))
+            {
+                schema = await recipeStep.GetSchemaAsync(cancellationToken);
+            }
 
             if (schema is not null)
             {
                 stepSchemas.Add(schema);
+                continue;
             }
+
+            stepSchemas.Add(BuildFallbackStepSchema(stepName));
         }
 
         JsonSchemaBuilder stepsItemBuilder;
 
         if (stepSchemas.Count > 0)
         {
-            var stepNames = _recipeSteps
-                .Select(s => s.Name)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Order(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
             // Build if/then pairs for discriminated union.
             // This pattern allows Monaco to suggest name values from the enum
             // AND per-step properties once the name is typed.
@@ -184,6 +215,17 @@ public sealed class RecipeSchemaService
             .Required("steps")
             .Build();
     }
+
+    private static JsonSchema BuildFallbackStepSchema(string stepName)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Const(stepName)))
+            .Required("name")
+            .AdditionalProperties(true)
+            .Build();
 
     /// <summary>
     /// Gets the names of all known recipe steps by inspecting registered handlers and step providers.

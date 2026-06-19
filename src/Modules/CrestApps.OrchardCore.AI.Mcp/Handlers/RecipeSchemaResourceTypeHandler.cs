@@ -36,7 +36,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
     {
         _logger.LogDebug("Returning full recipe schema.");
 
-        var recipeSchema = await _recipeSchemaService.GetRecipeSchemaAsync();
+        var recipeSchema = await _recipeSchemaService.GetRecipeSchemaAsync(cancellationToken);
 
         return new ReadResourceResult
         {
