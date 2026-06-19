@@ -36,12 +36,9 @@ dotnet add package CrestApps.OrchardCore.OpenAI
 
 After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
 
-## Upgrade guidance
+## Release notes
 
-If you are upgrading an existing Orchard solution, review these pages before you update package references:
-
-1. [Version 2.0.0 Release Notes](changelog/v2.0.0)
-2. [Migrating to Typed AI Deployments](ai/migration-typed-deployments)
+Review the current [Version 2.0.0 Release Notes](changelog/v2.0.0) before updating package references or tenant code.
 
 The current repository version is the `2.0.0-preview` line on `.NET 10` and Orchard Core `3.0.0-preview`.
 
@@ -58,7 +55,7 @@ dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.cspr
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
 >
-> The asset pipeline now waits for each generated CSS and JavaScript stream to finish before Gulp completes the task. This keeps `npm run rebuild` reliable on current Node.js and Gulp releases instead of failing with a premature stream-close error.
+> The asset pipeline waits for each generated CSS and JavaScript stream to finish before Gulp completes the task, which keeps `npm run rebuild` reliable on current Node.js and Gulp releases.
 
 ## Run the startup apps
 

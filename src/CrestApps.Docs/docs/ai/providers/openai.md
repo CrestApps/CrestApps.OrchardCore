@@ -10,17 +10,15 @@ description: OpenAI-compatible AI chat integration supporting DeepSeek, Google G
 | **Feature Name** | OpenAI Chat |
 | **Feature ID** | `CrestApps.OrchardCore.OpenAI` |
 
-Provides a way to interact with the OpenAI service provider.
+Provides OpenAI-compatible AI services for Orchard Core.
 
 ## Overview
 
-The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI-compatible models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.  
+Use this provider for OpenAI and for OpenAI-compatible platforms such as DeepSeek, Google Gemini, Together AI, vLLM, Cloudflare Workers AI, LM Studio, LocalAI, and similar services.
 
-### Configuration  
+## appsettings.json configuration
 
-The **OpenAI AI Chat** feature allows you to connect to any AI provider that adheres to OpenAI API standards, such as **DeepSeek, Google Gemini, Together AI, vLLM, Cloudflare Workers AI, and more**.  
-
-To configure a connection, add the following settings to the `appsettings.json` file:  
+Add an OpenAI connection under `OrchardCore:CrestApps:AI:Providers:OpenAI`:
 
 ```json
 {
@@ -32,12 +30,28 @@ To configure a connection, add the following settings to the `appsettings.json` 
             "DefaultConnectionName": "openai-cloud",
             "Connections": {
               "openai-cloud": {
-                "ApiKey": "<!-- Your API Key Goes Here -->",
+                "ApiKey": "your-api-key",
                 "Deployments": [
-                  { "Name": "gpt-4o", "Type": "Chat", "IsDefault": true },
-                  { "Name": "gpt-4o-mini", "Type": "Utility", "IsDefault": true },
-                  { "Name": "text-embedding-3-large", "Type": "Embedding", "IsDefault": true },
-                  { "Name": "dall-e-3", "Type": "Image", "IsDefault": true }
+                  {
+                    "Name": "chat-default",
+                    "ModelName": "gpt-4o",
+                    "Purpose": "Chat"
+                  },
+                  {
+                    "Name": "utility-default",
+                    "ModelName": "gpt-4o-mini",
+                    "Purpose": "Utility"
+                  },
+                  {
+                    "Name": "embedding-default",
+                    "ModelName": "text-embedding-3-large",
+                    "Purpose": "Embedding"
+                  },
+                  {
+                    "Name": "image-default",
+                    "ModelName": "dall-e-3",
+                    "Purpose": "Image"
+                  }
                 ]
               }
             }
@@ -49,157 +63,58 @@ To configure a connection, add the following settings to the `appsettings.json` 
 }
 ```
 
----
-
-### Using AI Deployments  
-
-If the **AI Deployments** feature is enabled, you can create multiple typed deployments under the same connection. Each deployment has a `Type` (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an optional `IsDefault` flag. This allows different AI profiles to utilize different models while sharing the same connection. UI dropdowns display deployments grouped by connection for easy selection.
-
-### Configuring Other AI Providers  
-
-The **OpenAI AI Chat** feature supports multiple AI providers that adhere to OpenAI API standards, such as:  
-
-- **DeepSeek** ([Docs](https://platform.deepseek.com/usage))  
-- **Google Gemini** ([Docs](https://ai.google.dev/gemini-api/docs/openai))  
-- **Together AI** ([Docs](https://docs.together.ai/docs/openai-api-compatibility))  
-- **vLLM** ([Docs](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html))  
-- **Cloudflare Workers AI** ([Docs](https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/))  
-- **LM Studio** ([Docs](https://github.com/xorbitsai/inference))  
-- **KoboldCpp** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **text-gen-webui** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **FastChat** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **LocalAI** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **llama-cpp-python** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **TensorRT-LLM** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-- **BerriAI/litellm** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
-
----
-
-### Configuring a Provider Example: DeepSeek  
-
-You can configure the DeepSeek connection either through the configuration provider or via the UI using the **AI Connection Management** feature.  
-
-#### Configuration Using `appsettings.json`  
-
-To configure DeepSeek, add the following settings:  
+Set `Endpoint` when the provider uses a custom OpenAI-compatible base URL:
 
 ```json
 {
-  "OrchardCore": {
-    "CrestApps": {
-      "AI": {
-        "Providers": {
-          "OpenAI": {
-            "DefaultConnectionName": "deepseek",
-            "Connections": {
-              "deepseek": {
-                "Endpoint": "https://api.deepseek.com/v1",
-                "ApiKey": "<!-- Your API Key Goes Here -->",
-                "Deployments": [
-                  { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
-                ]
-              }
-            }
-          }
-        }
-      }
+  "Connections": {
+    "deepseek": {
+      "Endpoint": "https://api.deepseek.com/v1",
+      "ApiKey": "your-deepseek-api-key"
     }
   }
 }
 ```
 
-> The `DefaultConnectionName` under the `OpenAI` node is required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
+## Recipe setup
 
-#### Configuration via AI Connection Management  
-
-If you are using the **AI Connection Management** feature, you can configure DeepSeek through the UI or by executing the following recipe:  
+Use `AIProviderConnections` to create the connection and `AIDeployment` to create the deployments that profiles can select.
 
 ```json
 {
   "steps": [
     {
       "name": "AIProviderConnections",
-      "connections": [
+      "Connections": [
         {
           "Source": "OpenAI",
           "Name": "deepseek",
-          "IsDefault": false,
           "DisplayText": "DeepSeek",
-          "Deployments": [
-            { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
-          ],
           "Properties": {
             "OpenAIConnectionMetadata": {
               "Endpoint": "https://api.deepseek.com/v1",
-              "ApiKey": "<!-- DeepSeek API Key -->"
+              "ApiKey": "your-deepseek-api-key"
             }
           }
         }
       ]
-    }
-  ]
-}
-```
-
-`Source` is the preferred connection-source field in `AIProviderConnections` recipes. For backward compatibility, the import pipeline still accepts `ClientName`, and the recipe schema also surfaces the common root-level `Endpoint` and `ApiKey` aliases even though exported recipes keep the provider settings under `Properties.OpenAIConnectionMetadata`.
-
----
-
-### Configuring Other AI Providers  
-
-To connect to **Google Gemini**, **Together AI**, **vLLM**, or any other supported provider, modify the `Endpoint` and `ApiKey` fields accordingly. For example, configuring **Google Gemini** would look like this:  
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps": {
-      "AI": {
-        "Providers": {
-          "OpenAI": {
-            "DefaultConnectionName": "google-gemini",
-            "Connections": {
-              "google-gemini": {
-                "Endpoint": "https://generativelanguage.googleapis.com/v1",
-                "ApiKey": "<!-- Your Google Gemini API Key -->",
-                "Deployments": [
-                  { "Name": "gemini-pro", "Type": "Chat", "IsDefault": true }
-                ]
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-You can replace `Endpoint` with the appropriate URL for each provider.  
-
----
-
-#### Configuring Multiple Models
-
-If you need access to multiple DeepSeek models, you can execute the following recipe to add typed deployments:
-
-```json
-{
-  "steps": [
+    },
     {
       "name": "AIDeployment",
-      "deployments": [
+      "Deployments": [
         {
           "Name": "deepseek-chat",
-          "Type": "Chat",
-          "IsDefault": true,
+          "ModelName": "deepseek-chat",
           "ClientName": "OpenAI",
-          "ConnectionName": "deepseek"
+          "ConnectionName": "deepseek",
+          "Purpose": "Chat"
         },
         {
           "Name": "deepseek-reasoner",
-          "Type": "Chat",
+          "ModelName": "deepseek-reasoner",
           "ClientName": "OpenAI",
-          "ConnectionName": "deepseek"
+          "ConnectionName": "deepseek",
+          "Purpose": "Utility"
         }
       ]
     }
@@ -207,8 +122,10 @@ If you need access to multiple DeepSeek models, you can execute the following re
 }
 ```
 
-This configuration allows you to access multiple models provided by DeepSeek, such as `deepseek-chat` (set as the default Chat deployment) and `deepseek-reasoner`.
+## Selecting deployments
 
-Use `ClientName` in `AIDeployment` recipes. `ProviderName` is obsolete and only kept for backward compatibility.
+Choose deployments explicitly on AI profiles, templates, or chat interactions when you need provider-specific model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
 
-By following these steps, you can seamlessly integrate DeepSeek into your AI chat feature, either as a default provider or alongside other AI models.
+## Other OpenAI-compatible providers
+
+To connect to another compatible platform, keep the same Orchard structure and change only the provider endpoint, API key, and deployment model names. For example, a Gemini connection typically uses an endpoint such as `https://generativelanguage.googleapis.com/v1`.

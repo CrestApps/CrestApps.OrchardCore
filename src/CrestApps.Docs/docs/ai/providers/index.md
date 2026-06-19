@@ -7,7 +7,7 @@ description: Overview of AI provider modules and how to implement custom provide
 
 # AI Providers
 
-AI Providers are modules that connect the CrestApps AI infrastructure to specific AI services. Each provider knows how to create chat clients, embedding generators, and image generators for its platform.
+AI providers are modules that connect the CrestApps AI infrastructure to specific AI services. Each provider knows how to create chat clients, embedding generators, image generators, and other provider-specific runtime services for its platform.
 
 ## What Is a Provider?
 
@@ -16,7 +16,7 @@ A provider is a module that implements the connection layer between CrestApps AI
 - **Authentication** — Managing API keys, tokens, or managed identity credentials
 - **Client creation** — Creating `IChatClient`, `IEmbeddingGenerator`, and `IImageGenerator` instances
 - **Connection configuration** — Defining endpoints, deployment names, and provider-specific settings
-- **Deployment management** — Supporting multiple typed models/deployments under a single connection, each with a `Type` (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an `IsDefault` flag
+- **Deployment management** — Supporting multiple named deployments under a single connection, each with one or more `Purpose` values such as `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, `TextToSpeech`, or `Vision`
 
 ## Built-in Providers
 
@@ -28,6 +28,58 @@ A provider is a module that implements the connection layer between CrestApps AI
 | [OpenAI](openai) | `CrestApps.OrchardCore.OpenAI` | OpenAI and any OpenAI-compatible provider |
 
 > **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**. For these providers, use the **OpenAI** provider type when configuring their connections and endpoints. This includes DeepSeek, Google Gemini, Together AI, vLLM, and many more.
+
+## Deployment model
+
+AI deployments are first-class records. Each deployment has:
+
+- a **Name** used throughout Orchard editors, recipes, and settings
+- an optional **ModelName** when the Orchard deployment name should differ from the vendor model name
+- a **ConnectionName** that points at the provider connection
+- a **Purpose** that describes what the deployment is used for
+
+### Deployment purposes
+
+| Purpose | Description |
+|---------|-------------|
+| `Chat` | Primary chat completions |
+| `Utility` | Lightweight auxiliary tasks such as query rewriting or planning |
+| `Embedding` | Vector embeddings for RAG and semantic search |
+| `Image` | Image generation |
+| `SpeechToText` | Speech-to-text transcription |
+| `TextToSpeech` | Text-to-speech synthesis |
+| `Vision` | Vision and image-understanding workloads |
+
+When configuring connections through `appsettings.json`, each connection can define a `Deployments` array:
+
+```json
+{
+  "Connections": {
+    "my-connection": {
+      "ApiKey": "your-api-key",
+      "Deployments": [
+        {
+          "Name": "chat-default",
+          "ModelName": "gpt-4o",
+          "Purpose": "Chat"
+        },
+        {
+          "Name": "utility-default",
+          "ModelName": "gpt-4.1-mini",
+          "Purpose": "Utility"
+        },
+        {
+          "Name": "embedding-default",
+          "ModelName": "text-embedding-3-large",
+          "Purpose": "Embedding"
+        }
+      ]
+    }
+  }
+}
+```
+
+Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
 
 ## Implementing a Custom Provider
 
@@ -58,7 +110,7 @@ public sealed class CustomAIClientProvider : IAIClientProvider
 
 ### 2. Implement `IAICompletionClient`
 
-Use the `NamedAICompletionClient` base class for standard providers, or `DeploymentAwareAICompletionClient` if your provider supports multiple deployments. Provider connections now come from the active provider connection catalog, so custom integrations should not depend on the removed `AIProviderOptions` snapshot:
+Use the `NamedAICompletionClient` base class for standard providers, or `DeploymentAwareAICompletionClient` if your provider supports multiple deployments. Provider connections come from the active provider connection catalog:
 
 ```csharp
 public sealed class CustomCompletionClient : NamedAICompletionClient
@@ -117,7 +169,7 @@ public sealed class Startup : StartupBase
 }
 ```
 
-### Supporting Multiple Deployments
+### Supporting multiple deployments
 
 If your provider supports multiple models, register a deployment provider:
 
@@ -129,43 +181,4 @@ services.AddAIDeploymentProvider("CustomProvider", options =>
 });
 ```
 
-### Typed Deployments
-
-Deployments are typed entities. Each deployment has a `Purpose` property (a flags enum) that indicates its capabilities:
-
-| Purpose | Description |
-|---------|-------------|
-| `Chat` | Primary chat completions |
-| `Utility` | Lightweight auxiliary tasks (query rewriting, planning) |
-| `Embedding` | Vector embeddings for RAG / semantic search |
-| `Image` | Image generation |
-| `SpeechToText` | Speech-to-text transcription |
-| `TextToSpeech` | Text-to-speech synthesis |
-| `Vision` | Vision / image understanding |
-
-When configuring connections via `appsettings.json`, deployments are defined as a `Deployments` array on each connection:
-
-```json
-{
-  "Connections": {
-    "my-connection": {
-      "ApiKey": "...",
-      "Deployments": [
-        { "Name": "gpt-4o", "Type": "Chat", "IsDefault": true },
-        { "Name": "gpt-4.1-mini", "Type": ["Chat", "Utility"], "IsDefault": true },
-        { "Name": "text-embedding-3-large", "Type": "Embedding", "IsDefault": true }
-      ]
-    }
-  }
-}
-```
-
-> **Note:** In `appsettings.json`, the property is still called `Type` for backward compatibility. In the admin UI and code, use `Purpose` (the new property). The `Type` property is obsolete and will be removed in a future release.
-
-The `Type`/`Purpose` property can be either a single value or an array of values when one deployment supports multiple capabilities. In the admin UI, the same concept is exposed as per-purpose checkboxes on a single deployment record.
-
-The `IsDefault` flag marks a deployment as the default for each selected purpose within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for purpose → global default → null/error.
-
-Global defaults can be configured under **Settings → Artificial Intelligence → Default AI Deployment Settings**.
-
-When you create or edit a deployment in the admin UI, the connection picker is populated from the current provider connection catalog for that provider. Deployments now reference the real connection record directly, and the legacy `ConnectionNameAlias` deployment property is no longer used.
+When you create or edit a deployment in the admin UI, the connection picker is populated from the provider connection catalog for that provider, so deployments always point at the stored connection record by name.

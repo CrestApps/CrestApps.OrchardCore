@@ -28,6 +28,10 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Enum("Default", "ManagedIdentity", "ApiKey")
             .Description("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.");
 
+        var deploymentPurposeSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech", "Vision");
+
         var containedConnectionPropertiesSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
@@ -51,9 +55,9 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection managed identity client ID alias for recipe imports. Supported by AzureSpeech deployments.")),
                 ("Properties", containedConnectionPropertiesSchema),
                 ("Purpose", new JsonSchemaBuilder().AnyOf(
-                    new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The deployment purpose, or a comma-separated flag value such as 'Chat, Utility'. Defaults to Chat when not specified."),
+                    deploymentPurposeSchema.Description("The deployment purpose. Defaults to Chat when not specified."),
                     new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
-                        new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech", "Vision")).MinItems(1).UniqueItems(true).Description("The deployment purposes."))))
+                        deploymentPurposeSchema).MinItems(1).UniqueItems(true).Description("The deployment purposes."))))
             .Required("Name")
             .AdditionalProperties(true);
 
