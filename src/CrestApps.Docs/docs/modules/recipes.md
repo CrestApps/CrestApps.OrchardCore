@@ -26,7 +26,7 @@ This is especially useful when recipes are generated programmatically (e.g., by 
 
 At runtime the feature can compose all known step schemas into a single "recipe" schema for an object with a `steps` array.
 
-The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instantiates both parameterless and service-backed `IRecipeStep` implementations, so exported reference schemas stay aligned with steps such as `AdminMenu`, `ContentDefinition`, `Content`, and other composed schema providers.
+The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instantiates both parameterless and service-backed `IRecipeStep` implementations, including steps that depend on registered option snapshots such as `AIDeployment` and `AIProviderConnections`, so exported reference schemas stay aligned with the runtime schema providers.
 
 ## AI profile creation from templates
 
