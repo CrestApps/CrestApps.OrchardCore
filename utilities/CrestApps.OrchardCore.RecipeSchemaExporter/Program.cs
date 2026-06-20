@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.Core.AI;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
@@ -257,6 +259,7 @@ internal sealed class Program
         services.AddSingleton<IContentItemSchemaService>(contentItemSchemaService);
         services.AddSingleton<IContentSchemaProvider>(contentSchemaProvider);
         services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
+        services.AddSingleton<IOptions<AIOptions>>(Options.Create(new AIOptions()));
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateActivityLibrary());

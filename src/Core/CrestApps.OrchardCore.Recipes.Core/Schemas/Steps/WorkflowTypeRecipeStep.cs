@@ -38,8 +38,8 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("WorkflowType")),
-                ("data", WorkflowDataArray(eventNames, taskNames)))
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("WorkflowType").Description("Recipe step discriminator. Must be 'WorkflowType'.")),
+                ("data", WorkflowDataArray(eventNames, taskNames).Description("Workflow type definitions to create or update.")))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();
@@ -56,15 +56,17 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
             .Items(new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
                 .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Workflow type name.")),
                     ("Activities", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Array)
-                        .Items(ActivitySchema(eventNames, taskNames))),
+                        .Items(ActivitySchema(eventNames, taskNames))
+                        .Description("Activities that belong to the workflow type.")),
                     ("Transitions", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Array)
                         .Items(new JsonSchemaBuilder()
                             .Type(SchemaValueType.Object)
-                            .AdditionalProperties(true))))
+                            .AdditionalProperties(true))
+                        .Description("Transition objects that connect activity outcomes.")))
                 .Required("Name", "Activities", "Transitions")
                 .AdditionalProperties(true));
     }
@@ -76,8 +78,8 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Activity type name. Start activities must be events; non-start activities must be tasks.")),
+                ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this activity is a workflow start event.")),
                 ("X", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Number)
                     .Description("Horizontal pixel position of the activity node in the designer.")),
@@ -86,7 +88,8 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
                     .Description("Vertical pixel position of the activity node in the designer.")),
                 ("Properties", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
-                    .AdditionalProperties(true)))
+                    .AdditionalProperties(true)
+                    .Description("Activity-specific property bag passed to the workflow activity.")))
             .Required("Name", "Properties")
             .AdditionalProperties(true)
             .If(new JsonSchemaBuilder()

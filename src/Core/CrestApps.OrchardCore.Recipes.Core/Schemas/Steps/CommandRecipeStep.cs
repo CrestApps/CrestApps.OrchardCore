@@ -25,11 +25,12 @@ public sealed class CommandRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("command")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("command").Description("Recipe step discriminator. Must be 'command'.")),
                 ("Commands", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                    .MinItems(1)))
+                    .MinItems(1)
+                    .Description("Commands to execute in order. Each entry is a single command line string.")))
             .Required("name", "Commands")
             .AdditionalProperties(true)
             .Build();

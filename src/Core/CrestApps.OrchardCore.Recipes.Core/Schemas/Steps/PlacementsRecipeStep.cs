@@ -24,7 +24,7 @@ public sealed class PlacementsRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Placements")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Placements").Description("Recipe step discriminator. Must be 'Placements'.")),
                 ("Placements", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(true)

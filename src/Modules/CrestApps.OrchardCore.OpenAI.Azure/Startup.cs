@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI;
@@ -67,7 +67,7 @@ public sealed class Startup : StartupBase
             })
             .AddDisplayDriver<AIDeployment, AzureSpeechDeploymentDisplayDriver>();
 
-        services.AddCoreAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, o =>
+        services.AddCoreAICompletionClient<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides AI profiles using Azure OpenAI models."];

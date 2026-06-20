@@ -12,8 +12,8 @@ public sealed class MicrosoftAccountSettingsRecipeStep : RecipeStepSchemaBase
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
             [
-                ("AppId", RecipeStepSchemaBuilders.String()),
-                ("AppSecret", RecipeStepSchemaBuilders.String()),
-                ("CallbackPath", RecipeStepSchemaBuilders.String()),
+                ("AppId", RecipeStepSchemaBuilders.String().Description("Microsoft application (client) ID.")),
+                ("AppSecret", RecipeStepSchemaBuilders.String().Description("Microsoft application client secret.")),
+                ("CallbackPath", RecipeStepSchemaBuilders.String().Description("Relative callback path that Microsoft redirects back to after sign-in.")),
             ]);
 }

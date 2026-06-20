@@ -42,15 +42,15 @@ public sealed class AIProfileRecipeStep : IRecipeStep
                 ("CreatedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional creation timestamp in ISO 8601 format.")),
                 ("OwnerId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional owner identifier.")),
                 ("Author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional author name.")),
-                ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Extended profile properties including AIProfileMetadata.")),
-                ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Profile settings.")))
+                ("Properties", AIProfileRecipeSchemaBuilder.BuildPropertiesSchema("Extended profile properties. Known metadata objects are listed here, and additional feature-specific objects are also allowed.")),
+                ("Settings", AIProfileRecipeSchemaBuilder.BuildSettingsSchema("Profile settings. Known settings objects are listed here, and additional feature-specific settings are also allowed.")))
             .Required("Name")
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProfile")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProfile").Description("Recipe step discriminator. Must be 'AIProfile'.")),
                 ("Profiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(profileSchema)

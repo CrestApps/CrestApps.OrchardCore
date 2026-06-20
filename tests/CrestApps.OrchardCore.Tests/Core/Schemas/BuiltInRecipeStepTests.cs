@@ -256,6 +256,11 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CreateOrUpdateIndexProfileRecipeStep), "CreateOrUpdateIndexProfile")]
     [InlineData(typeof(ResetIndexRecipeStep), "ResetIndex")]
     [InlineData(typeof(RebuildIndexRecipeStep), "RebuildIndex")]
+    [InlineData(typeof(AIDataSourceRecipeStep), "AIDataSource")]
+    [InlineData(typeof(McpConnectionRecipeStep), "McpConnection")]
+    [InlineData(typeof(McpPromptRecipeStep), "McpPrompt")]
+    [InlineData(typeof(McpResourceRecipeStep), "McpResource")]
+    [InlineData(typeof(A2AConnectionRecipeStep), "A2AConnection")]
     [InlineData(typeof(CommandRecipeStep), "command")]
     public void Name_ReturnsExpected(Type stepType, string expectedName)
     {
@@ -318,6 +323,11 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CreateOrUpdateIndexProfileRecipeStep))]
     [InlineData(typeof(ResetIndexRecipeStep))]
     [InlineData(typeof(RebuildIndexRecipeStep))]
+    [InlineData(typeof(AIDataSourceRecipeStep))]
+    [InlineData(typeof(McpConnectionRecipeStep))]
+    [InlineData(typeof(McpPromptRecipeStep))]
+    [InlineData(typeof(McpResourceRecipeStep))]
+    [InlineData(typeof(A2AConnectionRecipeStep))]
     [InlineData(typeof(CommandRecipeStep))]
     public async Task GetSchemaAsync_ProducesValidSerializableSchema(Type stepType)
     {
@@ -385,6 +395,11 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CreateOrUpdateIndexProfileRecipeStep))]
     [InlineData(typeof(ResetIndexRecipeStep))]
     [InlineData(typeof(RebuildIndexRecipeStep))]
+    [InlineData(typeof(AIDataSourceRecipeStep))]
+    [InlineData(typeof(McpConnectionRecipeStep))]
+    [InlineData(typeof(McpPromptRecipeStep))]
+    [InlineData(typeof(McpResourceRecipeStep))]
+    [InlineData(typeof(A2AConnectionRecipeStep))]
     [InlineData(typeof(CommandRecipeStep))]
     public async Task GetSchemaAsync_CachesResult(Type stepType)
     {

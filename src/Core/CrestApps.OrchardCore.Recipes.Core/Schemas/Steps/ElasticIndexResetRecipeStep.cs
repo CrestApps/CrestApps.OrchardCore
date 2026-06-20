@@ -24,11 +24,12 @@ public sealed class ElasticIndexResetRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("elastic-index-reset")),
-                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("elastic-index-reset").Description("Recipe step discriminator. Must be 'elastic-index-reset'.")),
+                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, reset all Elasticsearch indexes and ignore the Indices list.")),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Specific Elasticsearch index names to reset when IncludeAll is false.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

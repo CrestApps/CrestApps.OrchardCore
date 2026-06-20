@@ -24,29 +24,30 @@ public sealed class LayersRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Layers")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Layers").Description("Recipe step discriminator. Must be 'Layers'.")),
                 ("Layers", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Layer name.")),
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of when the layer should be used.")),
                             ("Rule", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Description("A JavaScript rule expression, e.g. isHomepage().")),
                             ("LayerRule", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Object)
                                 .Properties(
-                                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                    ("ConditionId", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Rule name shown in the layer editor.")),
+                                    ("ConditionId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Condition provider identifier used to evaluate the rule.")),
                                     ("Conditions", new JsonSchemaBuilder()
                                         .Type(SchemaValueType.Array)
                                         .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
                                 .AdditionalProperties(true)
                                 .Description("Structured layer rule object.")))
                         .Required("Name")
-                        .AdditionalProperties(true))))
+                        .AdditionalProperties(true))
+                    .Description("Layers to create or update.")))
             .Required("name", "Layers")
             .AdditionalProperties(true)
             .Build();

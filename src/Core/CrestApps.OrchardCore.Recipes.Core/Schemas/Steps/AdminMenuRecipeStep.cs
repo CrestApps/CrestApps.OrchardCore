@@ -39,21 +39,22 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminMenu")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminMenu").Description("Recipe step discriminator. Must be 'AdminMenu'.")),
                 ("data", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique admin menu content item identifier.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical admin menu name.")),
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the admin menu is enabled.")),
                             ("MenuItems", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
                                 .Items(contentItemSchema)
                                 .Description("The list of menu item content items.")))
                         .Required("Id", "Name", "MenuItems")
-                        .AdditionalProperties(true))))
+                        .AdditionalProperties(true))
+                    .Description("Admin menus to create or update.")))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();

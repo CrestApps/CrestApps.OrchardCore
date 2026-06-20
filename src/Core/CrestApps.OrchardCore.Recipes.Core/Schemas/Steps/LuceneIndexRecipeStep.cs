@@ -24,10 +24,11 @@ public sealed class LuceneIndexRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("lucene-index")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("lucene-index").Description("Recipe step discriminator. Must be 'lucene-index'.")),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))
+                    .Description("Lucene index definitions to create or update. Each object is forwarded to the Lucene index handler.")))
             .Required("name", "Indices")
             .AdditionalProperties(true)
             .Build();

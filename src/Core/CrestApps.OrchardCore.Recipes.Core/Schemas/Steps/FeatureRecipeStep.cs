@@ -41,7 +41,7 @@ public sealed class FeatureRecipeStep : IRecipeStep
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature").Description("Recipe step discriminator. Must be 'feature'.")),
                 ("enable", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(featureItemSchema)

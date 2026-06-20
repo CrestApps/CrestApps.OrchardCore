@@ -45,26 +45,28 @@ public sealed class RolesRecipeStep : IRecipeStep
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Roles")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Roles").Description("Recipe step discriminator. Must be 'Roles'.")),
                 ("Roles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Role name.")),
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of the role.")),
                             ("Permissions", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
                                 .Items(new JsonSchemaBuilder()
                                     .Type(SchemaValueType.String)
-                                    .Enum(permissionNames))),
+                                    .Enum(permissionNames))
+                                .Description("Permissions assigned to the role.")),
                             ("PermissionBehavior", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Enum("Add", "Replace", "Remove")
                                 .Description("How permissions are merged: Add (default), Replace, or Remove.")))
                         .Required("Name")
                         .AdditionalProperties(true))
-                    .MinItems(1)))
+                    .MinItems(1)
+                    .Description("Roles to create or update.")))
             .Required("name", "Roles")
             .AdditionalProperties(true);
 

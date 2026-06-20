@@ -42,6 +42,7 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
             {
                 { "ItemId", connection.ItemId },
                 { "DisplayText", connection.DisplayText },
+                { "Source", connection.Source },
                 { "Author", connection.Author },
                 { "CreatedUtc" , connection.CreatedUtc },
                 { "OwnerId" , connection.OwnerId },
@@ -59,7 +60,7 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
-            ["connections"] = connectionsData,
+            ["Connections"] = connectionsData,
         });
     }
 

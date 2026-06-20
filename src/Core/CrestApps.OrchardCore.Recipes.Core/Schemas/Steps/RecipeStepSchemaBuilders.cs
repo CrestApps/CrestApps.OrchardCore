@@ -19,7 +19,9 @@ internal static class RecipeStepSchemaBuilders
     {
         var allProperties = new List<(string Name, JsonSchemaBuilder Schema)>
         {
-            ("name", String().Const(stepName)),
+            ("name", String()
+                .Const(stepName)
+                .Description($"Recipe step discriminator. Must be '{stepName}'.")),
         };
 
         allProperties.AddRange(properties);
