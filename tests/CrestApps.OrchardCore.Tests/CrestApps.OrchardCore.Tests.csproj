@@ -54,4 +54,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\Omnichannel\Managements\Migrations\" />
+  </ItemGroup>
+
 </Project>
