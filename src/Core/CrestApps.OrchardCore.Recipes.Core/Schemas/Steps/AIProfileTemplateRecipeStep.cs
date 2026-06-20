@@ -48,14 +48,14 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
                 ("ToolNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("AI tool names.")),
                 ("AgentNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Agent profile names to include.")),
                 ("ProfileDescription", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Description of the profile's capabilities (used for Agent type).")),
-                ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Extended template properties.")))
+                ("Properties", AIProfileRecipeSchemaBuilder.BuildTemplatePropertiesSchema("Extended template properties. This includes the shared AI profile metadata objects plus template-specific metadata and template-stored settings objects, while still allowing additional feature-specific objects.")))
             .Required("Name", "DisplayText")
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProfileTemplate")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProfileTemplate").Description("Recipe step discriminator. Must be 'AIProfileTemplate'.")),
                 ("Templates", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(templateSchema)

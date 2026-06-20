@@ -26,7 +26,7 @@ public sealed class DeleteAIDeploymentsRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("DeleteAIDeployments")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("DeleteAIDeployments").Description("Recipe step discriminator. Must be 'DeleteAIDeployments'.")),
                 ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, all deployments will be removed.")),
                 ("DeploymentNames", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)

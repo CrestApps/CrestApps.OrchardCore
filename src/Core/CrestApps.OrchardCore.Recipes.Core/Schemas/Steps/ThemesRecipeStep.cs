@@ -36,7 +36,7 @@ public sealed class ThemesRecipeStep : IRecipeStep
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes").Description("Recipe step discriminator. Must be 'themes'.")),
                 ("site", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(themeIds)

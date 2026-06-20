@@ -10,19 +10,22 @@ public sealed class TranslationsRecipeStep : RecipeStepSchemaBase
     public override string Name => "Translations";
 
     protected override JsonSchema CreateSchema()
-        => RecipeStepSchemaBuilders.BuildNamedStep(
+    {
+        var translationEntrySchema = RecipeStepSchemaBuilders.Object(
+                [
+                    ("culture", RecipeStepSchemaBuilders.String().Description("Culture name, for example 'en-US' or 'fr'.")),
+                    ("context", RecipeStepSchemaBuilders.String().Description("Optional translation context used to disambiguate the key.")),
+                    ("key", RecipeStepSchemaBuilders.String().Description("Localization key to translate.")),
+                    ("value", RecipeStepSchemaBuilders.String().Description("Localized value stored for the key.")),
+                ],
+                ["culture", "key"])
+            .Description("Single localization entry.");
+
+        return RecipeStepSchemaBuilders.BuildNamedStep(
             Name,
             [
-                ("translations", RecipeStepSchemaBuilders.Array(
-                    RecipeStepSchemaBuilders.Object(
-                        [
-                            ("culture", RecipeStepSchemaBuilders.String()),
-                            ("context", RecipeStepSchemaBuilders.String()),
-                            ("key", RecipeStepSchemaBuilders.String()),
-                            ("value", RecipeStepSchemaBuilders.String()),
-                        ],
-                        ["culture", "key"]),
-                    1)),
+                ("translations", RecipeStepSchemaBuilders.Array(translationEntrySchema, 1).Description("Translation entries to import.")),
             ],
             ["translations"]);
+    }
 }

@@ -46,6 +46,8 @@ The A2A client supports the same authentication types available for MCP SSE conn
 
 Sensitive fields (API keys, passwords, secrets, private keys, certificates) are encrypted at rest using ASP.NET Core Data Protection.
 
+For the OAuth-based options, **Token Endpoint**, **Client ID**, and **Scopes** are shared across the OAuth 2.0 auth types in the editor and are preserved when you save the connection.
+
 ---
 
 ## Assigning Agent Connections to AI Profiles

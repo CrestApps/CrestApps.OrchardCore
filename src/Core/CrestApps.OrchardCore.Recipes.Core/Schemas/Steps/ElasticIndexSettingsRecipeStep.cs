@@ -24,10 +24,11 @@ public sealed class ElasticIndexSettingsRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ElasticIndexSettings")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ElasticIndexSettings").Description("Recipe step discriminator. Must be 'ElasticIndexSettings'.")),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))
+                    .Description("Elasticsearch index definitions to create or update. Each object is forwarded to the index settings handler.")))
             .Required("name", "Indices")
             .AdditionalProperties(true)
             .Build();

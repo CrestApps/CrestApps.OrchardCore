@@ -24,17 +24,18 @@ public sealed class CreateOrUpdateIndexProfileRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateOrUpdateIndexProfile")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateOrUpdateIndexProfile").Description("Recipe step discriminator. Must be 'CreateOrUpdateIndexProfile'.")),
                 ("Indexes", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                        .AdditionalProperties(true))))
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier for the index profile.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique index profile name.")),
+                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Index provider name, such as Lucene, Elasticsearch, or AzureAI.")),
+                            ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Index profile type used by the target feature or indexing task.")))
+                        .AdditionalProperties(true))
+                    .Description("Index profiles to create or update.")))
             .Required("name", "Indexes")
             .AdditionalProperties(true)
             .Build();

@@ -9,6 +9,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
 using CrestApps.OrchardCore.AI.A2A.Migrations;
+using CrestApps.OrchardCore.AI.A2A.Recipes;
 using CrestApps.OrchardCore.AI.A2A.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -19,6 +20,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.A2A;
@@ -42,6 +44,18 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionHandler>();
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionSettingsHandler>();
         services.AddDisplayDriver<A2AConnection, A2AConnectionDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<A2AConnectionStep>();
     }
 }
 

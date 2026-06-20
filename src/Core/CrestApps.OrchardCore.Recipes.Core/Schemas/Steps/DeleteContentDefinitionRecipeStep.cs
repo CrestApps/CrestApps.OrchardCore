@@ -24,13 +24,15 @@ public sealed class DeleteContentDefinitionRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("DeleteContentDefinition")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("DeleteContentDefinition").Description("Recipe step discriminator. Must be 'DeleteContentDefinition'.")),
                 ("ContentTypes", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))),
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Content type names to delete.")),
                 ("ContentParts", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Reusable content part names to delete.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

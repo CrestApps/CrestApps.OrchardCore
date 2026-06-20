@@ -12,9 +12,9 @@ public sealed class OpenIdScopeRecipeStep : RecipeStepSchemaBase
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
             [
-                ("Description", RecipeStepSchemaBuilders.String()),
-                ("DisplayName", RecipeStepSchemaBuilders.String()),
-                ("ScopeName", RecipeStepSchemaBuilders.String()),
-                ("Resources", RecipeStepSchemaBuilders.String()),
+                ("Description", RecipeStepSchemaBuilders.String().Description("Human-readable explanation of what this scope grants.")),
+                ("DisplayName", RecipeStepSchemaBuilders.String().Description("Display caption shown for the scope.")),
+                ("ScopeName", RecipeStepSchemaBuilders.String().Description("Unique scope name exposed by the OpenID server.")),
+                ("Resources", RecipeStepSchemaBuilders.String().Description("Space-separated resource names associated with this scope.")),
             ]);
 }

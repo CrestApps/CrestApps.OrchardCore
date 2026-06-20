@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI;
@@ -36,7 +36,7 @@ public sealed class Startup : StartupBase
     {
         services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>());
         services.AddScoped<IAIClientProvider, OpenAIClientProvider>();
-        services.AddCoreAIProfile<ProviderAICompletionClient<OpenAIClientMarker>>(OpenAIConstants.ClientName, o =>
+        services.AddCoreAICompletionClient<ProviderAICompletionClient<OpenAIClientMarker>>(OpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["OpenAI"];
             o.Description = S["Provides AI profiles using OpenAI."];

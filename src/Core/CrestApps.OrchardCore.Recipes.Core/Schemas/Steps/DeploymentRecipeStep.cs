@@ -25,24 +25,26 @@ public sealed class DeploymentRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("deployment")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("deployment").Description("Recipe step discriminator. Must be 'deployment'.")),
                 ("Plans", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment plan name.")),
                             ("Steps", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
                                 .Items(new JsonSchemaBuilder()
                                     .Type(SchemaValueType.Object)
                                     .Properties(
-                                        ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)))
+                                        ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment step type identifier.")),
+                                        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Raw deployment step payload passed to the step serializer.")))
                                     .Required("Type", "Step")
-                                    .AdditionalProperties(true))))
+                                    .AdditionalProperties(true))
+                                .Description("Deployment steps that belong to the plan.")))
                         .Required("Name")
-                        .AdditionalProperties(true))))
+                        .AdditionalProperties(true))
+                    .Description("Deployment plans to create or update.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

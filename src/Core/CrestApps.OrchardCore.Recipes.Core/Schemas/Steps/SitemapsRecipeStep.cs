@@ -25,10 +25,11 @@ public sealed class SitemapsRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Sitemaps")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Sitemaps").Description("Recipe step discriminator. Must be 'Sitemaps'.")),
                 ("data", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))
+                    .Description("Sitemap content items or sitemap definitions to create or update.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

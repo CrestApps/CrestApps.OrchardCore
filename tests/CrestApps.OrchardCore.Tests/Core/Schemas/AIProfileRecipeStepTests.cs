@@ -1,5 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.Core.AI;
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -20,6 +24,14 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"CreatedUtc\"", json);
         Assert.Contains("\"OwnerId\"", json);
         Assert.Contains("\"Author\"", json);
+        Assert.Contains("\"AIProfileMetadata\"", json);
+        Assert.Contains("\"FunctionInvocationMetadata\"", json);
+        Assert.Contains("\"PromptTemplateMetadata\"", json);
+        Assert.Contains("\"AIProfileDataExtractionSettings\"", json);
+        Assert.Contains("\"AIProfilePostSessionSettings\"", json);
+        Assert.Contains("\"ChatModeProfileSettings\"", json);
+        Assert.Contains("\"ClaudeSessionMetadata\"", json);
+        Assert.Contains("\"CopilotSessionMetadata\"", json);
         Assert.DoesNotContain("\"ChatDeploymentId\"", json);
         Assert.DoesNotContain("\"UtilityDeploymentId\"", json);
     }
@@ -40,7 +52,92 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"OrchestratorName\"", json);
         Assert.Contains("\"Properties\"", json);
         Assert.Contains("\"Settings\"", json);
+        Assert.Contains("\"AIProfileMetadata\"", json);
+        Assert.Contains("\"AIProfileDataExtractionSettings\"", json);
+        Assert.Contains("\"ClaudeSessionMetadata\"", json);
+        Assert.Contains("\"CopilotSessionMetadata\"", json);
         Assert.DoesNotContain("\"ChatDeploymentId\"", json);
         Assert.DoesNotContain("\"UtilityDeploymentId\"", json);
+    }
+
+    [Fact]
+    public async Task AIProfileTemplateSchema_ContainsSharedAndTemplateSpecificKnownProperties()
+    {
+        var step = new AIProfileTemplateRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("\"AIProfileTemplate\"", json);
+        Assert.Contains("\"Properties\"", json);
+        Assert.Contains("\"AgentMetadata\"", json);
+        Assert.Contains("\"AIProfileMetadata\"", json);
+        Assert.Contains("\"FunctionInvocationMetadata\"", json);
+        Assert.Contains("\"AgentInvocationMetadata\"", json);
+        Assert.Contains("\"PromptTemplateMetadata\"", json);
+        Assert.Contains("\"AnalyticsMetadata\"", json);
+        Assert.Contains("\"DataSourceMetadata\"", json);
+        Assert.Contains("\"AIDataSourceRagMetadata\"", json);
+        Assert.Contains("\"DocumentsMetadata\"", json);
+        Assert.Contains("\"MemoryMetadata\"", json);
+        Assert.Contains("\"ClaudeSessionMetadata\"", json);
+        Assert.Contains("\"CopilotSessionMetadata\"", json);
+        Assert.Contains("\"AIProfileMcpMetadata\"", json);
+        Assert.Contains("\"AIProfileA2AMetadata\"", json);
+        Assert.Contains("\"ProfileTemplateMetadata\"", json);
+        Assert.Contains("\"SystemPromptTemplateMetadata\"", json);
+        Assert.Contains("\"AIChatProfileSettings\"", json);
+        Assert.Contains("\"AIProfileDataExtractionSettings\"", json);
+        Assert.Contains("\"AIProfilePostSessionSettings\"", json);
+        Assert.Contains("\"ChatModeProfileSettings\"", json);
+        Assert.Contains("\"InitialResponseHandlerName\"", json);
+        Assert.Contains("\"AgentAvailability\"", json);
+    }
+
+    [Fact]
+    public async Task McpAndA2ARecipeSchemas_ContainKnownMetadataObjects()
+    {
+        var steps = new IRecipeStep[]
+        {
+            new McpConnectionRecipeStep(),
+            new McpResourceRecipeStep(),
+            new McpPromptRecipeStep(),
+            new A2AConnectionRecipeStep(),
+            new AIDataSourceRecipeStep(),
+        };
+
+        var json = JsonSerializer.Serialize(await Task.WhenAll(steps.Select(step => step.GetSchemaAsync(TestContext.Current.CancellationToken).AsTask())));
+
+        Assert.Contains("\"SseMcpConnectionMetadata\"", json);
+        Assert.Contains("\"StdioMcpConnectionMetadata\"", json);
+        Assert.Contains("\"FtpConnectionMetadata\"", json);
+        Assert.Contains("\"SftpConnectionMetadata\"", json);
+        Assert.Contains("\"A2AConnectionMetadata\"", json);
+        Assert.Contains("\"AIDataSource\"", json);
+        Assert.Contains("\"McpConnection\"", json);
+        Assert.Contains("\"McpPrompt\"", json);
+        Assert.Contains("\"McpResource\"", json);
+    }
+
+    [Fact]
+    public async Task AIProviderConnectionsSchema_UsesRegisteredProviderNamesForSourceEnums()
+    {
+        var options = new AIOptions();
+        var connectionSources = Assert.IsAssignableFrom<IDictionary<string, AIProviderConnectionOptionsEntry>>(options.ConnectionSources);
+        connectionSources["OpenAI"] = new AIProviderConnectionOptionsEntry("OpenAI");
+        connectionSources["Azure"] = new AIProviderConnectionOptionsEntry("Azure");
+        connectionSources["openai"] = new AIProviderConnectionOptionsEntry("OpenAI");
+        var step = new AIProviderConnectionsRecipeStep(Options.Create(options));
+
+        var json = JsonNode.Parse(JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken)))!;
+        var sourceValues = json["properties"]?["Connections"]?["items"]?["properties"]?["Source"]?["enum"]?
+            .AsArray()
+            .Select(node => node?.GetValue<string>())
+            .ToArray();
+        var clientNameValues = json["properties"]?["Connections"]?["items"]?["properties"]?["ClientName"]?["enum"]?
+            .AsArray()
+            .Select(node => node?.GetValue<string>())
+            .ToArray();
+
+        Assert.Equal(["Azure", "OpenAI"], sourceValues);
+        Assert.Equal(["Azure", "OpenAI"], clientNameValues);
     }
 }

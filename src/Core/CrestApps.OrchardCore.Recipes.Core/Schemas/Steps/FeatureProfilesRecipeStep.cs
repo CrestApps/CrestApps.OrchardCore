@@ -24,24 +24,26 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("FeatureProfiles")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("FeatureProfiles").Description("Recipe step discriminator. Must be 'FeatureProfiles'.")),
                 ("FeatureProfiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier for the feature profile.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name of the feature profile.")),
                             ("FeatureRules", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
                                 .Items(new JsonSchemaBuilder()
                                     .Type(SchemaValueType.Object)
                                     .Properties(
-                                        ("Rule", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("Expression", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                                        ("Rule", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Feature rule type identifier.")),
+                                        ("Expression", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Expression evaluated by the rule.")))
                                     .Required("Rule", "Expression")
-                                    .AdditionalProperties(true))))
-                        .AdditionalProperties(true))))
+                                    .AdditionalProperties(true))
+                                .Description("Rules that determine which features belong to the profile.")))
+                        .AdditionalProperties(true))
+                    .Description("Dictionary of tenant feature profiles keyed by their technical name.")))
             .Required("name", "FeatureProfiles")
             .AdditionalProperties(true)
             .Build();

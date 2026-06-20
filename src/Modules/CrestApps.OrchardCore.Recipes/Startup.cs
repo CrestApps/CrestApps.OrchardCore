@@ -1430,6 +1430,55 @@ public sealed class AIRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI data sources recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.DataSources")]
+public sealed class AIDataSourcesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AIDataSourceRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the MCP connection recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]
+public sealed class McpConnectionsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, McpConnectionRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the MCP server recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Mcp.Server")]
+public sealed class McpServerRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, McpPromptRecipeStep>();
+        services.AddScoped<IRecipeStep, McpResourceRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the A2A recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.A2A")]
+public sealed class A2ARecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, A2AConnectionRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the TimeZones recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.TimeZones")]

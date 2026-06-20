@@ -12,8 +12,8 @@ public sealed class GitHubAuthenticationSettingsRecipeStep : RecipeStepSchemaBas
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
             [
-                ("ConsumerKey", RecipeStepSchemaBuilders.String()),
-                ("ConsumerSecret", RecipeStepSchemaBuilders.String()),
-                ("CallbackPath", RecipeStepSchemaBuilders.String()),
+                ("ConsumerKey", RecipeStepSchemaBuilders.String().Description("GitHub OAuth application client ID.")),
+                ("ConsumerSecret", RecipeStepSchemaBuilders.String().Description("GitHub OAuth application client secret.")),
+                ("CallbackPath", RecipeStepSchemaBuilders.String().Description("Relative callback path that GitHub redirects back to after sign-in.")),
             ]);
 }
