@@ -1,4 +1,6 @@
+using CrestApps.Core.AI;
 using Json.Schema;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
@@ -7,7 +9,17 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
 {
+    private readonly AIOptions _aiOptions;
     private JsonSchema _cached;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionsRecipeStep"/> class.
+    /// </summary>
+    /// <param name="aiOptions">The AI options.</param>
+    public AIProviderConnectionsRecipeStep(IOptions<AIOptions> aiOptions)
+    {
+        _aiOptions = aiOptions.Value;
+    }
 
     public string Name => "AIProviderConnections";
 
@@ -21,7 +33,7 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
         return ValueTask.FromResult(_cached);
     }
 
-    private static JsonSchema CreateSchema()
+    private JsonSchema CreateSchema()
     {
         var azureAuthenticationTypeSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
@@ -54,26 +66,38 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Description("Provider-specific connection metadata. Recipe exports keep provider settings under these metadata objects.");
 
+        var providerSources = _aiOptions.ConnectionSources.Keys
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var providerSourceSchema = CreateProviderNameSchema(
+            providerSources,
+            "Connection source/provider identifier for the registered AI provider.");
+        var clientNameSchema = CreateProviderNameSchema(
+            providerSources,
+            "Obsolete alias for Source kept for backward compatibility.");
+
         var connectionSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
-                ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection source/provider identifier (for example OpenAI, Azure, or AzureAIInference).")),
+                ("Source", providerSourceSchema),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique connection name.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name.")),
-                ("ClientName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Obsolete alias for Source kept for backward compatibility.")),
+                ("ClientName", clientNameSchema),
                 ("Endpoint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection endpoint alias for recipe imports.")),
                 ("AuthenticationType", azureAuthenticationTypeSchema.Description("Common Azure connection authentication type alias for recipe imports.")),
                 ("ApiKey", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common connection API key alias for recipe imports.")),
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Common Azure connection managed identity client ID alias for recipe imports.")),
-                ("Properties", propertiesSchema))
+                ("Properties", propertiesSchema.Description("Provider-specific connection metadata grouped by metadata object name.")))
             .Required("Name")
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProviderConnections")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AIProviderConnections").Description("Recipe step discriminator. Must be 'AIProviderConnections'.")),
                 ("Connections", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(connectionSchema)
@@ -82,5 +106,22 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
             .Required("name", "Connections")
             .AdditionalProperties(true)
             .Build();
+    }
+
+    private static JsonSchemaBuilder CreateProviderNameSchema(
+        IEnumerable<string> providerSources,
+        string description)
+    {
+        var schema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Description(description);
+        var values = providerSources.ToArray();
+
+        if (values.Length > 0)
+        {
+            schema = schema.Enum(values);
+        }
+
+        return schema;
     }
 }

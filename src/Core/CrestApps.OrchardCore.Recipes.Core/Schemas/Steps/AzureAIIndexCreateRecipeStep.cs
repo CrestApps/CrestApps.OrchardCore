@@ -24,10 +24,11 @@ public sealed class AzureAIIndexCreateRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-create")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-create").Description("Recipe step discriminator. Must be 'azureai-index-create'.")),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))
+                    .Description("Azure AI Search index definitions to create. Each object is forwarded to the Azure AI index recipe handler.")))
             .Required("name", "Indices")
             .AdditionalProperties(true)
             .Build();

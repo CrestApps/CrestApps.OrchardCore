@@ -24,10 +24,11 @@ public sealed class UrlRewritingRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("UrlRewriting")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("UrlRewriting").Description("Recipe step discriminator. Must be 'UrlRewriting'.")),
                 ("Rules", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))
+                    .Description("URL rewrite rule objects to create or update.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

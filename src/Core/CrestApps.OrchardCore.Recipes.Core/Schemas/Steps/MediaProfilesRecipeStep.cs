@@ -25,9 +25,9 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
         var profileItemSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Width", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-                ("Height", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Short note shown to editors explaining when to use the media profile.")),
+                ("Width", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Target width in pixels.")),
+                ("Height", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Target height in pixels.")),
                 ("Mode", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(MediaProfileEnums.ResizeModes)
@@ -36,14 +36,14 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
                     .Type(SchemaValueType.String)
                     .Enum(MediaProfileEnums.OutputFormats)
                     .Description("The output image format.")),
-                ("Quality", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
-                ("BackgroundColor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                ("Quality", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Encoder quality percentage used by formats that support lossy compression.")),
+                ("BackgroundColor", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Background color used by pad-style resize modes.")))
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("MediaProfiles")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("MediaProfiles").Description("Recipe step discriminator. Must be 'MediaProfiles'.")),
                 ("MediaProfiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(profileItemSchema)

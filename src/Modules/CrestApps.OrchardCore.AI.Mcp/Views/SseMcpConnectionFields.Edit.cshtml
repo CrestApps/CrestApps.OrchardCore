@@ -80,8 +80,8 @@
     </div>
 </div>
 
-@* OAuth 2.0 Client Credentials Fields *@
-<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials">
+@* OAuth 2.0 Shared Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials authentication-type-dependent-@McpClientAuthenticationType.OAuth2PrivateKeyJwt authentication-type-dependent-@McpClientAuthenticationType.OAuth2Mtls">
     <div class="ocat-wrapper">
         <label asp-for="OAuth2TokenEndpoint" class="ocat-label">@T["Token Endpoint"]</label>
         <div class="ocat-end">
@@ -96,14 +96,6 @@
         <div class="ocat-end">
             <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
             <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientSecret" class="ocat-label">@T["Client Secret"]</label>
-        <div class="ocat-end">
-            <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" />
-            <span asp-validation-for="OAuth2ClientSecret" class="text-danger"></span>
         </div>
     </div>
 
@@ -116,25 +108,19 @@
     </div>
 </div>
 
+@* OAuth 2.0 Client Credentials Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials">
+    <div class="ocat-wrapper">
+        <label asp-for="OAuth2ClientSecret" class="ocat-label">@T["Client Secret"]</label>
+        <div class="ocat-end">
+            <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" />
+            <span asp-validation-for="OAuth2ClientSecret" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
 @* OAuth 2.0 Private Key JWT Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2PrivateKeyJwt">
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2TokenEndpoint" class="ocat-label">@T["Token Endpoint"]</label>
-        <div class="ocat-end">
-            <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
-            <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
-            <span class="hint">@T["The OAuth 2.0 token endpoint URL."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientId" class="ocat-label">@T["Client ID"]</label>
-        <div class="ocat-end">
-            <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
-            <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
-        </div>
-    </div>
-
     <div class="ocat-wrapper">
         <label asp-for="OAuth2PrivateKey" class="ocat-label">@T["Private Key (PEM)"]</label>
         <div class="ocat-end">
@@ -151,35 +137,10 @@
             <span class="hint">@T["Optional key identifier included in the JWT header. Required by some identity providers."]</span>
         </div>
     </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2Scopes" class="ocat-label">@T["Scopes"]</label>
-        <div class="ocat-end">
-            <input type="text" asp-for="OAuth2Scopes" class="form-control" placeholder="api read write" />
-            <span class="hint">@T["Optional space-separated list of scopes to request."]</span>
-        </div>
-    </div>
 </div>
 
 @* OAuth 2.0 Mutual TLS (mTLS) Fields *@
 <div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2Mtls">
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2TokenEndpoint" class="ocat-label">@T["Token Endpoint"]</label>
-        <div class="ocat-end">
-            <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
-            <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
-            <span class="hint">@T["The OAuth 2.0 token endpoint URL."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2ClientId" class="ocat-label">@T["Client ID"]</label>
-        <div class="ocat-end">
-            <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
-            <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
-        </div>
-    </div>
-
     <div class="ocat-wrapper">
         <label asp-for="OAuth2ClientCertificate" class="ocat-label">@T["Client Certificate (Base64 PFX)"]</label>
         <div class="ocat-end">
@@ -195,14 +156,6 @@
             <input type="password" asp-for="OAuth2ClientCertificatePassword" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientCertificatePassword? securedPlaceholder : string.Empty)" />
             <span asp-validation-for="OAuth2ClientCertificatePassword" class="text-danger"></span>
             <span class="hint">@T["Optional password for the PFX certificate file."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="OAuth2Scopes" class="ocat-label">@T["Scopes"]</label>
-        <div class="ocat-end">
-            <input type="text" asp-for="OAuth2Scopes" class="form-control" placeholder="api read write" />
-            <span class="hint">@T["Optional space-separated list of scopes to request."]</span>
         </div>
     </div>
 </div>

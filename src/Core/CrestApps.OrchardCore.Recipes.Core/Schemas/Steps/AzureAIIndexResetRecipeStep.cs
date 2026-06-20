@@ -24,11 +24,12 @@ public sealed class AzureAIIndexResetRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-reset")),
-                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-reset").Description("Recipe step discriminator. Must be 'azureai-index-reset'.")),
+                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, reset all Azure AI Search indexes and ignore the Indices list.")),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Specific Azure AI Search index names to reset when IncludeAll is false.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

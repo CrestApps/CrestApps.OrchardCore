@@ -26,7 +26,7 @@ This is especially useful when recipes are generated programmatically (e.g., by 
 
 At runtime the feature can compose all known step schemas into a single "recipe" schema for an object with a `steps` array.
 
-The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instantiates both parameterless and service-backed `IRecipeStep` implementations, so exported reference schemas stay aligned with steps such as `AdminMenu`, `ContentDefinition`, `Content`, and other composed schema providers.
+The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instantiates both parameterless and service-backed `IRecipeStep` implementations, including steps that depend on registered option snapshots such as `AIDeployment` and `AIProviderConnections`, so exported reference schemas stay aligned with the runtime schema providers.
 
 ## AI profile creation from templates
 
@@ -57,6 +57,14 @@ Behavior:
 This means the step behaves like: **create profile from profile template, then apply explicit recipe overrides**.
 
 The schema for this step intentionally mirrors the regular `AIProfile` step for profile fields such as `Name`, `DisplayText`, `Description`, `Type`, `PromptTemplate`, `PromptSubject`, `OrchestratorName`, `ChatDeploymentName`, `UtilityDeploymentName`, `CreatedUtc`, `OwnerId`, `Author`, `Properties`, and `Settings`, while adding the required `TemplateId` selector that must resolve to a Profile template.
+
+For both `AIProfile` and `CreateAIProfileFromTemplate`, the `Properties` and `Settings` objects now enumerate the known nested objects while still allowing extra keys for feature-specific extensions. Known `Properties` entries include metadata such as `AIProfileMetadata`, `FunctionInvocationMetadata`, `AgentInvocationMetadata`, `PromptTemplateMetadata`, `AnalyticsMetadata`, `DataSourceMetadata`, `AIDataSourceRagMetadata`, `DocumentsMetadata`, `MemoryMetadata`, `ClaudeSessionMetadata`, `CopilotSessionMetadata`, `AIProfileMcpMetadata`, and `AIProfileA2AMetadata`. Known `Settings` entries include `AIProfileSettings`, `ResponseHandlerProfileSettings`, `AIChatProfileSettings`, `AIProfileDataExtractionSettings`, `AIProfilePostSessionSettings`, and `ChatModeProfileSettings`.
+
+The `AIProfileTemplate` recipe step now extends that catalog with template-specific `ProfileTemplateMetadata` and `SystemPromptTemplateMetadata` objects, and it also documents the settings-style envelopes that templates persist in `Properties`. That makes profile templates expose the same shared AI metadata as profiles while still surfacing the template-only objects that the runtime understands.
+
+The Recipes feature now also exports dedicated step schemas for `AIDataSource`, `McpConnection`, `McpPrompt`, `McpResource`, and `A2AConnection`. Their `Properties` objects document the known built-in metadata envelopes such as `SseMcpConnectionMetadata`, `StdioMcpConnectionMetadata`, `FtpConnectionMetadata`, `SftpConnectionMetadata`, and `A2AConnectionMetadata`, while still allowing extra keys for future extensions.
+
+More broadly, the exported recipe-step schemas now attach descriptions to the known properties across the built-in CrestApps recipe steps so human authors and AI tools can discover what each property is for directly from the schema surface.
 
 ## Creating a Recipe Step
 

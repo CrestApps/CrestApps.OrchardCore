@@ -37,15 +37,15 @@ public sealed class CreateAIProfileFromTemplateRecipeStep : IRecipeStep
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the orchestrator name.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the chat deployment technical name.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Overrides the utility deployment technical name.")),
-                ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Overrides extended profile properties including AIProfileMetadata.")),
-                ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Overrides profile settings.")))
+                ("Properties", AIProfileRecipeSchemaBuilder.BuildPropertiesSchema("Overrides extended profile properties. Known metadata objects are listed here, and additional feature-specific objects are also allowed.")),
+                ("Settings", AIProfileRecipeSchemaBuilder.BuildSettingsSchema("Overrides profile settings. Known settings objects are listed here, and additional feature-specific settings are also allowed.")))
             .Required("TemplateId")
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateAIProfileFromTemplate")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("CreateAIProfileFromTemplate").Description("Recipe step discriminator. Must be 'CreateAIProfileFromTemplate'.")),
                 ("Profiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(profileSchema)

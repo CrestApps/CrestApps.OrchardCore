@@ -182,3 +182,5 @@ services.AddAIDeploymentProvider("CustomProvider", options =>
 ```
 
 When you create or edit a deployment in the admin UI, the connection picker is populated from the provider connection catalog for that provider, so deployments always point at the stored connection record by name.
+
+The `AIProviderConnections` recipe step schema derives the `Source` and backward-compatible `ClientName` enums from the currently registered connection providers, and the `AIDeployment` step derives `ClientName` from the currently registered provider options. Recipe tooling can therefore suggest the provider names that are actually available in the tenant.

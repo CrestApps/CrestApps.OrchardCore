@@ -12,9 +12,9 @@ public sealed class TwitterSettingsRecipeStep : RecipeStepSchemaBase
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
             [
-                ("ConsumerKey", RecipeStepSchemaBuilders.String()),
-                ("ConsumerSecret", RecipeStepSchemaBuilders.String()),
-                ("AccessToken", RecipeStepSchemaBuilders.String()),
-                ("AccessTokenSecret", RecipeStepSchemaBuilders.String()),
+                ("ConsumerKey", RecipeStepSchemaBuilders.String().Description("Twitter/X API consumer key.")),
+                ("ConsumerSecret", RecipeStepSchemaBuilders.String().Description("Twitter/X API consumer secret.")),
+                ("AccessToken", RecipeStepSchemaBuilders.String().Description("Twitter/X API access token used for authenticated requests.")),
+                ("AccessTokenSecret", RecipeStepSchemaBuilders.String().Description("Twitter/X API access token secret.")),
             ]);
 }

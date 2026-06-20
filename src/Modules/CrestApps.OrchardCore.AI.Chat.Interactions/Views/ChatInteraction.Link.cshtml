@@ -6,7 +6,7 @@
 @{
     string sourceName = Model.Source;
 
-    if (!AIOptions.Value.ProfileSources.TryGetValue(sourceName, out var source))
+    if (!AIOptions.Value.CompletionClients.TryGetValue(sourceName, out var source))
     {
         return;
     }
