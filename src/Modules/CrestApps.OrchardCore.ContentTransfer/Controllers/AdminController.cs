@@ -877,7 +877,9 @@ public sealed class AdminController : Controller, IUpdateModel
             contentTypes.Add(new SelectListItem(contentTypeDefinition.DisplayName, contentTypeDefinition.Name));
         }
 
-        return contentTypes;
+        return contentTypes
+            .OrderBy(item => item.Text ?? item.Value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private async Task<IShape> BuildListViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
