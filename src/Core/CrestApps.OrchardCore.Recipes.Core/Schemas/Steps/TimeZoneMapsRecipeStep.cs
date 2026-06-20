@@ -26,7 +26,7 @@ public sealed class TimeZoneMapsRecipeStep : RecipeStepSchemaBase
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("TimeZoneMaps")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("TimeZoneMaps").Description("Recipe step discriminator. Must be 'TimeZoneMaps'.")),
                 ("Maps", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(mapSchema)

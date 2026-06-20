@@ -24,11 +24,12 @@ public sealed class RebuildIndexRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("RebuildIndex")),
-                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("RebuildIndex").Description("Recipe step discriminator. Must be 'RebuildIndex'.")),
+                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, rebuild all index profiles and ignore the IndexNames list.")),
                 ("IndexNames", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Description("Specific index profile names to rebuild when IncludeAll is false.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

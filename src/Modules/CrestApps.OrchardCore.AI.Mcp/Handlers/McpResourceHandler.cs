@@ -105,8 +105,10 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
             var uri = resourceData[nameof(Resource.Uri)]?.ToString();
             if (!string.IsNullOrWhiteSpace(uri))
             {
-                // Build the full URI: {source}://{itemId}/{userPath}
-                entry.Resource.Uri = BuildUri(entry.Source, entry.ItemId, uri);
+                // Accept either a relative path segment or an already-expanded MCP URI.
+                entry.Resource.Uri = IsFullUri(uri, entry.Source)
+                    ? uri
+                    : BuildUri(entry.Source, entry.ItemId, uri);
             }
 
             var name = resourceData[nameof(Resource.Name)]?.ToString();
@@ -177,4 +179,8 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         // Strip the leading slash.
         return remainder.TrimStart('/');
     }
+
+    private static bool IsFullUri(string value, string source)
+        => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+            string.Equals(uri.Scheme, source, StringComparison.OrdinalIgnoreCase);
 }

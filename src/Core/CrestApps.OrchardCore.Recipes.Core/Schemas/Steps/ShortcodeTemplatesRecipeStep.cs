@@ -24,19 +24,20 @@ public sealed class ShortcodeTemplatesRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ShortcodeTemplates")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ShortcodeTemplates").Description("Recipe step discriminator. Must be 'ShortcodeTemplates'.")),
                 ("ShortcodeTemplates", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Usage", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("DefaultValue", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Shortcode template content.")),
+                            ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Short help text shown to editors.")),
+                            ("Usage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Example usage snippet shown to editors.")),
+                            ("DefaultValue", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Default shortcode output or value.")),
                             ("Categories", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
+                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                                .Description("Editor categories assigned to the shortcode template.")))
                         .AdditionalProperties(true))
                     .Description("A dictionary keyed by shortcode name.")))
             .Required("name", "ShortcodeTemplates")

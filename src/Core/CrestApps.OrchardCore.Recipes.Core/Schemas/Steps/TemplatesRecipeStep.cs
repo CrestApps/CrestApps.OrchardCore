@@ -25,14 +25,14 @@ public sealed class TemplatesRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Templates")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Templates").Description("Recipe step discriminator. Must be 'Templates'.")),
                 ("Templates", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Liquid template content.")),
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of the template.")))
                         .AdditionalProperties(true))
                     .Description("A dictionary keyed by template name. Each value has a Content property with Liquid markup.")))
             .Required("name", "Templates")

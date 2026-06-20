@@ -24,14 +24,14 @@ public sealed class AdminTemplatesRecipeStep : IRecipeStep
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminTemplates")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("AdminTemplates").Description("Recipe step discriminator. Must be 'AdminTemplates'.")),
                 ("AdminTemplates", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                            ("Content", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Liquid template content.")),
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of what the template customizes.")))
                         .AdditionalProperties(true))
                     .Description("A dictionary keyed by template name. Each value has a Content property with Liquid markup.")))
             .Required("name", "AdminTemplates")

@@ -97,6 +97,8 @@ Configure the following:
 
 The module authenticates to the token endpoint using the client certificate for mutual TLS authentication.
 
+In the admin editor, **Token Endpoint**, **Client ID**, and **Scopes** are shared across the OAuth 2.0 auth variants so the saved SSE connection keeps the values you enter when switching between OAuth-based authentication methods.
+
 #### Custom Headers
 
 For advanced scenarios, provide a JSON object of HTTP header key-value pairs. Use this when none of the standard authentication types fit your needs.

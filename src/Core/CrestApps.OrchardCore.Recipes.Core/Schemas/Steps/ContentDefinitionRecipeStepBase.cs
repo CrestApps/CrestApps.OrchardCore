@@ -40,7 +40,7 @@ public abstract class ContentDefinitionRecipeStepBase(
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(Name)),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(Name).Description($"Recipe step discriminator. Must be '{Name}'.")),
                 ("ContentTypes", BuildContentTypesArray(partsItem)),
                 ("ContentParts", BuildContentPartsArray(fieldsItem)))
             .Required(RequiredProperties.ToArray())
@@ -65,12 +65,13 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Items(new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
                 .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("Settings", TypeSettingsSchema()),
+                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical content type name.")),
+                    ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display name shown in the Orchard admin UI.")),
+                    ("Settings", TypeSettingsSchema().Description("Content type settings object, including standard Orchard ContentTypeSettings.")),
                     ("ContentTypePartDefinitionRecords", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Array)
-                        .Items(partsItem)))
+                        .Items(partsItem)
+                        .Description("Parts attached to this content type.")))
                 .Required("Name", "DisplayName", "Settings", "ContentTypePartDefinitionRecords")
                 .AdditionalProperties(true));
     }
@@ -84,13 +85,14 @@ public abstract class ContentDefinitionRecipeStepBase(
                     ("ContentTypeSettings", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Creatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Listable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Draftable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Versionable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                            ("Securable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                            ("Creatable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether editors can create new items of this type.")),
+                            ("Listable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether items of this type appear in content lists.")),
+                            ("Draftable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether items of this type support drafts.")),
+                            ("Versionable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether multiple versions are retained.")),
+                            ("Securable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether item-level permissions are enabled.")))
                         .Required("Creatable", "Listable", "Draftable", "Versionable", "Securable")
-                        .AdditionalProperties(false)))
+                        .AdditionalProperties(false)
+                        .Description("Standard Orchard Core content type settings.")))
                 .AdditionalProperties(true),
             new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
@@ -104,11 +106,12 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Items(new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
                 .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)),
+                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Reusable content part name.")),
+                    ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Part definition settings, including part-specific settings envelopes.")),
                     ("ContentPartFieldDefinitionRecords", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Array)
-                        .Items(fieldsItem)))
+                        .Items(fieldsItem)
+                        .Description("Field definitions that belong to this reusable part.")))
                 .Required("Name", "Settings", "ContentPartFieldDefinitionRecords")
                 .AdditionalProperties(true));
     }
@@ -122,9 +125,10 @@ public abstract class ContentDefinitionRecipeStepBase(
                     .Type(SchemaValueType.String)
                     .AnyOf(
                         new JsonSchemaBuilder().Enum(knownPartNames),
-                        new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern(@"^(?!.*Field$).+"))),
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Settings", GenericSubSettings("ContentTypePartSettings")))
+                        new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern(@"^(?!.*Field$).+"))
+                    .Description("Attached part type name. Known part names are enumerated when available.")),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Attachment name used on the content type. Usually matches PartName.")),
+                ("Settings", GenericSubSettings("ContentTypePartSettings").Description("Attachment settings for this part on the content type.")))
             .Required("PartName", "Name", "Settings")
             .AdditionalProperties(true);
 
@@ -145,9 +149,10 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Properties(
                 ("FieldName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(fieldTypeNames)),
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("Settings", GenericSubSettings("ContentPartFieldSettings")))
+                    .Enum(fieldTypeNames)
+                    .Description("Field type name. Known Orchard field types are enumerated from the current tenant.")),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Field name used inside the content part.")),
+                ("Settings", GenericSubSettings("ContentPartFieldSettings").Description("Field definition settings, including Orchard placement/editor settings and field-specific settings envelopes.")))
             .Required("FieldName", "Name", "Settings")
             .AdditionalProperties(true);
 
@@ -169,12 +174,13 @@ public abstract class ContentDefinitionRecipeStepBase(
                 (key, new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(
-                        ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Position", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("DisplayMode", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                        ("Editor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                    .AdditionalProperties(false)))
+                        ("DisplayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display label shown in the admin UI.")),
+                        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description shown to editors.")),
+                        ("Position", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Placement position used by Orchard when rendering the part or field.")),
+                        ("DisplayMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Display mode selected for the part or field.")),
+                        ("Editor", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Editor name used to edit the part or field.")))
+                    .AdditionalProperties(false)
+                    .Description($"Standard Orchard settings stored under '{key}'.")))
             .AdditionalProperties(true);
     }
 

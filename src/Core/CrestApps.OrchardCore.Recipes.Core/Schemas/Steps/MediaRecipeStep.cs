@@ -25,13 +25,13 @@ public sealed class MediaRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("media")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("media").Description("Recipe step discriminator. Must be 'media'.")),
                 ("Files", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("TargetPath", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("TargetPath", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Media library path where the file will be stored.")),
                             ("Path", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Description("Alias for TargetPath. Path where the content will be written.")),
@@ -45,7 +45,8 @@ public sealed class MediaRecipeStep : IRecipeStep
                                 .Type(SchemaValueType.String)
                                 .Description("Base64-encoded content of the file.")))
                         .Required("TargetPath")
-                        .AdditionalProperties(true))))
+                        .AdditionalProperties(true))
+                    .Description("Media files to import.")))
             .Required("name", "Files")
             .AdditionalProperties(true)
             .Build();

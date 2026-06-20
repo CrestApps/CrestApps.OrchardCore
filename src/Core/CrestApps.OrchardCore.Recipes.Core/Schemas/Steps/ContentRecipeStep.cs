@@ -37,11 +37,12 @@ public sealed class ContentRecipeStep : IRecipeStep
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("content")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("content").Description("Recipe step discriminator. Must be 'content'.")),
                 ("data", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(contentItemSchema)
-                    .MinItems(1)))
+                    .MinItems(1)
+                    .Description("Content items to import or update. Each item must match the schema for its content type.")))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();
