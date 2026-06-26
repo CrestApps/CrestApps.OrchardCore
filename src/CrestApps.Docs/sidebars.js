@@ -101,6 +101,8 @@ const sidebars = {
                 'modules/index',
                 'modules/content-access-control',
                 'modules/content-fields',
+                'modules/phone-number-verifications',
+                'modules/phone-number-verifications-abstractapi',
                 'modules/recipes',
                 'modules/resources',
                 'modules/roles',

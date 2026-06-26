@@ -1,0 +1,74 @@
+@using CrestApps.OrchardCore.PhoneNumberVerifications.Models
+@model AbstractApiPhoneNumberVerificationSettingsViewModel
+
+<h4 class="card-title">@T["AbstractAPI"]</h4>
+<p class="hint">@T["Configure the connection to the AbstractAPI Phone Validation service."]</p>
+
+<div class="mb-3">
+    <label asp-for="Endpoint" class="form-label">@T["Endpoint"]</label>
+    <input type="url" class="form-control" asp-for="Endpoint" placeholder="https://phonevalidation.abstractapi.com/v1/" />
+    <span asp-validation-for="Endpoint" class="text-danger"></span>
+    <span class="hint">@T["The AbstractAPI Phone Validation endpoint."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
+    <select asp-for="AuthenticationType" class="form-select">
+        <option value="@PhoneNumberVerificationAuthenticationType.ApiKey">@T["API key"]</option>
+        <option value="@PhoneNumberVerificationAuthenticationType.Basic">@T["Basic"]</option>
+        <option value="@PhoneNumberVerificationAuthenticationType.ClientCredentials">@T["Client credentials"]</option>
+    </select>
+    <span class="hint">@T["The authentication strategy used when calling the provider. AbstractAPI uses API key authentication."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+    <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder='@T["Enter a new API key to replace the saved key"]' />
+    <span asp-validation-for="ApiKey" class="text-danger"></span>
+    @if (Model.HasApiKey)
+    {
+        <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The API key provided by AbstractAPI for authenticating requests."]</span>
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="Username" class="form-label">@T["Username"]</label>
+    <input type="text" class="form-control" asp-for="Username" autocomplete="off" />
+    <span class="hint">@T["The username used when basic authentication is selected."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Password" class="form-label">@T["Password"]</label>
+    <input type="password" class="form-control" asp-for="Password" autocomplete="off" placeholder='@T["Enter a new password to replace the saved value"]' />
+    @if (Model.HasPassword)
+    {
+        <span class="hint text-success">@T["A password has been securely stored. Enter a new value to replace it, or leave empty to keep the existing password."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The password used when basic authentication is selected."]</span>
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
+    <input type="text" class="form-control" asp-for="ClientId" autocomplete="off" />
+    <span class="hint">@T["The client identifier used when client credentials authentication is selected."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ClientSecret" class="form-label">@T["Client secret"]</label>
+    <input type="password" class="form-control" asp-for="ClientSecret" autocomplete="off" placeholder='@T["Enter a new client secret to replace the saved value"]' />
+    @if (Model.HasClientSecret)
+    {
+        <span class="hint text-success">@T["A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The client secret used when client credentials authentication is selected."]</span>
+    }
+</div>

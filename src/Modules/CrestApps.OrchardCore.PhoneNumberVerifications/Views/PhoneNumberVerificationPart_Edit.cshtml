@@ -1,0 +1,61 @@
+@model PhoneNumberVerificationPartViewModel
+
+@{
+    var statusClass = Model.VerificationStatus switch
+    {
+        PhoneNumberVerificationStatus.Verified => "text-bg-success",
+        PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+        PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<div class="card">
+    <div class="card-header">@T["Phone Number Verification"]</div>
+    <div class="card-body">
+        <p class="hint">@T["This data is managed automatically by the Phone Number Verifications module. It is updated during background revalidation, explicit verification, or just-in-time verification."]</p>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9"><span class="badge @statusClass">@Model.VerificationStatus.ToString()</span></dd>
+
+            @if (!string.IsNullOrEmpty(Model.NormalizedPhoneNumber))
+            {
+                <dt class="col-sm-3">@T["Normalized number"]</dt>
+                <dd class="col-sm-9">@Model.NormalizedPhoneNumber</dd>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.VerificationProvider))
+            {
+                <dt class="col-sm-3">@T["Provider"]</dt>
+                <dd class="col-sm-9">@Model.VerificationProvider</dd>
+            }
+
+            @if (Model.LineType != PhoneNumberLineType.Unknown)
+            {
+                <dt class="col-sm-3">@T["Line type"]</dt>
+                <dd class="col-sm-9">@Model.LineType.ToString()</dd>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Carrier))
+            {
+                <dt class="col-sm-3">@T["Carrier"]</dt>
+                <dd class="col-sm-9">@Model.Carrier</dd>
+            }
+
+            @if (Model.LastVerifiedUtc.HasValue)
+            {
+                <dt class="col-sm-3">@T["Last verified"]</dt>
+                <dd class="col-sm-9">@Model.LastVerifiedUtc.Value.ToString("g")</dd>
+            }
+
+            @if (Model.NextVerificationDueUtc.HasValue)
+            {
+                <dt class="col-sm-3">@T["Next verification due"]</dt>
+                <dd class="col-sm-9">@Model.NextVerificationDueUtc.Value.ToString("g")</dd>
+            }
+
+            <dt class="col-sm-3">@T["Attempts"]</dt>
+            <dd class="col-sm-9">@Model.VerificationAttemptCount</dd>
+        </dl>
+    </div>
+</div>

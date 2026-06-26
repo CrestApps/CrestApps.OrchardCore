@@ -20,6 +20,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumberVerifications.Abstractions/CrestApps.OrchardCore.PhoneNumberVerifications.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
@@ -73,6 +74,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumberVerifications/CrestApps.OrchardCore.PhoneNumberVerifications.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
