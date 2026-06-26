@@ -79,6 +79,22 @@ public sealed class PhoneNumberVerificationsStartupTests
     }
 
     [Fact]
+    public void VeriphoneStartup_ShouldRegisterProviderAndSettingsDriver()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        new VeriphoneStartup().ConfigureServices(services);
+
+        // Assert
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IPhoneNumberVerificationProvider) &&
+            descriptor.KeyedImplementationType == typeof(VeriphonePhoneNumberVerificationProvider) &&
+            Equals(descriptor.ServiceKey, PhoneNumberVerificationsConstants.Providers.Veriphone));
+    }
+
+    [Fact]
     public void OmnichannelContactVerificationStartup_ShouldRegisterContentHandler()
     {
         // Arrange

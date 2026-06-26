@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.PhoneNumberVerifications.Models
+@model VeriphonePhoneNumberVerificationSettingsViewModel
+
+<h4 class="card-title">@T["Veriphone"]</h4>
+<p class="hint">@T["Configure the connection to the Veriphone phone number validation service."]</p>
+
+<div class="mb-3">
+    <label asp-for="Endpoint" class="form-label">@T["Endpoint"]</label>
+    <input type="url" class="form-control" asp-for="Endpoint" placeholder="@VeriphonePhoneNumberVerificationSettings.DefaultEndpoint" />
+    <span asp-validation-for="Endpoint" class="text-danger"></span>
+    <span class="hint">@T["The Veriphone phone number verification endpoint."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+    <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder='@T["Enter a new API key to replace the saved key"]' />
+    <span asp-validation-for="ApiKey" class="text-danger"></span>
+    @if (Model.HasApiKey)
+    {
+        <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The API key provided by Veriphone for authenticating requests."]</span>
+    }
+</div>

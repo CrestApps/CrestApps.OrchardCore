@@ -103,6 +103,7 @@ const sidebars = {
                 'modules/content-fields',
                 'modules/phone-number-verifications',
                 'modules/phone-number-verifications-abstractapi',
+                'modules/phone-number-verifications-veriphone',
                 'modules/recipes',
                 'modules/resources',
                 'modules/roles',

@@ -24,6 +24,11 @@ public static class PhoneNumberVerificationsConstants
         /// The AbstractAPI phone number verification provider feature.
         /// </summary>
         public const string AbstractApi = "CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi";
+
+        /// <summary>
+        /// The Veriphone phone number verification provider feature.
+        /// </summary>
+        public const string Veriphone = "CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone";
     }
 
     /// <summary>
@@ -35,6 +40,11 @@ public static class PhoneNumberVerificationsConstants
         /// The AbstractAPI provider key.
         /// </summary>
         public const string AbstractApi = "AbstractApi";
+
+        /// <summary>
+        /// The Veriphone provider key.
+        /// </summary>
+        public const string Veriphone = "Veriphone";
     }
 
     /// <summary>

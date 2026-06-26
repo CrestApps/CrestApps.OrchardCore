@@ -19,6 +19,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [DNC Registry](dnc-registry) | `CrestApps.OrchardCore.DncRegistry` | National do-not-call registry integrations and import compliance settings |
 | [Phone Number Verifications](phone-number-verifications) | `CrestApps.OrchardCore.PhoneNumberVerifications` | Provider-agnostic phone number verification with content-part storage, reporting, and background revalidation |
 | [Phone Number Verifications - AbstractAPI](phone-number-verifications-abstractapi) | `CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi` | AbstractAPI provider for phone number verification |
+| [Phone Number Verifications - Veriphone](phone-number-verifications-veriphone) | `CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone` | Veriphone provider for phone number verification |
 | [Recipes](recipes) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes |
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |

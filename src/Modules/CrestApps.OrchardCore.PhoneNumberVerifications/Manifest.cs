@@ -33,3 +33,14 @@ using OrchardCore.Modules.Manifest;
         PhoneNumberVerificationsConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Veriphone Phone Number Verification",
+    Id = PhoneNumberVerificationsConstants.Features.Veriphone,
+    Category = "Communication",
+    Description = "Verifies phone numbers using the Veriphone phone number validation service.",
+    Dependencies =
+    [
+        PhoneNumberVerificationsConstants.Features.Area,
+    ]
+)]
