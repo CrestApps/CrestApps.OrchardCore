@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;

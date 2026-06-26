@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 

@@ -1,5 +1,4 @@
 using System.Data;
-using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.DncRegistry;
@@ -8,7 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;

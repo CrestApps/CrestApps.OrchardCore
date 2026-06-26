@@ -16,7 +16,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;

@@ -1,5 +1,4 @@
 using System.Data;
-using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using System.Globalization;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;
@@ -7,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.ContentFields.Fields;
