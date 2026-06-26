@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.PhoneNumberVerifications.Indexes;
+using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,14 +7,14 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using YesSql;
 
 namespace CrestApps.OrchardCore.PhoneNumberVerifications.BackgroundTasks;
 
 /// <summary>
-/// Periodically revalidates contact phone numbers that have never been verified or whose
-/// verification has expired. Work is processed in resilient batches so the task scales and
-/// tolerates provider failures.
+/// Periodically revalidates content items that have stored phone numbers whose verification
+/// is due. Work is processed in resilient batches so the task scales and tolerates provider failures.
 /// </summary>
 [BackgroundTask(
     Title = "Phone Number Revalidation",
@@ -55,11 +56,14 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
             var session = scope.ServiceProvider.GetRequiredService<ISession>();
             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-            var manager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
+            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
+            var verificationManager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
+            var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
             var now = clock.UtcNow;
 
             var batch = await session.Query<ContentItem, PhoneNumberVerificationPartIndex>(index =>
-                    index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now)
+                    (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)
+                    && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
                 .OrderBy(index => index.ContentItemId)
                 .Take(BatchSize)
                 .ListAsync(cancellationToken);
@@ -82,7 +86,20 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
                 try
                 {
-                    await manager.VerifyContentItemAsync(contentItem, cancellationToken: cancellationToken);
+                    var phoneNumber = GetPhoneNumber(contentItem);
+
+                    if (string.IsNullOrWhiteSpace(phoneNumber))
+                    {
+                        continue;
+                    }
+
+                    var result = await verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+
+                    contentItem.AlterPhoneNumberVerificationResult(
+                        result,
+                        revalidationIntervalDays: settings.RevalidationIntervalDays);
+
+                    await session.SaveAsync(contentItem);
                 }
                 catch (Exception ex)
                 {
@@ -92,5 +109,27 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
             await session.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private static string GetPhoneNumber(ContentItem contentItem)
+    {
+        if (!contentItem.TryGet<PhoneNumberVerificationPart>(out var part))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(part.NormalizedPhoneNumber))
+        {
+            return part.NormalizedPhoneNumber;
+        }
+
+        if (!string.IsNullOrWhiteSpace(part.PhoneNumber))
+        {
+            return part.PhoneNumber;
+        }
+
+        return part.TryGetPhoneNumberVerificationResult(out var result)
+            ? result.NormalizedPhoneNumber ?? result.PhoneNumber
+            : null;
     }
 }

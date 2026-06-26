@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using OrchardCore.ContentManagement;
@@ -26,6 +25,8 @@ public sealed class PhoneNumberVerificationPartIndexProvider : IndexProvider<Con
                 var index = new PhoneNumberVerificationPartIndex
                 {
                     ContentItemId = contentItem.ContentItemId,
+                    PhoneNumber = part.PhoneNumber,
+                    NormalizedPhoneNumber = part.NormalizedPhoneNumber,
                     IsVerified = part.VerificationStatus == PhoneNumberVerificationStatus.Verified,
                     VerificationStatus = part.VerificationStatus,
                     VerificationProvider = part.VerificationProvider,
@@ -33,28 +34,16 @@ public sealed class PhoneNumberVerificationPartIndexProvider : IndexProvider<Con
                     NextVerificationDueUtc = part.NextVerificationDueUtc,
                 };
 
-                if (!string.IsNullOrEmpty(part.VerificationResultJson))
+                if (part.TryGetPhoneNumberVerificationResult(out var result))
                 {
-                    PhoneNumberVerificationResult result = null;
-
-                    try
-                    {
-                        result = JsonSerializer.Deserialize<PhoneNumberVerificationResult>(part.VerificationResultJson, PhoneNumberVerificationSerialization.Options);
-                    }
-                    catch (JsonException)
-                    {
-                        result = null;
-                    }
-
-                    if (result is not null)
-                    {
-                        index.PhoneNumber = result.NormalizedPhoneNumber ?? result.PhoneNumber;
-                        index.CountryCode = result.CountryCode;
-                        index.Carrier = result.Carrier;
-                        index.IsMobile = result.IsMobile;
-                        index.IsLandline = result.IsLandline;
-                        index.IsVoip = result.IsVoip;
-                    }
+                    index.PhoneNumber ??= result.PhoneNumber;
+                    index.NormalizedPhoneNumber ??= result.NormalizedPhoneNumber ?? result.PhoneNumber;
+                    index.CountryCode = result.CountryCode;
+                    index.Carrier = result.Carrier;
+                    index.IsMobile = result.IsMobile;
+                    index.IsLandline = result.IsLandline;
+                    index.IsVoip = result.IsVoip;
+                    index.LineStatus = result.LineStatus;
                 }
 
                 return index;

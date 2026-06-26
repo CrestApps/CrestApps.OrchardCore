@@ -1,8 +1,10 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using CrestApps.OrchardCore.PhoneNumberVerifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 using YesSql;
@@ -17,7 +19,7 @@ public sealed class ReportController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
-    private readonly IPhoneNumberVerificationManager _verificationManager;
+    private readonly PhoneNumberVerificationProviderOptions _providerOptions;
     private readonly IClock _clock;
 
     /// <summary>
@@ -25,17 +27,17 @@ public sealed class ReportController : Controller
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="session">The YesSql session used to query the verification index.</param>
-    /// <param name="verificationManager">The verification manager used to enumerate providers.</param>
+    /// <param name="providerOptions">The registered verification providers.</param>
     /// <param name="clock">The clock.</param>
     public ReportController(
         IAuthorizationService authorizationService,
         ISession session,
-        IPhoneNumberVerificationManager verificationManager,
+        IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
         IClock clock)
     {
         _authorizationService = authorizationService;
         _session = session;
-        _verificationManager = verificationManager;
+        _providerOptions = providerOptions.Value;
         _clock = clock;
     }
 
@@ -80,7 +82,7 @@ public sealed class ReportController : Controller
             VerificationSuccessRate = ComputeSuccessRate(verified, invalid, failures),
         };
 
-        foreach (var provider in _verificationManager.GetProviders())
+        foreach (var provider in _providerOptions.Providers.Values)
         {
             var usage = await CountAsync(index => index.VerificationProvider == provider.Key);
 
@@ -90,7 +92,7 @@ public sealed class ReportController : Controller
         return View(model);
     }
 
-    private Task<int> CountAsync(System.Linq.Expressions.Expression<Func<PhoneNumberVerificationPartIndex, bool>> predicate)
+    private Task<int> CountAsync(Expression<Func<PhoneNumberVerificationPartIndex, bool>> predicate)
         => _session.QueryIndex(predicate).CountAsync();
 
     private static double ComputeSuccessRate(int verified, int invalid, int failures)

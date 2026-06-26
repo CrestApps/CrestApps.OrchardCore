@@ -115,6 +115,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         {
             PhoneNumber = phoneNumber,
             NormalizedPhoneNumber = normalized,
+            NationalFormat = parsed.LocalFormat,
             IsValid = parsed.Valid,
             IsReachable = parsed.Valid,
             IsMobile = lineType == PhoneNumberLineType.Mobile,

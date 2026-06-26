@@ -25,8 +25,6 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IPhoneNumberVerificationManager, DefaultPhoneNumberVerificationManager>();
-        services.AddScoped<IPhoneNumberVerificationStore, ContentItemPhoneNumberVerificationStore>();
-        services.AddScoped<IContentPhoneNumberResolver, DefaultContentPhoneNumberResolver>();
 
         services.AddSiteDisplayDriver<PhoneNumberVerificationsSettingsDisplayDriver>();
         services.AddNavigationProvider<PhoneNumberVerificationsAdminMenu>();

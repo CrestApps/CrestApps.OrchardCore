@@ -27,14 +27,6 @@ public sealed class PhoneNumberVerificationsStartupTests
             descriptor.ImplementationType == typeof(DefaultPhoneNumberVerificationManager));
 
         Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(IPhoneNumberVerificationStore) &&
-            descriptor.ImplementationType == typeof(ContentItemPhoneNumberVerificationStore));
-
-        Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(IContentPhoneNumberResolver) &&
-            descriptor.ImplementationType == typeof(DefaultContentPhoneNumberResolver));
-
-        Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IIndexProvider) &&
             descriptor.ImplementationType?.Name == "PhoneNumberVerificationPartIndexProvider");
 

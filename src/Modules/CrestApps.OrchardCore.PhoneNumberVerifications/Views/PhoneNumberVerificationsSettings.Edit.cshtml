@@ -1,14 +1,6 @@
 @model PhoneNumberVerificationsSettingsViewModel
 
-<p class="alert alert-info">@T["Configure how phone numbers are verified, how often verification is revalidated, and which provider is used by default. Enable a provider feature to make it available below."]</p>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnableJustInTimeVerification" />
-        <label class="form-check-label" asp-for="EnableJustInTimeVerification">@T["Enable just-in-time verification"]</label>
-        <span class="hint dashed">@T["When enabled, trusted operations (such as sending SMS or placing calls) verify a phone number on demand if its verification has expired. When disabled, only stored results are used."]</span>
-    </div>
-</div>
+<p class="alert alert-info">@T["Configure how often stored phone number verification results are revalidated and which provider is used by default. Enable a provider feature to make it available below."]</p>
 
 <div class="mb-3">
     <label asp-for="RevalidationIntervalDays" class="form-label">@T["Revalidation interval (days)"]</label>

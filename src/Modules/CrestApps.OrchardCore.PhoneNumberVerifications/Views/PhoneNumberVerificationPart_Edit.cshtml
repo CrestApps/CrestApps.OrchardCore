@@ -13,7 +13,7 @@
 <div class="card">
     <div class="card-header">@T["Phone Number Verification"]</div>
     <div class="card-body">
-        <p class="hint">@T["This data is managed automatically by the Phone Number Verifications module. It is updated during background revalidation, explicit verification, or just-in-time verification."]</p>
+        <p class="hint">@T["This data is managed automatically by the Phone Number Verifications module. It is updated when a verification result is stored or revalidated."]</p>
         <dl class="row mb-0">
             <dt class="col-sm-3">@T["Status"]</dt>
             <dd class="col-sm-9"><span class="badge @statusClass">@Model.VerificationStatus.ToString()</span></dd>

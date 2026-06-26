@@ -1,22 +1,18 @@
 using CrestApps.OrchardCore.PhoneNumberVerifications;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
-using Moq;
 using OrchardCore.ContentManagement;
-using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumberVerifications;
 
-public sealed class ContentItemPhoneNumberVerificationStoreTests
+public sealed class PhoneNumberVerificationPartExtensionsTests
 {
     private static readonly DateTime _now = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void IsVerified_WhenStatusVerifiedAndLastVerifiedSet_ReturnsTrue()
+    public void IsPhoneNumberVerified_WhenStatusVerifiedAndLastVerifiedSet_ReturnsTrue()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart
         {
             VerificationStatus = PhoneNumberVerificationStatus.Verified,
@@ -24,17 +20,16 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         });
 
         // Act
-        var isVerified = store.IsVerified(contentItem);
+        var isVerified = contentItem.IsPhoneNumberVerified();
 
         // Assert
         Assert.True(isVerified);
     }
 
     [Fact]
-    public void IsVerified_WhenStatusInvalid_ReturnsFalse()
+    public void IsPhoneNumberVerified_WhenStatusInvalid_ReturnsFalse()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart
         {
             VerificationStatus = PhoneNumberVerificationStatus.Invalid,
@@ -42,31 +37,29 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         });
 
         // Act
-        var isVerified = store.IsVerified(contentItem);
+        var isVerified = contentItem.IsPhoneNumberVerified();
 
         // Assert
         Assert.False(isVerified);
     }
 
     [Fact]
-    public async Task RequiresRevalidationAsync_WhenNeverVerified_ReturnsTrue()
+    public void RequiresPhoneNumberRevalidation_WhenNeverVerified_ReturnsTrue()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
 
         // Act
-        var requires = await store.RequiresRevalidationAsync(contentItem, TestContext.Current.CancellationToken);
+        var requires = contentItem.RequiresPhoneNumberRevalidation(_now);
 
         // Assert
         Assert.True(requires);
     }
 
     [Fact]
-    public async Task RequiresRevalidationAsync_WhenNextDueInFuture_ReturnsFalse()
+    public void RequiresPhoneNumberRevalidation_WhenNextDueInFuture_ReturnsFalse()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart
         {
             LastVerifiedUtc = _now.AddDays(-10),
@@ -74,17 +67,16 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         });
 
         // Act
-        var requires = await store.RequiresRevalidationAsync(contentItem, TestContext.Current.CancellationToken);
+        var requires = contentItem.RequiresPhoneNumberRevalidation(_now);
 
         // Assert
         Assert.False(requires);
     }
 
     [Fact]
-    public async Task RequiresRevalidationAsync_WhenNextDueInPast_ReturnsTrue()
+    public void RequiresPhoneNumberRevalidation_WhenNextDueInPast_ReturnsTrue()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart
         {
             LastVerifiedUtc = _now.AddDays(-400),
@@ -92,37 +84,36 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         });
 
         // Act
-        var requires = await store.RequiresRevalidationAsync(contentItem, TestContext.Current.CancellationToken);
+        var requires = contentItem.RequiresPhoneNumberRevalidation(_now);
 
         // Assert
         Assert.True(requires);
     }
 
     [Fact]
-    public async Task UpdateAsync_WhenVerified_SetsNextVerificationDueFromInterval()
+    public void AlterPhoneNumberVerificationResult_WhenVerified_StoresResultOnPart()
     {
         // Arrange
-        var settings = new PhoneNumberVerificationsSettings
-        {
-            RevalidationIntervalDays = 30,
-        };
-        var store = CreateStore(settings);
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
         var result = new PhoneNumberVerificationResult
         {
-            PhoneNumber = "+17024993350",
-            NormalizedPhoneNumber = "+17024993350",
+            PhoneNumber = "14159929960",
+            NormalizedPhoneNumber = "+14159929960",
             Status = PhoneNumberVerificationStatus.Verified,
             VerificationProvider = "AbstractApi",
             VerificationDateUtc = _now,
+            Carrier = "T-Mobile",
+            LineType = PhoneNumberLineType.Mobile,
         };
 
         // Act
-        await store.UpdateAsync(contentItem, result, "user-1", TestContext.Current.CancellationToken);
+        contentItem.AlterPhoneNumberVerificationResult(result, "user-1", revalidationIntervalDays: 30);
 
         // Assert
         Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
 
+        Assert.Equal("14159929960", part.PhoneNumber);
+        Assert.Equal("+14159929960", part.NormalizedPhoneNumber);
         Assert.Equal(PhoneNumberVerificationStatus.Verified, part.VerificationStatus);
         Assert.Equal("AbstractApi", part.VerificationProvider);
         Assert.Equal("user-1", part.LastVerifiedByUserId);
@@ -133,10 +124,9 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
     }
 
     [Fact]
-    public async Task UpdateAsync_WhenFailed_DoesNotSetLastVerified()
+    public void AlterPhoneNumberVerificationResult_WhenFailed_DoesNotSetLastVerified()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
         var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
         var result = new PhoneNumberVerificationResult
         {
@@ -147,7 +137,7 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         };
 
         // Act
-        await store.UpdateAsync(contentItem, result, verifiedByUserId: null, TestContext.Current.CancellationToken);
+        contentItem.AlterPhoneNumberVerificationResult(result);
 
         // Assert
         Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
@@ -159,10 +149,10 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
     }
 
     [Fact]
-    public void Read_WhenResultStored_DeserializesResult()
+    public void TryGetPhoneNumberVerificationResult_WhenResultStored_ReturnsResult()
     {
         // Arrange
-        var store = CreateStore(new PhoneNumberVerificationsSettings());
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
         var result = new PhoneNumberVerificationResult
         {
             PhoneNumber = "+17024993350",
@@ -170,26 +160,17 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
             Carrier = "Example Carrier",
             Status = PhoneNumberVerificationStatus.Verified,
         };
-        var json = System.Text.Json.JsonSerializer.Serialize(result, PhoneNumberVerificationSerialization.Options);
-        var contentItem = CreateContentItem(new PhoneNumberVerificationPart
-        {
-            VerificationResultJson = json,
-        });
+
+        contentItem.AlterPhoneNumberVerificationResult(result);
 
         // Act
-        var stored = store.Read(contentItem);
+        var found = contentItem.TryGetPhoneNumberVerificationResult(out var stored);
 
         // Assert
+        Assert.True(found);
         Assert.NotNull(stored);
         Assert.Equal("+17024993350", stored.NormalizedPhoneNumber);
         Assert.Equal("Example Carrier", stored.Carrier);
-    }
-
-    private static ContentItemPhoneNumberVerificationStore CreateStore(PhoneNumberVerificationsSettings settings)
-    {
-        var clock = Mock.Of<IClock>(c => c.UtcNow == _now);
-
-        return new ContentItemPhoneNumberVerificationStore(CreateSiteService(settings), clock);
     }
 
     private static ContentItem CreateContentItem(PhoneNumberVerificationPart part)
@@ -202,18 +183,5 @@ public sealed class ContentItemPhoneNumberVerificationStoreTests
         contentItem.Apply(part);
 
         return contentItem;
-    }
-
-    private static ISiteService CreateSiteService(PhoneNumberVerificationsSettings settings)
-    {
-        var site = new Mock<ISite>();
-        site.Setup(x => x.GetOrCreate<PhoneNumberVerificationsSettings>())
-            .Returns(settings);
-
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(x => x.GetSiteSettingsAsync())
-            .ReturnsAsync(site.Object);
-
-        return siteService.Object;
     }
 }

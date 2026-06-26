@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using CrestApps.OrchardCore.PhoneNumberVerifications.ViewModels;
@@ -33,25 +32,15 @@ public sealed class PhoneNumberVerificationPartDisplayDriver : ContentPartDispla
         viewModel.LastVerifiedUtc = part.LastVerifiedUtc;
         viewModel.NextVerificationDueUtc = part.NextVerificationDueUtc;
         viewModel.VerificationAttemptCount = part.VerificationAttemptCount;
+        viewModel.NormalizedPhoneNumber = part.NormalizedPhoneNumber ?? part.PhoneNumber;
 
-        if (string.IsNullOrEmpty(part.VerificationResultJson))
+        if (!part.TryGetPhoneNumberVerificationResult(out var result))
         {
             return;
         }
 
-        try
-        {
-            var result = JsonSerializer.Deserialize<PhoneNumberVerificationResult>(part.VerificationResultJson, PhoneNumberVerificationSerialization.Options);
-
-            if (result is not null)
-            {
-                viewModel.NormalizedPhoneNumber = result.NormalizedPhoneNumber ?? result.PhoneNumber;
-                viewModel.Carrier = result.Carrier;
-                viewModel.LineType = result.LineType;
-            }
-        }
-        catch (JsonException)
-        {
-        }
+        viewModel.NormalizedPhoneNumber ??= result.NormalizedPhoneNumber ?? result.PhoneNumber;
+        viewModel.Carrier = result.Carrier;
+        viewModel.LineType = result.LineType;
     }
 }

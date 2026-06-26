@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 /// </summary>
 internal sealed class PhoneNumberVerificationsPermissionProvider : IPermissionProvider
 {
-    private readonly IEnumerable<Permission> _allPermissions =
+    private static readonly IEnumerable<Permission> _allPermissions =
     [
         PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings,
         PhoneNumberVerificationsPermissions.VerifyPhoneNumbers,

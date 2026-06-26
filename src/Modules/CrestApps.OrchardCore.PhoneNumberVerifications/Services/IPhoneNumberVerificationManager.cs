@@ -1,10 +1,7 @@
-using OrchardCore.ContentManagement;
-
 namespace CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 
 /// <summary>
-/// Coordinates phone number verification by resolving providers, selecting the active
-/// provider, applying caching rules, and handling just-in-time verification.
+/// Resolves registered phone number verification providers and executes verification requests.
 /// </summary>
 public interface IPhoneNumberVerificationManager
 {
@@ -40,28 +37,5 @@ public interface IPhoneNumberVerificationManager
     Task<PhoneNumberVerificationResult> VerifyAsync(
         string phoneNumber,
         string providerKey = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Verifies the phone number for a content item, applying caching rules and persisting the result.
-    /// </summary>
-    /// <param name="contentItem">The content item to verify.</param>
-    /// <param name="options">Optional verification options.</param>
-    /// <param name="cancellationToken">A token used to cancel the operation.</param>
-    /// <returns>The verification result, or <see langword="null"/> when no phone number could be resolved.</returns>
-    Task<PhoneNumberVerificationResult> VerifyContentItemAsync(
-        ContentItem contentItem,
-        PhoneNumberVerificationOptions options = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Ensures a content item has a current verification result, performing just-in-time verification
-    /// only when it is enabled in settings and the stored result has expired.
-    /// </summary>
-    /// <param name="contentItem">The content item to evaluate.</param>
-    /// <param name="cancellationToken">A token used to cancel the operation.</param>
-    /// <returns>The current verification result, or <see langword="null"/> when none is available.</returns>
-    Task<PhoneNumberVerificationResult> EnsureVerifiedAsync(
-        ContentItem contentItem,
         CancellationToken cancellationToken = default);
 }

@@ -7,10 +7,14 @@ namespace CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 public abstract class PhoneNumberVerificationHandlerBase : IPhoneNumberVerificationHandler
 {
     /// <inheritdoc/>
-    public virtual Task VerifyingAsync(PhoneNumberVerificationContext context)
+    public virtual Task VerifyingAsync(
+        PhoneNumberVerificationContext context,
+        CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public virtual Task VerifiedAsync(PhoneNumberVerificationContext context)
+    public virtual Task VerifiedAsync(
+        PhoneNumberVerificationContext context,
+        CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }

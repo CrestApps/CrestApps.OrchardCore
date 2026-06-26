@@ -49,11 +49,15 @@ public sealed class PhoneNumberVerificationProviderRegistrationTests
 
     private sealed class FakeProvider : IPhoneNumberVerificationProvider
     {
-        public Task<PhoneNumberVerificationResult> VerifyAsync(string phoneNumber, CancellationToken cancellationToken = default)
-            => Task.FromResult(new PhoneNumberVerificationResult
+        public Task<PhoneNumberVerificationResult> VerifyAsync(
+            string phoneNumber,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PhoneNumberVerificationResult
             {
                 PhoneNumber = phoneNumber,
                 Status = PhoneNumberVerificationStatus.Verified,
             });
+        }
     }
 }

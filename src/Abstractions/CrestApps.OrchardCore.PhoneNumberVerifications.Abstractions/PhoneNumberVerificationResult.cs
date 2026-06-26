@@ -20,6 +20,11 @@ public sealed class PhoneNumberVerificationResult
     public string NormalizedPhoneNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the national display format when the provider supplies one.
+    /// </summary>
+    public string NationalFormat { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the phone number is valid.
     /// </summary>
     public bool IsValid { get; set; }
@@ -55,6 +60,21 @@ public sealed class PhoneNumberVerificationResult
     public string CountryName { get; set; }
 
     /// <summary>
+    /// Gets or sets the international dialing prefix for the country (e.g., <c>+1</c>).
+    /// </summary>
+    public string CountryPrefix { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-reported region or state.
+    /// </summary>
+    public string Region { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-reported city.
+    /// </summary>
+    public string City { get; set; }
+
+    /// <summary>
     /// Gets or sets the carrier name associated with the phone number.
     /// </summary>
     public string Carrier { get; set; }
@@ -70,9 +90,29 @@ public sealed class PhoneNumberVerificationResult
     public PhoneNumberLineType LineType { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider-specific line status when available (for example, <c>active</c>).
+    /// </summary>
+    public string LineStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional provider risk score, where higher values indicate higher risk.
     /// </summary>
     public double? RiskScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider risk level when available (for example, <c>low</c>).
+    /// </summary>
+    public string RiskLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider identified the number as disposable.
+    /// </summary>
+    public bool? IsDisposable { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider detected abuse signals.
+    /// </summary>
+    public bool? IsAbuseDetected { get; set; }
 
     /// <summary>
     /// Gets or sets the key of the provider that produced this result.

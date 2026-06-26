@@ -15,9 +15,14 @@ public sealed class PhoneNumberVerificationPartIndex : MapIndex
     public string ContentItemId { get; set; }
 
     /// <summary>
-    /// Gets or sets the normalized (E.164) phone number that was verified.
+    /// Gets or sets the phone number submitted for verification.
     /// </summary>
     public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the normalized (E.164) phone number that was verified.
+    /// </summary>
+    public string NormalizedPhoneNumber { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the phone number is currently verified.
@@ -35,7 +40,7 @@ public sealed class PhoneNumberVerificationPartIndex : MapIndex
     public string VerificationProvider { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC timestamp of the most recent successful verification.
+    /// Gets or sets the UTC timestamp of the most recent completed validity verification.
     /// </summary>
     public DateTime? LastVerifiedUtc { get; set; }
 
@@ -68,4 +73,9 @@ public sealed class PhoneNumberVerificationPartIndex : MapIndex
     /// Gets or sets a value indicating whether the phone number is a VoIP line.
     /// </summary>
     public bool IsVoip { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-specific line status when available.
+    /// </summary>
+    public string LineStatus { get; set; }
 }

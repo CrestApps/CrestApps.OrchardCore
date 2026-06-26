@@ -68,6 +68,7 @@ AbstractAPI returns the following information, which the provider maps into the 
 | --- | --- |
 | `IsValid` / `IsReachable` | `valid` |
 | `NormalizedPhoneNumber` | `international_format` |
+| `NationalFormat` | `local_format` |
 | `LineType`, `IsMobile`, `IsLandline`, `IsVoip` | `type` |
 | `CountryCode` / `CountryName` | `country.code` / `country.name` |
 | `Carrier` | `carrier` |

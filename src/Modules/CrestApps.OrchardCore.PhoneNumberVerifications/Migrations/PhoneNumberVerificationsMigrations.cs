@@ -36,7 +36,8 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
 
         await SchemaBuilder.CreateMapIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))
-            .Column<string>("PhoneNumber", column => column.WithLength(30))
+            .Column<string>("PhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPhoneNumber", column => column.WithLength(30))
             .Column<bool>("IsVerified", column => column.NotNull().WithDefault(false))
             .Column<int>("VerificationStatus")
             .Column<string>("VerificationProvider", column => column.WithLength(64))
@@ -47,6 +48,7 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             .Column<bool>("IsMobile", column => column.NotNull().WithDefault(false))
             .Column<bool>("IsLandline", column => column.NotNull().WithDefault(false))
             .Column<bool>("IsVoip", column => column.NotNull().WithDefault(false))
+            .Column<string>("LineStatus", column => column.WithLength(32))
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
@@ -68,7 +70,8 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
             .CreateIndex("IDX_PhoneNumberVerificationPartIndex_PhoneNumber",
                 "DocumentId",
-                "PhoneNumber"
+                "PhoneNumber",
+                "NormalizedPhoneNumber"
             )
         );
 

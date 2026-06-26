@@ -3,26 +3,21 @@ using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
-using YesSql;
 
 namespace CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 
 /// <summary>
-/// Default implementation of <see cref="IPhoneNumberVerificationManager"/>.
+/// Default provider dispatcher for phone number verification requests.
 /// </summary>
 public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerificationManager
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly PhoneNumberVerificationProviderOptions _providerOptions;
     private readonly ISiteService _siteService;
-    private readonly IPhoneNumberVerificationStore _store;
-    private readonly IEnumerable<IContentPhoneNumberResolver> _phoneNumberResolvers;
     private readonly IEnumerable<IPhoneNumberVerificationHandler> _handlers;
     private readonly IPhoneNumberService _phoneNumberService;
-    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -32,40 +27,31 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// <param name="serviceProvider">The scoped service provider used to resolve providers by key.</param>
     /// <param name="providerOptions">The registered provider descriptors.</param>
     /// <param name="siteService">The site service used to read module settings.</param>
-    /// <param name="store">The verification store.</param>
-    /// <param name="phoneNumberResolvers">The content phone number resolvers.</param>
     /// <param name="handlers">The verification lifecycle handlers.</param>
     /// <param name="phoneNumberService">The phone number formatting service.</param>
-    /// <param name="session">The YesSql session used to persist content item changes.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DefaultPhoneNumberVerificationManager(
         IServiceProvider serviceProvider,
         IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
         ISiteService siteService,
-        IPhoneNumberVerificationStore store,
-        IEnumerable<IContentPhoneNumberResolver> phoneNumberResolvers,
         IEnumerable<IPhoneNumberVerificationHandler> handlers,
         IPhoneNumberService phoneNumberService,
-        ISession session,
         IClock clock,
         ILogger<DefaultPhoneNumberVerificationManager> logger)
     {
         _serviceProvider = serviceProvider;
         _providerOptions = providerOptions.Value;
         _siteService = siteService;
-        _store = store;
-        _phoneNumberResolvers = phoneNumberResolvers;
         _handlers = handlers;
         _phoneNumberService = phoneNumberService;
-        _session = session;
         _clock = clock;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public IReadOnlyCollection<PhoneNumberVerificationProviderDescriptor> GetProviders()
-        => _providerOptions.Providers.Values.ToArray();
+        => _providerOptions.Providers.Values;
 
     /// <inheritdoc/>
     public bool TryGetProvider(string key, out IPhoneNumberVerificationProvider provider)
@@ -101,73 +87,19 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     }
 
     /// <inheritdoc/>
-    public Task<PhoneNumberVerificationResult> VerifyAsync(
+    public async Task<PhoneNumberVerificationResult> VerifyAsync(
         string phoneNumber,
         string providerKey = null,
         CancellationToken cancellationToken = default)
-        => VerifyCoreAsync(phoneNumber, providerKey, contentItem: null, cancellationToken);
-
-    /// <inheritdoc/>
-    public async Task<PhoneNumberVerificationResult> VerifyContentItemAsync(
-        ContentItem contentItem,
-        PhoneNumberVerificationOptions options = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(contentItem);
-
-        options ??= new PhoneNumberVerificationOptions();
-
-        if (!options.Force && _store.IsVerified(contentItem) && !await _store.RequiresRevalidationAsync(contentItem, cancellationToken))
-        {
-            return _store.Read(contentItem);
-        }
-
-        var phoneNumber = await ResolvePhoneNumberAsync(contentItem);
-
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            return null;
-        }
-
-        var result = await VerifyCoreAsync(phoneNumber, options.ProviderKey, contentItem, cancellationToken);
-
-        await _store.UpdateAsync(contentItem, result, options.VerifiedByUserId, cancellationToken);
-        await _session.SaveAsync(contentItem);
-
-        return result;
-    }
-
-    /// <inheritdoc/>
-    public async Task<PhoneNumberVerificationResult> EnsureVerifiedAsync(
-        ContentItem contentItem,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(contentItem);
-
-        var settings = await _siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-
-        if (!settings.EnableJustInTimeVerification)
-        {
-            return _store.Read(contentItem);
-        }
-
-        if (await _store.RequiresRevalidationAsync(contentItem, cancellationToken))
-        {
-            return await VerifyContentItemAsync(contentItem, options: null, cancellationToken);
-        }
-
-        return _store.Read(contentItem);
-    }
-
-    private async Task<PhoneNumberVerificationResult> VerifyCoreAsync(
-        string phoneNumber,
-        string providerKey,
-        ContentItem contentItem,
-        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(phoneNumber);
 
         providerKey ??= await GetDefaultProviderKeyAsync(cancellationToken);
+
+        if (string.IsNullOrEmpty(providerKey))
+        {
+            throw new InvalidOperationException("No phone number verification provider is registered.");
+        }
 
         if (!TryGetProvider(providerKey, out var provider))
         {
@@ -180,10 +112,9 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         {
             PhoneNumber = phoneNumber,
             ProviderKey = providerKey,
-            ContentItem = contentItem,
         };
 
-        await _handlers.InvokeAsync((handler, ctx) => handler.VerifyingAsync(ctx), context, _logger);
+        await _handlers.InvokeAsync((handler, ctx) => handler.VerifyingAsync(ctx, cancellationToken), context, _logger);
 
         PhoneNumberVerificationResult result;
 
@@ -210,32 +141,9 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
 
         context.Result = result;
 
-        await _handlers.InvokeAsync((handler, ctx) => handler.VerifiedAsync(ctx), context, _logger);
+        await _handlers.InvokeAsync((handler, ctx) => handler.VerifiedAsync(ctx, cancellationToken), context, _logger);
 
         return result;
-    }
-
-    private async Task<string> ResolvePhoneNumberAsync(ContentItem contentItem)
-    {
-        var existing = _store.Read(contentItem);
-        var phoneNumber = existing?.NormalizedPhoneNumber ?? existing?.PhoneNumber;
-
-        if (!string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            return phoneNumber;
-        }
-
-        foreach (var resolver in _phoneNumberResolvers)
-        {
-            phoneNumber = await resolver.GetPhoneNumberAsync(contentItem);
-
-            if (!string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                return phoneNumber;
-            }
-        }
-
-        return null;
     }
 
     private string NormalizePhoneNumber(string phoneNumber)

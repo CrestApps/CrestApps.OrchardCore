@@ -1,5 +1,3 @@
-using OrchardCore.ContentManagement;
-
 namespace CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 
 /// <summary>
@@ -16,11 +14,6 @@ public sealed class PhoneNumberVerificationContext
     /// Gets or sets the key of the provider performing the verification.
     /// </summary>
     public string ProviderKey { get; set; }
-
-    /// <summary>
-    /// Gets or sets the content item the verification is associated with, when applicable.
-    /// </summary>
-    public ContentItem ContentItem { get; set; }
 
     /// <summary>
     /// Gets or sets the verification result. This is <see langword="null"/> before verification completes.

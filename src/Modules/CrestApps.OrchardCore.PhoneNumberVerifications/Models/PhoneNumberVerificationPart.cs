@@ -10,7 +10,17 @@ namespace CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 public sealed class PhoneNumberVerificationPart : ContentPart
 {
     /// <summary>
-    /// Gets or sets the UTC timestamp of the most recent successful verification.
+    /// Gets or sets the phone number submitted for verification.
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the normalized phone number in E.164 format when available.
+    /// </summary>
+    public string NormalizedPhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the most recent completed validity verification.
     /// </summary>
     public DateTime? LastVerifiedUtc { get; set; }
 

@@ -11,12 +11,6 @@ public sealed class PhoneNumberVerificationsSettings
     public const int DefaultRevalidationIntervalDays = 365;
 
     /// <summary>
-    /// Gets or sets a value indicating whether just-in-time verification is enabled.
-    /// When enabled, trusted operations verify a number on demand if its verification has expired.
-    /// </summary>
-    public bool EnableJustInTimeVerification { get; set; }
-
-    /// <summary>
     /// Gets or sets the number of days after which a verified phone number must be revalidated.
     /// </summary>
     public int RevalidationIntervalDays { get; set; } = DefaultRevalidationIntervalDays;

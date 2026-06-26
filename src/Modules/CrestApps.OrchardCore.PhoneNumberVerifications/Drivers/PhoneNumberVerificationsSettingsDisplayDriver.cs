@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,13 +16,13 @@ namespace CrestApps.OrchardCore.PhoneNumberVerifications.Drivers;
 
 /// <summary>
 /// Site settings display driver for the core Phone Number Verifications settings,
-/// including just-in-time verification, the revalidation interval, and provider selection.
+/// including the revalidation interval and provider selection.
 /// </summary>
 public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayDriver<PhoneNumberVerificationsSettings>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IPhoneNumberVerificationManager _verificationManager;
+    private readonly PhoneNumberVerificationProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -30,17 +31,17 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="verificationManager">The verification manager used to discover providers.</param>
+    /// <param name="providerOptions">The registered verification providers.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PhoneNumberVerificationsSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IPhoneNumberVerificationManager verificationManager,
+        IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
         IStringLocalizer<PhoneNumberVerificationsSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _verificationManager = verificationManager;
+        _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -51,10 +52,9 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
     {
         return Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", viewModel =>
         {
-            viewModel.EnableJustInTimeVerification = settings.EnableJustInTimeVerification;
             viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
             viewModel.SelectedProvider = settings.SelectedProvider;
-            viewModel.Providers = _verificationManager.GetProviders()
+            viewModel.Providers = _providerOptions.Providers.Values
                 .Select(provider => new SelectListItem(provider.DisplayName ?? provider.Key, provider.Key))
                 .OrderBy(item => item.Text)
                 .ToList();
@@ -83,7 +83,6 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.RevalidationIntervalDays), S["The revalidation interval must be greater than zero."]);
         }
 
-        settings.EnableJustInTimeVerification = viewModel.EnableJustInTimeVerification;
         settings.RevalidationIntervalDays = viewModel.RevalidationIntervalDays > 0
             ? viewModel.RevalidationIntervalDays
             : PhoneNumberVerificationsSettings.DefaultRevalidationIntervalDays;

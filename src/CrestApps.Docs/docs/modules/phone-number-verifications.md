@@ -2,7 +2,7 @@
 sidebar_label: Phone Number Verifications
 sidebar_position: 8
 title: Phone Number Verifications
-description: A provider-agnostic framework for verifying contact phone numbers, with pluggable providers, background revalidation, just-in-time verification, and reporting.
+description: A provider-agnostic framework for verifying contact phone numbers, with pluggable providers, content-part storage, SQL indexing, background revalidation, and reporting.
 ---
 
 | | |
@@ -10,7 +10,7 @@ description: A provider-agnostic framework for verifying contact phone numbers, 
 | **Feature Name** | Phone Number Verifications |
 | **Feature ID** | `CrestApps.OrchardCore.PhoneNumberVerifications` |
 
-The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results on contact content items. It manages verification providers, verification workflows, verification records, reporting, and a background revalidation process.
+The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, reporting, and a background revalidation process.
 
 The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
 
@@ -23,9 +23,8 @@ The framework is built from a small set of cooperating abstractions:
 | Abstraction | Responsibility |
 | --- | --- |
 | `IPhoneNumberVerificationProvider` | Calls an external verification service and maps the response into the common result model. Registered against a unique provider key. |
-| `IPhoneNumberVerificationManager` | Selects the active provider, resolves providers by key, executes verification, applies caching rules, and performs just-in-time verification. |
-| `IPhoneNumberVerificationStore` | Reads and updates the verification results stored on content items, and determines whether a number is already verified or requires revalidation. |
-| `IContentPhoneNumberResolver` | Resolves the phone number to verify from a content item. The default implementation scans content fields whose name contains "phone". |
+| `IPhoneNumberVerificationManager` | Selects the active provider, resolves providers by key, executes verification, and raises verification lifecycle handlers. |
+| `PhoneNumberVerificationPartExtensions` | Reads and updates verification data stored on content items with `contentItem.Alter<PhoneNumberVerificationPart>(...)` and `contentItem.TryGet<PhoneNumberVerificationPart>(...)`. |
 | `IPhoneNumberVerificationHandler` | Receives `Verifying` and `Verified` lifecycle events. |
 | `PhoneNumberVerificationResult` | The provider-agnostic result model. Providers map their native responses into this shape and may extend it through the `Metadata` bag. |
 
@@ -52,11 +51,15 @@ Providers return a provider-agnostic `PhoneNumberVerificationResult`:
 | `NormalizedPhoneNumber` | The number in E.164 format. |
 | `IsValid` / `IsReachable` | Whether the number is valid and reachable. |
 | `IsMobile` / `IsLandline` / `IsVoip` | Line-type flags. |
-| `CountryCode` / `CountryName` | Country information. |
+| `NationalFormat` | The provider-supplied national display format, when available. |
+| `CountryCode` / `CountryName` / `CountryPrefix` | Country information. |
+| `Region` / `City` | Provider-reported location details. |
 | `Carrier` | The carrier name. |
 | `TimeZone` | The IANA time zone identifier. |
 | `LineType` | The normalized line type. |
-| `RiskScore` | An optional provider risk score. |
+| `LineStatus` | The provider-specific line status, when available. |
+| `RiskScore` / `RiskLevel` | Optional provider risk information. |
+| `IsDisposable` / `IsAbuseDetected` | Optional provider risk flags. |
 | `VerificationProvider` | The provider key that produced the result. |
 | `ProviderReferenceId` | The provider-specific reference identifier. |
 | `VerificationDateUtc` | When the verification was performed. |
@@ -64,7 +67,7 @@ Providers return a provider-agnostic `PhoneNumberVerificationResult`:
 | `Status` | The normalized status (`Unverified`, `Verified`, `Invalid`, `Failed`). |
 | `Metadata` | A provider-extensible bag for additional values. |
 
-The entire normalized response is stored, so future providers can expose additional information without schema changes.
+The entire normalized response is stored, so future providers can expose additional information without schema changes. Rich responses such as Dialpad Professional phone intelligence can map common fields (format, carrier, location, validation, and risk) into the shared model while retaining plan-specific details such as messaging, registration, and breach data in `Metadata` and `RawProviderResponse`.
 
 ## Content item integration
 
@@ -74,7 +77,9 @@ The part stores:
 
 | Field | Description |
 | --- | --- |
-| `LastVerifiedUtc` | The UTC timestamp of the most recent successful verification. |
+| `PhoneNumber` | The phone number submitted for verification. |
+| `NormalizedPhoneNumber` | The normalized phone number in E.164 format when available. |
+| `LastVerifiedUtc` | The UTC timestamp of the most recent completed validity verification. |
 | `LastVerifiedByUserId` | The identifier of the user who last triggered a verification. User identifiers are stored instead of usernames because usernames may change over time. |
 | `VerificationProvider` | The provider key that produced the stored result. |
 | `VerificationStatus` | The normalized verification status. |
@@ -84,23 +89,29 @@ The part stores:
 
 ## SQL index
 
-The module maintains a `PhoneNumberVerificationPartIndex` SQL index over the commonly queried fields (content item id, normalized phone number, verification status, provider, last-verified and next-due timestamps, country code, carrier, and line-type flags). The index powers reporting, dashboard widgets, revalidation jobs, and administrative searches. Provider-specific metadata stays in the stored JSON payload and is not indexed.
+The module maintains a `PhoneNumberVerificationPartIndex` SQL index over the commonly queried fields (content item id, raw and normalized phone numbers, verification status, provider, last-verified and next-due timestamps, country code, carrier, line-type flags, and line status). The index powers reporting, dashboard widgets, revalidation jobs, and administrative searches. Provider-specific metadata stays in the stored JSON payload and is not indexed.
 
 ## Verification workflow
 
-Imports and contact creation never verify numbers automatically, so imports stay fast and inexpensive. Verification happens through one of three paths:
+Imports and contact creation never verify numbers automatically, so imports stay fast and inexpensive. Verification happens through one of two paths:
 
 1. **Background revalidation** — a scheduled job verifies contacts that are due.
 2. **Explicit requests** — a verification is triggered for a specific contact.
-3. **Just-in-time verification** — a verification is performed on demand before a trusted operation when enabled.
 
-## Just-in-time verification
+Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
 
-When **Enable just-in-time verification** is on, trusted operations that require a reliable phone number — such as outbound SMS, outbound calling, campaign execution, and third-party integrations — verify the number on demand if its verification has expired (`LastVerifiedUtc` + revalidation interval is in the past). When disabled, these operations never perform synchronous verification and always use the stored result.
+```csharp
+var result = await verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+
+contentItem.AlterPhoneNumberVerificationResult(
+    result,
+    verifiedByUserId: userId,
+    revalidationIntervalDays: settings.RevalidationIntervalDays);
+```
 
 ## Background revalidation
 
-A daily background task finds contacts that have never been verified or whose verification has expired, verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
+A daily background task finds content items that already carry a stored phone number and whose verification is due, verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
 
 - processes work in batches to scale to large data sets
 - tolerates provider failures without stopping the run
@@ -108,11 +119,11 @@ A daily background task finds contacts that have never been verified or whose ve
 
 ## Caching and cost optimization
 
-External verification APIs are paid services, so the framework minimizes provider calls. Verification records act as the authoritative cache. A number is only (re)verified when it has never been verified, its verification has expired, or a user explicitly requests revalidation. Cached results are always used first.
+External verification APIs are paid services, so the framework minimizes provider calls. Verification data stored on `PhoneNumberVerificationPart` acts as the authoritative cache. A number is only (re)verified when its stored verification has expired or a caller explicitly requests revalidation. Cached results are always read from the content item first.
 
 ## Reporting
 
-A report dashboard is available under **Configuration** -> **Phone Number Verifications** -> **Report**. It surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
+A report dashboard is available under **Reports** -> **Phone Number Verifications**. It surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 
@@ -124,7 +135,6 @@ Configure the module under **Settings** -> **Phone Number Verifications**.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| **Enable just-in-time verification** | `false` | Verify a number on demand before trusted operations when its verification has expired. |
 | **Revalidation interval (days)** | `365` | The number of days after which a verified number must be revalidated. |
 | **Default provider** | First available | The provider used by default. The selector lists every enabled provider. |
 
@@ -194,7 +204,3 @@ public sealed class MyProviderStartup : StartupBase
 ```
 
 `AddPhoneNumberVerificationProvider` registers the implementation as a keyed service under the provider key and adds its descriptor so the provider selection setting discovers it automatically.
-
-### Customizing phone number resolution
-
-To control which phone number is verified for a content item, implement `IContentPhoneNumberResolver` and register it. The manager uses the first resolver that returns a value, so a custom resolver registered after the default takes precedence for the content it understands.

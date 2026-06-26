@@ -29,19 +29,14 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Configuration"], configuration => configuration
+            .Add(S["Reports"], S["Reports"].PrefixPosition(), reports => reports
                 .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
-                    .AddClass("phone-number-verifications")
-                    .Id("phoneNumberVerifications")
-                    .Add(S["Report"], S["Report"].PrefixPosition(), report => report
-                        .AddClass("phone-number-verifications-report")
-                        .Id("phoneNumberVerificationsReport")
-                        .Action("Index", "Report", PhoneNumberVerificationsConstants.Features.Area)
-                        .Permission(PhoneNumberVerificationsPermissions.VerifyPhoneNumbers)
-                        .LocalNav()
-                    )
-                )
-            );
+                    .AddClass("phone-number-verifications-report")
+                    .Id("phoneNumberVerificationsReport")
+                    .Action("Index", "Report", PhoneNumberVerificationsConstants.Features.Area)
+                    .Permission(PhoneNumberVerificationsPermissions.VerifyPhoneNumbers)
+                    .LocalNav()
+                ));
 
         builder
             .Add(S["Settings"], settings => settings

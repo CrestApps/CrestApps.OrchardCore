@@ -9,11 +9,6 @@ namespace CrestApps.OrchardCore.PhoneNumberVerifications.ViewModels;
 public class PhoneNumberVerificationsSettingsViewModel
 {
     /// <summary>
-    /// Gets or sets a value indicating whether just-in-time verification is enabled.
-    /// </summary>
-    public bool EnableJustInTimeVerification { get; set; }
-
-    /// <summary>
     /// Gets or sets the number of days after which a verified phone number must be revalidated.
     /// </summary>
     public int RevalidationIntervalDays { get; set; }
