@@ -7,20 +7,20 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel",
     Id = OmnichannelConstants.Features.Area,
-    Category = "Communications",
+    Category = "Communication",
     Description = "Provides a unified communication layer that works across any channel (SMS, email, chat, phone, and more)"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel (Azure Communication Services)",
     Id = OmnichannelConstants.Features.AzureCommunicationServices,
-    Category = "Communications",
+    Category = "Communication",
     Description = "Provides way to communicate using Azure Communication Services",
     Dependencies =
     [
