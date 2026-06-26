@@ -104,6 +104,7 @@ const sidebars = {
                 'modules/phone-number-verifications',
                 'modules/phone-number-verifications-abstractapi',
                 'modules/phone-number-verifications-veriphone',
+                'modules/phone-number-verifications-twilio',
                 'modules/recipes',
                 'modules/resources',
                 'modules/roles',

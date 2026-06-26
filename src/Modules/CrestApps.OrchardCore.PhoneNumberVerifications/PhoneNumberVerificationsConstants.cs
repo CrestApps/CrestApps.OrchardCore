@@ -29,6 +29,11 @@ public static class PhoneNumberVerificationsConstants
         /// The Veriphone phone number verification provider feature.
         /// </summary>
         public const string Veriphone = "CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone";
+
+        /// <summary>
+        /// The Twilio phone number verification provider feature.
+        /// </summary>
+        public const string Twilio = "CrestApps.OrchardCore.PhoneNumberVerifications.Twilio";
     }
 
     /// <summary>
@@ -45,6 +50,11 @@ public static class PhoneNumberVerificationsConstants
         /// The Veriphone provider key.
         /// </summary>
         public const string Veriphone = "Veriphone";
+
+        /// <summary>
+        /// The Twilio provider key.
+        /// </summary>
+        public const string Twilio = "Twilio";
     }
 
     /// <summary>

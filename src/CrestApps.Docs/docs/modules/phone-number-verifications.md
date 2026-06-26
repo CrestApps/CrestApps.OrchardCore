@@ -12,7 +12,7 @@ description: A provider-agnostic framework for verifying contact phone numbers, 
 
 The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, reporting, and a background revalidation process.
 
-The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification** and **Veriphone Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
+The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, and **Twilio Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
 
 The core feature is enabled on demand. It is activated automatically when a dependent feature (such as a provider feature) is enabled, or you can enable it directly under **Configuration** -> **Features**.
 
@@ -39,6 +39,7 @@ The module ships with the following features:
 | Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumberVerifications` | The core framework, settings, content part, SQL index, automatic contact verification, reporting, and background revalidation. |
 | AbstractAPI Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi` | Verifies phone numbers using the [AbstractAPI Phone Validation](https://www.abstractapi.com/api/phone-validation-api) service. |
 | Veriphone Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone` | Verifies phone numbers using the [Veriphone phone number validation API](https://veriphone.io/docs). |
+| Twilio Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.Twilio` | Verifies phone numbers using the [Twilio Lookup API](https://www.twilio.com/docs/lookup/v2-api). |
 
 Enable a provider feature to activate the core feature and make the provider available for selection.
 

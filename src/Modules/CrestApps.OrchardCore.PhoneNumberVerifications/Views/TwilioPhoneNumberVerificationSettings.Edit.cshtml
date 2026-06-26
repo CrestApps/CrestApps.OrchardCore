@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.PhoneNumberVerifications.Models
+@model TwilioPhoneNumberVerificationSettingsViewModel
+
+<h4 class="card-title">@T["Twilio"]</h4>
+<p class="hint">@T["Configure the connection to the Twilio Lookup service."]</p>
+
+<div class="mb-3">
+    <label asp-for="Endpoint" class="form-label">@T["Endpoint"]</label>
+    <input type="text" class="form-control" asp-for="Endpoint" placeholder="@TwilioPhoneNumberVerificationSettings.DefaultEndpoint" />
+    <span asp-validation-for="Endpoint" class="text-danger"></span>
+    <span class="hint">@T["The Twilio Lookup endpoint template. Use {PhoneNumber} where the submitted phone number should be inserted."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
+    <select asp-for="AuthenticationType" class="form-select">
+        <option value="@TwilioPhoneNumberVerificationAuthenticationType.ApiKey">@T["API key SID and secret"]</option>
+        <option value="@TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials">@T["Account SID and Auth Token"]</option>
+    </select>
+    <span class="hint">@T["Twilio recommends API keys for production. Account SID and Auth Token authentication is available for local testing."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ApiKeySid" class="form-label">@T["API key SID"]</label>
+    <input type="text" class="form-control" asp-for="ApiKeySid" autocomplete="off" />
+    <span asp-validation-for="ApiKeySid" class="text-danger"></span>
+    <span class="hint">@T["The Twilio API key SID used as the Basic authentication username."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ApiKeySecret" class="form-label">@T["API key secret"]</label>
+    <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="off" placeholder='@T["Enter a new API key secret to replace the saved value"]' />
+    <span asp-validation-for="ApiKeySecret" class="text-danger"></span>
+    @if (Model.HasApiKeySecret)
+    {
+        <span class="hint text-success">@T["An API key secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The Twilio API key secret used as the Basic authentication password."]</span>
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="AccountSid" class="form-label">@T["Account SID"]</label>
+    <input type="text" class="form-control" asp-for="AccountSid" autocomplete="off" />
+    <span asp-validation-for="AccountSid" class="text-danger"></span>
+    <span class="hint">@T["The Twilio Account SID used as the Basic authentication username when account credential authentication is selected."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AuthToken" class="form-label">@T["Auth Token"]</label>
+    <input type="password" class="form-control" asp-for="AuthToken" autocomplete="off" placeholder='@T["Enter a new Auth Token to replace the saved value"]' />
+    <span asp-validation-for="AuthToken" class="text-danger"></span>
+    @if (Model.HasAuthToken)
+    {
+        <span class="hint text-success">@T["An Auth Token has been securely stored. Enter a new value to replace it, or leave empty to keep the existing token."]</span>
+    }
+    else
+    {
+        <span class="hint">@T["The Twilio Auth Token used as the Basic authentication password when account credential authentication is selected."]</span>
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="CountryCode" class="form-label">@T["Country code"]</label>
+    <input type="text" maxlength="2" class="form-control" asp-for="CountryCode" autocomplete="off" placeholder="US" />
+    <span class="hint">@T["Optional ISO 3166-1 alpha-2 country code sent to Twilio when phone numbers are submitted in national format."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Fields" class="form-label">@T["Data packages"]</label>
+    <input type="text" class="form-control" asp-for="Fields" autocomplete="off" placeholder="line_type_intelligence,line_status" />
+    <span class="hint">@T["Optional comma-separated Twilio Lookup data packages for the Fields parameter. Basic validation is included by default; additional data packages may incur Twilio charges."]</span>
+</div>

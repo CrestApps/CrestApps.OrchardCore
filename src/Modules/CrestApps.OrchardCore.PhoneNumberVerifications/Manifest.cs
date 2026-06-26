@@ -44,3 +44,14 @@ using OrchardCore.Modules.Manifest;
         PhoneNumberVerificationsConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Twilio Phone Number Verification",
+    Id = PhoneNumberVerificationsConstants.Features.Twilio,
+    Category = "Communication",
+    Description = "Verifies phone numbers using the Twilio Lookup service.",
+    Dependencies =
+    [
+        PhoneNumberVerificationsConstants.Features.Area,
+    ]
+)]

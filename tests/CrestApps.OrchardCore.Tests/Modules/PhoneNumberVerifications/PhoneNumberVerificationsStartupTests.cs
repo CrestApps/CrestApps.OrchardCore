@@ -95,6 +95,22 @@ public sealed class PhoneNumberVerificationsStartupTests
     }
 
     [Fact]
+    public void TwilioStartup_ShouldRegisterProviderAndSettingsDriver()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        new TwilioStartup().ConfigureServices(services);
+
+        // Assert
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IPhoneNumberVerificationProvider) &&
+            descriptor.KeyedImplementationType == typeof(TwilioPhoneNumberVerificationProvider) &&
+            Equals(descriptor.ServiceKey, PhoneNumberVerificationsConstants.Providers.Twilio));
+    }
+
+    [Fact]
     public void OmnichannelContactVerificationStartup_ShouldRegisterContentHandler()
     {
         // Arrange
