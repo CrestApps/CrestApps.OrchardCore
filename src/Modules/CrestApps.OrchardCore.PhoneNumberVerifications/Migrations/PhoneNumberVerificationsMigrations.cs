@@ -75,6 +75,21 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             )
         );
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the verification index columns introduced after the initial module version.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table =>
+        {
+            table.AddColumn<string>("NormalizedPhoneNumber", column => column.WithLength(30));
+            table.AddColumn<string>("LineStatus", column => column.WithLength(32));
+        });
+
+        return 2;
     }
 }
