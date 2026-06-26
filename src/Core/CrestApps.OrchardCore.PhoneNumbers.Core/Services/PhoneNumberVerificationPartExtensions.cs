@@ -1,8 +1,9 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using OrchardCore.ContentManagement;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Provides helpers for reading and updating phone number verification data stored on content items.

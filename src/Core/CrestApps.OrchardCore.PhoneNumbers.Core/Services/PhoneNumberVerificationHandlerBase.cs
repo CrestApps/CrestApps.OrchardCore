@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Provides a no-op base implementation of <see cref="IPhoneNumberVerificationHandler"/>

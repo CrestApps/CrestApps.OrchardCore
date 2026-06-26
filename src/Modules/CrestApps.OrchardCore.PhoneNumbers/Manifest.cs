@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -14,7 +13,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Name = "Phone Numbers Services",
-    Id = PhoneNumbersConstants.Features.Area,
+    Id = PhoneNumberVerificationsConstants.Features.PhoneNumbers,
     Category = "Communications",
     EnabledByDependencyOnly = true,
     Description = "Provides phone number parsing, validation, and E.164 formatting services."

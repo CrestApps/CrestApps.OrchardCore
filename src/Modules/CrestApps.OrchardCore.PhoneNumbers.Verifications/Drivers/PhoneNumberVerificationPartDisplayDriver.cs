@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;

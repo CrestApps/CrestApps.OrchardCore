@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.DncRegistry;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -19,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides the core framework for integrating with national do-not-call registries.",
     Dependencies =
     [
-        PhoneNumbersConstants.Features.Area,
+        PhoneNumberVerificationsConstants.Features.PhoneNumbers,
     ]
 )]
 

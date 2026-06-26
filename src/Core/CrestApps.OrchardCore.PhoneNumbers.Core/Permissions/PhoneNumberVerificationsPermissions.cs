@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 
 /// <summary>
 /// Permissions for the Phone Number Verifications module.
@@ -15,9 +15,16 @@ public static class PhoneNumberVerificationsPermissions
         "Manage phone number verification settings");
 
     /// <summary>
-    /// Gets the permission to verify phone numbers and view verification reports.
+    /// Gets the permission to verify phone numbers.
     /// </summary>
     public static readonly Permission VerifyPhoneNumbers = new(
         "VerifyPhoneNumbers",
-        "Verify phone numbers and view verification reports");
+        "Verify phone numbers");
+
+    /// <summary>
+    /// Gets the permission to run the Phone Number Verifications report.
+    /// </summary>
+    public static readonly Permission RunPhoneNumberVerificationsReport = new(
+        "RunPhoneNumberVerificationsReport",
+        "Run 'Phone Number Verifications' Report");
 }

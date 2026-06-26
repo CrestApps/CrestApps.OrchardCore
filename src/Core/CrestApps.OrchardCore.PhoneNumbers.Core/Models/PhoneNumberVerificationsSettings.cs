@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 
 /// <summary>
 /// Global site settings for the Phone Number Verifications module.

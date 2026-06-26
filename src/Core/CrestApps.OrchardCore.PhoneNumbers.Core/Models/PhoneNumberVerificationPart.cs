@@ -1,6 +1,7 @@
 using OrchardCore.ContentManagement;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 
 /// <summary>
 /// Stores phone number verification data on a content item (for example, a Contact).

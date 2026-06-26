@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Handles events raised during the phone number verification lifecycle.

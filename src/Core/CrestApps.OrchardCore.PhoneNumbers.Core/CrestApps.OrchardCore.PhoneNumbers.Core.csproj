@@ -12,6 +12,9 @@
 
   <ItemGroup>
     <PackageReference Include="libphonenumber-csharp" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>
 

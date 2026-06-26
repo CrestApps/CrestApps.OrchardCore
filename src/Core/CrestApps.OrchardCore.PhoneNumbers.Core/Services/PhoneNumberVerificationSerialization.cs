@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Provides shared JSON serialization settings for persisting verification results.

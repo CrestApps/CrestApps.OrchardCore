@@ -130,7 +130,7 @@ External verification APIs are paid services, so the framework minimizes provide
 
 ## Reporting
 
-A report dashboard is available under **Reports** -> **Phone Number Verifications**. It surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
+A report dashboard is available under **Reports** -> **Phone Number Verifications** for users who have the `RunPhoneNumberVerificationsReport` permission. It surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 

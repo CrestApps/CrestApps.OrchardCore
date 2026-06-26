@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;

@@ -1,5 +1,6 @@
+using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;

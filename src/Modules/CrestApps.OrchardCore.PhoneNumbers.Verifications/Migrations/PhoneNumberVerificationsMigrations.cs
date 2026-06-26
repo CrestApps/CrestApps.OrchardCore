@@ -40,7 +40,7 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             .Column<string>("PhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPhoneNumber", column => column.WithLength(30))
             .Column<bool>("IsVerified", column => column.NotNull().WithDefault(false))
-            .Column<int>("VerificationStatus")
+            .Column<PhoneNumberVerificationStatus>("VerificationStatus")
             .Column<string>("VerificationProvider", column => column.WithLength(64))
             .Column<DateTime>("LastVerifiedUtc")
             .Column<DateTime>("NextVerificationDueUtc")

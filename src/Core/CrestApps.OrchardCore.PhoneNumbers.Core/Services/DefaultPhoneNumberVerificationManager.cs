@@ -1,12 +1,13 @@
 using CrestApps.OrchardCore.PhoneNumbers;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Default provider dispatcher for phone number verification requests.

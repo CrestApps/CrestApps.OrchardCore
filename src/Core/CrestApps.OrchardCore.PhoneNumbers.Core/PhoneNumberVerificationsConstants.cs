@@ -16,6 +16,11 @@ public static class PhoneNumberVerificationsConstants
     public static class Features
     {
         /// <summary>
+        /// The feature identifier for the Phone Numbers module.
+        /// </summary>
+        public const string PhoneNumbers = "CrestApps.OrchardCore.PhoneNumbers";
+
+        /// <summary>
         /// The core Phone Number Verifications feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.PhoneNumbers.Verifications";

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -21,7 +20,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "CrestApps.OrchardCore.Resources",
-        PhoneNumbersConstants.Features.Area,
+        PhoneNumberVerificationsConstants.Features.PhoneNumbers,
         "OrchardCore.ContentFields",
         "OrchardCore.ContentTypes",
     ]

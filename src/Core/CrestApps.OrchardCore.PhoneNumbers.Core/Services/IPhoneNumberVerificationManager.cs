@@ -1,4 +1,6 @@
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications;
+
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Resolves registered phone number verification providers and executes verification requests.

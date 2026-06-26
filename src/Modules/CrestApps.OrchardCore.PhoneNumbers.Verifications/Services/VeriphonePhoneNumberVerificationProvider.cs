@@ -1,10 +1,11 @@
 using System.Globalization;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;

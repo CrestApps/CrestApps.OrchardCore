@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
@@ -35,7 +36,7 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
                     .AddClass("reports")
                     .Id("reports")
                     .Action("Index", "Reports", PhoneNumberVerificationsConstants.Features.Area)
-                    .Permission(PhoneNumberVerificationsPermissions.VerifyPhoneNumbers)
+                    .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
                 ));
 

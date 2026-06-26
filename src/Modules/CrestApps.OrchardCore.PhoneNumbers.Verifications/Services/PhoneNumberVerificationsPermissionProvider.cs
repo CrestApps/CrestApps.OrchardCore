@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -12,6 +13,7 @@ internal sealed class PhoneNumberVerificationsPermissionProvider : IPermissionPr
     [
         PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings,
         PhoneNumberVerificationsPermissions.VerifyPhoneNumbers,
+        PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport,
     ];
 
     /// <inheritdoc/>

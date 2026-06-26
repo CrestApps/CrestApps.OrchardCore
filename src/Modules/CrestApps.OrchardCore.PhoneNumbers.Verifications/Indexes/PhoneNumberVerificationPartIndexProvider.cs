@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using OrchardCore.ContentManagement;
 using YesSql.Indexes;
 
