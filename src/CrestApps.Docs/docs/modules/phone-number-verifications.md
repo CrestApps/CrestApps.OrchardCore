@@ -36,7 +36,7 @@ The module ships with the following features:
 
 | Feature | Feature ID | Description |
 | --- | --- | --- |
-| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumberVerifications` | The core framework, settings, content part, SQL index, reporting, and background revalidation. |
+| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumberVerifications` | The core framework, settings, content part, SQL index, automatic contact verification, reporting, and background revalidation. |
 | AbstractAPI Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi` | Verifies phone numbers using the [AbstractAPI Phone Validation](https://www.abstractapi.com/api/phone-validation-api) service. |
 
 Enable a provider feature to activate the core feature and make the provider available for selection.
@@ -93,10 +93,15 @@ The module maintains a `PhoneNumberVerificationPartIndex` SQL index over the com
 
 ## Verification workflow
 
-Imports and contact creation never verify numbers automatically, so imports stay fast and inexpensive. Verification happens through one of two paths:
+Verification happens through one of three paths:
 
-1. **Background revalidation** — a scheduled job verifies contacts that are due.
-2. **Explicit requests** — a verification is triggered for a specific contact.
+1. **Automatic contact changes** — when the Omnichannel Management feature is enabled, a content handler watches omnichannel contact content items. On create or update, it extracts the preferred phone number from the `ContactMethods` bag (`Cell`, then `Home`, `Office`, `Work`, `Other`) and verifies it when it is new or different from the number stored in `PhoneNumberVerificationPart`.
+2. **Background revalidation** — a scheduled job verifies contacts that already have a stored phone number and are due.
+3. **Explicit requests** — a verification is triggered for a specific phone number.
+
+Automatic verification runs as deferred work after the content item is saved, so the content lifecycle does not call the external provider inline. If no provider is enabled or a provider call fails, the handler stores the phone number as `Unverified`; the background revalidation task can pick it up later when a provider is available.
+
+When a phone field is rendered for display or editing, the UI shows a status icon next to the number when verification data is available on the same content item. Verified numbers show a green check mark, invalid numbers show a red error icon, failed verifications show a warning icon, and unverified numbers show a muted unknown icon. Each icon includes a tooltip that explains the status and includes the last verification timestamp when one is available.
 
 Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
 

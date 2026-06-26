@@ -1,12 +1,15 @@
 using CrestApps.OrchardCore.PhoneNumberVerifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Flows.Models;
 using OrchardCore.Settings;
 using YesSql;
 
@@ -61,6 +64,11 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
             var now = clock.UtcNow;
 
+            if (verificationManager.GetProviders().Count == 0)
+            {
+                break;
+            }
+
             var batch = await session.Query<ContentItem, PhoneNumberVerificationPartIndex>(index =>
                     (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)
                     && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
@@ -99,6 +107,13 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
                         result,
                         revalidationIntervalDays: settings.RevalidationIntervalDays);
 
+                    if (GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
+                    {
+                        phoneNumberContentItem.AlterPhoneNumberVerificationResult(
+                            result,
+                            revalidationIntervalDays: settings.RevalidationIntervalDays);
+                    }
+
                     await session.SaveAsync(contentItem);
                 }
                 catch (Exception ex)
@@ -131,5 +146,53 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
         return part.TryGetPhoneNumberVerificationResult(out var result)
             ? result.NormalizedPhoneNumber ?? result.PhoneNumber
             : null;
+    }
+
+    private static ContentItem GetPreferredPhoneNumberContentItem(ContentItem contact)
+    {
+        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart)
+            || bagPart.ContentItems is null
+            || bagPart.ContentItems.Count == 0)
+        {
+            return null;
+        }
+
+        var phoneNumbers = new PriorityQueue<ContentItem, int>();
+
+        foreach (var contentMethod in bagPart.ContentItems)
+        {
+            if (contentMethod.ContentType != OmnichannelConstants.ContentTypes.PhoneNumber
+                || !contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart)
+                || string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber))
+            {
+                continue;
+            }
+
+            var priority = GetPhoneNumberPriority(phonePart.Type?.Text);
+
+            if (priority is null)
+            {
+                continue;
+            }
+
+            phoneNumbers.Enqueue(contentMethod, priority.Value);
+        }
+
+        return phoneNumbers.Count > 0
+            ? phoneNumbers.Dequeue()
+            : null;
+    }
+
+    private static int? GetPhoneNumberPriority(string type)
+    {
+        return type switch
+        {
+            "Cell" => 1,
+            "Home" => 2,
+            "Office" => 3,
+            "Work" => 4,
+            "Other" => 5,
+            _ => null,
+        };
     }
 }

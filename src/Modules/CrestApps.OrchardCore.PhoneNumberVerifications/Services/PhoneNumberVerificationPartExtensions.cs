@@ -94,6 +94,52 @@ public static class PhoneNumberVerificationPartExtensions
     }
 
     /// <summary>
+    /// Stores an unverified phone number on a content item so it can be verified later.
+    /// </summary>
+    /// <param name="contentItem">The content item to update.</param>
+    /// <param name="phoneNumber">The phone number to store.</param>
+    /// <param name="normalizedPhoneNumber">The normalized phone number, when available.</param>
+    public static void AlterPhoneNumberVerificationPending(
+        this ContentItem contentItem,
+        string phoneNumber,
+        string normalizedPhoneNumber = null)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+        ArgumentException.ThrowIfNullOrWhiteSpace(phoneNumber);
+
+        contentItem.Alter<PhoneNumberVerificationPart>(part =>
+        {
+            part.PhoneNumber = phoneNumber;
+            part.NormalizedPhoneNumber = normalizedPhoneNumber ?? phoneNumber;
+            part.VerificationStatus = PhoneNumberVerificationStatus.Unverified;
+            part.VerificationProvider = null;
+            part.VerificationResultJson = null;
+            part.LastVerifiedUtc = null;
+            part.NextVerificationDueUtc = null;
+        });
+    }
+
+    /// <summary>
+    /// Clears verification data when the content item no longer has a phone number.
+    /// </summary>
+    /// <param name="contentItem">The content item to update.</param>
+    public static void ClearPhoneNumberVerification(this ContentItem contentItem)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+
+        contentItem.Alter<PhoneNumberVerificationPart>(part =>
+        {
+            part.PhoneNumber = null;
+            part.NormalizedPhoneNumber = null;
+            part.VerificationStatus = PhoneNumberVerificationStatus.Unverified;
+            part.VerificationProvider = null;
+            part.VerificationResultJson = null;
+            part.LastVerifiedUtc = null;
+            part.NextVerificationDueUtc = null;
+        });
+    }
+
+    /// <summary>
     /// Determines whether a content item currently has a successful verification result.
     /// </summary>
     /// <param name="contentItem">The content item to evaluate.</param>

@@ -173,6 +173,57 @@ public sealed class PhoneNumberVerificationPartExtensionsTests
         Assert.Equal("Example Carrier", stored.Carrier);
     }
 
+    [Fact]
+    public void AlterPhoneNumberVerificationPending_WhenPhoneNumberProvided_StoresUnverifiedPart()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
+
+        // Act
+        contentItem.AlterPhoneNumberVerificationPending("14159929960", "+14159929960");
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Equal("14159929960", part.PhoneNumber);
+        Assert.Equal("+14159929960", part.NormalizedPhoneNumber);
+        Assert.Equal(PhoneNumberVerificationStatus.Unverified, part.VerificationStatus);
+        Assert.Null(part.VerificationProvider);
+        Assert.Null(part.VerificationResultJson);
+        Assert.Null(part.LastVerifiedUtc);
+        Assert.Null(part.NextVerificationDueUtc);
+    }
+
+    [Fact]
+    public void ClearPhoneNumberVerification_WhenPartExists_ClearsVerificationData()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart
+        {
+            PhoneNumber = "14159929960",
+            NormalizedPhoneNumber = "+14159929960",
+            VerificationStatus = PhoneNumberVerificationStatus.Verified,
+            VerificationProvider = "AbstractApi",
+            VerificationResultJson = "{}",
+            LastVerifiedUtc = _now,
+            NextVerificationDueUtc = _now.AddDays(30),
+        });
+
+        // Act
+        contentItem.ClearPhoneNumberVerification();
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Null(part.PhoneNumber);
+        Assert.Null(part.NormalizedPhoneNumber);
+        Assert.Equal(PhoneNumberVerificationStatus.Unverified, part.VerificationStatus);
+        Assert.Null(part.VerificationProvider);
+        Assert.Null(part.VerificationResultJson);
+        Assert.Null(part.LastVerifiedUtc);
+        Assert.Null(part.NextVerificationDueUtc);
+    }
+
     private static ContentItem CreateContentItem(PhoneNumberVerificationPart part)
     {
         var contentItem = new ContentItem

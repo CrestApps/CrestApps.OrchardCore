@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumberVerifications.BackgroundTasks;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Drivers;
+using CrestApps.OrchardCore.PhoneNumberVerifications.Handlers;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Migrations;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Models;
@@ -7,6 +9,7 @@ using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -56,5 +59,17 @@ public sealed class AbstractApiStartup : StartupBase
             "Verifies phone numbers using the AbstractAPI Phone Validation service.");
 
         services.AddSiteDisplayDriver<AbstractApiPhoneNumberVerificationSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers automatic verification for Omnichannel contact content items.
+/// </summary>
+[RequireFeatures(OmnichannelConstants.Features.Managements)]
+public sealed class OmnichannelContactVerificationStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentHandler, OmnichannelContactPhoneNumberVerificationHandler>();
     }
 }

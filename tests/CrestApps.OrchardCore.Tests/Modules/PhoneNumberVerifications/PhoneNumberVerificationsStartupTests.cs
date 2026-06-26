@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.PhoneNumberVerifications.BackgroundTasks;
 using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data.Migration;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -75,5 +76,20 @@ public sealed class PhoneNumberVerificationsStartupTests
             descriptor.ServiceType == typeof(IPhoneNumberVerificationProvider) &&
             descriptor.KeyedImplementationType == typeof(AbstractApiPhoneNumberVerificationProvider) &&
             Equals(descriptor.ServiceKey, PhoneNumberVerificationsConstants.Providers.AbstractApi));
+    }
+
+    [Fact]
+    public void OmnichannelContactVerificationStartup_ShouldRegisterContentHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        new OmnichannelContactVerificationStartup().ConfigureServices(services);
+
+        // Assert
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IContentHandler) &&
+            descriptor.ImplementationType?.Name == "OmnichannelContactPhoneNumberVerificationHandler");
     }
 }
