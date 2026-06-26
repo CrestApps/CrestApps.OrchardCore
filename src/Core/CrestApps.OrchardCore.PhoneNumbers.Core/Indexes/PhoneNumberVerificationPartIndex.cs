@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications;
+using CrestApps.OrchardCore.PhoneNumbers;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;

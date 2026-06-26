@@ -101,7 +101,9 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
 
         try
         {
-            parsed = JsonSerializer.Deserialize<TwilioLookupResponse>(payload);
+            parsed = JsonSerializer.Deserialize<TwilioLookupResponse>(
+                payload,
+                PhoneNumberVerificationProviderJsonSerializerOptions.Default);
         }
         catch (JsonException ex)
         {

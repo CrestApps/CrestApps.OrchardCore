@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications;
+namespace CrestApps.OrchardCore.PhoneNumbers;
 
 /// <summary>
 /// Represents a provider-agnostic phone number verification result.

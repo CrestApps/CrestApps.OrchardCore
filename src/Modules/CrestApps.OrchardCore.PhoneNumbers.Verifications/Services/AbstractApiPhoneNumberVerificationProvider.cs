@@ -94,7 +94,9 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
 
         try
         {
-            parsed = JsonSerializer.Deserialize<AbstractApiResponse>(payload);
+            parsed = JsonSerializer.Deserialize<AbstractApiResponse>(
+                payload,
+                PhoneNumberVerificationProviderJsonSerializerOptions.Default);
         }
         catch (JsonException ex)
         {

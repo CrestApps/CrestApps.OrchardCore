@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
-    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Verifications.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Verifications.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

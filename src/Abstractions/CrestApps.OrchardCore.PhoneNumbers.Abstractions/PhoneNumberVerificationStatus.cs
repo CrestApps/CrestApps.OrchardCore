@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications;
+namespace CrestApps.OrchardCore.PhoneNumbers;
 
 /// <summary>
 /// Represents the verification status of a phone number.

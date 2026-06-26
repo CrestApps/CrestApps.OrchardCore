@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;

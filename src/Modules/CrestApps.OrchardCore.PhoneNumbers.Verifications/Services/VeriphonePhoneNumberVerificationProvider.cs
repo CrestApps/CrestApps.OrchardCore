@@ -99,7 +99,9 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
 
         try
         {
-            parsed = JsonSerializer.Deserialize<VeriphoneResponse>(payload);
+            parsed = JsonSerializer.Deserialize<VeriphoneResponse>(
+                payload,
+                PhoneNumberVerificationProviderJsonSerializerOptions.Default);
         }
         catch (JsonException ex)
         {

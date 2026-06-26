@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications;
@@ -13,6 +14,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using YesSql.Indexes;
+using PhoneNumberVerificationsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.Startup;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;
 
@@ -25,7 +27,7 @@ public sealed class PhoneNumberVerificationsStartupTests
         var services = new ServiceCollection();
 
         // Act
-        new Startup().ConfigureServices(services);
+        new PhoneNumberVerificationsStartup().ConfigureServices(services);
 
         // Assert
         Assert.Contains(services, descriptor =>
@@ -60,7 +62,7 @@ public sealed class PhoneNumberVerificationsStartupTests
         var services = new ServiceCollection();
 
         // Act
-        new Startup().ConfigureServices(services);
+        new PhoneNumberVerificationsStartup().ConfigureServices(services);
 
         // Assert
         Assert.DoesNotContain(services, descriptor =>

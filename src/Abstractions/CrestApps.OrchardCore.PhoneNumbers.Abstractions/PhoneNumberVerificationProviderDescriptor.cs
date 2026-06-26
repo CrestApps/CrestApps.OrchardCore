@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Localization;
 
-namespace CrestApps.OrchardCore.PhoneNumbers.Verifications;
+namespace CrestApps.OrchardCore.PhoneNumbers;
 
 /// <summary>
 /// Describes a registered phone number verification provider so the framework can

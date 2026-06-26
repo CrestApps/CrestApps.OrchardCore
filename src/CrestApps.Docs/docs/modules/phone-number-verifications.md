@@ -167,7 +167,7 @@ Adding a provider never requires changes to the core feature. A provider only ne
 
 ### Creating a custom provider
 
-Implement `IPhoneNumberVerificationProvider` and map the external response into `PhoneNumberVerificationResult`:
+Reference `CrestApps.OrchardCore.PhoneNumbers.Abstractions`, then implement `IPhoneNumberVerificationProvider` from the `CrestApps.OrchardCore.PhoneNumbers` namespace and map the external response into `PhoneNumberVerificationResult`:
 
 ```csharp
 public sealed class MyPhoneNumberVerificationProvider : IPhoneNumberVerificationProvider

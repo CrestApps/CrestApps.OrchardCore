@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.PhoneNumbers.Verifications;
+using CrestApps.OrchardCore.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
