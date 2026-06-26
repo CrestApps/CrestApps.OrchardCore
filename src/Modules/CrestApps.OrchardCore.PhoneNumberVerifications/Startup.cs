@@ -9,8 +9,8 @@ using CrestApps.OrchardCore.PhoneNumberVerifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -59,6 +59,26 @@ public sealed class AbstractApiStartup : StartupBase
             "Verifies phone numbers using the AbstractAPI Phone Validation service.");
 
         services.AddSiteDisplayDriver<AbstractApiPhoneNumberVerificationSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Twilio Lookup phone number verification provider.
+/// </summary>
+[Feature(PhoneNumberVerificationsConstants.Features.Twilio)]
+public sealed class TwilioStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddHttpClient(nameof(TwilioPhoneNumberVerificationProvider));
+
+        services.AddPhoneNumberVerificationProvider<TwilioPhoneNumberVerificationProvider>(
+            PhoneNumberVerificationsConstants.Providers.Twilio,
+            "Twilio",
+            "Verifies phone numbers using the Twilio Lookup service.");
+
+        services.AddSiteDisplayDriver<TwilioPhoneNumberVerificationSettingsDisplayDriver>();
     }
 }
 
