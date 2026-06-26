@@ -1,0 +1,133 @@
+@model DialPadSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsEnabled" checked="@Model.IsEnabled" role="button" data-bs-toggle="collapse" data-bs-target="#DialPad_Provider_Settings" aria-expanded="@Model.IsEnabled.ToString().ToLowerInvariant()" aria-controls="DialPad_Provider_Settings" />
+            <label class="form-check-label" asp-for="IsEnabled">@T["Enable DialPad provider"]</label>
+        </div>
+    </div>
+</div>
+
+<div id="DialPad_Provider_Settings" class="collapse @(Model.IsEnabled ? " show" : string.Empty)">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <h4 class="mb-0">@T["DialPad account info"]</h4>
+        </div>
+    </div>
+
+    <div class="alert alert-info" role="alert">
+        @T["Use API key authentication for simple integrations where one DialPad account places calls for the tenant. Use OAuth 2.0 for multiuser integrations and production deployments where each user connects their own DialPad account."]
+        @T["API keys and OAuth client secrets are encrypted before they are stored."]
+        @T["To obtain OAuth 2.0 access, visit"]
+        <a href="https://developers.dialpad.com/" target="_blank" rel="noopener noreferrer">developers.dialpad.com</a>
+        @T["for DialPad developer instructions."]
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="AuthenticationType">
+        <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+        <div class="ocat-end">
+            <select asp-for="AuthenticationType" class="form-select" data-dialpad-authentication-type>
+                <option value="@DialPadAuthenticationType.NotConfigured">@T["Select authentication type"]</option>
+                <option value="@DialPadAuthenticationType.ApiKey">@T["API key"]</option>
+                <option value="@DialPadAuthenticationType.OAuth2">@T["OAuth 2.0"]</option>
+            </select>
+            <span asp-validation-for="AuthenticationType"></span>
+            <span class="hint">@T["API key authentication uses the DialPad account that owns the API key. OAuth 2.0 lets each user connect their own DialPad account and is recommended for larger organizations."]</span>
+        </div>
+    </div>
+
+    <div data-dialpad-authentication-section="@DialPadAuthenticationType.ApiKey" hidden="@(Model.AuthenticationType != DialPadAuthenticationType.ApiKey)">
+        <div class="ocat-wrapper" asp-validation-class-for="ApiToken">
+            <label asp-for="ApiToken" class="ocat-label">@T["API key"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiToken" class="form-control" type="password" autocomplete="off" />
+                <span asp-validation-for="ApiToken"></span>
+                @if (Model.HasApiToken)
+                {
+                    <span class="hint">@T["An encrypted API key is already saved. Leave this empty to keep the existing value, or enter a new API key to replace it."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["Enter the DialPad API key. This value is encrypted before it is stored."]</span>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="UserId">
+            <label asp-for="UserId" class="ocat-label">@T["User id"]</label>
+            <div class="ocat-end">
+                <input asp-for="UserId" class="form-control" />
+                <span asp-validation-for="UserId"></span>
+                <span class="hint">@T["Enter the DialPad user id that places outbound calls when API key authentication is selected."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="OutboundCallerId">
+            <label asp-for="OutboundCallerId" class="ocat-label">@T["Outbound caller id"]</label>
+            <div class="ocat-end">
+                <input asp-for="OutboundCallerId" class="form-control" />
+                <span asp-validation-for="OutboundCallerId"></span>
+                <span class="hint">@T["The phone number presented to the recipient on outbound calls. Include a country code, for example +1 for the United States."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div data-dialpad-authentication-section="@DialPadAuthenticationType.OAuth2" hidden="@(Model.AuthenticationType != DialPadAuthenticationType.OAuth2)">
+        <div class="ocat-wrapper" asp-validation-class-for="ClientId">
+            <label asp-for="ClientId" class="ocat-label">@T["OAuth client id"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientId" class="form-control" autocomplete="off" />
+                <span asp-validation-for="ClientId"></span>
+                <span class="hint">@T["The OAuth client id issued by DialPad. Required when OAuth 2.0 authentication is selected."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="ClientSecret">
+            <label asp-for="ClientSecret" class="ocat-label">@T["OAuth client secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientSecret" class="form-control" type="password" autocomplete="off" />
+                <span asp-validation-for="ClientSecret"></span>
+                @if (Model.HasClientSecret)
+                {
+                    <span class="hint">@T["An encrypted client secret is already saved. Leave this empty to keep the existing value, or enter a new client secret to replace it."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["Enter the OAuth client secret issued by DialPad. This value is encrypted before it is stored."]</span>
+                }
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Scopes">
+            <label asp-for="Scopes" class="ocat-label">@T["OAuth scopes"]</label>
+            <div class="ocat-end">
+                <input asp-for="Scopes" class="form-control" />
+                <span asp-validation-for="Scopes"></span>
+                <span class="hint">@T["Optional. The space-separated OAuth scopes requested during authorization."]</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script at="Foot">
+    (function () {
+        var selector = document.querySelector('[data-dialpad-authentication-type]');
+
+        if (!selector) {
+            return;
+        }
+
+        var sections = Array.prototype.slice.call(document.querySelectorAll('[data-dialpad-authentication-section]'));
+
+        function updateAuthenticationSections() {
+            sections.forEach(function (section) {
+                section.hidden = section.getAttribute('data-dialpad-authentication-section') !== selector.value;
+            });
+        }
+
+        selector.addEventListener('change', updateAuthenticationSections);
+        updateAuthenticationSections();
+    })();
+</script>

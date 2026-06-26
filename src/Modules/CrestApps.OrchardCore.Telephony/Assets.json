@@ -1,0 +1,21 @@
+[
+  {
+    "inputs": [
+      "Assets/js/soft-phone.js"
+    ],
+    "output": "wwwroot/scripts/soft-phone.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/phone-field-dialer.js"
+    ],
+    "output": "wwwroot/scripts/phone-field-dialer.js"
+  },
+  {
+    "generateSourceMaps": false,
+    "inputs": [
+      "Assets/scss/soft-phone.scss"
+    ],
+    "output": "wwwroot/styles/soft-phone.css"
+  }
+]

@@ -1,0 +1,30 @@
+@model SoftPhoneWidgetSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="DisplayOnAdmin" checked="@Model.DisplayOnAdmin" />
+            <label class="form-check-label" asp-for="DisplayOnAdmin">@T["Show the soft phone on the admin dashboard"]</label>
+            <span class="hint">@T["Displays the floating soft phone on admin pages for users who can use the soft phone."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="DisplayOnFrontend" checked="@Model.DisplayOnFrontend" />
+            <label class="form-check-label" asp-for="DisplayOnFrontend">@T["Show the soft phone on the front end"]</label>
+            <span class="hint">@T["Displays the floating soft phone on the website for users who can use the soft phone. You can also place the soft phone manually in a theme or template."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AccentColor">
+    <label asp-for="AccentColor" class="ocat-label">@T["Accent color"]</label>
+    <div class="ocat-end">
+        <input asp-for="AccentColor" class="form-control form-control-color" type="color" />
+        <span asp-validation-for="AccentColor"></span>
+        <span class="hint">@T["The accent color used by the floating soft phone button and controls."]</span>
+    </div>
+</div>

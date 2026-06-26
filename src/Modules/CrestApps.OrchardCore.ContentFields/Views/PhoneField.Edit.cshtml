@@ -21,6 +21,8 @@
         <input type="hidden" asp-for="CountryCode" data-phone-country="true" />
         <input type="hidden" asp-for="NationalNumber" data-phone-national="true" />
         <span asp-validation-for="PhoneNumber"></span>
+        @* Placeholder for telephony integrations (for example the soft phone) to attach a dial button. *@
+        <span class="phone-field-dial" data-phone-dial></span>
         @if (!string.IsNullOrEmpty(settings.Hint))
         {
             <span class="hint">@settings.Hint</span>

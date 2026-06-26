@@ -96,6 +96,14 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Telephony',
+            items: [
+                'telephony/index',
+                'telephony/dialpad',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Standard Modules',
             items: [
                 'modules/index',

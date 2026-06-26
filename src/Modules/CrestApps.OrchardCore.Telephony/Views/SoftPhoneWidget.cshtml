@@ -1,0 +1,141 @@
+@using CrestApps.OrchardCore.Telephony
+@using CrestApps.OrchardCore.Telephony.Hubs
+@using CrestApps.Core.SignalR.Services
+@using System.Text.Json
+@inject HubRouteManager HubRouteManager
+@{
+    var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
+    var accentColor = Model.AccentColor as string ?? "#2f6fed";
+    var capabilities = Model.Capabilities is int caps ? caps : 0;
+    var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+
+    var config = new Dictionary<string, object>
+    {
+        ["hubUrl"] = hubUrl,
+        ["capabilities"] = capabilities,
+        ["connectUrl"] = connectUrl,
+        ["storageKey"] = "telephony-soft-phone",
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["idle"] = T["Ready"].Value,
+            ["connecting"] = T["Connecting..."].Value,
+            ["ringing"] = T["Ringing..."].Value,
+            ["connected"] = T["In call"].Value,
+            ["onHold"] = T["On hold"].Value,
+            ["disconnected"] = T["Call ended"].Value,
+            ["failed"] = T["Call failed"].Value,
+            ["disconnectedHub"] = T["Disconnected"].Value,
+            ["notReady"] = T["Not Ready"].Value,
+            ["notConfigured"] = T["No telephony provider is configured."].Value,
+            ["notConnected"] = T["Not connected"].Value,
+            ["invalidNumber"] = T["Enter a phone number to call."].Value,
+            ["transferPrompt"] = T["Transfer to number"].Value,
+            ["mergePrompt"] = T["Second call id to merge"].Value,
+            ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
+            ["noInteractions"] = T["No recent calls."].Value,
+            ["incoming"] = T["Incoming"].Value,
+            ["outgoing"] = T["Outgoing"].Value,
+            ["missed"] = T["Missed"].Value,
+            ["inProgress"] = T["In progress"].Value,
+            ["completed"] = T["Completed"].Value,
+            ["rejected"] = T["Rejected"].Value,
+            ["canceled"] = T["Canceled"].Value,
+        },
+    };
+}
+
+<div id="telephony-soft-phone"
+     class="telephony-soft-phone"
+     style="--telephony-accent: @accentColor; visibility: hidden;"
+     data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
+
+    <button type="button" class="telephony-soft-phone__toggle" data-telephony-toggle title="@T["Soft phone"]" aria-label="@T["Soft phone"]">
+        <i class="fa-solid fa-phone" data-telephony-toggle-icon></i>
+    </button>
+
+    <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
+        <div class="telephony-soft-phone__header" data-telephony-drag-handle>
+            <span class="telephony-soft-phone__title">@T["Soft Phone"]</span>
+            <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
+            <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="telephony-soft-phone__unavailable" data-telephony-unavailable hidden>
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <p data-telephony-unavailable-text>@T["No telephony provider is configured."]</p>
+        </div>
+
+        <div class="telephony-soft-phone__connect" data-telephony-connect-panel hidden>
+            <p class="telephony-soft-phone__connect-text">@T["Connect your account to the telephony provider to start making calls."]</p>
+            <button type="button" class="telephony-soft-phone__connect-btn btn btn-primary" data-telephony-connect>
+                <i class="fa-solid fa-link"></i> @T["Connect to provider"]
+            </button>
+        </div>
+
+        <div class="telephony-soft-phone__body" data-telephony-body>
+            <div class="telephony-soft-phone__view" data-telephony-view="keypad">
+                <div class="telephony-soft-phone__display">
+                    <input type="tel"
+                           class="telephony-soft-phone__number"
+                           data-telephony-number
+                           placeholder="@T["Enter a number"]"
+                           aria-label="@T["Phone number"]" />
+                    <div class="telephony-soft-phone__peer" data-telephony-peer></div>
+                </div>
+
+                <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
+
+                <div class="telephony-soft-phone__keypad">
+                    @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" })
+                    {
+                        <button type="button" class="telephony-soft-phone__key" data-telephony-key="@key">@key</button>
+                    }
+                </div>
+
+                <div class="telephony-soft-phone__actions">
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--call" data-telephony-dial title="@T["Call"]">
+                        <i class="fa-solid fa-phone"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hold" data-telephony-hold title="@T["Hold"]" hidden>
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--resume" data-telephony-resume title="@T["Resume"]" hidden>
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--mute" data-telephony-mute title="@T["Mute"]" hidden>
+                        <i class="fa-solid fa-microphone-slash"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--unmute" data-telephony-unmute title="@T["Unmute"]" hidden>
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Merge"]" hidden>
+                        <i class="fa-solid fa-code-merge"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup" data-telephony-hangup title="@T["Hang up"]" hidden>
+                        <i class="fa-solid fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="telephony-soft-phone__view telephony-soft-phone__history" data-telephony-view="history" data-telephony-history hidden>
+                <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
+            </div>
+        </div>
+
+        <div class="telephony-soft-phone__footer" data-telephony-footer hidden>
+            <button type="button" class="telephony-soft-phone__tab is-active" data-telephony-tab="keypad" aria-selected="true">
+                <i class="fa-solid fa-grip"></i>
+                <span>@T["Keypad"]</span>
+            </button>
+            <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="history" aria-selected="false">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>@T["Recent"]</span>
+            </button>
+        </div>
+    </div>
+</div>
