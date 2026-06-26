@@ -8,8 +8,8 @@ description: Configure the AbstractAPI provider for the Phone Number Verificatio
 | | |
 | --- | --- |
 | **Feature Name** | AbstractAPI Phone Number Verification |
-| **Feature ID** | `CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi` |
-| **Depends on** | `CrestApps.OrchardCore.PhoneNumberVerifications` |
+| **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` |
+| **Depends on** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
 ## Purpose
 

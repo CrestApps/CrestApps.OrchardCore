@@ -8,8 +8,8 @@ description: Configure the Twilio Lookup provider for the Phone Number Verificat
 | | |
 | --- | --- |
 | **Feature Name** | Twilio Phone Number Verification |
-| **Feature ID** | `CrestApps.OrchardCore.PhoneNumberVerifications.Twilio` |
-| **Depends on** | `CrestApps.OrchardCore.PhoneNumberVerifications` |
+| **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` |
+| **Depends on** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
 ## Purpose
 

@@ -8,8 +8,8 @@ description: Configure the Veriphone provider for the Phone Number Verifications
 | | |
 | --- | --- |
 | **Feature Name** | Veriphone Phone Number Verification |
-| **Feature ID** | `CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone` |
-| **Depends on** | `CrestApps.OrchardCore.PhoneNumberVerifications` |
+| **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` |
+| **Depends on** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
 ## Purpose
 

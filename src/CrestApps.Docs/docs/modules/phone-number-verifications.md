@@ -8,7 +8,7 @@ description: A provider-agnostic framework for verifying contact phone numbers, 
 | | |
 | --- | --- |
 | **Feature Name** | Phone Number Verifications |
-| **Feature ID** | `CrestApps.OrchardCore.PhoneNumberVerifications` |
+| **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
 The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, reporting, and a background revalidation process.
 
@@ -36,10 +36,10 @@ The module ships with the following features:
 
 | Feature | Feature ID | Description |
 | --- | --- | --- |
-| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumberVerifications` | The core framework, settings, content part, SQL index, automatic contact verification, reporting, and background revalidation. |
-| AbstractAPI Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.AbstractApi` | Verifies phone numbers using the [AbstractAPI Phone Validation](https://www.abstractapi.com/api/phone-validation-api) service. |
-| Veriphone Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.Veriphone` | Verifies phone numbers using the [Veriphone phone number validation API](https://veriphone.io/docs). |
-| Twilio Phone Number Verification | `CrestApps.OrchardCore.PhoneNumberVerifications.Twilio` | Verifies phone numbers using the [Twilio Lookup API](https://www.twilio.com/docs/lookup/v2-api). |
+| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | The core framework, settings, content part, SQL index, automatic contact verification, reporting, and background revalidation. |
+| AbstractAPI Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | Verifies phone numbers using the [AbstractAPI Phone Validation](https://www.abstractapi.com/api/phone-validation-api) service. |
+| Veriphone Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Verifies phone numbers using the [Veriphone phone number validation API](https://veriphone.io/docs). |
+| Twilio Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Verifies phone numbers using the [Twilio Lookup API](https://www.twilio.com/docs/lookup/v2-api). |
 
 Enable a provider feature to activate the core feature and make the provider available for selection.
 
@@ -189,20 +189,30 @@ public sealed class MyPhoneNumberVerificationProvider : IPhoneNumberVerification
 }
 ```
 
-Register the provider in a feature `Startup` using the provider key and metadata:
+Register the provider in a feature `Startup` using the provider key and localized metadata:
 
 ```csharp
 [Feature("MyCompany.MyModule.MyProvider")]
 public sealed class MyProviderStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public MyProviderStartup(IStringLocalizer<MyProviderStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpClient(nameof(MyPhoneNumberVerificationProvider));
 
         services.AddPhoneNumberVerificationProvider<MyPhoneNumberVerificationProvider>(
             "MyProvider",
-            "My Provider",
-            "Verifies phone numbers using My Provider.");
+            options =>
+            {
+                options.DisplayName = S["My Provider"];
+                options.Description = S["Verifies phone numbers using My Provider."];
+            });
 
         // Optional: register a settings display driver for the provider tab.
         services.AddSiteDisplayDriver<MyProviderSettingsDisplayDriver>();
@@ -210,4 +220,4 @@ public sealed class MyProviderStartup : StartupBase
 }
 ```
 
-`AddPhoneNumberVerificationProvider` registers the implementation as a keyed service under the provider key and adds its descriptor so the provider selection setting discovers it automatically.
+`AddPhoneNumberVerificationProvider` registers the implementation as a keyed service under the provider key and adds its descriptor so the provider selection setting discovers it automatically. The registration action configures localized provider metadata without allowing the provider key to drift from the keyed service registration.

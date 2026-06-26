@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
