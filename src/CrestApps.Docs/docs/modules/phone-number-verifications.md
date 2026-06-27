@@ -167,15 +167,17 @@ Configure the module under **Settings** -> **Phone Number Verifications**.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| **Default provider** | First available | The provider used by default. The selector lists only **enabled** providers. If no provider matches the selection (or none is chosen), the first enabled provider is used. |
 | **Revalidation interval (days)** | `365` | The number of days after which a verified number must be revalidated. |
 | **Maximum verification attempts** | `3` | The maximum number of consecutive failed verification requests before a record stops auto-retrying and is flagged as **Needs attention** in the records queue. |
-| **Default provider** | First available | The provider used by default. The selector lists every enabled provider. |
 
 ![Phone number verifications core settings](/img/docs/phone-number-verifications-settings.png)
 
 > Screenshot placeholder: the core settings page.
 
 Each provider feature contributes its own tab to the same settings page, following the Orchard Core SMS module pattern. Provider tabs only appear when the provider feature is enabled.
+
+Each provider tab includes an **Enable this provider** switch. A provider is only used for verification and only appears in the **Default provider** selector when this switch is on. Turning the switch on reveals the provider's connection and authentication fields, which are then validated when the settings are saved; turning it off hides those fields and skips their validation. If you disable the provider that is currently selected as the default, the default selection is cleared and the framework falls back to the first enabled provider.
 
 ![Provider settings tab](/img/docs/phone-number-verifications-provider-settings.png)
 

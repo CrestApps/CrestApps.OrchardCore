@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -24,7 +23,7 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly PhoneNumberVerificationProviderOptions _providerOptions;
+    private readonly IPhoneNumberVerificationManager _verificationManager;
 
     internal readonly IStringLocalizer S;
 
@@ -33,17 +32,17 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="providerOptions">The registered verification providers.</param>
+    /// <param name="verificationManager">The verification manager used to resolve enabled providers.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PhoneNumberVerificationsSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
+        IPhoneNumberVerificationManager verificationManager,
         IStringLocalizer<PhoneNumberVerificationsSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _providerOptions = providerOptions.Value;
+        _verificationManager = verificationManager;
         S = stringLocalizer;
     }
 
@@ -52,13 +51,16 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
 
     public override IDisplayResult Edit(ISite site, PhoneNumberVerificationsSettings settings, BuildEditorContext context)
     {
-        return Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", viewModel =>
+        return Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", async viewModel =>
         {
             viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
             viewModel.MaxVerificationAttempts = settings.MaxVerificationAttempts;
             viewModel.SelectedProvider = settings.SelectedProvider;
-            viewModel.Providers = _providerOptions.Providers.Values
-                .Select(provider => new SelectListItem(provider.DisplayName ?? provider.Key, provider.Key))
+
+            var enabledProviders = await _verificationManager.GetEnabledProvidersAsync();
+
+            viewModel.Providers = enabledProviders
+                .Select(provider => new SelectListItem(provider.DisplayName?.Value ?? provider.Key, provider.Key))
                 .OrderBy(item => item.Text)
                 .ToList();
         }).Location("Content:1#General")

@@ -100,7 +100,7 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
         var verificationManager = services.GetRequiredService<IPhoneNumberVerificationManager>();
         var siteService = services.GetRequiredService<ISiteService>();
         var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-        var hasProvider = verificationManager.GetProviders().Count > 0;
+        var hasProvider = (await verificationManager.GetEnabledProvidersAsync()).Count > 0;
 
         foreach (var contentItemId in contentItemIds)
         {

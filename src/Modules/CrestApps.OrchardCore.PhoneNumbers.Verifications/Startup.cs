@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Drivers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Migrations;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -67,7 +68,7 @@ public sealed class AbstractApiStartup : StartupBase
     {
         services.AddHttpClient(nameof(AbstractApiPhoneNumberVerificationProvider));
 
-        services.AddPhoneNumberVerificationProvider<AbstractApiPhoneNumberVerificationProvider>(
+        services.AddPhoneNumberVerificationProvider<AbstractApiPhoneNumberVerificationProvider, AbstractApiPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.AbstractApi,
             options =>
             {
@@ -101,7 +102,7 @@ public sealed class VeriphoneStartup : StartupBase
     {
         services.AddHttpClient(nameof(VeriphonePhoneNumberVerificationProvider));
 
-        services.AddPhoneNumberVerificationProvider<VeriphonePhoneNumberVerificationProvider>(
+        services.AddPhoneNumberVerificationProvider<VeriphonePhoneNumberVerificationProvider, VeriphonePhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Veriphone,
             options =>
             {
@@ -135,7 +136,7 @@ public sealed class TwilioStartup : StartupBase
     {
         services.AddHttpClient(nameof(TwilioPhoneNumberVerificationProvider));
 
-        services.AddPhoneNumberVerificationProvider<TwilioPhoneNumberVerificationProvider>(
+        services.AddPhoneNumberVerificationProvider<TwilioPhoneNumberVerificationProvider, TwilioPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Twilio,
             options =>
             {

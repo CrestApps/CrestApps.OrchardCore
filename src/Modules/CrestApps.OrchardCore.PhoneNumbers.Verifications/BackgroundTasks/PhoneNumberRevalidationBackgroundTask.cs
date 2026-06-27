@@ -46,7 +46,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
         {
             var verificationManager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
 
-            if (verificationManager.GetProviders().Count == 0)
+            if ((await verificationManager.GetEnabledProvidersAsync(cancellationToken)).Count == 0)
             {
                 return;
             }

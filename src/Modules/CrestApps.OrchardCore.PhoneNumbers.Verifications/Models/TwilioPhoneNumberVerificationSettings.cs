@@ -1,14 +1,21 @@
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 
 /// <summary>
 /// Site settings for the Twilio Lookup phone number verification provider.
 /// </summary>
-public sealed class TwilioPhoneNumberVerificationSettings
+public sealed class TwilioPhoneNumberVerificationSettings : IPhoneNumberVerificationProviderSettings
 {
     /// <summary>
     /// The default Twilio Lookup endpoint template.
     /// </summary>
     public const string DefaultEndpoint = "https://lookups.twilio.com/v2/PhoneNumbers/{PhoneNumber}";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider is enabled and available for selection.
+    /// </summary>
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the Twilio Lookup endpoint template used to verify phone numbers.

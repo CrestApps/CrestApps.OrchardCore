@@ -12,6 +12,13 @@ public interface IPhoneNumberVerificationManager
     IReadOnlyCollection<PhoneNumberVerificationProviderDescriptor> GetProviders();
 
     /// <summary>
+    /// Gets the descriptors for the providers that are currently enabled and available for selection.
+    /// </summary>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>The enabled provider descriptors.</returns>
+    Task<IReadOnlyCollection<PhoneNumberVerificationProviderDescriptor>> GetEnabledProvidersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Attempts to resolve a registered provider by its key.
     /// </summary>
     /// <param name="key">The provider key.</param>

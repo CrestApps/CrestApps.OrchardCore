@@ -1,14 +1,18 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -25,8 +29,10 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly INotifier _notifier;
 
     internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VeriphonePhoneNumberVerificationSettingsDisplayDriver"/> class.
@@ -34,17 +40,23 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to encrypt secrets.</param>
+    /// <param name="notifier">The notifier used to surface admin messages.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
     public VeriphonePhoneNumberVerificationSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<VeriphonePhoneNumberVerificationSettingsDisplayDriver> stringLocalizer)
+        INotifier notifier,
+        IStringLocalizer<VeriphonePhoneNumberVerificationSettingsDisplayDriver> stringLocalizer,
+        IHtmlLocalizer<VeriphonePhoneNumberVerificationSettingsDisplayDriver> htmlLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
+        _notifier = notifier;
         S = stringLocalizer;
+        H = htmlLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -55,6 +67,7 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
     {
         return Initialize<VeriphonePhoneNumberVerificationSettingsViewModel>("VeriphonePhoneNumberVerificationSettings_Edit", viewModel =>
         {
+            viewModel.IsEnabled = settings.IsEnabled;
             viewModel.Endpoint = settings.Endpoint;
             viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
         }).Location("Content:6#Veriphone")
@@ -87,11 +100,39 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
             var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
             settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey);
         }
-        else if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+
+        if (viewModel.IsEnabled)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required to call the Veriphone API."]);
+            settings.IsEnabled = true;
+
+            if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required to call the Veriphone API."]);
+            }
+        }
+        else
+        {
+            await DisableProviderAsync(site, settings);
         }
 
         return Edit(site, settings, context);
+    }
+
+    private async Task DisableProviderAsync(ISite site, VeriphonePhoneNumberVerificationSettings settings)
+    {
+        if (settings.IsEnabled)
+        {
+            var mainSettings = site.GetOrCreate<PhoneNumberVerificationsSettings>();
+
+            if (string.Equals(mainSettings.SelectedProvider, PhoneNumberVerificationsConstants.Providers.Veriphone, StringComparison.OrdinalIgnoreCase))
+            {
+                mainSettings.SelectedProvider = null;
+                site.Put(mainSettings);
+
+                await _notifier.WarningAsync(H["The Veriphone provider was the default provider. The default provider has been cleared until you select a new one."]);
+            }
+        }
+
+        settings.IsEnabled = false;
     }
 }

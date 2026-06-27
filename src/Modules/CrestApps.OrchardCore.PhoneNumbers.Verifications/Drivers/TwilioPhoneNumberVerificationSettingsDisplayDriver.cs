@@ -1,14 +1,18 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -25,8 +29,10 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly INotifier _notifier;
 
     internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TwilioPhoneNumberVerificationSettingsDisplayDriver"/> class.
@@ -34,17 +40,23 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to encrypt secrets.</param>
+    /// <param name="notifier">The notifier used to surface admin messages.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
     public TwilioPhoneNumberVerificationSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<TwilioPhoneNumberVerificationSettingsDisplayDriver> stringLocalizer)
+        INotifier notifier,
+        IStringLocalizer<TwilioPhoneNumberVerificationSettingsDisplayDriver> stringLocalizer,
+        IHtmlLocalizer<TwilioPhoneNumberVerificationSettingsDisplayDriver> htmlLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
+        _notifier = notifier;
         S = stringLocalizer;
+        H = htmlLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -55,6 +67,7 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
     {
         return Initialize<TwilioPhoneNumberVerificationSettingsViewModel>("TwilioPhoneNumberVerificationSettings_Edit", viewModel =>
         {
+            viewModel.IsEnabled = settings.IsEnabled;
             viewModel.Endpoint = settings.Endpoint;
             viewModel.AuthenticationType = settings.AuthenticationType;
             viewModel.ApiKeySid = settings.ApiKeySid;
@@ -105,9 +118,36 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
             settings.ProtectedAuthToken = protector.Protect(viewModel.AuthToken);
         }
 
-        ValidateSettings(settings, viewModel, context);
+        if (viewModel.IsEnabled)
+        {
+            settings.IsEnabled = true;
+
+            ValidateSettings(settings, viewModel, context);
+        }
+        else
+        {
+            await DisableProviderAsync(site, settings);
+        }
 
         return Edit(site, settings, context);
+    }
+
+    private async Task DisableProviderAsync(ISite site, TwilioPhoneNumberVerificationSettings settings)
+    {
+        if (settings.IsEnabled)
+        {
+            var mainSettings = site.GetOrCreate<PhoneNumberVerificationsSettings>();
+
+            if (string.Equals(mainSettings.SelectedProvider, PhoneNumberVerificationsConstants.Providers.Twilio, StringComparison.OrdinalIgnoreCase))
+            {
+                mainSettings.SelectedProvider = null;
+                site.Put(mainSettings);
+
+                await _notifier.WarningAsync(H["The Twilio provider was the default provider. The default provider has been cleared until you select a new one."]);
+            }
+        }
+
+        settings.IsEnabled = false;
     }
 
     private void ValidateSettings(

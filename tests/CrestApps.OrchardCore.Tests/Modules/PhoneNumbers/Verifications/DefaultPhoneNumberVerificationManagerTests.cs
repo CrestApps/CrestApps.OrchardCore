@@ -210,6 +210,7 @@ public sealed class DefaultPhoneNumberVerificationManagerTests
             serviceProvider,
             Options.Create(options),
             siteService.Object,
+            [],
             handlers ?? [],
             new DefaultPhoneNumberService(),
             clock.Object,

@@ -1,10 +1,17 @@
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 
 /// <summary>
 /// Site settings for the AbstractAPI phone number verification provider.
 /// </summary>
-public sealed class AbstractApiPhoneNumberVerificationSettings
+public sealed class AbstractApiPhoneNumberVerificationSettings : IPhoneNumberVerificationProviderSettings
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider is enabled and available for selection.
+    /// </summary>
+    public bool IsEnabled { get; set; }
+
     /// <summary>
     /// Gets or sets the API endpoint used to verify phone numbers.
     /// </summary>

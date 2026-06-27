@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 public class TwilioPhoneNumberVerificationSettingsViewModel
 {
     /// <summary>
+    /// Gets or sets a value indicating whether the provider is enabled.
+    /// </summary>
+    public bool IsEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the Twilio Lookup endpoint template used to verify phone numbers.
     /// </summary>
     public string Endpoint { get; set; }

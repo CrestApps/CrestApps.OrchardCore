@@ -15,6 +15,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     private readonly IServiceProvider _serviceProvider;
     private readonly PhoneNumberVerificationProviderOptions _providerOptions;
     private readonly ISiteService _siteService;
+    private readonly IEnumerable<IPhoneNumberVerificationProviderConfiguration> _providerConfigurations;
     private readonly IEnumerable<IPhoneNumberVerificationHandler> _handlers;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IClock _clock;
@@ -26,6 +27,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// <param name="serviceProvider">The scoped service provider used to resolve providers by key.</param>
     /// <param name="providerOptions">The registered provider descriptors.</param>
     /// <param name="siteService">The site service used to read module settings.</param>
+    /// <param name="providerConfigurations">The provider enabled-state configurations.</param>
     /// <param name="handlers">The verification lifecycle handlers.</param>
     /// <param name="phoneNumberService">The phone number formatting service.</param>
     /// <param name="clock">The clock.</param>
@@ -34,6 +36,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         IServiceProvider serviceProvider,
         IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
         ISiteService siteService,
+        IEnumerable<IPhoneNumberVerificationProviderConfiguration> providerConfigurations,
         IEnumerable<IPhoneNumberVerificationHandler> handlers,
         IPhoneNumberService phoneNumberService,
         IClock clock,
@@ -42,6 +45,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         _serviceProvider = serviceProvider;
         _providerOptions = providerOptions.Value;
         _siteService = siteService;
+        _providerConfigurations = providerConfigurations;
         _handlers = handlers;
         _phoneNumberService = phoneNumberService;
         _clock = clock;
@@ -51,6 +55,27 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// <inheritdoc/>
     public IReadOnlyCollection<PhoneNumberVerificationProviderDescriptor> GetProviders()
         => _providerOptions.Providers.Values;
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<PhoneNumberVerificationProviderDescriptor>> GetEnabledProvidersAsync(CancellationToken cancellationToken = default)
+    {
+        if (_providerOptions.Providers.Count == 0)
+        {
+            return [];
+        }
+
+        var enabled = new List<PhoneNumberVerificationProviderDescriptor>();
+
+        foreach (var descriptor in _providerOptions.Providers.Values)
+        {
+            if (await IsProviderEnabledAsync(descriptor.Key, cancellationToken))
+            {
+                enabled.Add(descriptor);
+            }
+        }
+
+        return enabled;
+    }
 
     /// <inheritdoc/>
     public bool TryGetProvider(string key, out IPhoneNumberVerificationProvider provider)
@@ -70,19 +95,46 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// <inheritdoc/>
     public async Task<string> GetDefaultProviderKeyAsync(CancellationToken cancellationToken = default)
     {
-        if (_providerOptions.Providers.Count == 0)
+        var enabledProviders = await GetEnabledProvidersAsync(cancellationToken);
+
+        if (enabledProviders.Count == 0)
         {
             return null;
         }
 
         var settings = await _siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
 
-        if (!string.IsNullOrEmpty(settings.SelectedProvider) && _providerOptions.Providers.ContainsKey(settings.SelectedProvider))
+        if (!string.IsNullOrEmpty(settings.SelectedProvider)
+            && enabledProviders.Any(provider => string.Equals(provider.Key, settings.SelectedProvider, StringComparison.OrdinalIgnoreCase)))
         {
             return settings.SelectedProvider;
         }
 
-        return _providerOptions.Providers.Keys.First();
+        return enabledProviders.First().Key;
+    }
+
+    private async Task<bool> IsProviderEnabledAsync(string key, CancellationToken cancellationToken)
+    {
+        var hasConfiguration = false;
+
+        foreach (var configuration in _providerConfigurations)
+        {
+            if (!string.Equals(configuration.ProviderKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            hasConfiguration = true;
+
+            if (await configuration.IsEnabledAsync(cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        // Providers without an explicit enabled-state configuration (for example, simple providers
+        // that do not expose settings) are always considered available.
+        return !hasConfiguration;
     }
 
     /// <inheritdoc/>

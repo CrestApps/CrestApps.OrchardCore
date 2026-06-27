@@ -1,14 +1,18 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -25,8 +29,10 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly INotifier _notifier;
 
     internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AbstractApiPhoneNumberVerificationSettingsDisplayDriver"/> class.
@@ -34,17 +40,23 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to encrypt secrets.</param>
+    /// <param name="notifier">The notifier used to surface admin messages.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
     public AbstractApiPhoneNumberVerificationSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<AbstractApiPhoneNumberVerificationSettingsDisplayDriver> stringLocalizer)
+        INotifier notifier,
+        IStringLocalizer<AbstractApiPhoneNumberVerificationSettingsDisplayDriver> stringLocalizer,
+        IHtmlLocalizer<AbstractApiPhoneNumberVerificationSettingsDisplayDriver> htmlLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
+        _notifier = notifier;
         S = stringLocalizer;
+        H = htmlLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -54,6 +66,7 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
     {
         return Initialize<AbstractApiPhoneNumberVerificationSettingsViewModel>("AbstractApiPhoneNumberVerificationSettings_Edit", viewModel =>
         {
+            viewModel.IsEnabled = settings.IsEnabled;
             viewModel.Endpoint = settings.Endpoint;
             viewModel.AuthenticationType = settings.AuthenticationType;
             viewModel.Username = settings.Username;
@@ -97,12 +110,39 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
             settings.ProtectedPassword = protector.Protect(viewModel.Password);
         }
 
-        if (settings.AuthenticationType == PhoneNumberVerificationAuthenticationType.ApiKey
-            && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+        if (viewModel.IsEnabled)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required when using API key authentication."]);
+            settings.IsEnabled = true;
+
+            if (settings.AuthenticationType == PhoneNumberVerificationAuthenticationType.ApiKey
+                && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required when using API key authentication."]);
+            }
+        }
+        else
+        {
+            await DisableProviderAsync(site, settings);
         }
 
         return Edit(site, settings, context);
+    }
+
+    private async Task DisableProviderAsync(ISite site, AbstractApiPhoneNumberVerificationSettings settings)
+    {
+        if (settings.IsEnabled)
+        {
+            var mainSettings = site.GetOrCreate<PhoneNumberVerificationsSettings>();
+
+            if (string.Equals(mainSettings.SelectedProvider, PhoneNumberVerificationsConstants.Providers.AbstractApi, StringComparison.OrdinalIgnoreCase))
+            {
+                mainSettings.SelectedProvider = null;
+                site.Put(mainSettings);
+
+                await _notifier.WarningAsync(H["The AbstractAPI provider was the default provider. The default provider has been cleared until you select a new one."]);
+            }
+        }
+
+        settings.IsEnabled = false;
     }
 }
