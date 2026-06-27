@@ -118,7 +118,7 @@ When a verification request fails:
 - A record that has **never** completed verification is surfaced with the `Failed` status and is kept due so the background task retries it.
 - A record that was **previously verified** is left untouched (status, `LastVerifiedUtc`, and `NextVerificationDueUtc` are preserved), so a transient provider outage never downgrades a known-good number. Only `FailedAttemptCount` and `LastError` are updated.
 
-Failed records are retried automatically by the background task until `FailedAttemptCount` reaches the configured **Maximum verification attempts** (default `3`). Once a record reaches that cap it stops auto-retrying and is flagged as **Needs attention** in the records queue, where an administrator can inspect the error and manually re-queue it. When a verification request finally completes, `FailedAttemptCount` and `LastError` are reset to zero/null.
+Failed records are retried automatically by the background task until `FailedAttemptCount` reaches the configured **Maximum verification attempts** (default `3`). Once a record reaches that cap it stops auto-retrying and is flagged as **Needs attention** in the records queue, where an administrator can inspect the error and manually retry it. When a verification request finally completes, `FailedAttemptCount` and `LastError` are reset to zero/null.
 
 ## Verification records queue
 
@@ -128,7 +128,7 @@ A **Phone Number Verifications** dashboard is available under **Tools** for user
 - search records by raw or normalized phone number,
 - sort records by most or least recently attempted, or newest or oldest created,
 - review each record's phone number, provider, result, total and failed attempt counts, the last attempt timestamp, and the most recent provider error,
-- manually re-queue a record with **Retry now**, which clears the failure counters and due date so the background task picks it up again (requires the `VerifyPhoneNumbers` permission).
+- immediately re-verify a record with **Retry now**, which resets the failure counters, calls the configured provider right away, updates the stored status, and reports the outcome (requires the `VerifyPhoneNumbers` permission).
 
 
 Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
