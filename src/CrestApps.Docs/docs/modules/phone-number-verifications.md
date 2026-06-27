@@ -122,11 +122,12 @@ Failed records are retried automatically by the background task until `FailedAtt
 
 ## Verification records queue
 
-A searchable records queue is available under **Reports** -> **Phone Number Verification Records** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data and lets administrators:
+A **Phone Number Verifications** dashboard is available under **Tools** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data and lets administrators:
 
+- see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected,
 - search records by raw or normalized phone number,
-- filter by status (All, Verified, Invalid, Failed, Pending, or Needs attention),
-- review the last attempt timestamp, total and failed attempt counts, and the most recent provider error,
+- sort records by most or least recently attempted, or newest or oldest created,
+- review each record's phone number, provider, result, total and failed attempt counts, the last attempt timestamp, and the most recent provider error,
 - manually re-queue a record with **Retry now**, which clears the failure counters and due date so the background task picks it up again (requires the `VerifyPhoneNumbers` permission).
 
 

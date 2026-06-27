@@ -2,92 +2,147 @@
 
 @{
     var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+
+    var filters = new[]
+    {
+        PhoneNumberVerificationRecordFilter.All,
+        PhoneNumberVerificationRecordFilter.Verified,
+        PhoneNumberVerificationRecordFilter.Invalid,
+        PhoneNumberVerificationRecordFilter.Failed,
+        PhoneNumberVerificationRecordFilter.Pending,
+        PhoneNumberVerificationRecordFilter.NeedsAttention,
+    };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Number Verification Records"])</h1></zone>
+<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Number Verifications"])</h1></zone>
 
-<form asp-action="Index" asp-controller="Records" method="get" class="row g-2 align-items-end mb-4">
-    <div class="col-md-5">
-        <label asp-for="Q" class="form-label">@T["Search by phone number"]</label>
-        <input type="text" class="form-control" asp-for="Q" placeholder="@T["Phone number"]" />
-    </div>
-    <div class="col-md-4">
-        <label asp-for="Status" class="form-label">@T["Status"]</label>
-        <select asp-for="Status" asp-items="Model.Statuses" class="form-select"></select>
-    </div>
-    <div class="col-md-3">
-        <button type="submit" class="btn btn-primary">@T["Search"]</button>
-        <a asp-action="Index" asp-controller="Records" class="btn btn-link">@T["Reset"]</a>
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
+    @foreach (var filter in filters)
+    {
+        var count = Model.Counts.TryGetValue(filter, out var value) ? value : 0;
+        var isActive = Model.Status == filter;
+        var label = filter switch
+        {
+            PhoneNumberVerificationRecordFilter.All => T["All"],
+            PhoneNumberVerificationRecordFilter.Verified => T["Verified"],
+            PhoneNumberVerificationRecordFilter.Invalid => T["Invalid"],
+            PhoneNumberVerificationRecordFilter.Failed => T["Failed"],
+            PhoneNumberVerificationRecordFilter.Pending => T["Pending"],
+            PhoneNumberVerificationRecordFilter.NeedsAttention => T["Needs attention"],
+            _ => T[filter.ToString()],
+        };
+        var accent = filter switch
+        {
+            PhoneNumberVerificationRecordFilter.Verified => "text-success",
+            PhoneNumberVerificationRecordFilter.Invalid => "text-danger",
+            PhoneNumberVerificationRecordFilter.Failed => "text-warning",
+            PhoneNumberVerificationRecordFilter.NeedsAttention => "text-danger",
+            _ => "text-body",
+        };
+
+        <div class="col">
+            <a asp-action="Index" asp-route-status="@filter" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort"
+               class="card h-100 text-decoration-none @(isActive ? "border-primary border-2" : "")"
+               title="@T["Show {0} records", label]">
+                <div class="card-body py-3">
+                    <h6 class="card-subtitle text-muted mb-1">@label</h6>
+                    <p class="h3 mb-0 @accent">@count</p>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+<form asp-action="Index" asp-controller="Records" method="get">
+    <input type="hidden" asp-for="Status" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by phone number"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <div class="d-flex align-items-center gap-2">
+                        <label asp-for="Sort" class="col-form-label text-nowrap">@T["Sort by"]</label>
+                        <select asp-for="Sort" asp-items="Model.Sorts" class="form-select" onchange="this.form.submit()"></select>
+                    </div>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary">@T["Search"]</button>
+                    <a asp-action="Index" asp-controller="Records" class="btn btn-link">@T["Reset"]</a>
+                </div>
+            </div>
+        </div>
     </div>
 </form>
 
 @if (Model.Entries.Count == 0)
 {
-    <p class="alert alert-info">@T["No phone number verification records match the current filter."]</p>
+    <div class="alert alert-info text-center">@T["No phone number verifications match the current filter."]</div>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>@T["Phone number"]</th>
-                <th>@T["Status"]</th>
-                <th>@T["Provider"]</th>
-                <th>@T["Last attempt"]</th>
-                <th class="text-end">@T["Attempts"]</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var entry in Model.Entries)
+    <ul class="list-group">
+        @foreach (var entry in Model.Entries)
+        {
+            var statusClass = entry.VerificationStatus switch
             {
-                var statusClass = entry.VerificationStatus switch
-                {
-                    PhoneNumberVerificationStatus.Verified => "text-bg-success",
-                    PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
-                    PhoneNumberVerificationStatus.Failed => "text-bg-warning",
-                    _ => "text-bg-secondary",
-                };
-                var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
+                PhoneNumberVerificationStatus.Verified => "text-bg-success",
+                PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+                PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+                _ => "text-bg-secondary",
+            };
+            var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
+            var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
 
-                <tr>
-                    <td>
-                        <a href="@editUrl">@(string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber)</a>
+            <li class="list-group-item">
+                <div class="row align-items-center gx-3 gy-2">
+                    <div class="col-12 col-lg">
+                        <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
                         @if (!string.IsNullOrEmpty(entry.DisplayText))
                         {
-                            <div class="text-muted small">@entry.DisplayText</div>
+                            <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
                         }
-                    </td>
-                    <td>
+                    </div>
+                    <div class="col-6 col-lg-auto">
                         <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
                         @if (entry.IsExhausted)
                         {
                             <span class="badge text-bg-danger ms-1" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
                         }
-                        @if (!string.IsNullOrEmpty(entry.LastError))
-                        {
-                            <div class="text-danger small">@entry.LastError</div>
-                        }
-                    </td>
-                    <td>@entry.VerificationProvider</td>
-                    <td>
-                        @if (entry.LastAttemptUtc.HasValue)
-                        {
-                            @entry.LastAttemptUtc.Value.ToString("g")
-                        }
-                        else
-                        {
-                            <span class="text-muted">@T["Never"]</span>
-                        }
-                    </td>
-                    <td class="text-end">
-                        @entry.VerificationAttemptCount
-                        @if (entry.FailedAttemptCount > 0)
-                        {
-                            <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
-                        }
-                    </td>
-                    <td class="text-end">
+                    </div>
+                    <div class="col-6 col-lg-auto text-lg-center">
+                        <div class="text-muted text-uppercase small">@T["Provider"]</div>
+                        <div>@(string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider)</div>
+                    </div>
+                    <div class="col-6 col-lg-auto text-lg-center">
+                        <div class="text-muted text-uppercase small">@T["Attempts"]</div>
+                        <div>
+                            @entry.VerificationAttemptCount
+                            @if (entry.FailedAttemptCount > 0)
+                            {
+                                <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-auto text-lg-center">
+                        <div class="text-muted text-uppercase small">@T["Last attempt"]</div>
+                        <div>
+                            @if (entry.LastAttemptUtc.HasValue)
+                            {
+                                @entry.LastAttemptUtc.Value.ToString("g")
+                            }
+                            else
+                            {
+                                <span class="text-muted">@T["Never"]</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-auto text-lg-end">
                         @if (entry.FailedAttemptCount > 0)
                         {
                             <form asp-action="Retry" asp-controller="Records" method="post" class="d-inline">
@@ -96,11 +151,17 @@ else
                                 <button type="submit" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
                             </form>
                         }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(entry.LastError))
+                {
+                    <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">
+                        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@entry.LastError
+                    </div>
+                }
+            </li>
+        }
+    </ul>
 
     @await DisplayAsync(Model.Pager)
 }

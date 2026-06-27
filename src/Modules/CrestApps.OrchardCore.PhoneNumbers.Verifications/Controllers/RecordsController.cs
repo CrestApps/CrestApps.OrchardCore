@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -69,15 +70,17 @@ public sealed class RecordsController : Controller
     }
 
     /// <summary>
-    /// Renders the searchable, paged phone number verification records queue.
+    /// Renders the searchable, paged phone number verification queue dashboard.
     /// </summary>
     /// <param name="q">An optional phone number search term.</param>
     /// <param name="status">The status filter to apply.</param>
+    /// <param name="sort">The sort order to apply.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
-    /// <returns>The records queue view.</returns>
+    /// <returns>The verification queue view.</returns>
     public async Task<IActionResult> Index(
         string q,
         PhoneNumberVerificationRecordFilter status,
+        PhoneNumberVerificationRecordSort sort,
         PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport))
@@ -90,39 +93,36 @@ public sealed class RecordsController : Controller
             ? settings.MaxVerificationAttempts
             : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
 
+        var term = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
         var pager = new Pager(pagerParameters, _pagerOptions.GetPageSize());
 
-        var query = _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
-            .With<PhoneNumberVerificationPartIndex>(index => index.PhoneNumber != null || index.NormalizedPhoneNumber != null);
-
-        if (!string.IsNullOrWhiteSpace(q))
-        {
-            var term = q.Trim();
-
-            query = query.With<PhoneNumberVerificationPartIndex>(index =>
-                index.PhoneNumber.Contains(term) || index.NormalizedPhoneNumber.Contains(term));
-        }
-
-        query = status switch
-        {
-            PhoneNumberVerificationRecordFilter.Verified => query.With<PhoneNumberVerificationPartIndex>(index => index.IsVerified),
-            PhoneNumberVerificationRecordFilter.Invalid => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Invalid),
-            PhoneNumberVerificationRecordFilter.Failed => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed),
-            PhoneNumberVerificationRecordFilter.Pending => query.With<PhoneNumberVerificationPartIndex>(index => index.LastVerifiedUtc == null),
-            PhoneNumberVerificationRecordFilter.NeedsAttention => query.With<PhoneNumberVerificationPartIndex>(index => index.FailedAttemptCount >= maxAttempts),
-            _ => query,
-        };
+        var query = ApplyStatusFilter(BuildBaseQuery(term), status, maxAttempts);
 
         var totalCount = await query.CountAsync();
 
-        var contentItems = await query
-            .OrderByDescending(index => index.LastAttemptUtc)
-            .ThenBy(index => index.ContentItemId)
+        var contentItems = await ApplySort(query, sort)
             .Skip(pager.GetStartIndex())
             .Take(pager.PageSize)
             .ListAsync();
 
-        var pagerShape = await _shapeFactory.PagerAsync(pager, totalCount);
+        var routeData = new RouteData();
+
+        if (term is not null)
+        {
+            routeData.Values[nameof(q)] = term;
+        }
+
+        if (status != PhoneNumberVerificationRecordFilter.All)
+        {
+            routeData.Values[nameof(status)] = status;
+        }
+
+        if (sort != PhoneNumberVerificationRecordSort.RecentlyAttempted)
+        {
+            routeData.Values[nameof(sort)] = sort;
+        }
+
+        var pagerShape = await _shapeFactory.PagerAsync(pager, totalCount, routeData);
 
         var entries = new List<PhoneNumberVerificationRecordEntry>();
 
@@ -156,9 +156,11 @@ public sealed class RecordsController : Controller
         {
             Q = q,
             Status = status,
+            Sort = sort,
             Entries = entries,
             Pager = pagerShape,
-            Statuses = BuildStatusOptions(),
+            Sorts = BuildSortOptions(),
+            Counts = await BuildStatusCountsAsync(maxAttempts, term),
         };
 
         return View(model);
@@ -201,16 +203,65 @@ public sealed class RecordsController : Controller
         return RedirectToReturnUrlOrIndex(returnUrl);
     }
 
-    private IList<SelectListItem> BuildStatusOptions()
+    private IQuery<ContentItem, PhoneNumberVerificationPartIndex> BuildBaseQuery(string term)
+    {
+        var query = _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
+            .With<PhoneNumberVerificationPartIndex>(index => index.PhoneNumber != null || index.NormalizedPhoneNumber != null);
+
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            query = query.With<PhoneNumberVerificationPartIndex>(index =>
+                index.PhoneNumber.Contains(term) || index.NormalizedPhoneNumber.Contains(term));
+        }
+
+        return query;
+    }
+
+    private static IQuery<ContentItem, PhoneNumberVerificationPartIndex> ApplyStatusFilter(
+        IQuery<ContentItem, PhoneNumberVerificationPartIndex> query,
+        PhoneNumberVerificationRecordFilter status,
+        int maxAttempts)
+        => status switch
+        {
+            PhoneNumberVerificationRecordFilter.Verified => query.With<PhoneNumberVerificationPartIndex>(index => index.IsVerified),
+            PhoneNumberVerificationRecordFilter.Invalid => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Invalid),
+            PhoneNumberVerificationRecordFilter.Failed => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed),
+            PhoneNumberVerificationRecordFilter.Pending => query.With<PhoneNumberVerificationPartIndex>(index => index.LastVerifiedUtc == null),
+            PhoneNumberVerificationRecordFilter.NeedsAttention => query.With<PhoneNumberVerificationPartIndex>(index => index.FailedAttemptCount >= maxAttempts),
+            _ => query,
+        };
+
+    private static IQuery<ContentItem> ApplySort(
+        IQuery<ContentItem, PhoneNumberVerificationPartIndex> query,
+        PhoneNumberVerificationRecordSort sort)
+        => sort switch
+        {
+            PhoneNumberVerificationRecordSort.LeastRecentlyAttempted => query.OrderBy(index => index.LastAttemptUtc).ThenBy(index => index.ContentItemId),
+            PhoneNumberVerificationRecordSort.RecentlyCreated => query.With<ContentItemIndex>().OrderByDescending(index => index.CreatedUtc).ThenBy(index => index.ContentItemId),
+            PhoneNumberVerificationRecordSort.OldestCreated => query.With<ContentItemIndex>().OrderBy(index => index.CreatedUtc).ThenBy(index => index.ContentItemId),
+            _ => query.OrderByDescending(index => index.LastAttemptUtc).ThenBy(index => index.ContentItemId),
+        };
+
+    private async Task<IDictionary<PhoneNumberVerificationRecordFilter, int>> BuildStatusCountsAsync(int maxAttempts, string term)
+    {
+        var counts = new Dictionary<PhoneNumberVerificationRecordFilter, int>();
+
+        foreach (var filter in Enum.GetValues<PhoneNumberVerificationRecordFilter>())
+        {
+            counts[filter] = await ApplyStatusFilter(BuildBaseQuery(term), filter, maxAttempts).CountAsync();
+        }
+
+        return counts;
+    }
+
+    private IList<SelectListItem> BuildSortOptions()
     {
         return
         [
-            new SelectListItem(S["All"], nameof(PhoneNumberVerificationRecordFilter.All)),
-            new SelectListItem(S["Verified"], nameof(PhoneNumberVerificationRecordFilter.Verified)),
-            new SelectListItem(S["Invalid"], nameof(PhoneNumberVerificationRecordFilter.Invalid)),
-            new SelectListItem(S["Failed"], nameof(PhoneNumberVerificationRecordFilter.Failed)),
-            new SelectListItem(S["Pending"], nameof(PhoneNumberVerificationRecordFilter.Pending)),
-            new SelectListItem(S["Needs attention"], nameof(PhoneNumberVerificationRecordFilter.NeedsAttention)),
+            new SelectListItem(S["Recently attempted"], nameof(PhoneNumberVerificationRecordSort.RecentlyAttempted)),
+            new SelectListItem(S["Least recently attempted"], nameof(PhoneNumberVerificationRecordSort.LeastRecentlyAttempted)),
+            new SelectListItem(S["Recently created"], nameof(PhoneNumberVerificationRecordSort.RecentlyCreated)),
+            new SelectListItem(S["Oldest created"], nameof(PhoneNumberVerificationRecordSort.OldestCreated)),
         ];
     }
 
