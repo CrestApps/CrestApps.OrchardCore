@@ -67,6 +67,7 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
         return Initialize<DialPadSettingsViewModel>("DialPadSettings_Edit", model =>
         {
             model.IsEnabled = settings.IsEnabled;
+            model.Environment = settings.Environment;
             model.AuthenticationType = GetEffectiveAuthenticationType(settings);
             model.ClientId = settings.ClientId;
             model.Scopes = settings.Scopes;
@@ -112,11 +113,13 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
         {
             settings.IsEnabled = true;
 
+            hasChanges |= settings.Environment != model.Environment;
             hasChanges |= settings.AuthenticationType != model.AuthenticationType;
             hasChanges |= settings.UserId != model.UserId;
             hasChanges |= settings.OutboundCallerId != model.OutboundCallerId;
             hasChanges |= settings.ClientId != model.ClientId;
             hasChanges |= settings.Scopes != model.Scopes;
+            settings.Environment = model.Environment;
             settings.AuthenticationType = model.AuthenticationType;
             settings.UserId = model.UserId;
             settings.OutboundCallerId = model.OutboundCallerId;

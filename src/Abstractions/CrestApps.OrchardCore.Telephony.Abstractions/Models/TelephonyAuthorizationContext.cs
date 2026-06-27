@@ -14,4 +14,16 @@ public sealed class TelephonyAuthorizationContext
     /// Gets or sets the opaque state value used to protect the flow against cross-site request forgery.
     /// </summary>
     public string State { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PKCE code challenge to include in the authorization request, or
+    /// <see langword="null"/> when PKCE is not used.
+    /// </summary>
+    public string CodeChallenge { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PKCE code challenge method (for example, <c>S256</c>) that corresponds to
+    /// <see cref="CodeChallenge"/>.
+    /// </summary>
+    public string CodeChallengeMethod { get; set; }
 }

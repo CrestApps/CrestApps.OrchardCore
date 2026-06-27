@@ -15,10 +15,7 @@ public static class DialPadServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddDialPadTelephonyProvider(this IServiceCollection services)
     {
-        services.AddHttpClient(DialPadConstants.ProviderTechnicalName, client =>
-        {
-            client.BaseAddress = new Uri(DialPadConstants.DefaultApiBaseUrl);
-        });
+        services.AddHttpClient(DialPadConstants.ProviderTechnicalName);
 
         return services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
     }

@@ -14,6 +14,12 @@ public class DialPadSettingsViewModel
     public bool IsEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
+    /// endpoints.
+    /// </summary>
+    public DialPadEnvironment Environment { get; set; }
+
+    /// <summary>
     /// Gets or sets the selected DialPad authentication type.
     /// </summary>
     public DialPadAuthenticationType AuthenticationType { get; set; }

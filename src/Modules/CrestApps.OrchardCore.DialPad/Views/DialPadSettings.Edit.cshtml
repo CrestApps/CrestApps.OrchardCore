@@ -24,6 +24,18 @@
         @T["for DialPad developer instructions."]
     </div>
 
+    <div class="ocat-wrapper" asp-validation-class-for="Environment">
+        <label asp-for="Environment" class="ocat-label">@T["Environment"]</label>
+        <div class="ocat-end">
+            <select asp-for="Environment" class="form-select">
+                <option value="@DialPadEnvironment.Production">@T["Production"]</option>
+                <option value="@DialPadEnvironment.Sandbox">@T["Sandbox"]</option>
+            </select>
+            <span asp-validation-for="Environment"></span>
+            <span class="hint">@T["Select the DialPad environment. Sandbox uses the sandbox.dialpad.com endpoints for development and testing; Production uses dialpad.com. This applies to both the REST API and OAuth 2.0 endpoints."]</span>
+        </div>
+    </div>
+
     <div class="ocat-wrapper" asp-validation-class-for="AuthenticationType">
         <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
         <div class="ocat-end">
@@ -104,7 +116,7 @@
             <div class="ocat-end">
                 <input asp-for="Scopes" class="form-control" />
                 <span asp-validation-for="Scopes"></span>
-                <span class="hint">@T["Optional. The space-separated OAuth scopes requested during authorization."]</span>
+                <span class="hint">@T["Optional. Space-separated OAuth scopes requested during authorization. The offline_access scope is always requested so access tokens can be refreshed automatically. PKCE is always used to protect the authorization code exchange."]</span>
             </div>
         </div>
     </div>

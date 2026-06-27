@@ -13,7 +13,11 @@ internal sealed class FakeAuthTelephonyProvider : ITelephonyProvider, ITelephony
 
     public string AuthenticationScheme { get; set; } = TelephonyAuthenticationSchemes.OAuth2;
 
+    public bool SupportsProofKeyForCodeExchange { get; set; }
+
     public TelephonyUserTokens RefreshResult { get; set; }
+
+    public TelephonyUserTokens RevokedTokens { get; private set; }
 
     public LocalizedString Name => new("FakeAuth", "FakeAuth");
 
@@ -27,6 +31,13 @@ internal sealed class FakeAuthTelephonyProvider : ITelephonyProvider, ITelephony
 
     public Task<TelephonyUserTokens> RefreshTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
         => Task.FromResult(RefreshResult);
+
+    public Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    {
+        RevokedTokens = tokens;
+
+        return Task.CompletedTask;
+    }
 
     public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult(TelephonyResult.Success());

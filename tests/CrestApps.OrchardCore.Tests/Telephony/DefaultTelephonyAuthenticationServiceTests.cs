@@ -95,13 +95,74 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             tokenStore);
 
         // Act
-        var result = await service.CompleteAuthorizationAsync("code", "https://site.test/callback", TestContext.Current.CancellationToken);
+        var result = await service.CompleteAuthorizationAsync("code", "https://site.test/callback", codeVerifier: null, TestContext.Current.CancellationToken);
         var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
         Assert.NotNull(stored);
         Assert.Equal("exchanged", stored.AccessToken);
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenProviderSupportsPkce_GeneratesCodeVerifier()
+    {
+        // Arrange
+        var service = CreateService(
+            new FakeAuthTelephonyProvider { RequiresUserAuthentication = true, SupportsProofKeyForCodeExchange = true },
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new FakeTelephonyUserTokenStore());
+
+        // Act
+        var request = await service.GetAuthorizationUrlAsync("https://site.test/callback", "state-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(request);
+        Assert.False(string.IsNullOrEmpty(request.Url));
+        Assert.False(string.IsNullOrEmpty(request.CodeVerifier));
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenProviderDoesNotSupportPkce_DoesNotGenerateCodeVerifier()
+    {
+        // Arrange
+        var service = CreateService(
+            new FakeAuthTelephonyProvider { RequiresUserAuthentication = true, SupportsProofKeyForCodeExchange = false },
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new FakeTelephonyUserTokenStore());
+
+        // Act
+        var request = await service.GetAuthorizationUrlAsync("https://site.test/callback", "state-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(request);
+        Assert.Null(request.CodeVerifier);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_RevokesTokensBeforeRemovingThem()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider { RequiresUserAuthentication = true };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            tokenStore);
+
+        // Act
+        await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(provider.RevokedTokens);
+        Assert.Equal("valid", provider.RevokedTokens.AccessToken);
+        Assert.Null(stored);
     }
 
     private static DefaultTelephonyAuthenticationService CreateService(

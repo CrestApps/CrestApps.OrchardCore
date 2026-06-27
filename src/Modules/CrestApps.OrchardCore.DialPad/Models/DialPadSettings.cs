@@ -11,6 +11,12 @@ public sealed class DialPadSettings
     public bool IsEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
+    /// endpoints.
+    /// </summary>
+    public DialPadEnvironment Environment { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional internal override for the DialPad REST API base address. When empty the
     /// default endpoint is used.
     /// </summary>

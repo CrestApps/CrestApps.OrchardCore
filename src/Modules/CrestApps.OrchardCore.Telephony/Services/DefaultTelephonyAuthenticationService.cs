@@ -77,7 +77,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     }
 
     /// <inheritdoc/>
-    public async Task<string> GetAuthorizationUrlAsync(string redirectUri, string state, CancellationToken cancellationToken = default)
+    public async Task<TelephonyAuthorizationRequest> GetAuthorizationUrlAsync(string redirectUri, string state, CancellationToken cancellationToken = default)
     {
         var provider = await _providerResolver.GetAsync();
 
@@ -92,11 +92,31 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             State = state,
         };
 
-        return await authenticationProvider.GetAuthorizationUrlAsync(context, cancellationToken);
+        string codeVerifier = null;
+
+        if (authenticationProvider.SupportsProofKeyForCodeExchange)
+        {
+            codeVerifier = TelephonyPkceGenerator.CreateCodeVerifier();
+            context.CodeChallenge = TelephonyPkceGenerator.CreateCodeChallenge(codeVerifier);
+            context.CodeChallengeMethod = TelephonyPkceGenerator.Sha256Method;
+        }
+
+        var url = await authenticationProvider.GetAuthorizationUrlAsync(context, cancellationToken);
+
+        if (string.IsNullOrEmpty(url))
+        {
+            return null;
+        }
+
+        return new TelephonyAuthorizationRequest
+        {
+            Url = url,
+            CodeVerifier = codeVerifier,
+        };
     }
 
     /// <inheritdoc/>
-    public async Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, CancellationToken cancellationToken = default)
+    public async Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(code))
         {
@@ -115,6 +135,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         {
             Code = code,
             RedirectUri = redirectUri,
+            CodeVerifier = codeVerifier,
         };
 
         var tokens = await authenticationProvider.ExchangeCodeAsync(context, cancellationToken);
@@ -136,10 +157,26 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     {
         var name = await GetDefaultProviderNameAsync();
 
-        if (!string.IsNullOrEmpty(name))
+        if (string.IsNullOrEmpty(name))
         {
-            await _tokenStore.RemoveAsync(name, cancellationToken);
+            return;
         }
+
+        var tokens = await _tokenStore.GetAsync(name, cancellationToken);
+
+        if (tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            var provider = await _providerResolver.GetAsync(name);
+
+            if (provider is ITelephonyAuthenticationProvider authenticationProvider)
+            {
+                // Revoke the tokens at the provider before removing them locally so the provider does
+                // not keep issuing API keys on behalf of the disconnected user.
+                await authenticationProvider.RevokeTokensAsync(tokens, cancellationToken);
+            }
+        }
+
+        await _tokenStore.RemoveAsync(name, cancellationToken);
     }
 
     /// <inheritdoc/>

@@ -32,16 +32,17 @@ connects their own DialPad account.
 | Setting | Description |
 | --- | --- |
 | **Enable DialPad provider** | Turns the provider on and makes it selectable as the default provider. |
+| **Environment** | Select **Production** (`dialpad.com`) or **Sandbox** (`sandbox.dialpad.com`). This applies to both the REST API and the OAuth 2.0 endpoints, so developers can validate an integration against the sandbox before going live. |
 | **Authentication type** | Select **API key** or **OAuth 2.0**. The default **Select authentication type** option keeps DialPad disabled until an authentication mode is chosen. |
 | **API key** | The DialPad API key used when **API key** authentication is selected. Stored encrypted with the data protection provider. |
 | **OAuth client id** | The OAuth client id issued by DialPad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by DialPad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
-| **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. |
+| **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
 | **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
 | **User id** | The DialPad user id that places outbound calls when **API key** authentication is selected. |
 
-DialPad API calls use the provider's fixed REST endpoint, `https://dialpad.com/api/v2/`, so there is
-no tenant-level API base URL field to configure.
+DialPad API calls use the environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
+`https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
 
 When you enable DialPad and no default provider is set yet, DialPad becomes the default
 automatically. When you disable DialPad while it is the default provider, the default is cleared and
@@ -77,10 +78,20 @@ To configure OAuth 2.0:
 3. Enter the client id, client secret, and any scopes on the DialPad settings tab.
 
 Each user then sees a **Connect to provider** button in the soft phone and connects their own DialPad
-account. DialPad uses the `https://dialpad.com/oauth2/authorize` and `https://dialpad.com/oauth2/token`
-endpoints. The user's access and refresh tokens are stored **encrypted on the user's account**, and
-outbound calls are placed with the connected user's access token. Tokens are refreshed automatically
-when they expire.
+account. DialPad implements the "three-legged" OAuth 2.0 authorization code flow (RFC 6749 §4.1), and the
+provider follows DialPad's documented requirements:
+
+- **PKCE** ([RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636)) is always used. A per-request
+  code verifier is generated, its `S256` challenge is sent on the authorization request, and the verifier
+  is supplied when the authorization code is exchanged for tokens.
+- The **`offline_access`** scope is always requested so DialPad issues a refresh token. The user's access
+  and refresh tokens are stored **encrypted on the user's account**, and outbound calls are placed with the
+  connected user's access token. Tokens are refreshed automatically when they expire.
+- The **environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
+  `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
+  endpoints.
+- When a user **disconnects**, the provider calls DialPad's `deauthorize` endpoint to revoke every token
+  DialPad issued on the user's behalf before the stored tokens are removed locally.
 
 ## Capabilities
 

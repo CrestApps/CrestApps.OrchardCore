@@ -61,14 +61,14 @@ public sealed class TelephonyOAuthController : Controller
             return BuildCompletionPage(false, returnUrl);
         }
 
-        var authorizationUrl = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state);
+        var authorizationRequest = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state);
 
-        if (string.IsNullOrEmpty(authorizationUrl))
+        if (authorizationRequest is null || string.IsNullOrEmpty(authorizationRequest.Url))
         {
             return BuildCompletionPage(false, returnUrl);
         }
 
-        var payload = _protector.Protect(string.Join('|', state, redirectUri, returnUrl ?? string.Empty));
+        var payload = _protector.Protect(string.Join('|', state, redirectUri, returnUrl ?? string.Empty, authorizationRequest.CodeVerifier ?? string.Empty));
 
         Response.Cookies.Append(StateCookieName, payload, new CookieOptions
         {
@@ -78,7 +78,7 @@ public sealed class TelephonyOAuthController : Controller
             IsEssential = true,
         });
 
-        return Redirect(authorizationUrl);
+        return Redirect(authorizationRequest.Url);
     }
 
     /// <summary>
@@ -106,18 +106,19 @@ public sealed class TelephonyOAuthController : Controller
             {
                 var parts = _protector.Unprotect(payload).Split('|');
 
-                if (parts.Length == 3)
+                if (parts.Length == 4)
                 {
                     var storedState = parts[0];
                     var redirectUri = parts[1];
                     returnUrl = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
+                    var codeVerifier = string.IsNullOrEmpty(parts[3]) ? null : parts[3];
 
                     if (string.IsNullOrEmpty(error) &&
                         !string.IsNullOrEmpty(code) &&
                         !string.IsNullOrEmpty(storedState) &&
                         string.Equals(storedState, state, StringComparison.Ordinal))
                     {
-                        success = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri);
+                        success = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier);
                     }
                 }
             }

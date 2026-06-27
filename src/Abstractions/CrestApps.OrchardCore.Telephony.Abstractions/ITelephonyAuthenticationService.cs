@@ -15,22 +15,23 @@ public interface ITelephonyAuthenticationService
     Task<TelephonyConnectionStatus> GetStatusAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Builds the authorization URL the current user is redirected to in order to connect to the provider.
+    /// Builds the authorization request the current user is redirected with in order to connect to the provider.
     /// </summary>
     /// <param name="redirectUri">The absolute callback URL the provider redirects to.</param>
     /// <param name="state">The opaque state value used to protect the flow against cross-site request forgery.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The authorization URL, or <see langword="null"/> when the provider does not require authentication.</returns>
-    Task<string> GetAuthorizationUrlAsync(string redirectUri, string state, CancellationToken cancellationToken = default);
+    /// <returns>The authorization request, or <see langword="null"/> when the provider does not require authentication.</returns>
+    Task<TelephonyAuthorizationRequest> GetAuthorizationUrlAsync(string redirectUri, string state, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Completes the authorization by exchanging the authorization code for tokens and storing them on the user's account.
     /// </summary>
     /// <param name="code">The authorization code returned by the provider.</param>
     /// <param name="redirectUri">The callback URL used when the authorization request was created.</param>
+    /// <param name="codeVerifier">The PKCE code verifier generated when the authorization request was created, or <see langword="null"/> when PKCE is not used.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns><see langword="true"/> when the user was connected successfully; otherwise <see langword="false"/>.</returns>
-    Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, CancellationToken cancellationToken = default);
+    Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Disconnects the current user from the configured provider by removing the stored tokens.

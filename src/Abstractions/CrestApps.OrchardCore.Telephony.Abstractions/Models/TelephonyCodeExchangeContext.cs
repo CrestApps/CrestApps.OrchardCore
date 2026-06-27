@@ -14,4 +14,10 @@ public sealed class TelephonyCodeExchangeContext
     /// Gets or sets the callback URL that was used when the authorization request was created.
     /// </summary>
     public string RedirectUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PKCE code verifier that corresponds to the code challenge sent during
+    /// authorization, or <see langword="null"/> when PKCE is not used.
+    /// </summary>
+    public string CodeVerifier { get; set; }
 }

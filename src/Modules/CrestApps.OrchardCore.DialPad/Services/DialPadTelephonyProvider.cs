@@ -66,6 +66,9 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
     public string AuthenticationScheme => TelephonyAuthenticationSchemes.OAuth2;
 
     /// <inheritdoc/>
+    public bool SupportsProofKeyForCodeExchange => true;
+
+    /// <inheritdoc/>
     public TelephonyCapabilities Capabilities
     {
         get
@@ -285,12 +288,20 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             ["state"] = context.State,
         };
 
-        if (!string.IsNullOrWhiteSpace(settings.Scopes))
+        var scope = BuildScope(settings.Scopes);
+
+        if (!string.IsNullOrWhiteSpace(scope))
         {
-            parameters["scope"] = settings.Scopes;
+            parameters["scope"] = scope;
         }
 
-        return QueryHelpers.AddQueryString(DialPadConstants.OAuthAuthorizeUrl, parameters);
+        if (!string.IsNullOrEmpty(context.CodeChallenge))
+        {
+            parameters["code_challenge"] = context.CodeChallenge;
+            parameters["code_challenge_method"] = string.IsNullOrEmpty(context.CodeChallengeMethod) ? "S256" : context.CodeChallengeMethod;
+        }
+
+        return QueryHelpers.AddQueryString(DialPadConstants.GetAuthorizeUrl(settings.Environment), parameters);
     }
 
     /// <inheritdoc/>
@@ -312,7 +323,12 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             ["client_secret"] = settings.ClientSecret,
         };
 
-        return await RequestTokensAsync(form, existingRefreshToken: null, cancellationToken);
+        if (!string.IsNullOrEmpty(context.CodeVerifier))
+        {
+            form["code_verifier"] = context.CodeVerifier;
+        }
+
+        return await RequestTokensAsync(form, existingRefreshToken: null, settings, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -338,12 +354,74 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             ["client_secret"] = settings.ClientSecret,
         };
 
-        return await RequestTokensAsync(form, existingRefreshToken: tokens.RefreshToken, cancellationToken);
+        return await RequestTokensAsync(form, existingRefreshToken: tokens.RefreshToken, settings, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    {
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            return;
+        }
+
+        var settings = await GetResolvedSettingsAsync();
+
+        if (GetEffectiveAuthenticationType(settings) != DialPadAuthenticationType.OAuth2)
+        {
+            return;
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient(DialPadConstants.ProviderTechnicalName);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, DialPadConstants.GetDeauthorizeUrl(settings.Environment))
+            {
+                Content = new StringContent(string.Empty),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+            using var response = await client.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DialPad rejected an OAuth token revocation request with status code {StatusCode}.", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while revoking DialPad OAuth tokens.");
+        }
+    }
+
+    private static string BuildScope(string configuredScopes)
+    {
+        var scopes = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(configuredScopes))
+        {
+            foreach (var scope in configuredScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!scopes.Contains(scope, StringComparer.OrdinalIgnoreCase))
+                {
+                    scopes.Add(scope);
+                }
+            }
+        }
+
+        if (!scopes.Contains(DialPadConstants.OfflineAccessScope, StringComparer.OrdinalIgnoreCase))
+        {
+            scopes.Add(DialPadConstants.OfflineAccessScope);
+        }
+
+        return string.Join(' ', scopes);
     }
 
     private async Task<TelephonyUserTokens> RequestTokensAsync(
         Dictionary<string, string> form,
         string existingRefreshToken,
+        DialPadSettings settings,
         CancellationToken cancellationToken)
     {
         try
@@ -351,7 +429,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             var client = _httpClientFactory.CreateClient(DialPadConstants.ProviderTechnicalName);
 
             using var content = new FormUrlEncodedContent(form);
-            using var response = await client.PostAsync(DialPadConstants.OAuthTokenUrl, content, cancellationToken);
+            using var response = await client.PostAsync(DialPadConstants.GetTokenUrl(settings.Environment), content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -571,16 +649,11 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
     {
         var client = _httpClientFactory.CreateClient(DialPadConstants.ProviderTechnicalName);
 
-        if (!string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
-        {
-            var baseUrl = settings.ApiBaseUrl.EndsWith('/') ? settings.ApiBaseUrl : settings.ApiBaseUrl + '/';
-            client.BaseAddress = new Uri(baseUrl);
-        }
-        else if (client.BaseAddress is null)
-        {
-            client.BaseAddress = new Uri(DialPadConstants.DefaultApiBaseUrl);
-        }
+        var baseUrl = string.IsNullOrWhiteSpace(settings.ApiBaseUrl)
+            ? DialPadConstants.GetApiBaseUrl(settings.Environment)
+            : settings.ApiBaseUrl.EndsWith('/') ? settings.ApiBaseUrl : settings.ApiBaseUrl + '/';
 
+        client.BaseAddress = new Uri(baseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
 
         return client;
@@ -597,6 +670,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             _settings = new DialPadSettings
             {
                 IsEnabled = settings.IsEnabled,
+                Environment = settings.Environment,
                 ApiBaseUrl = settings.ApiBaseUrl,
                 UserId = settings.UserId,
                 OutboundCallerId = settings.OutboundCallerId,

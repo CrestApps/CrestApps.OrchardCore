@@ -209,6 +209,46 @@ public sealed class DialPadTelephonyProviderTests
         Assert.Contains("response_type=code", url);
         Assert.Contains("state=xyz", url);
         Assert.Contains("scope=calls", url);
+        Assert.Contains("offline_access", url);
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenCodeChallengeProvided_IncludesPkceParameters()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        var url = await provider.GetAuthorizationUrlAsync(
+            new TelephonyAuthorizationContext
+            {
+                RedirectUri = "https://site.test/cb",
+                State = "xyz",
+                CodeChallenge = "challenge-value",
+                CodeChallengeMethod = "S256",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains("code_challenge=challenge-value", url);
+        Assert.Contains("code_challenge_method=S256", url);
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenSandboxEnvironment_UsesSandboxEndpoint()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler, DialPadEnvironment.Sandbox);
+
+        // Act
+        var url = await provider.GetAuthorizationUrlAsync(
+            new TelephonyAuthorizationContext { RedirectUri = "https://site.test/cb", State = "xyz" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.StartsWith("https://sandbox.dialpad.com/oauth2/authorize", url);
     }
 
     [Fact]
@@ -233,6 +273,75 @@ public sealed class DialPadTelephonyProviderTests
         Assert.Contains("code=auth-code", handler.LastRequestBody);
         Assert.Contains("client_id=client-id", handler.LastRequestBody);
         Assert.Contains("client_secret=client-secret", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_WhenCodeVerifierProvided_IncludesPkceVerifierInBody()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"access_token\":\"at\",\"token_type\":\"Bearer\"}");
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        var tokens = await provider.ExchangeCodeAsync(
+            new TelephonyCodeExchangeContext { Code = "auth-code", RedirectUri = "https://site.test/cb", CodeVerifier = "verifier-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(tokens);
+        Assert.Contains("code_verifier=verifier-1", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_WhenSandboxEnvironment_PostsToSandboxTokenEndpoint()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"access_token\":\"at\",\"token_type\":\"Bearer\"}");
+        var provider = CreateOAuthProvider(handler, DialPadEnvironment.Sandbox);
+
+        // Act
+        await provider.ExchangeCodeAsync(
+            new TelephonyCodeExchangeContext { Code = "auth-code", RedirectUri = "https://site.test/cb" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("https://sandbox.dialpad.com/oauth2/token", handler.LastRequest.RequestUri.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task RevokeTokensAsync_PostsToDeauthorizeEndpointWithBearerToken()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        await provider.RevokeTokensAsync(
+            new TelephonyUserTokens { AccessToken = "access-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest.Method);
+        Assert.Equal("https://dialpad.com/oauth2/deauthorize", handler.LastRequest.RequestUri.AbsoluteUri);
+        Assert.Equal("Bearer", handler.LastRequest.Headers.Authorization.Scheme);
+        Assert.Equal("access-1", handler.LastRequest.Headers.Authorization.Parameter);
+    }
+
+    [Fact]
+    public async Task RevokeTokensAsync_WhenNoAccessToken_DoesNotCallApi()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        await provider.RevokeTokensAsync(
+            new TelephonyUserTokens { AccessToken = "" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(handler.LastRequest);
     }
 
     [Fact]
@@ -282,7 +391,7 @@ public sealed class DialPadTelephonyProviderTests
         Assert.True(settings.UseOAuth);
     }
 
-    private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler)
+    private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialPadEnvironment environment = DialPadEnvironment.Production)
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
 
@@ -293,6 +402,7 @@ public sealed class DialPadTelephonyProviderTests
         var settings = new DialPadSettings
         {
             IsEnabled = true,
+            Environment = environment,
             AuthenticationType = DialPadAuthenticationType.OAuth2,
             ClientId = "client-id",
             ClientSecret = protectedSecret,

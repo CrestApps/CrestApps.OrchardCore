@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.DialPad.Models;
+
 namespace CrestApps.OrchardCore.DialPad;
 
 /// <summary>
@@ -21,19 +23,61 @@ public static class DialPadConstants
     public const string OAuthProtectorName = "DialPad.OAuth";
 
     /// <summary>
-    /// The DialPad OAuth 2.0 authorization endpoint.
+    /// The DialPad OAuth scope that allows access to a refresh token so access tokens can be renewed
+    /// without prompting the user to reconnect.
     /// </summary>
-    public const string OAuthAuthorizeUrl = "https://dialpad.com/oauth2/authorize";
+    public const string OfflineAccessScope = "offline_access";
 
     /// <summary>
-    /// The DialPad OAuth 2.0 token endpoint.
+    /// The base address of the production DialPad environment.
     /// </summary>
-    public const string OAuthTokenUrl = "https://dialpad.com/oauth2/token";
+    public const string ProductionBaseUrl = "https://dialpad.com";
 
     /// <summary>
-    /// The default base address of the DialPad REST API.
+    /// The base address of the sandbox DialPad environment.
     /// </summary>
-    public const string DefaultApiBaseUrl = "https://dialpad.com/api/v2/";
+    public const string SandboxBaseUrl = "https://sandbox.dialpad.com";
+
+    /// <summary>
+    /// Gets the base address for the given DialPad environment.
+    /// </summary>
+    /// <param name="environment">The DialPad environment.</param>
+    /// <returns>The environment base address.</returns>
+    public static string GetBaseUrl(DialPadEnvironment environment)
+        => environment == DialPadEnvironment.Sandbox ? SandboxBaseUrl : ProductionBaseUrl;
+
+    /// <summary>
+    /// Gets the OAuth 2.0 authorization endpoint for the given DialPad environment.
+    /// </summary>
+    /// <param name="environment">The DialPad environment.</param>
+    /// <returns>The authorization endpoint URL.</returns>
+    public static string GetAuthorizeUrl(DialPadEnvironment environment)
+        => $"{GetBaseUrl(environment)}/oauth2/authorize";
+
+    /// <summary>
+    /// Gets the OAuth 2.0 token endpoint for the given DialPad environment.
+    /// </summary>
+    /// <param name="environment">The DialPad environment.</param>
+    /// <returns>The token endpoint URL.</returns>
+    public static string GetTokenUrl(DialPadEnvironment environment)
+        => $"{GetBaseUrl(environment)}/oauth2/token";
+
+    /// <summary>
+    /// Gets the OAuth 2.0 deauthorize endpoint for the given DialPad environment, used to revoke the
+    /// tokens issued to the application on behalf of a user.
+    /// </summary>
+    /// <param name="environment">The DialPad environment.</param>
+    /// <returns>The deauthorize endpoint URL.</returns>
+    public static string GetDeauthorizeUrl(DialPadEnvironment environment)
+        => $"{GetBaseUrl(environment)}/oauth2/deauthorize";
+
+    /// <summary>
+    /// Gets the default REST API base address for the given DialPad environment.
+    /// </summary>
+    /// <param name="environment">The DialPad environment.</param>
+    /// <returns>The REST API base address.</returns>
+    public static string GetApiBaseUrl(DialPadEnvironment environment)
+        => $"{GetBaseUrl(environment)}/api/v2/";
 
     /// <summary>
     /// Contains the feature identifiers exposed by the DialPad module.
