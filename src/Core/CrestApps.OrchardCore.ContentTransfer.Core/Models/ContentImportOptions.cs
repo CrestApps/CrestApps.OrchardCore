@@ -12,9 +12,12 @@ public sealed class ContentImportOptions
     public const long DefaultMaxUploadFileSize = 1_073_741_824;
 
     /// <summary>
-    /// The default chunk size, in bytes, used when uploading import files. Defaults to 30 MB.
+    /// The default chunk size, in bytes, used when uploading import files. Defaults to 25 MB.
+    /// This stays below the common pre-application request-body limit (about 28.6 MB /
+    /// <c>30000000</c> bytes) enforced by IIS request filtering and several reverse proxies, so the
+    /// default upload works out of the box on those hosts without extra configuration.
     /// </summary>
-    public const int DefaultMaxUploadChunkSize = 31_457_280;
+    public const int DefaultMaxUploadChunkSize = 26_214_400;
 
     public int ImportBatchSize { get; set; } = DefaultImportBatchSize;
 

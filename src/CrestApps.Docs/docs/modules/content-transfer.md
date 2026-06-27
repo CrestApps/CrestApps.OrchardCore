@@ -86,7 +86,7 @@ Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:Cont
         "ExportBatchSize": 200,
         "ExportQueueThreshold": 500,
         "MaxUploadFileSize": 1073741824,
-        "MaxUploadChunkSize": 31457280,
+        "MaxUploadChunkSize": 26214400,
         "TemporaryFileLifetime": "01:00:00"
       }
     }
@@ -100,7 +100,7 @@ Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:Cont
 | `ExportBatchSize` | `200` | Number of content items written per export batch. |
 | `ExportQueueThreshold` | `500` | Maximum item count for immediate export before the request is queued. |
 | `MaxUploadFileSize` | `1073741824` (1 GB) | Maximum size, in bytes, of a file that can be uploaded for bulk import. Set to `0` to disable the size check. |
-| `MaxUploadChunkSize` | `31457280` (30 MB) | Size, in bytes, of each chunk when an upload is streamed to the server. Set to `0` to disable chunked uploads. |
+| `MaxUploadChunkSize` | `26214400` (25 MB) | Size, in bytes, of each chunk when an upload is streamed to the server. The default stays below the common pre-application request-body limit (about 28.6 MB / `30000000` bytes) so uploads work out of the box on IIS and most reverse proxies. Set to `0` to disable chunked uploads. |
 | `TemporaryFileLifetime` | `"01:00:00"` (1 hour) | How long an in-progress chunked upload's temporary file is kept before a background task purges it. Uses the `d.hh:mm:ss` time-span format. |
 
 All values are read from the tenant's shell configuration, so they can be set globally for every tenant or overridden for a single tenant. See [Overriding the upload limits](#overriding-the-upload-limits).
@@ -133,9 +133,10 @@ from configuration, so you can set it to any size your imports require (well bey
 | 5 GB | `5368709120` |
 | 10 GB | `10737418240` |
 
-Keep `MaxUploadChunkSize` at a moderate value (for example 30 MB) even when you raise the maximum file
-size, so individual requests stay small. The total file size, not the chunk size, is what
-`MaxUploadFileSize` limits.
+Keep `MaxUploadChunkSize` at a moderate value (the default is 25 MB) even when you raise the maximum file
+size, so individual requests stay small. Leaving it below `30000000` bytes also keeps uploads working
+without extra host configuration (see [Hosting and proxy limits](#hosting-and-proxy-limits)). The total
+file size, not the chunk size, is what `MaxUploadFileSize` limits.
 
 **Raise the maximum import size to 5 GB (all tenants).** Edit the application root `appsettings.json`:
 
@@ -144,8 +145,7 @@ size, so individual requests stay small. The total file size, not the chunk size
   "OrchardCore": {
     "CrestApps": {
       "ContentTransfer": {
-        "MaxUploadFileSize": 5368709120,
-        "MaxUploadChunkSize": 31457280
+        "MaxUploadFileSize": 5368709120
       }
     }
   }
@@ -173,7 +173,6 @@ nesting with a double underscore, which is convenient for containers and CI:
 
 ```bash
 OrchardCore__CrestApps__ContentTransfer__MaxUploadFileSize=5368709120
-OrchardCore__CrestApps__ContentTransfer__MaxUploadChunkSize=31457280
 ```
 
 **Remove the size cap.** Set `MaxUploadFileSize` to `0` to disable the file-size check entirely. This is
@@ -193,15 +192,17 @@ overhead, at the Kestrel / ASP.NET Core level, on every request. For most deploy
 Linux, containers, `dotnet run`, Azure App Service on Linux, or behind a non-IIS reverse proxy — you do
 **not** need any additional request-size configuration.
 
-Two cases need attention because they enforce a limit **before** the request reaches the application, so
-the module cannot raise them from code:
+Two cases enforce a limit **before** the request reaches the application, so the module cannot raise them
+from code. The default `MaxUploadChunkSize` (25 MB) stays below both of the limits below, so the default
+configuration works without changes. You only need the guidance here if you **raise** `MaxUploadChunkSize`
+above the host limit, or disable chunking:
 
 - **IIS hosting on Windows (in-process or out-of-process).** IIS request filtering caps the request body at
   `maxAllowedContentLength` (about 28.6 MB / `30000000` bytes by default) and rejects anything larger with
-  an IIS-level `404.13` before the app runs. Because the default chunk size (30 MB) is slightly above this,
-  raise `maxAllowedContentLength` in `web.config` (to at least `MaxUploadChunkSize` plus overhead) or lower
-  `MaxUploadChunkSize` below `30000000` when hosting behind IIS. This is only required for IIS; it is not
-  needed for Kestrel-based hosting.
+  an IIS-level `404.13` before the app runs. The default chunk size is below this, so the default upload
+  works out of the box. If you raise `MaxUploadChunkSize` to `30000000` bytes or more, also raise
+  `maxAllowedContentLength` in `web.config` (to at least `MaxUploadChunkSize` plus overhead). This applies
+  to IIS only; it is not needed for Kestrel-based hosting.
 
   ```xml
   <system.webServer>

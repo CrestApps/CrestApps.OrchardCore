@@ -31,6 +31,7 @@ using OrchardCore.Media.Fields;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.PublishLater.Models;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Taxonomies.Fields;
 using OrchardCore.Title.Models;
@@ -49,6 +50,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
         services.AddSingleton<IContentTransferChunkFileUploadService, ContentTransferChunkFileUploadService>();
 
         services.AddSingleton<IContentTransferFileStore>(serviceProvider =>
