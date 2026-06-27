@@ -46,6 +46,14 @@ public sealed class PhoneNumberVerificationsStartupTests
             descriptor.ImplementationType == typeof(PhoneNumberRevalidationBackgroundTask));
 
         Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IPhoneNumberVerificationQueueProcessor) &&
+            descriptor.ImplementationType == typeof(PhoneNumberVerificationQueueProcessor));
+
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IPhoneNumberVerificationRequestDelayer) &&
+            descriptor.ImplementationType == typeof(DefaultPhoneNumberVerificationRequestDelayer));
+
+        Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(INavigationProvider) &&
             descriptor.ImplementationType?.Name == "PhoneNumberVerificationsAdminMenu");
 

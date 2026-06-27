@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
@@ -32,12 +31,11 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
     // Upper bound on the number of due content items handled per run. This caps memory usage when a
     // large backlog becomes due at once; any remainder is picked up by the next scheduled run.
     private const int MaxItemsPerRun = 10_000;
+    private const int MaxProcessingDurationMilliseconds = 1_500_000;
 
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger<PhoneNumberRevalidationBackgroundTask>>();
-
         string[] dueContentItemIds;
 
         // Snapshot the due content item ids up front. Processing a fixed snapshot guarantees forward
@@ -59,6 +57,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             var maxAttempts = settings.MaxVerificationAttempts > 0
                 ? settings.MaxVerificationAttempts
                 : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
+            var maxItemsPerRun = GetMaxItemsPerRun(settings.RequestDelayMilliseconds);
             var now = clock.UtcNow;
 
             var dueIndexes = await session.QueryIndex<PhoneNumberVerificationPartIndex>(index =>
@@ -66,7 +65,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
                     && index.FailedAttemptCount < maxAttempts
                     && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
                 .OrderBy(index => index.ContentItemId)
-                .Take(MaxItemsPerRun)
+                .Take(maxItemsPerRun)
                 .ListAsync(cancellationToken);
 
             dueContentItemIds = dueIndexes
@@ -81,9 +80,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             return;
         }
 
-        // Throttle provider calls across the whole run so a large backlog (for example, many records
-        // re-queued at once) does not exceed provider rate limits and trigger HTTP 429 responses.
-        var isFirstVerification = true;
+        var delayBeforeNextRequest = false;
 
         foreach (var contentItemIds in dueContentItemIds.Chunk(BatchSize))
         {
@@ -96,80 +93,40 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
             var session = scope.ServiceProvider.GetRequiredService<ISession>();
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
-            var verificationManager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
+            var queueProcessor = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationQueueProcessor>();
             var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
 
             var contentItems = await session.Query<ContentItem, ContentItemIndex>(index =>
                     index.Latest && index.ContentItemId.IsIn(contentItemIds))
                 .ListAsync(cancellationToken);
 
+            var processed = await queueProcessor.ProcessAsync(
+                contentItems,
+                settings,
+                delayBeforeNextRequest,
+                cancellationToken);
+
+            if (processed > 0)
+            {
+                delayBeforeNextRequest = true;
+            }
+
             foreach (var contentItem in contentItems)
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                try
-                {
-                    var phoneNumber = GetStoredPhoneNumber(contentItem);
-
-                    if (string.IsNullOrWhiteSpace(phoneNumber))
-                    {
-                        continue;
-                    }
-
-                    if (!isFirstVerification && settings.RequestDelayMilliseconds > 0)
-                    {
-                        await Task.Delay(settings.RequestDelayMilliseconds, cancellationToken);
-                    }
-
-                    isFirstVerification = false;
-
-                    var result = await verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
-
-                    contentItem.AlterPhoneNumberVerificationResult(
-                        result,
-                        revalidationIntervalDays: settings.RevalidationIntervalDays);
-
-                    if (OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
-                    {
-                        phoneNumberContentItem.AlterPhoneNumberVerificationResult(
-                            result,
-                            revalidationIntervalDays: settings.RevalidationIntervalDays);
-                    }
-
-                    await session.SaveAsync(contentItem);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to revalidate the phone number for content item '{ContentItemId}'.", contentItem.ContentItemId);
-                }
+                await session.SaveAsync(contentItem, cancellationToken: cancellationToken);
             }
 
             await session.SaveChangesAsync(cancellationToken);
         }
     }
 
-    private static string GetStoredPhoneNumber(ContentItem contentItem)
+    private static int GetMaxItemsPerRun(int requestDelayMilliseconds)
     {
-        if (!contentItem.TryGet<PhoneNumberVerificationPart>(out var part))
+        if (requestDelayMilliseconds <= 0)
         {
-            return null;
+            return MaxItemsPerRun;
         }
 
-        if (!string.IsNullOrWhiteSpace(part.NormalizedPhoneNumber))
-        {
-            return part.NormalizedPhoneNumber;
-        }
-
-        if (!string.IsNullOrWhiteSpace(part.PhoneNumber))
-        {
-            return part.PhoneNumber;
-        }
-
-        return part.TryGetPhoneNumberVerificationResult(out var result)
-            ? result.NormalizedPhoneNumber ?? result.PhoneNumber
-            : null;
+        return Math.Clamp(MaxProcessingDurationMilliseconds / requestDelayMilliseconds, BatchSize, MaxItemsPerRun);
     }
 }

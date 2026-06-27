@@ -90,29 +90,32 @@ else
         <input type="hidden" name="returnUrl" value="@returnUrl" />
         <input type="hidden" name="q" value="@Model.Q" />
 
-        <div class="card text-bg-theme mb-3 position-sticky action-bar">
-            <div class="card-body">
-                <div class="row gx-3 gy-2 align-items-center">
-                    <div class="col-12 col-md-auto">
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="checkbox" id="select-all-records" />
-                            <label class="form-check-label" for="select-all-records">@T["Select all on this page"]</label>
+        @if (Model.CanVerifyPhoneNumbers)
+        {
+            <div class="card text-bg-theme mb-3 position-sticky action-bar">
+                <div class="card-body">
+                    <div class="row gx-3 gy-2 align-items-center">
+                        <div class="col-12 col-md-auto">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="select-all-records" />
+                                <label class="form-check-label" for="select-all-records">@T["Select all on this page"]</label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-12 col-md">
-                        <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("RetrySelected", "Records")">
-                                <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>@T["Retry selected"]
-                            </button>
-                            <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
-                                    title="@T["Re-queues every failed record across all pages that matches the current search."]">
-                                <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
-                            </button>
+                        <div class="col-12 col-md">
+                            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                                <button type="submit" class="btn btn-secondary" formaction="@Url.Action("RetrySelected", "Records")">
+                                    <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>@T["Retry selected"]
+                                </button>
+                                <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
+                                        title="@T["Re-queues every failed or needs-attention record across all pages that matches the current search."]">
+                                    <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
 
         <ul class="list-group">
             @foreach (var entry in Model.Entries)
@@ -129,11 +132,14 @@ else
 
                 <li class="list-group-item">
                     <div class="row align-items-center gx-3 gy-2">
-                        <div class="col-auto">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input record-checkbox" type="checkbox" name="contentItemIds" value="@entry.ContentItemId" aria-label="@T["Select record"]" />
+                        @if (Model.CanVerifyPhoneNumbers)
+                        {
+                            <div class="col-auto">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input record-checkbox" type="checkbox" name="contentItemIds" value="@entry.ContentItemId" aria-label="@T["Select record"]" />
+                                </div>
                             </div>
-                        </div>
+                        }
                         <div class="col-12 col-lg">
                             <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
                             @if (!string.IsNullOrEmpty(entry.DisplayText))
@@ -176,7 +182,7 @@ else
                             </div>
                         </div>
                         <div class="col-12 col-lg-auto text-lg-end">
-                            @if (entry.FailedAttemptCount > 0)
+                            @if (Model.CanVerifyPhoneNumbers && entry.FailedAttemptCount > 0)
                             {
                                 <button type="submit" name="contentItemId" value="@entry.ContentItemId" formaction="@Url.Action("Retry", "Records")" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
                             }

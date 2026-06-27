@@ -3,13 +3,13 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
 
@@ -42,26 +42,12 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
 
     private Task TrackAsync(ContentItem contentItem)
     {
-        if (contentItem.Id == 0 || !contentItem.TryGet<OmnichannelContactPart>(out _))
+        if (string.IsNullOrEmpty(contentItem.ContentItemId) || !contentItem.TryGet<OmnichannelContactPart>(out _))
         {
             return Task.CompletedTask;
         }
 
-        var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
-        var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
-
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            if (HasPhoneNumberVerification(contentItem))
-            {
-                AddDeferredTask();
-                _contentItemIds.Add(contentItem.ContentItemId);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        if (!RequiresVerificationUpdate(contentItem, phoneNumberContentItem, phoneNumber, _phoneNumberService))
+        if (!PreparePendingVerification(contentItem, _phoneNumberService))
         {
             return Task.CompletedTask;
         }
@@ -94,77 +80,26 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
         }
 
         var services = scope.ServiceProvider;
-        var logger = services.GetRequiredService<ILogger<OmnichannelContactPhoneNumberVerificationHandler>>();
         var session = services.GetRequiredService<ISession>();
-        var phoneNumberService = services.GetRequiredService<IPhoneNumberService>();
         var verificationManager = services.GetRequiredService<IPhoneNumberVerificationManager>();
         var siteService = services.GetRequiredService<ISiteService>();
+        var queueProcessor = services.GetRequiredService<IPhoneNumberVerificationQueueProcessor>();
         var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-        var hasProvider = (await verificationManager.GetEnabledProvidersAsync()).Count > 0;
 
-        foreach (var contentItemId in contentItemIds)
+        if ((await verificationManager.GetEnabledProvidersAsync()).Count == 0)
         {
-            var contentItem = await session.Query<ContentItem, ContentItemIndex>(index =>
-                    index.Latest && index.ContentItemId == contentItemId)
-                .FirstOrDefaultAsync();
+            return;
+        }
 
-            if (contentItem is null || !contentItem.TryGet<OmnichannelContactPart>(out _))
-            {
-                continue;
-            }
+        var contentItems = await session.Query<ContentItem, ContentItemIndex>(index =>
+                index.Latest && index.ContentItemId.IsIn(contentItemIds))
+            .ListAsync();
 
-            var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
-            var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
+        await queueProcessor.ProcessAsync(contentItems, settings);
 
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                if (contentItem.TryGet<PhoneNumberVerificationPart>(out _))
-                {
-                    contentItem.ClearPhoneNumberVerification();
-                    await session.SaveAsync(contentItem);
-                }
-
-                continue;
-            }
-
-            if (!RequiresVerificationUpdate(contentItem, phoneNumberContentItem, phoneNumber, phoneNumberService))
-            {
-                continue;
-            }
-
-            var normalizedPhoneNumber = NormalizePhoneNumber(phoneNumber, phoneNumberService);
-
-            if (!hasProvider)
-            {
-                contentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
-                phoneNumberContentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
-                await session.SaveAsync(contentItem);
-
-                continue;
-            }
-
-            try
-            {
-                var result = await verificationManager.VerifyAsync(phoneNumber);
-
-                contentItem.AlterPhoneNumberVerificationResult(
-                    result,
-                    revalidationIntervalDays: settings.RevalidationIntervalDays);
-
-                phoneNumberContentItem.AlterPhoneNumberVerificationResult(
-                    result,
-                    revalidationIntervalDays: settings.RevalidationIntervalDays);
-
-                await session.SaveAsync(contentItem);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to automatically verify the phone number for contact content item '{ContentItemId}'.", contentItem.ContentItemId);
-
-                contentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
-                phoneNumberContentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
-                await session.SaveAsync(contentItem);
-            }
+        foreach (var contentItem in contentItems)
+        {
+            await session.SaveAsync(contentItem);
         }
 
         await session.SaveChangesAsync();
@@ -196,6 +131,39 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
         return phoneNumberContentItem is null
             || !phoneNumberContentItem.TryGet<PhoneNumberVerificationPart>(out var phoneVerificationPart)
             || !IsSamePhoneNumber(phoneVerificationPart, phoneNumber, phoneNumberService);
+    }
+
+    internal static bool PreparePendingVerification(
+        ContentItem contentItem,
+        IPhoneNumberService phoneNumberService)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+        ArgumentNullException.ThrowIfNull(phoneNumberService);
+
+        var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
+        var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            if (HasPhoneNumberVerification(contentItem))
+            {
+                contentItem.ClearPhoneNumberVerification();
+            }
+
+            return false;
+        }
+
+        if (!RequiresVerificationUpdate(contentItem, phoneNumberContentItem, phoneNumber, phoneNumberService))
+        {
+            return false;
+        }
+
+        var normalizedPhoneNumber = NormalizePhoneNumber(phoneNumber, phoneNumberService);
+
+        contentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
+        phoneNumberContentItem.AlterPhoneNumberVerificationPending(phoneNumber, normalizedPhoneNumber);
+
+        return true;
     }
 
     private static bool HasPhoneNumberVerification(ContentItem contentItem)

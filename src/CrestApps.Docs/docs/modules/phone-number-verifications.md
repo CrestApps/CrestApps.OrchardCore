@@ -104,7 +104,7 @@ Verification happens through one of three paths:
 2. **Background revalidation** — a scheduled job verifies contacts that already have a stored phone number and are due.
 3. **Explicit requests** — a verification is triggered for a specific phone number.
 
-Automatic verification runs as deferred work after the content item is saved, so the content lifecycle does not call the external provider inline. If no provider is enabled or a provider call fails, the handler stores the phone number as `Unverified`; the background revalidation task can pick it up later when a provider is available.
+Automatic verification first stores the changed number as `Unverified` on the contact and preferred phone-number record during the current content save. The external provider call then runs as deferred work after that save completes, so the provider result is the only later update to the verification status. If no provider is enabled, the number remains pending and the background revalidation task can pick it up later when a provider becomes available.
 
 When a phone field is rendered for display or editing, the UI shows a status icon next to the number when verification data is available on the same content item. Verified numbers show a green check mark, invalid numbers show a red error icon, failed verifications show a warning icon, and unverified numbers show a muted unknown icon. Each icon includes a tooltip that explains the status and includes the last verification timestamp when one is available.
 
@@ -129,9 +129,9 @@ A **Phone Verifications Queue** dashboard is available under **Tools** for users
 - sort records by most or least recently attempted, or newest or oldest created,
 - review each record's phone number, provider, result, total and failed attempt counts, the last attempt timestamp, and the most recent provider error,
 - page through large result sets,
-- re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
+- re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed or needs-attention record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
 
-All retry actions are **queued, not synchronous**: they reset the affected records' failure counters and mark them **Pending** immediately, then a throttled background task re-verifies them shortly afterwards. This keeps the page responsive even when re-queuing thousands of records and lets the throttle space out provider calls to avoid rate limits (HTTP 429).
+All retry actions are **queued, not synchronous**: they reset the affected records' failure counters and mark them **Pending** immediately, then deferred verification work runs after the pending state is saved. The scheduled background task remains a safety net for any records still due later. This keeps the page responsive even when re-queuing many records and lets the throttle space out provider calls to avoid rate limits (HTTP 429).
 
 Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
 
@@ -146,9 +146,9 @@ contentItem.AlterPhoneNumberVerificationResult(
 
 ## Background revalidation
 
-A throttled background task runs every five minutes, finds content items that already carry a stored phone number and whose verification is due (including records re-queued from the queue dashboard), verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
+A throttled background task runs every five minutes, finds content items that already carry a stored phone number and whose verification is due (including records that remain pending after a queue retry), verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
 
-- processes work in batches to scale to large data sets
+- processes work in bounded, throttled batches to scale to large data sets without overlapping long-running provider calls
 - throttles consecutive provider calls using the configured **Request delay (milliseconds)** setting to respect provider rate limits (HTTP 429)
 - tolerates provider failures without stopping the run
 - uses distributed locking so it is safe to run across multiple instances

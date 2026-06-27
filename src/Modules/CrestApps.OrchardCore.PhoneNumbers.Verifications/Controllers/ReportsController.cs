@@ -59,7 +59,7 @@ public sealed class ReportsController : Controller
         var verified = await CountAsync(index => index.IsVerified);
         var invalid = await CountAsync(index => index.VerificationStatus == PhoneNumberVerificationStatus.Invalid);
         var failures = await CountAsync(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed);
-        var pending = await CountAsync(index => index.LastVerifiedUtc == null);
+        var pending = await CountAsync(index => index.VerificationStatus == PhoneNumberVerificationStatus.Unverified);
         var requiring = await CountAsync(index =>
             index.LastVerifiedUtc != null
             && index.NextVerificationDueUtc != null

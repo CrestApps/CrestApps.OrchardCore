@@ -24,6 +24,12 @@ public class PhoneNumberVerificationRecordsViewModel
     public PhoneNumberVerificationRecordSort Sort { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the current user can retry phone number verifications.
+    /// </summary>
+    [BindNever]
+    public bool CanVerifyPhoneNumbers { get; set; }
+
+    /// <summary>
     /// Gets or sets the records on the current page.
     /// </summary>
     [BindNever]
