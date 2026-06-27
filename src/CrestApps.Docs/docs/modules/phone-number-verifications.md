@@ -120,16 +120,18 @@ When a verification request fails:
 
 Failed records are retried automatically by the background task until `FailedAttemptCount` reaches the configured **Maximum verification attempts** (default `3`). Once a record reaches that cap it stops auto-retrying and is flagged as **Needs attention** in the records queue, where an administrator can inspect the error and manually retry it. When a verification request finally completes, `FailedAttemptCount` and `LastError` are reset to zero/null.
 
-## Verification records queue
+## Phone Verifications Queue
 
-A **Phone Number Verifications** dashboard is available under **Tools** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data and lets administrators:
+A **Phone Verifications Queue** dashboard is available under **Tools** for users who have the `RunPhoneNumberVerificationsReport` permission. It lists every content item carrying verification data and lets administrators:
 
-- see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected,
+- see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected. The status buckets are mutually exclusive and always sum to the total: **Pending** counts records awaiting verification (unverified status, including records just re-queued), **Failed** counts records whose last request failed but can still be retried automatically, and **Needs attention** counts records that have reached the maximum failed attempts,
 - search records by raw or normalized phone number,
 - sort records by most or least recently attempted, or newest or oldest created,
 - review each record's phone number, provider, result, total and failed attempt counts, the last attempt timestamp, and the most recent provider error,
-- immediately re-verify a record with **Retry now**, which resets the failure counters, calls the configured provider right away, updates the stored status, and reports the outcome (requires the `VerifyPhoneNumbers` permission).
+- page through large result sets,
+- re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
 
+All retry actions are **queued, not synchronous**: they reset the affected records' failure counters and mark them **Pending** immediately, then a throttled background task re-verifies them shortly afterwards. This keeps the page responsive even when re-queuing thousands of records and lets the throttle space out provider calls to avoid rate limits (HTTP 429).
 
 Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
 
@@ -144,9 +146,10 @@ contentItem.AlterPhoneNumberVerificationResult(
 
 ## Background revalidation
 
-A daily background task finds content items that already carry a stored phone number and whose verification is due, verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
+A throttled background task runs every five minutes, finds content items that already carry a stored phone number and whose verification is due (including records re-queued from the queue dashboard), verifies them in resilient batches, and updates the stored results, the SQL index, and reporting data. The task:
 
 - processes work in batches to scale to large data sets
+- throttles consecutive provider calls using the configured **Request delay (milliseconds)** setting to respect provider rate limits (HTTP 429)
 - tolerates provider failures without stopping the run
 - uses distributed locking so it is safe to run across multiple instances
 
@@ -171,6 +174,7 @@ Configure the module under **Settings** -> **Phone Number Verifications**.
 | **Default provider** | First available | The provider used by default. The selector lists only **enabled** providers. If no provider matches the selection (or none is chosen), the first enabled provider is used. |
 | **Revalidation interval (days)** | `365` | The number of days after which a verified number must be revalidated. |
 | **Maximum verification attempts** | `3` | The maximum number of consecutive failed verification requests before a record stops auto-retrying and is flagged as **Needs attention** in the records queue. |
+| **Request delay (milliseconds)** | `1000` | The delay between consecutive provider requests during background processing. Increase this value to space out calls and avoid provider rate limits (HTTP 429) when many records are verified in sequence. |
 
 ![Phone number verifications core settings](/img/docs/phone-number-verifications-settings.png)
 

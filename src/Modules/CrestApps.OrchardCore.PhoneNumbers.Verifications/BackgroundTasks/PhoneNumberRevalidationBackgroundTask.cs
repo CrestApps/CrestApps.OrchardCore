@@ -16,12 +16,13 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
 
 /// <summary>
 /// Periodically revalidates content items that have stored phone numbers whose verification
-/// is due. Work is processed in resilient batches so the task scales and tolerates provider failures.
+/// is due, including records re-queued from the verification queue. Work is processed in resilient
+/// batches and provider calls are throttled so the task scales and respects provider rate limits.
 /// </summary>
 [BackgroundTask(
     Title = "Phone Number Revalidation",
-    Schedule = "0 3 * * *",
-    Description = "Revalidates contact phone numbers that are due for verification.",
+    Schedule = "*/5 * * * *",
+    Description = "Revalidates contact phone numbers that are due for verification, including re-queued records.",
     LockTimeout = 3_000,
     LockExpiration = 1_800_000)]
 public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
@@ -80,6 +81,10 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             return;
         }
 
+        // Throttle provider calls across the whole run so a large backlog (for example, many records
+        // re-queued at once) does not exceed provider rate limits and trigger HTTP 429 responses.
+        var isFirstVerification = true;
+
         foreach (var contentItemIds in dueContentItemIds.Chunk(BatchSize))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -113,6 +118,13 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
                     {
                         continue;
                     }
+
+                    if (!isFirstVerification && settings.RequestDelayMilliseconds > 0)
+                    {
+                        await Task.Delay(settings.RequestDelayMilliseconds, cancellationToken);
+                    }
+
+                    isFirstVerification = false;
 
                     var result = await verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
 

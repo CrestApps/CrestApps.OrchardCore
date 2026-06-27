@@ -21,12 +21,13 @@ public enum PhoneNumberVerificationRecordFilter
     Invalid = 2,
 
     /// <summary>
-    /// Shows records whose most recent verification request failed.
+    /// Shows records whose most recent verification request failed but can still be retried automatically.
     /// </summary>
     Failed = 3,
 
     /// <summary>
-    /// Shows records that have never completed a verification.
+    /// Shows records that are awaiting verification (an unverified status), including records that were
+    /// just re-queued and have not been processed yet.
     /// </summary>
     Pending = 4,
 

@@ -55,6 +55,7 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
         {
             viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
             viewModel.MaxVerificationAttempts = settings.MaxVerificationAttempts;
+            viewModel.RequestDelayMilliseconds = settings.RequestDelayMilliseconds;
             viewModel.SelectedProvider = settings.SelectedProvider;
 
             var enabledProviders = await _verificationManager.GetEnabledProvidersAsync();
@@ -93,12 +94,20 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.MaxVerificationAttempts), S["The maximum verification attempts must be greater than zero."]);
         }
 
+        if (viewModel.RequestDelayMilliseconds < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.RequestDelayMilliseconds), S["The request delay cannot be negative."]);
+        }
+
         settings.RevalidationIntervalDays = viewModel.RevalidationIntervalDays > 0
             ? viewModel.RevalidationIntervalDays
             : PhoneNumberVerificationsSettings.DefaultRevalidationIntervalDays;
         settings.MaxVerificationAttempts = viewModel.MaxVerificationAttempts > 0
             ? viewModel.MaxVerificationAttempts
             : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
+        settings.RequestDelayMilliseconds = viewModel.RequestDelayMilliseconds >= 0
+            ? viewModel.RequestDelayMilliseconds
+            : PhoneNumberVerificationsSettings.DefaultRequestDelayMilliseconds;
         settings.SelectedProvider = viewModel.SelectedProvider;
 
         return Edit(site, settings, context);

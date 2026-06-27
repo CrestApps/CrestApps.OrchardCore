@@ -20,6 +20,12 @@ public class PhoneNumberVerificationsSettingsViewModel
     public int MaxVerificationAttempts { get; set; }
 
     /// <summary>
+    /// Gets or sets the delay, in milliseconds, applied between consecutive provider verification
+    /// requests during background processing, used to avoid provider rate limits.
+    /// </summary>
+    public int RequestDelayMilliseconds { get; set; }
+
+    /// <summary>
     /// Gets or sets the key of the provider used by default.
     /// </summary>
     public string SelectedProvider { get; set; }

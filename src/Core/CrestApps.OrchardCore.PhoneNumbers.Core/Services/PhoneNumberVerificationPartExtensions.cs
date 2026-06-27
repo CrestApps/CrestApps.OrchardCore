@@ -124,8 +124,10 @@ public static class PhoneNumberVerificationPartExtensions
     }
 
     /// <summary>
-    /// Re-queues a content item for verification by clearing the failure counters and due date so the
-    /// background task picks it up again. The last known status and phone number are preserved.
+    /// Re-queues a content item for verification by clearing the failure counters and due date and
+    /// marking the record as pending (<see cref="PhoneNumberVerificationStatus.Unverified"/>) so it
+    /// leaves the failed bucket immediately and is picked up by the background task again. The stored
+    /// phone number is preserved.
     /// </summary>
     /// <param name="contentItem">The content item to re-queue.</param>
     public static void RequeuePhoneNumberVerification(this ContentItem contentItem)
@@ -134,6 +136,7 @@ public static class PhoneNumberVerificationPartExtensions
 
         contentItem.Alter<PhoneNumberVerificationPart>(part =>
         {
+            part.VerificationStatus = PhoneNumberVerificationStatus.Unverified;
             part.FailedAttemptCount = 0;
             part.LastError = null;
             part.NextVerificationDueUtc = null;

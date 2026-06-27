@@ -45,7 +45,7 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
 
         builder
             .Add(S["Tools"], tools => tools
-                .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
+                .Add(S["Phone Verifications Queue"], S["Phone Verifications Queue"].PrefixPosition(), verifications => verifications
                     .AddClass("phone-number-verifications")
                     .Id("phoneNumberVerifications")
                     .Action("Index", "Records", PhoneNumberVerificationsConstants.Features.Area)

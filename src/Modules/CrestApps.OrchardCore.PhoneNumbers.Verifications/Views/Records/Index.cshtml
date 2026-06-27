@@ -14,7 +14,7 @@
     };
 }
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Number Verifications"])</h1></zone>
+<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Verifications Queue"])</h1></zone>
 
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
     @foreach (var filter in filters)
@@ -86,82 +86,138 @@
 }
 else
 {
-    <ul class="list-group">
-        @foreach (var entry in Model.Entries)
-        {
-            var statusClass = entry.VerificationStatus switch
-            {
-                PhoneNumberVerificationStatus.Verified => "text-bg-success",
-                PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
-                PhoneNumberVerificationStatus.Failed => "text-bg-warning",
-                _ => "text-bg-secondary",
-            };
-            var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
-            var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
+    <form asp-action="RetrySelected" asp-controller="Records" method="post">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <input type="hidden" name="q" value="@Model.Q" />
 
-            <li class="list-group-item">
-                <div class="row align-items-center gx-3 gy-2">
-                    <div class="col-12 col-lg">
-                        <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
-                        @if (!string.IsNullOrEmpty(entry.DisplayText))
-                        {
-                            <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
-                        }
-                    </div>
-                    <div class="col-6 col-lg-auto">
-                        <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
-                        @if (entry.IsExhausted)
-                        {
-                            <span class="badge text-bg-danger ms-1" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
-                        }
-                    </div>
-                    <div class="col-6 col-lg-auto text-lg-center">
-                        <div class="text-muted text-uppercase small">@T["Provider"]</div>
-                        <div>@(string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider)</div>
-                    </div>
-                    <div class="col-6 col-lg-auto text-lg-center">
-                        <div class="text-muted text-uppercase small">@T["Attempts"]</div>
-                        <div>
-                            @entry.VerificationAttemptCount
-                            @if (entry.FailedAttemptCount > 0)
-                            {
-                                <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
-                            }
+        <div class="card text-bg-theme mb-3 position-sticky action-bar">
+            <div class="card-body">
+                <div class="row gx-3 gy-2 align-items-center">
+                    <div class="col-12 col-md-auto">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="select-all-records" />
+                            <label class="form-check-label" for="select-all-records">@T["Select all on this page"]</label>
                         </div>
                     </div>
-                    <div class="col-6 col-lg-auto text-lg-center">
-                        <div class="text-muted text-uppercase small">@T["Last attempt"]</div>
-                        <div>
-                            @if (entry.LastAttemptUtc.HasValue)
-                            {
-                                @entry.LastAttemptUtc.Value.ToString("g")
-                            }
-                            else
-                            {
-                                <span class="text-muted">@T["Never"]</span>
-                            }
+                    <div class="col-12 col-md">
+                        <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                            <button type="submit" class="btn btn-secondary" formaction="@Url.Action("RetrySelected", "Records")">
+                                <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>@T["Retry selected"]
+                            </button>
+                            <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
+                                    title="@T["Re-queues every failed record across all pages that matches the current search."]">
+                                <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
+                            </button>
                         </div>
-                    </div>
-                    <div class="col-12 col-lg-auto text-lg-end">
-                        @if (entry.FailedAttemptCount > 0)
-                        {
-                            <form asp-action="Retry" asp-controller="Records" method="post" class="d-inline">
-                                <input type="hidden" name="contentItemId" value="@entry.ContentItemId" />
-                                <input type="hidden" name="returnUrl" value="@returnUrl" />
-                                <button type="submit" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
-                            </form>
-                        }
                     </div>
                 </div>
-                @if (!string.IsNullOrEmpty(entry.LastError))
+            </div>
+        </div>
+
+        <ul class="list-group">
+            @foreach (var entry in Model.Entries)
+            {
+                var statusClass = entry.VerificationStatus switch
                 {
-                    <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">
-                        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@entry.LastError
+                    PhoneNumberVerificationStatus.Verified => "text-bg-success",
+                    PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+                    PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+                    _ => "text-bg-secondary",
+                };
+                var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
+                var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
+
+                <li class="list-group-item">
+                    <div class="row align-items-center gx-3 gy-2">
+                        <div class="col-auto">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input record-checkbox" type="checkbox" name="contentItemIds" value="@entry.ContentItemId" aria-label="@T["Select record"]" />
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg">
+                            <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
+                            @if (!string.IsNullOrEmpty(entry.DisplayText))
+                            {
+                                <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
+                            }
+                        </div>
+                        <div class="col-6 col-lg-auto">
+                            <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
+                            @if (entry.IsExhausted)
+                            {
+                                <span class="badge text-bg-danger ms-1" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
+                            }
+                        </div>
+                        <div class="col-6 col-lg-auto text-lg-center">
+                            <div class="text-muted text-uppercase small">@T["Provider"]</div>
+                            <div>@(string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider)</div>
+                        </div>
+                        <div class="col-6 col-lg-auto text-lg-center">
+                            <div class="text-muted text-uppercase small">@T["Attempts"]</div>
+                            <div>
+                                @entry.VerificationAttemptCount
+                                @if (entry.FailedAttemptCount > 0)
+                                {
+                                    <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-auto text-lg-center">
+                            <div class="text-muted text-uppercase small">@T["Last attempt"]</div>
+                            <div>
+                                @if (entry.LastAttemptUtc.HasValue)
+                                {
+                                    @entry.LastAttemptUtc.Value.ToString("g")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">@T["Never"]</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-auto text-lg-end">
+                            @if (entry.FailedAttemptCount > 0)
+                            {
+                                <button type="submit" name="contentItemId" value="@entry.ContentItemId" formaction="@Url.Action("Retry", "Records")" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
+                            }
+                        </div>
                     </div>
-                }
-            </li>
-        }
-    </ul>
+                    @if (!string.IsNullOrEmpty(entry.LastError))
+                    {
+                        <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">
+                            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@entry.LastError
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    </form>
 
     @await DisplayAsync(Model.Pager)
 }
+
+<script at="Foot">
+    (function () {
+        var selectAll = document.getElementById('select-all-records');
+
+        if (!selectAll) {
+            return;
+        }
+
+        var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.record-checkbox'));
+
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = selectAll.checked;
+            });
+        });
+
+        checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                selectAll.checked = checkboxes.every(function (item) {
+                    return item.checked;
+                });
+            });
+        });
+    })();
+</script>

@@ -17,6 +17,12 @@ public sealed class PhoneNumberVerificationsSettings
     public const int DefaultMaxVerificationAttempts = 3;
 
     /// <summary>
+    /// The default delay, in milliseconds, applied between consecutive provider verification
+    /// requests so background processing does not exceed provider rate limits.
+    /// </summary>
+    public const int DefaultRequestDelayMilliseconds = 1000;
+
+    /// <summary>
     /// Gets or sets the number of days after which a verified phone number must be revalidated.
     /// </summary>
     public int RevalidationIntervalDays { get; set; } = DefaultRevalidationIntervalDays;
@@ -27,6 +33,13 @@ public sealed class PhoneNumberVerificationsSettings
     /// records queue and can be re-queued manually.
     /// </summary>
     public int MaxVerificationAttempts { get; set; } = DefaultMaxVerificationAttempts;
+
+    /// <summary>
+    /// Gets or sets the delay, in milliseconds, applied between consecutive provider verification
+    /// requests during background processing. A higher value spaces out provider calls to avoid
+    /// rate-limit (HTTP 429) responses when many records are verified in sequence.
+    /// </summary>
+    public int RequestDelayMilliseconds { get; set; } = DefaultRequestDelayMilliseconds;
 
     /// <summary>
     /// Gets or sets the key of the provider used by default when verifying phone numbers.

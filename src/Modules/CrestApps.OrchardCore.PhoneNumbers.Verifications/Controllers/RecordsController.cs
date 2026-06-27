@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
-using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
@@ -20,6 +18,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Controllers;
 
@@ -30,6 +29,8 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Controllers;
 [Admin]
 public sealed class RecordsController : Controller
 {
+    private const int RequeueBatchSize = 100;
+
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
     private readonly ISiteService _siteService;
@@ -37,7 +38,6 @@ public sealed class RecordsController : Controller
     private readonly PagerOptions _pagerOptions;
     private readonly INotifier _notifier;
     private readonly IPhoneNumberVerificationManager _verificationManager;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -51,8 +51,7 @@ public sealed class RecordsController : Controller
     /// <param name="shapeFactory">The shape factory used to build the pager shape.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="notifier">The notifier service.</param>
-    /// <param name="verificationManager">The phone number verification manager used to re-verify records on demand.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="verificationManager">The phone number verification manager used to check for enabled providers.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public RecordsController(
@@ -63,7 +62,6 @@ public sealed class RecordsController : Controller
         IOptions<PagerOptions> pagerOptions,
         INotifier notifier,
         IPhoneNumberVerificationManager verificationManager,
-        ILogger<RecordsController> logger,
         IStringLocalizer<RecordsController> stringLocalizer,
         IHtmlLocalizer<RecordsController> htmlLocalizer)
     {
@@ -74,7 +72,6 @@ public sealed class RecordsController : Controller
         _pagerOptions = pagerOptions.Value;
         _notifier = notifier;
         _verificationManager = verificationManager;
-        _logger = logger;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -177,10 +174,11 @@ public sealed class RecordsController : Controller
     }
 
     /// <summary>
-    /// Immediately re-verifies a record against the configured provider, resets its failure counters,
-    /// updates its status, and reports the outcome instead of waiting for the daily background task.
+    /// Re-queues a single record for verification by resetting its failure counters and marking it
+    /// pending. A throttled background task re-verifies queued records shortly afterwards, which avoids
+    /// blocking the request and respects provider rate limits.
     /// </summary>
-    /// <param name="contentItemId">The identifier of the content item to re-verify.</param>
+    /// <param name="contentItemId">The identifier of the content item to re-queue.</param>
     /// <param name="returnUrl">The URL to return to.</param>
     /// <returns>A redirect to the originating page or the records queue.</returns>
     [HttpPost]
@@ -196,94 +194,156 @@ public sealed class RecordsController : Controller
             return NotFound();
         }
 
-        var contentItem = await _session.Query<ContentItem, ContentItemIndex>(index =>
-                index.Latest && index.ContentItemId == contentItemId)
-            .FirstOrDefaultAsync();
+        if (!await EnsureProvidersEnabledAsync())
+        {
+            return RedirectToReturnUrlOrIndex(returnUrl);
+        }
 
-        if (contentItem is null || !contentItem.TryGet<PhoneNumberVerificationPart>(out var part))
+        var requeued = await RequeueContentItemsAsync([contentItemId]);
+
+        if (requeued == 0)
         {
             return NotFound();
         }
 
-        var phoneNumber = GetStoredPhoneNumber(part);
-
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            await _notifier.WarningAsync(H["This record does not have a phone number to verify."]);
-
-            return RedirectToReturnUrlOrIndex(returnUrl);
-        }
-
-        if ((await _verificationManager.GetEnabledProvidersAsync()).Count == 0)
-        {
-            await _notifier.WarningAsync(H["No phone number verification providers are enabled. Enable a provider before retrying."]);
-
-            return RedirectToReturnUrlOrIndex(returnUrl);
-        }
-
-        var settings = await _siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-
-        contentItem.RequeuePhoneNumberVerification();
-
-        try
-        {
-            var result = await _verificationManager.VerifyAsync(phoneNumber);
-
-            contentItem.AlterPhoneNumberVerificationResult(
-                result,
-                revalidationIntervalDays: settings.RevalidationIntervalDays);
-
-            if (OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
-            {
-                phoneNumberContentItem.AlterPhoneNumberVerificationResult(
-                    result,
-                    revalidationIntervalDays: settings.RevalidationIntervalDays);
-            }
-
-            await _session.SaveAsync(contentItem);
-
-            switch (result.Status)
-            {
-                case PhoneNumberVerificationStatus.Verified:
-                    await _notifier.SuccessAsync(H["The phone number was verified successfully."]);
-                    break;
-                case PhoneNumberVerificationStatus.Invalid:
-                    await _notifier.WarningAsync(H["The phone number was checked and is not valid."]);
-                    break;
-                default:
-                    await _notifier.ErrorAsync(H["The verification request could not be completed: {0}", result.ErrorMessage]);
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to re-verify the phone number for content item '{ContentItemId}'.", contentItem.ContentItemId);
-
-            await _session.SaveAsync(contentItem);
-
-            await _notifier.ErrorAsync(H["The verification request could not be completed. See the logs for details."]);
-        }
+        await _notifier.SuccessAsync(H["The record was queued for verification and will be processed shortly."]);
 
         return RedirectToReturnUrlOrIndex(returnUrl);
     }
 
-    private static string GetStoredPhoneNumber(PhoneNumberVerificationPart part)
+    /// <summary>
+    /// Re-queues the selected records for verification. A throttled background task re-verifies the
+    /// queued records shortly afterwards.
+    /// </summary>
+    /// <param name="contentItemIds">The identifiers of the records selected on the current page.</param>
+    /// <param name="returnUrl">The URL to return to.</param>
+    /// <returns>A redirect to the originating page or the records queue.</returns>
+    [HttpPost]
+    public async Task<IActionResult> RetrySelected(string[] contentItemIds, string returnUrl)
     {
-        if (!string.IsNullOrWhiteSpace(part.NormalizedPhoneNumber))
+        if (!await _authorizationService.AuthorizeAsync(User, PhoneNumberVerificationsPermissions.VerifyPhoneNumbers))
         {
-            return part.NormalizedPhoneNumber;
+            return Forbid();
         }
 
-        if (!string.IsNullOrWhiteSpace(part.PhoneNumber))
+        if (contentItemIds is null || contentItemIds.Length == 0)
         {
-            return part.PhoneNumber;
+            await _notifier.WarningAsync(H["No records were selected."]);
+
+            return RedirectToReturnUrlOrIndex(returnUrl);
         }
 
-        return part.TryGetPhoneNumberVerificationResult(out var result)
-            ? result.NormalizedPhoneNumber ?? result.PhoneNumber
-            : null;
+        if (!await EnsureProvidersEnabledAsync())
+        {
+            return RedirectToReturnUrlOrIndex(returnUrl);
+        }
+
+        var requeued = await RequeueContentItemsAsync(contentItemIds);
+
+        await _notifier.SuccessAsync(H["{0} record(s) were queued for verification and will be processed shortly.", requeued]);
+
+        return RedirectToReturnUrlOrIndex(returnUrl);
     }
 
+    /// <summary>
+    /// Re-queues every failed record across all pages, honoring the current search term. A throttled
+    /// background task re-verifies the queued records shortly afterwards.
+    /// </summary>
+    /// <param name="q">The optional search term used to scope which failed records are re-queued.</param>
+    /// <param name="returnUrl">The URL to return to.</param>
+    /// <returns>A redirect to the originating page or the records queue.</returns>
+    [HttpPost]
+    public async Task<IActionResult> RetryAllFailed(string q, string returnUrl)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, PhoneNumberVerificationsPermissions.VerifyPhoneNumbers))
+        {
+            return Forbid();
+        }
+
+        if (!await EnsureProvidersEnabledAsync())
+        {
+            return RedirectToReturnUrlOrIndex(returnUrl);
+        }
+
+        var term = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
+
+        var failedContentItemIds = await GetFailedContentItemIdsAsync(term);
+
+        if (failedContentItemIds.Count == 0)
+        {
+            await _notifier.InformationAsync(H["There are no failed records to retry."]);
+
+            return RedirectToReturnUrlOrIndex(returnUrl);
+        }
+
+        var requeued = await RequeueContentItemsAsync(failedContentItemIds);
+
+        await _notifier.SuccessAsync(H["{0} failed record(s) were queued for verification and will be processed shortly.", requeued]);
+
+        return RedirectToReturnUrlOrIndex(returnUrl);
+    }
+
+    private async Task<bool> EnsureProvidersEnabledAsync()
+    {
+        if ((await _verificationManager.GetEnabledProvidersAsync()).Count == 0)
+        {
+            await _notifier.WarningAsync(H["No phone number verification providers are enabled. Enable a provider before retrying."]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task<int> RequeueContentItemsAsync(IEnumerable<string> contentItemIds)
+    {
+        var ids = contentItemIds
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct()
+            .ToArray();
+
+        if (ids.Length == 0)
+        {
+            return 0;
+        }
+
+        var requeued = 0;
+
+        foreach (var chunk in ids.Chunk(RequeueBatchSize))
+        {
+            var contentItems = await _session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.Latest && index.ContentItemId.IsIn(chunk))
+                .ListAsync();
+
+            foreach (var contentItem in contentItems)
+            {
+                if (!contentItem.Has<PhoneNumberVerificationPart>())
+                {
+                    continue;
+                }
+
+                contentItem.RequeuePhoneNumberVerification();
+
+                await _session.SaveAsync(contentItem);
+
+                requeued++;
+            }
+        }
+
+        return requeued;
+    }
+
+    private async Task<IList<string>> GetFailedContentItemIdsAsync(string term)
+    {
+        var contentItems = await BuildBaseQuery(term)
+            .With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed)
+            .ListAsync();
+
+        return contentItems
+            .Select(contentItem => contentItem.ContentItemId)
+            .Distinct()
+            .ToList();
+    }
     private IQuery<ContentItem, PhoneNumberVerificationPartIndex> BuildBaseQuery(string term)
     {
         var query = _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
@@ -306,9 +366,9 @@ public sealed class RecordsController : Controller
         {
             PhoneNumberVerificationRecordFilter.Verified => query.With<PhoneNumberVerificationPartIndex>(index => index.IsVerified),
             PhoneNumberVerificationRecordFilter.Invalid => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Invalid),
-            PhoneNumberVerificationRecordFilter.Failed => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed),
-            PhoneNumberVerificationRecordFilter.Pending => query.With<PhoneNumberVerificationPartIndex>(index => index.LastVerifiedUtc == null),
-            PhoneNumberVerificationRecordFilter.NeedsAttention => query.With<PhoneNumberVerificationPartIndex>(index => index.FailedAttemptCount >= maxAttempts),
+            PhoneNumberVerificationRecordFilter.Pending => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Unverified),
+            PhoneNumberVerificationRecordFilter.Failed => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed && index.FailedAttemptCount < maxAttempts),
+            PhoneNumberVerificationRecordFilter.NeedsAttention => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed && index.FailedAttemptCount >= maxAttempts),
             _ => query,
         };
 
