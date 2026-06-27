@@ -41,14 +41,18 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
                     .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
                 )
-                .Add(S["Phone Number Verification Records"], S["Phone Number Verification Records"].PrefixPosition(), records => records
-                    .AddClass("phone-number-verification-records")
-                    .Id("phoneNumberVerificationRecords")
+            , priority: 1);
+
+        builder
+            .Add(S["Tools"], tools => tools
+                .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
+                    .AddClass("phone-number-verifications")
+                    .Id("phoneNumberVerifications")
                     .Action("Index", "Records", PhoneNumberVerificationsConstants.Features.Area)
                     .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
                 )
-            , priority: 1);
+            );
 
         builder
             .Add(S["Settings"], settings => settings
