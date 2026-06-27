@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -13,14 +14,19 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Migrations;
 internal sealed class PhoneNumberVerificationsMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PhoneNumberVerificationsMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public PhoneNumberVerificationsMigrations(IContentDefinitionManager contentDefinitionManager)
+    /// <param name="logger">The logger.</param>
+    public PhoneNumberVerificationsMigrations(
+        IContentDefinitionManager contentDefinitionManager,
+        ILogger<PhoneNumberVerificationsMigrations> logger)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _logger = logger;
     }
 
     /// <summary>
@@ -86,7 +92,7 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             )
         );
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -113,5 +119,53 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    /// <summary>
+    /// Ensures the resilience tracking columns and retry index exist for databases that recorded
+    /// schema version 2 before those columns were added to the create step. The operations are
+    /// applied defensively so installations that already contain the columns are left unchanged.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+                .AddColumn<int>("FailedAttemptCount", column => column.NotNull().WithDefault(0))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'FailedAttemptCount' column may already exist on the PhoneNumberVerificationPartIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+                .AddColumn<DateTime>("LastAttemptUtc")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'LastAttemptUtc' column may already exist on the PhoneNumberVerificationPartIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+                .CreateIndex("IDX_PhoneNumberVerificationPartIndex_Retry",
+                    "DocumentId",
+                    "FailedAttemptCount",
+                    "NextVerificationDueUtc"
+                )
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_PhoneNumberVerificationPartIndex_Retry' index may already exist on the PhoneNumberVerificationPartIndex table.");
+        }
+
+        return 3;
     }
 }

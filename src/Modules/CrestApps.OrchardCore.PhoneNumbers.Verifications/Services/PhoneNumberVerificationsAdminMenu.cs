@@ -32,9 +32,11 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
     {
         builder
             .Add(S["Reports"], "after.40", reports => reports
+                .AddClass("reports")
+                .Id("reports")
                 .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
-                    .AddClass("reports")
-                    .Id("reports")
+                    .AddClass("phone-number-verifications-report")
+                    .Id("phoneNumberVerificationsReport")
                     .Action("Index", "Reports", PhoneNumberVerificationsConstants.Features.Area)
                     .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
