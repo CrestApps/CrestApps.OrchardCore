@@ -31,7 +31,7 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Reports"], S["Reports"].PrefixPosition(), reports => reports
+            .Add(S["Reports"], "after.40", reports => reports
                 .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
                     .AddClass("reports")
                     .Id("reports")
@@ -45,7 +45,8 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
                     .Action("Index", "Records", PhoneNumberVerificationsConstants.Features.Area)
                     .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
-                ));
+                )
+            , priority: 1);
 
         builder
             .Add(S["Settings"], settings => settings
