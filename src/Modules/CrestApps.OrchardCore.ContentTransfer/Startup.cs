@@ -76,7 +76,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypeDefinitionDisplayDriver, ContentTypeTransferSettingsDisplayDriver>();
         services.AddScoped<IContentImportHandler, CommonContentImportHandler>();
         services.AddScoped<INavigationProvider, AdminMenu>();
-        services.Configure<ContentImportOptions>(_configuration.GetSection("OrchardCore:CrestApps:ContentTransfer"));
+        services.Configure<ContentImportOptions>(_configuration.GetSection("CrestApps:ContentTransfer"));
         services.AddSingleton<IBackgroundTask, ImportFilesBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ExportFilesBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ContentTransferUploadCleanupBackgroundTask>();
