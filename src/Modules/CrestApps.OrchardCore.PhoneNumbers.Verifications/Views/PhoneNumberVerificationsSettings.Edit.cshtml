@@ -2,31 +2,37 @@
 
 <p class="alert alert-info">@T["Configure how often stored phone number verification results are revalidated and which provider is used by default. Enable a provider feature to make it available below."]</p>
 
-<div class="mb-3">
-    <label asp-for="SelectedProvider" class="form-label">@T["Default provider"]</label>
-    @if (Model.Providers.Count > 0)
-    {
-        <select asp-for="SelectedProvider" asp-items="Model.Providers" class="form-select">
-            <option value="">@T["First available provider"]</option>
-        </select>
-        <span class="hint">@T["The provider used by default when verifying phone numbers. Only enabled providers are listed here."]</span>
-    }
-    else
-    {
-        <p class="alert alert-warning">@T["No verification providers are enabled. Enable a provider from its tab above (for example, AbstractAPI, Veriphone, or Twilio) to verify phone numbers."]</p>
-    }
+@if (Model.Providers.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="SelectedProvider" class="ocat-label">@T["Default provider"]</label>
+        <div class="ocat-end">
+            <select asp-for="SelectedProvider" asp-items="Model.Providers" class="form-select">
+                <option value="">@T["First available provider"]</option>
+            </select>
+            <span class="hint">@T["The provider used by default when verifying phone numbers. Only enabled providers are listed here."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <p class="alert alert-warning">@T["No verification providers are enabled. Enable a provider from its tab above (for example, AbstractAPI, Veriphone, or Twilio) to verify phone numbers."]</p>
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="RevalidationIntervalDays" class="ocat-label">@T["Revalidation interval (days)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="1" class="form-control" asp-for="RevalidationIntervalDays" />
+        <span asp-validation-for="RevalidationIntervalDays" class="text-danger"></span>
+        <span class="hint">@T["The number of days after which a verified phone number must be revalidated."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="RevalidationIntervalDays" class="form-label">@T["Revalidation interval (days)"]</label>
-    <input type="number" min="1" class="form-control" asp-for="RevalidationIntervalDays" />
-    <span asp-validation-for="RevalidationIntervalDays" class="text-danger"></span>
-    <span class="hint">@T["The number of days after which a verified phone number must be revalidated."]</span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="MaxVerificationAttempts" class="form-label">@T["Maximum verification attempts"]</label>
-    <input type="number" min="1" class="form-control" asp-for="MaxVerificationAttempts" />
-    <span asp-validation-for="MaxVerificationAttempts" class="text-danger"></span>
-    <span class="hint">@T["The number of consecutive failed verification requests (for example, provider rate limits or HTTP errors) before a record stops being retried automatically. Exhausted records appear in the verification records queue and can be re-queued manually."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="MaxVerificationAttempts" class="ocat-label">@T["Maximum verification attempts"]</label>
+    <div class="ocat-end">
+        <input type="number" min="1" class="form-control" asp-for="MaxVerificationAttempts" />
+        <span asp-validation-for="MaxVerificationAttempts" class="text-danger"></span>
+        <span class="hint">@T["The number of consecutive failed verification requests (for example, provider rate limits or HTTP errors) before a record stops being retried automatically. Exhausted records appear in the verification records queue and can be re-queued manually."]</span>
+    </div>
 </div>

@@ -14,61 +14,83 @@
     <div class="card-header">@T["Phone Number Verification"]</div>
     <div class="card-body">
         <p class="hint">@T["This data is managed automatically by the Phone Number Verifications module. It is updated when a verification result is stored or revalidated."]</p>
-        <dl class="row mb-0">
-            <dt class="col-sm-3">@T["Status"]</dt>
-            <dd class="col-sm-9"><span class="badge @statusClass">@Model.VerificationStatus.ToString()</span></dd>
 
-            @if (!string.IsNullOrEmpty(Model.NormalizedPhoneNumber))
-            {
-                <dt class="col-sm-3">@T["Normalized number"]</dt>
-                <dd class="col-sm-9">@Model.NormalizedPhoneNumber</dd>
-            }
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Status"]</label>
+            <div class="ocat-end">
+                <span class="badge @statusClass">@Model.VerificationStatus.ToString()</span>
+            </div>
+        </div>
 
-            @if (!string.IsNullOrEmpty(Model.VerificationProvider))
-            {
-                <dt class="col-sm-3">@T["Provider"]</dt>
-                <dd class="col-sm-9">@Model.VerificationProvider</dd>
-            }
+        @if (!string.IsNullOrEmpty(Model.NormalizedPhoneNumber))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Normalized number"]</label>
+                <div class="ocat-end">@Model.NormalizedPhoneNumber</div>
+            </div>
+        }
 
-            @if (Model.LineType != PhoneNumberLineType.Unknown)
-            {
-                <dt class="col-sm-3">@T["Line type"]</dt>
-                <dd class="col-sm-9">@Model.LineType.ToString()</dd>
-            }
+        @if (!string.IsNullOrEmpty(Model.VerificationProvider))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Provider"]</label>
+                <div class="ocat-end">@Model.VerificationProvider</div>
+            </div>
+        }
 
-            @if (!string.IsNullOrEmpty(Model.Carrier))
-            {
-                <dt class="col-sm-3">@T["Carrier"]</dt>
-                <dd class="col-sm-9">@Model.Carrier</dd>
-            }
+        @if (Model.LineType != PhoneNumberLineType.Unknown)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Line type"]</label>
+                <div class="ocat-end">@Model.LineType.ToString()</div>
+            </div>
+        }
 
-            @if (Model.LastVerifiedUtc.HasValue)
-            {
-                <dt class="col-sm-3">@T["Last verified"]</dt>
-                <dd class="col-sm-9">@Model.LastVerifiedUtc.Value.ToString("g")</dd>
-            }
+        @if (!string.IsNullOrEmpty(Model.Carrier))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Carrier"]</label>
+                <div class="ocat-end">@Model.Carrier</div>
+            </div>
+        }
 
-            @if (Model.NextVerificationDueUtc.HasValue)
-            {
-                <dt class="col-sm-3">@T["Next verification due"]</dt>
-                <dd class="col-sm-9">@Model.NextVerificationDueUtc.Value.ToString("g")</dd>
-            }
+        @if (Model.LastVerifiedUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Last verified"]</label>
+                <div class="ocat-end">@Model.LastVerifiedUtc.Value.ToString("g")</div>
+            </div>
+        }
 
-            <dt class="col-sm-3">@T["Attempts"]</dt>
-            <dd class="col-sm-9">@Model.VerificationAttemptCount</dd>
+        @if (Model.NextVerificationDueUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Next verification due"]</label>
+                <div class="ocat-end">@Model.NextVerificationDueUtc.Value.ToString("g")</div>
+            </div>
+        }
 
-            @if (Model.LastAttemptUtc.HasValue)
-            {
-                <dt class="col-sm-3">@T["Last attempt"]</dt>
-                <dd class="col-sm-9">@Model.LastAttemptUtc.Value.ToString("g")</dd>
-            }
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Attempts"]</label>
+            <div class="ocat-end">@Model.VerificationAttemptCount</div>
+        </div>
 
-            @if (Model.FailedAttemptCount > 0)
-            {
-                <dt class="col-sm-3">@T["Failed attempts"]</dt>
-                <dd class="col-sm-9">@Model.FailedAttemptCount</dd>
-            }
-        </dl>
+        @if (Model.LastAttemptUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Last attempt"]</label>
+                <div class="ocat-end">@Model.LastAttemptUtc.Value.ToString("g")</div>
+            </div>
+        }
+
+        @if (Model.FailedAttemptCount > 0)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Failed attempts"]</label>
+                <div class="ocat-end">@Model.FailedAttemptCount</div>
+            </div>
+        }
+
         @if (!string.IsNullOrEmpty(Model.LastError))
         {
             <div class="alert alert-warning mt-3 mb-0">
