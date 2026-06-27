@@ -75,17 +75,21 @@ The export pipeline now initializes missing parts on the parent content item bef
 
 ## Configuration
 
-Configure the module in `appsettings.json` with the `OrchardCore_ContentsTransfer` section:
+Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:ContentTransfer` section:
 
 ```json
 {
-  "OrchardCore_ContentsTransfer": {
-    "ImportBatchSize": 100,
-    "ExportBatchSize": 200,
-    "ExportQueueThreshold": 500,
-    "MaxUploadFileSize": 1073741824,
-    "MaxUploadChunkSize": 31457280,
-    "TemporaryFileLifetime": "01:00:00"
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "ImportBatchSize": 100,
+        "ExportBatchSize": 200,
+        "ExportQueueThreshold": 500,
+        "MaxUploadFileSize": 1073741824,
+        "MaxUploadChunkSize": 31457280,
+        "TemporaryFileLifetime": "01:00:00"
+      }
+    }
   }
 }
 ```
@@ -137,9 +141,13 @@ size, so individual requests stay small. The total file size, not the chunk size
 
 ```json
 {
-  "OrchardCore_ContentsTransfer": {
-    "MaxUploadFileSize": 5368709120,
-    "MaxUploadChunkSize": 31457280
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "MaxUploadFileSize": 5368709120,
+        "MaxUploadChunkSize": 31457280
+      }
+    }
   }
 }
 ```
@@ -150,8 +158,12 @@ take precedence over the application root settings:
 
 ```json
 {
-  "OrchardCore_ContentsTransfer": {
-    "MaxUploadFileSize": 2147483648
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "MaxUploadFileSize": 2147483648
+      }
+    }
   }
 }
 ```
@@ -160,8 +172,8 @@ take precedence over the application root settings:
 nesting with a double underscore, which is convenient for containers and CI:
 
 ```bash
-OrchardCore_ContentsTransfer__MaxUploadFileSize=5368709120
-OrchardCore_ContentsTransfer__MaxUploadChunkSize=31457280
+OrchardCore__CrestApps__ContentTransfer__MaxUploadFileSize=5368709120
+OrchardCore__CrestApps__ContentTransfer__MaxUploadChunkSize=31457280
 ```
 
 **Remove the size cap.** Set `MaxUploadFileSize` to `0` to disable the file-size check entirely. This is
