@@ -1,7 +1,9 @@
 using System.Data;
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContentTransfer.Filters;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.Services;
 using CrestApps.OrchardCore.ContentTransfer.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,13 +25,13 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Media;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using YesSql;
 using YesSql.Filters.Query;
 using YesSql.Services;
+using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Controllers;
 
@@ -52,9 +54,10 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IContentImportManager _contentImportManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IChunkFileUploadService _chunkFileUploadService;
+    private readonly IContentTransferChunkFileUploadService _chunkFileUploadService;
     private readonly IContentTransferFileFormatProvider[] _formatProviders;
     private readonly IContentTransferEntryManager _contentTransferEntryManager;
+    private readonly ContentImportOptions _contentImportOptions;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -77,9 +80,10 @@ public sealed class AdminController : Controller, IUpdateModel
         IUpdateModelAccessor updateModelAccessor,
         IContentImportManager contentImportManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        IChunkFileUploadService chunkFileUploadService,
+        IContentTransferChunkFileUploadService chunkFileUploadService,
         IEnumerable<IContentTransferFileFormatProvider> formatProviders,
         IContentTransferEntryManager contentTransferEntryManager,
+        IOptions<ContentImportOptions> contentImportOptions,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -102,6 +106,7 @@ public sealed class AdminController : Controller, IUpdateModel
             .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         _contentTransferEntryManager = contentTransferEntryManager;
+        _contentImportOptions = contentImportOptions.Value;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -225,6 +230,7 @@ public sealed class AdminController : Controller, IUpdateModel
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [ContentTransferUploadSizeLimit]
     [ActionName(nameof(Import))]
     public async Task<IActionResult> ImportPOST(string contentTypeId)
     {
@@ -262,6 +268,11 @@ public sealed class AdminController : Controller, IUpdateModel
                 if (file == null || file.Length == 0)
                 {
                     return BadRequest(new { error = S["File is required."].Value });
+                }
+
+                if (_contentImportOptions.MaxUploadFileSize > 0 && file.Length > _contentImportOptions.MaxUploadFileSize)
+                {
+                    return BuildUploadErrorResult(ContentTransferUploadError.MaxFileSizeExceeded);
                 }
 
                 var extension = Path.GetExtension(file.FileName);
@@ -308,7 +319,8 @@ public sealed class AdminController : Controller, IUpdateModel
                 TriggerImportProcessing(entry.EntryId);
 
                 return Ok(new { success = true });
-            });
+            },
+            (error) => Task.FromResult(BuildUploadErrorResult(error)));
     }
 
     [Admin("import/contents/{contentTypeId}/download-template", "ImportContentDownloadTemplateTemplate")]
@@ -461,8 +473,7 @@ public sealed class AdminController : Controller, IUpdateModel
         var countQuery = BuildExportQuery(contentTypeId, partialExport, latestOnly, allVersions, createdFrom, createdTo, modifiedFrom, modifiedTo, owners);
         var totalCount = await countQuery.CountAsync();
 
-        var contentImportOptions = HttpContext.RequestServices.GetRequiredService<IOptions<ContentImportOptions>>().Value;
-        var threshold = contentImportOptions.ExportQueueThreshold;
+        var threshold = _contentImportOptions.ExportQueueThreshold;
         var formatProvider = ResolveFileFormatProvider(extension);
 
         if (formatProvider == null)
@@ -514,7 +525,7 @@ public sealed class AdminController : Controller, IUpdateModel
         }
 
         // Immediate export: write directly to a temp file stream using pagination.
-        var batchSize = contentImportOptions.ExportBatchSize < 1 ? 200 : contentImportOptions.ExportBatchSize;
+        var batchSize = _contentImportOptions.ExportBatchSize < 1 ? 200 : _contentImportOptions.ExportBatchSize;
         var columnNames = exportColumns.Select(c => c.Name).ToList();
 
         var tempFilePath = Path.GetTempFileName();
@@ -1075,6 +1086,40 @@ public sealed class AdminController : Controller, IUpdateModel
                 : error.ErrorMessage)
             .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
             ?? S["The import request is invalid."].Value;
+
+    private IActionResult BuildUploadErrorResult(ContentTransferUploadError error)
+    {
+        switch (error)
+        {
+            case ContentTransferUploadError.MaxFileSizeExceeded:
+                return StatusCode(
+                    StatusCodes.Status413PayloadTooLarge,
+                    new { error = S["The file exceeds the maximum allowed size of {0}.", FormatFileSize(_contentImportOptions.MaxUploadFileSize)].Value });
+
+            case ContentTransferUploadError.MaxChunkSizeExceeded:
+                return StatusCode(
+                    StatusCodes.Status413PayloadTooLarge,
+                    new { error = S["The upload could not be completed because a chunk exceeded the allowed size."].Value });
+
+            default:
+                return BadRequest(new { error = S["The upload request was invalid. Please try again."].Value });
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] units = ["bytes", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        var unitIndex = 0;
+
+        while (size >= 1024 && unitIndex < units.Length - 1)
+        {
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return $"{size:0.##} {units[unitIndex]}";
+    }
 
     private IQuery<ContentItem> BuildExportQuery(
         string contentTypeId,

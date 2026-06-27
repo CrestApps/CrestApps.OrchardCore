@@ -1,13 +1,33 @@
 @using Microsoft.Extensions.Options
 @using CrestApps.OrchardCore.ContentTransfer
-@using OrchardCore.Media
+@using CrestApps.OrchardCore.ContentTransfer.Models
 
 @model ContentImporterViewModel
 
-@inject IOptions<MediaOptions> MediaOptions
+@inject IOptions<ContentImportOptions> ContentImportOptions
+
+@functions {
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["bytes", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        var unitIndex = 0;
+
+        while (size >= 1024 && unitIndex < units.Length - 1)
+        {
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return $"{size:0.##} {units[unitIndex]}";
+    }
+}
 
 @{
     var supportedFormats = Model.FileFormats?.Select(format => format.Value).ToList() ?? [];
+    var maxUploadChunkSize = ContentImportOptions.Value.MaxUploadChunkSize;
+    var maxUploadFileSize = ContentImportOptions.Value.MaxUploadFileSize;
+    var maxUploadFileSizeDisplay = FormatBytes(maxUploadFileSize);
 }
 
 <nav aria-label="breadcrumb">
@@ -131,7 +151,8 @@
         var uploadStatus = document.getElementById('upload-status');
         var uploadError = document.getElementById('upload-error');
         var uploadActions = document.getElementById('upload-actions');
-        var maxChunkSize = @MediaOptions.Value.MaxUploadChunkSize;
+        var maxChunkSize = @maxUploadChunkSize;
+        var maxFileSize = @maxUploadFileSize;
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -148,6 +169,13 @@
             var token = form.querySelector('input[name="__RequestVerificationToken"]').value;
 
             uploadError.style.display = 'none';
+
+            if (maxFileSize > 0 && file.size > maxFileSize) {
+                uploadError.textContent = '@T["The selected file is larger than the maximum allowed size of {0}.", maxUploadFileSizeDisplay]';
+                uploadError.style.display = '';
+                return;
+            }
+
             uploadActions.style.display = 'none';
             progressContainer.style.display = '';
 
@@ -243,9 +271,16 @@
             progressContainer.style.display = 'none';
             uploadActions.style.display = '';
             var message = '@T["An error occurred while uploading the file."]';
+
+            if (xhr.status === 413) {
+                message = '@T["The file is too large to upload. Maximum allowed size is {0}.", maxUploadFileSizeDisplay]';
+            } else if (xhr.status === 0) {
+                message = '@T["The upload was interrupted. Please check your connection and try again."]';
+            }
+
             try {
                 var response = JSON.parse(xhr.responseText);
-                if (response.error) {
+                if (response && response.error) {
                     message = response.error;
                 }
             } catch (e) { }

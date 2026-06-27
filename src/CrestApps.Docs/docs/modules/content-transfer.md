@@ -43,6 +43,8 @@ Use **Content** -> **Bulk Import** to upload a transfer file for a content type.
 4. Choose whether the imported items should stay as the latest draft or be published immediately.
 5. The import is queued with a **Pending** status and processed in the background.
 
+Large files are supported. When a file exceeds the configured chunk size it is uploaded to the server in chunks, and the import UI reports a clear, specific message when an upload is rejected (for example when a file exceeds the maximum allowed size). See [Large file uploads](#large-file-uploads) to tune the limits.
+
 Validation runs through `IContentManager.ValidateAsync()`. Failed rows are tracked, and rejected rows can be downloaded again in the same file format as the original import as long as that format feature is still enabled.
 
 Queued imports now follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. While an import is running, the action menu offers **Pause import**. Paused, failed, pending, and stalled imports show **Resume import** so the background job can continue from the last saved batch.
@@ -80,7 +82,10 @@ Configure the module in `appsettings.json` with the `OrchardCore_ContentsTransfe
   "OrchardCore_ContentsTransfer": {
     "ImportBatchSize": 100,
     "ExportBatchSize": 200,
-    "ExportQueueThreshold": 500
+    "ExportQueueThreshold": 500,
+    "MaxUploadFileSize": 1073741824,
+    "MaxUploadChunkSize": 31457280,
+    "TemporaryFileLifetime": "01:00:00"
   }
 }
 ```
@@ -90,6 +95,112 @@ Configure the module in `appsettings.json` with the `OrchardCore_ContentsTransfe
 | `ImportBatchSize` | `100` | Number of rows processed per import batch. |
 | `ExportBatchSize` | `200` | Number of content items written per export batch. |
 | `ExportQueueThreshold` | `500` | Maximum item count for immediate export before the request is queued. |
+| `MaxUploadFileSize` | `1073741824` (1 GB) | Maximum size, in bytes, of a file that can be uploaded for bulk import. Set to `0` to disable the size check. |
+| `MaxUploadChunkSize` | `31457280` (30 MB) | Size, in bytes, of each chunk when an upload is streamed to the server. Set to `0` to disable chunked uploads. |
+| `TemporaryFileLifetime` | `"01:00:00"` (1 hour) | How long an in-progress chunked upload's temporary file is kept before a background task purges it. Uses the `d.hh:mm:ss` time-span format. |
+
+All values are read from the tenant's shell configuration, so they can be set globally for every tenant or overridden for a single tenant. See [Overriding the upload limits](#overriding-the-upload-limits).
+
+### Large file uploads
+
+Bulk import is meant to ingest large data files, so the upload limits are independent from the global
+media library limits. This means you can allow very large imports without weakening the size
+restrictions that protect the media library.
+
+When a selected file is larger than `MaxUploadChunkSize`, the import UI streams it to the server in
+chunks. Each request body stays bounded to a single chunk (plus a small overhead), so the server never
+has to accept a single oversized request. The assembled file is validated against `MaxUploadFileSize`
+before processing, and abandoned temporary upload files are purged automatically based on
+`TemporaryFileLifetime`.
+
+### Overriding the upload limits
+
+`MaxUploadFileSize` defaults to **1 GB**. To allow larger (or smaller) imports, override it with the
+size in **bytes**. Use this reference for common values:
+
+| Size | Bytes |
+| --- | --- |
+| 100 MB | `104857600` |
+| 250 MB | `262144000` |
+| 500 MB | `524288000` |
+| 1 GB (default) | `1073741824` |
+| 2 GB | `2147483648` |
+| 5 GB | `5368709120` |
+| 10 GB | `10737418240` |
+
+Keep `MaxUploadChunkSize` at a moderate value (for example 30 MB) even when you raise the maximum file
+size, so individual requests stay small. The total file size, not the chunk size, is what
+`MaxUploadFileSize` limits.
+
+**Raise the maximum import size to 5 GB (all tenants).** Edit the application root `appsettings.json`:
+
+```json
+{
+  "OrchardCore_ContentsTransfer": {
+    "MaxUploadFileSize": 5368709120,
+    "MaxUploadChunkSize": 31457280
+  }
+}
+```
+
+**Override the limit for a single tenant.** Add the same section to that tenant's configuration file at
+`App_Data/Sites/{TenantName}/appsettings.json` (use `Default` for the default tenant). Tenant settings
+take precedence over the application root settings:
+
+```json
+{
+  "OrchardCore_ContentsTransfer": {
+    "MaxUploadFileSize": 2147483648
+  }
+}
+```
+
+**Override with environment variables.** Configuration keys map to environment variables by replacing the
+nesting with a double underscore, which is convenient for containers and CI:
+
+```bash
+OrchardCore_ContentsTransfer__MaxUploadFileSize=5368709120
+OrchardCore_ContentsTransfer__MaxUploadChunkSize=31457280
+```
+
+**Remove the size cap.** Set `MaxUploadFileSize` to `0` to disable the file-size check entirely. This is
+not recommended on internet-facing sites because it removes a safeguard against very large uploads; keep
+a sensible maximum and only raise it as far as your imports actually require.
+
+**Disable chunking.** Set `MaxUploadChunkSize` to `0` to require the whole file in a single request. This
+is only suitable for smaller imports because the entire file must fit within one request body.
+
+After changing any of these settings, restart the tenant (or the application) so the new shell
+configuration is loaded.
+
+### Hosting and proxy limits
+
+For chunked uploads, the module automatically raises the per-request body limit for the bulk import
+endpoint to one chunk plus a small overhead, so Kestrel does not need any extra configuration. However,
+infrastructure in front of the application enforces its own request body limits and must allow at least
+`MaxUploadChunkSize` plus roughly 1 MB of overhead:
+
+- **IIS / in-process hosting** caps requests at `maxAllowedContentLength` (about 28.6 MB / `30000000`
+  bytes by default). Because the default chunk size (30 MB) is slightly larger than this, raise
+  `maxAllowedContentLength` in `web.config`, or lower `MaxUploadChunkSize` below `30000000`, when hosting
+  behind IIS:
+
+  ```xml
+  <system.webServer>
+    <security>
+      <requestFiltering>
+        <requestLimits maxAllowedContentLength="33554432" />
+      </requestFiltering>
+    </security>
+  </system.webServer>
+  ```
+
+- **Reverse proxies** such as Nginx (`client_max_body_size`) or Apache (`LimitRequestBody`) must allow at
+  least one chunk plus overhead.
+
+When chunking is disabled (`MaxUploadChunkSize` set to `0`), every layer above instead has to allow the
+entire `MaxUploadFileSize` in a single request, which is another reason to keep chunking enabled for large
+imports.
 
 ## Extensibility
 
