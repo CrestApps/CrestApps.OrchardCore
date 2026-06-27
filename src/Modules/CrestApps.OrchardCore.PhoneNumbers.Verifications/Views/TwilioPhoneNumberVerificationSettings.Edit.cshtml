@@ -8,7 +8,7 @@
     <label asp-for="Endpoint" class="form-label">@T["Endpoint"]</label>
     <input type="text" class="form-control" asp-for="Endpoint" placeholder="@TwilioPhoneNumberVerificationSettings.DefaultEndpoint" />
     <span asp-validation-for="Endpoint" class="text-danger"></span>
-    <span class="hint">@T["The Twilio Lookup endpoint template. Use {PhoneNumber} where the submitted phone number should be inserted."]</span>
+    <span class="hint">@T["The Twilio Lookup endpoint template. Use {{PhoneNumber}} where the submitted phone number should be inserted."]</span>
 </div>
 
 <div class="mb-3">
