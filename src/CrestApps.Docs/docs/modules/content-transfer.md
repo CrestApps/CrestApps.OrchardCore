@@ -115,8 +115,9 @@ before processing, and abandoned temporary upload files are purged automatically
 
 ### Overriding the upload limits
 
-`MaxUploadFileSize` defaults to **1 GB**. To allow larger (or smaller) imports, override it with the
-size in **bytes**. Use this reference for common values:
+`MaxUploadFileSize` defaults to **1 GB**. The default is not a hard limit — it is a 64-bit byte value bound
+from configuration, so you can set it to any size your imports require (well beyond 1 GB). To allow larger
+(or smaller) imports, override it with the size in **bytes**. Use this reference for common values:
 
 | Size | Bytes |
 | --- | --- |
@@ -175,15 +176,20 @@ configuration is loaded.
 
 ### Hosting and proxy limits
 
-For chunked uploads, the module automatically raises the per-request body limit for the bulk import
-endpoint to one chunk plus a small overhead, so Kestrel does not need any extra configuration. However,
-infrastructure in front of the application enforces its own request body limits and must allow at least
-`MaxUploadChunkSize` plus roughly 1 MB of overhead:
+The module raises the per-request body limit for the bulk import endpoint to one chunk plus a small
+overhead, at the Kestrel / ASP.NET Core level, on every request. For most deployments — Kestrel directly,
+Linux, containers, `dotnet run`, Azure App Service on Linux, or behind a non-IIS reverse proxy — you do
+**not** need any additional request-size configuration.
 
-- **IIS / in-process hosting** caps requests at `maxAllowedContentLength` (about 28.6 MB / `30000000`
-  bytes by default). Because the default chunk size (30 MB) is slightly larger than this, raise
-  `maxAllowedContentLength` in `web.config`, or lower `MaxUploadChunkSize` below `30000000`, when hosting
-  behind IIS:
+Two cases need attention because they enforce a limit **before** the request reaches the application, so
+the module cannot raise them from code:
+
+- **IIS hosting on Windows (in-process or out-of-process).** IIS request filtering caps the request body at
+  `maxAllowedContentLength` (about 28.6 MB / `30000000` bytes by default) and rejects anything larger with
+  an IIS-level `404.13` before the app runs. Because the default chunk size (30 MB) is slightly above this,
+  raise `maxAllowedContentLength` in `web.config` (to at least `MaxUploadChunkSize` plus overhead) or lower
+  `MaxUploadChunkSize` below `30000000` when hosting behind IIS. This is only required for IIS; it is not
+  needed for Kestrel-based hosting.
 
   ```xml
   <system.webServer>
