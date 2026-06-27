@@ -1,13 +1,34 @@
 @using Microsoft.Extensions.Options
+@using System.Text.Json
 @using CrestApps.OrchardCore.ContentTransfer
-@using OrchardCore.Media
+@using CrestApps.OrchardCore.ContentTransfer.Models
 
 @model ContentImporterViewModel
 
-@inject IOptions<MediaOptions> MediaOptions
+@inject IOptions<ContentImportOptions> ContentImportOptions
+
+@functions {
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["bytes", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        var unitIndex = 0;
+
+        while (size >= 1024 && unitIndex < units.Length - 1)
+        {
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return $"{size:0.##} {units[unitIndex]}";
+    }
+}
 
 @{
     var supportedFormats = Model.FileFormats?.Select(format => format.Value).ToList() ?? [];
+    var maxUploadChunkSize = ContentImportOptions.Value.MaxUploadChunkSize;
+    var maxUploadFileSize = ContentImportOptions.Value.MaxUploadFileSize;
+    var maxUploadFileSizeDisplay = FormatBytes(maxUploadFileSize);
 }
 
 <nav aria-label="breadcrumb">
@@ -123,134 +144,29 @@
     </div>
 </div>
 
-<script at="Foot">
+<script asp-name="ContentTransferImport" at="Foot"></script>
+
+@{
+    var importConfig = new
+    {
+        maxChunkSize = maxUploadChunkSize,
+        maxFileSize = maxUploadFileSize,
+        maxFileSizeDisplay = maxUploadFileSizeDisplay,
+        redirectUrl = Url.Action("List", "Admin", new { area = ContentTransferConstants.Feature.ModuleId }),
+        messages = new
+        {
+            selectFile = T["Please select a file to upload."].Value,
+            fileTooLargeClient = T["The selected file is larger than the maximum allowed size of {0}."].Value,
+            uploadGeneric = T["An error occurred while uploading the file."].Value,
+            fileTooLargeServer = T["The file is too large to upload. Maximum allowed size is {0}."].Value,
+            uploadInterrupted = T["The upload was interrupted. Please check your connection and try again."].Value,
+            uploading = T["Uploading..."].Value,
+        },
+    };
+}
+
+<script at="Foot" depends-on="ContentTransferImport">
     document.addEventListener('DOMContentLoaded', function () {
-        var form = document.getElementById('import-form');
-        var progressContainer = document.getElementById('upload-progress');
-        var progressBar = progressContainer.querySelector('.progress-bar');
-        var uploadStatus = document.getElementById('upload-status');
-        var uploadError = document.getElementById('upload-error');
-        var uploadActions = document.getElementById('upload-actions');
-        var maxChunkSize = @MediaOptions.Value.MaxUploadChunkSize;
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            var fileInput = form.querySelector('input[type="file"]');
-            if (!fileInput || !fileInput.files || !fileInput.files.length) {
-                uploadError.textContent = '@T["Please select a file to upload."]';
-                uploadError.style.display = '';
-                return;
-            }
-
-            var file = fileInput.files[0];
-            var url = form.action;
-            var token = form.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            uploadError.style.display = 'none';
-            uploadActions.style.display = 'none';
-            progressContainer.style.display = '';
-
-            if (maxChunkSize > 0 && file.size > maxChunkSize) {
-                uploadChunked(file, url, token, maxChunkSize);
-            } else {
-                uploadWhole(file, url, token);
-            }
-        });
-
-        function uploadWhole(file, url, token) {
-            var formData = new FormData(form);
-            var xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', function (e) {
-                if (e.lengthComputable) {
-                    var percent = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressBar.textContent = percent + '%';
-                    progressBar.setAttribute('aria-valuenow', percent);
-                }
-            });
-
-            xhr.addEventListener('load', function () {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    var response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        window.location.href = '@Url.Action("List", "Admin", new { area = ContentTransferConstants.Feature.ModuleId })';
-                    }
-                } else {
-                    showError(xhr);
-                }
-            });
-
-            xhr.addEventListener('error', function () {
-                showError(xhr);
-            });
-
-            xhr.open('POST', url);
-            xhr.send(formData);
-        }
-
-        function uploadChunked(file, url, token, chunkSize) {
-            var uploadId = crypto.randomUUID();
-            var fileSize = file.size;
-            var start = 0;
-
-            function uploadNextChunk() {
-                var end = Math.min(start + chunkSize, fileSize);
-                var chunk = file.slice(start, end);
-
-                var formData = new FormData(form);
-                formData.set('ImportContentFile.File', new File([chunk], file.name, { type: file.type }));
-                formData.set('__chunkedFileUploadId', uploadId);
-
-                var xhr = new XMLHttpRequest();
-
-                xhr.addEventListener('load', function () {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        start = end;
-                        var percent = Math.round((start / fileSize) * 100);
-                        progressBar.style.width = percent + '%';
-                        progressBar.textContent = percent + '%';
-                        progressBar.setAttribute('aria-valuenow', percent);
-
-                        if (start < fileSize) {
-                            uploadStatus.textContent = '@T["Uploading..."]' + ' (' + percent + '%)';
-                            uploadNextChunk();
-                        } else {
-                            var response = JSON.parse(xhr.responseText);
-                            if (response.success) {
-                                window.location.href = '@Url.Action("List", "Admin", new { area = ContentTransferConstants.Feature.ModuleId })';
-                            }
-                        }
-                    } else {
-                        showError(xhr);
-                    }
-                });
-
-                xhr.addEventListener('error', function () {
-                    showError(xhr);
-                });
-
-                xhr.open('POST', url);
-                xhr.setRequestHeader('Content-Range', 'bytes ' + start + '-' + (end - 1) + '/' + fileSize);
-                xhr.send(formData);
-            }
-
-            uploadNextChunk();
-        }
-
-        function showError(xhr) {
-            progressContainer.style.display = 'none';
-            uploadActions.style.display = '';
-            var message = '@T["An error occurred while uploading the file."]';
-            try {
-                var response = JSON.parse(xhr.responseText);
-                if (response.error) {
-                    message = response.error;
-                }
-            } catch (e) { }
-            uploadError.textContent = message;
-            uploadError.style.display = '';
-        }
+        contentTransferImport.initialize(@Html.Raw(JsonSerializer.Serialize(importConfig, JOptions.CamelCase)));
     });
 </script>

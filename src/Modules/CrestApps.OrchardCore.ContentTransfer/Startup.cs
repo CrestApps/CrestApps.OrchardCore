@@ -27,11 +27,11 @@ using OrchardCore.Html.Models;
 using OrchardCore.Liquid.Models;
 using OrchardCore.Markdown.Fields;
 using OrchardCore.Markdown.Models;
-using OrchardCore.Media;
 using OrchardCore.Media.Fields;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.PublishLater.Models;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Taxonomies.Fields;
 using OrchardCore.Title.Models;
@@ -50,7 +50,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddChunkFileUploadServices();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
+        services.AddSingleton<IContentTransferChunkFileUploadService, ContentTransferChunkFileUploadService>();
 
         services.AddSingleton<IContentTransferFileStore>(serviceProvider =>
         {
@@ -77,9 +78,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypeDefinitionDisplayDriver, ContentTypeTransferSettingsDisplayDriver>();
         services.AddScoped<IContentImportHandler, CommonContentImportHandler>();
         services.AddScoped<INavigationProvider, AdminMenu>();
-        services.Configure<ContentImportOptions>(_configuration.GetSection("OrchardCore_ContentsTransfer"));
+        services.Configure<ContentImportOptions>(_configuration.GetSection("CrestApps:ContentTransfer"));
         services.AddSingleton<IBackgroundTask, ImportFilesBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ExportFilesBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ContentTransferUploadCleanupBackgroundTask>();
 
         services.AddScoped<IContentTransferEntryAdminListQueryService, DefaultContentTransferEntryAdminListQueryService>();
         services.AddScoped<IDisplayDriver<ListContentTransferEntryOptions>, ListContentTransferEntryOptionsDisplayDriver>();
