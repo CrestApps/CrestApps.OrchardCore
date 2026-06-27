@@ -31,6 +31,21 @@ public class PhoneNumberVerificationPartViewModel
     public int VerificationAttemptCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of consecutive failed verification requests.
+    /// </summary>
+    public int FailedAttemptCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message from the most recent failed verification request, if any.
+    /// </summary>
+    public string LastError { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the most recent verification attempt, successful or failed.
+    /// </summary>
+    public DateTime? LastAttemptUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the normalized phone number from the stored result.
     /// </summary>
     public string NormalizedPhoneNumber { get; set; }

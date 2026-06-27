@@ -75,22 +75,102 @@ public static class PhoneNumberVerificationPartExtensions
         ArgumentNullException.ThrowIfNull(result);
 
         var normalizedIntervalDays = NormalizeRevalidationIntervalDays(revalidationIntervalDays);
-        var lastVerifiedUtc = GetLastVerifiedUtc(result);
-        var nextVerificationDueUtc = lastVerifiedUtc?.AddDays(normalizedIntervalDays);
-        var serializedResult = JsonSerializer.Serialize(result, PhoneNumberVerificationSerialization.Options);
+        var attemptUtc = result.VerificationDateUtc == default
+            ? null
+            : (DateTime?)result.VerificationDateUtc;
+        var requestCompleted = result.Status is PhoneNumberVerificationStatus.Verified or PhoneNumberVerificationStatus.Invalid;
 
         contentItem.Alter<PhoneNumberVerificationPart>(part =>
         {
-            part.PhoneNumber = result.PhoneNumber;
-            part.NormalizedPhoneNumber = result.NormalizedPhoneNumber ?? result.PhoneNumber;
-            part.VerificationStatus = result.Status;
-            part.VerificationProvider = result.VerificationProvider;
-            part.VerificationResultJson = serializedResult;
             part.VerificationAttemptCount++;
-            part.LastVerifiedByUserId = verifiedByUserId;
-            part.LastVerifiedUtc = lastVerifiedUtc;
-            part.NextVerificationDueUtc = nextVerificationDueUtc;
+            part.LastAttemptUtc = attemptUtc;
+
+            if (requestCompleted)
+            {
+                var serializedResult = JsonSerializer.Serialize(result, PhoneNumberVerificationSerialization.Options);
+
+                part.PhoneNumber = result.PhoneNumber;
+                part.NormalizedPhoneNumber = result.NormalizedPhoneNumber ?? result.PhoneNumber;
+                part.VerificationStatus = result.Status;
+                part.VerificationProvider = result.VerificationProvider;
+                part.VerificationResultJson = serializedResult;
+                part.LastVerifiedByUserId = verifiedByUserId;
+                part.LastVerifiedUtc = attemptUtc;
+                part.NextVerificationDueUtc = attemptUtc?.AddDays(normalizedIntervalDays);
+                part.FailedAttemptCount = 0;
+                part.LastError = null;
+
+                return;
+            }
+
+            // The verification request itself failed (provider rate limit, HTTP error, transport
+            // failure, and so on). Record the failure without overwriting a previously known-good
+            // result, so a transient provider outage never downgrades a verified number to invalid.
+            part.FailedAttemptCount++;
+            part.LastError = result.ErrorMessage;
+
+            if (part.LastVerifiedUtc is null)
+            {
+                // The number has never completed verification, so surface the failure as the current
+                // status and keep the failed payload available for diagnostics. The record stays due
+                // (no next-due date) so the background task retries it until the attempt cap is reached.
+                part.PhoneNumber = result.PhoneNumber ?? part.PhoneNumber;
+                part.NormalizedPhoneNumber = result.NormalizedPhoneNumber ?? result.PhoneNumber ?? part.NormalizedPhoneNumber;
+                part.VerificationStatus = PhoneNumberVerificationStatus.Failed;
+                part.VerificationProvider = result.VerificationProvider;
+                part.VerificationResultJson = JsonSerializer.Serialize(result, PhoneNumberVerificationSerialization.Options);
+            }
         });
+    }
+
+    /// <summary>
+    /// Re-queues a content item for verification by clearing the failure counters and due date so the
+    /// background task picks it up again. The last known status and phone number are preserved.
+    /// </summary>
+    /// <param name="contentItem">The content item to re-queue.</param>
+    public static void RequeuePhoneNumberVerification(this ContentItem contentItem)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+
+        contentItem.Alter<PhoneNumberVerificationPart>(part =>
+        {
+            part.FailedAttemptCount = 0;
+            part.LastError = null;
+            part.NextVerificationDueUtc = null;
+        });
+    }
+
+    /// <summary>
+    /// Determines whether a content item has reached the maximum number of consecutive failed
+    /// verification attempts and therefore should no longer be retried automatically.
+    /// </summary>
+    /// <param name="contentItem">The content item to evaluate.</param>
+    /// <param name="maxAttempts">The maximum number of consecutive failed attempts allowed.</param>
+    /// <returns><see langword="true"/> when the failure cap has been reached; otherwise, <see langword="false"/>.</returns>
+    public static bool HasReachedMaxVerificationAttempts(
+        this ContentItem contentItem,
+        int maxAttempts = PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+
+        return contentItem.TryGet<PhoneNumberVerificationPart>(out var part)
+            && part.HasReachedMaxVerificationAttempts(maxAttempts);
+    }
+
+    /// <summary>
+    /// Determines whether a verification part has reached the maximum number of consecutive failed
+    /// verification attempts and therefore should no longer be retried automatically.
+    /// </summary>
+    /// <param name="part">The verification part to evaluate.</param>
+    /// <param name="maxAttempts">The maximum number of consecutive failed attempts allowed.</param>
+    /// <returns><see langword="true"/> when the failure cap has been reached; otherwise, <see langword="false"/>.</returns>
+    public static bool HasReachedMaxVerificationAttempts(
+        this PhoneNumberVerificationPart part,
+        int maxAttempts = PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts)
+    {
+        ArgumentNullException.ThrowIfNull(part);
+
+        return part.FailedAttemptCount >= NormalizeMaxAttempts(maxAttempts);
     }
 
     /// <summary>
@@ -116,6 +196,8 @@ public static class PhoneNumberVerificationPartExtensions
             part.VerificationResultJson = null;
             part.LastVerifiedUtc = null;
             part.NextVerificationDueUtc = null;
+            part.FailedAttemptCount = 0;
+            part.LastError = null;
         });
     }
 
@@ -136,6 +218,9 @@ public static class PhoneNumberVerificationPartExtensions
             part.VerificationResultJson = null;
             part.LastVerifiedUtc = null;
             part.NextVerificationDueUtc = null;
+            part.FailedAttemptCount = 0;
+            part.LastError = null;
+            part.LastAttemptUtc = null;
         });
     }
 
@@ -180,22 +265,17 @@ public static class PhoneNumberVerificationPartExtensions
         return part.LastVerifiedUtc.Value.AddDays(NormalizeRevalidationIntervalDays(revalidationIntervalDays)) <= utcNow;
     }
 
-    private static DateTime? GetLastVerifiedUtc(PhoneNumberVerificationResult result)
-    {
-        if (result.VerificationDateUtc == default)
-        {
-            return null;
-        }
-
-        return result.Status is PhoneNumberVerificationStatus.Verified or PhoneNumberVerificationStatus.Invalid
-            ? result.VerificationDateUtc
-            : null;
-    }
-
     private static int NormalizeRevalidationIntervalDays(int revalidationIntervalDays)
     {
         return revalidationIntervalDays > 0
             ? revalidationIntervalDays
             : PhoneNumberVerificationsSettings.DefaultRevalidationIntervalDays;
+    }
+
+    private static int NormalizeMaxAttempts(int maxAttempts)
+    {
+        return maxAttempts > 0
+            ? maxAttempts
+            : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
     }
 }

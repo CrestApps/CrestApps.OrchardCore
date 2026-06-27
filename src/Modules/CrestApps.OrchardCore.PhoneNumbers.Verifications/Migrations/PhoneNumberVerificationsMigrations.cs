@@ -44,6 +44,8 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             .Column<string>("VerificationProvider", column => column.WithLength(64))
             .Column<DateTime>("LastVerifiedUtc")
             .Column<DateTime>("NextVerificationDueUtc")
+            .Column<int>("FailedAttemptCount", column => column.NotNull().WithDefault(0))
+            .Column<DateTime>("LastAttemptUtc")
             .Column<string>("CountryCode", column => column.WithLength(2))
             .Column<string>("Carrier", column => column.WithLength(128))
             .Column<bool>("IsMobile", column => column.NotNull().WithDefault(false))
@@ -76,6 +78,40 @@ internal sealed class PhoneNumberVerificationsMigrations : DataMigration
             )
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+            .CreateIndex("IDX_PhoneNumberVerificationPartIndex_Retry",
+                "DocumentId",
+                "FailedAttemptCount",
+                "NextVerificationDueUtc"
+            )
+        );
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the resilience tracking columns (failed attempt count and last attempt timestamp)
+    /// to the verification index for existing installations.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+            .AddColumn<int>("FailedAttemptCount", column => column.NotNull().WithDefault(0))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+            .AddColumn<DateTime>("LastAttemptUtc")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<PhoneNumberVerificationPartIndex>(table => table
+            .CreateIndex("IDX_PhoneNumberVerificationPartIndex_Retry",
+                "DocumentId",
+                "FailedAttemptCount",
+                "NextVerificationDueUtc"
+            )
+        );
+
+        return 2;
     }
 }

@@ -38,6 +38,13 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
                     .Action("Index", "Reports", PhoneNumberVerificationsConstants.Features.Area)
                     .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
                     .LocalNav()
+                )
+                .Add(S["Phone Number Verification Records"], S["Phone Number Verification Records"].PrefixPosition(), records => records
+                    .AddClass("phone-number-verification-records")
+                    .Id("phoneNumberVerificationRecords")
+                    .Action("Index", "Records", PhoneNumberVerificationsConstants.Features.Area)
+                    .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
+                    .LocalNav()
                 ));
 
         builder

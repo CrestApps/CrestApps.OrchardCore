@@ -149,6 +149,153 @@ public sealed class PhoneNumberVerificationPartExtensionsTests
     }
 
     [Fact]
+    public void AlterPhoneNumberVerificationResult_WhenFailed_IncrementsFailedAttemptCountAndStoresError()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
+        var result = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = "+17024993350",
+            Status = PhoneNumberVerificationStatus.Failed,
+            VerificationProvider = "AbstractApi",
+            VerificationDateUtc = _now,
+            ErrorMessage = "Provider returned 429 Too Many Requests.",
+        };
+
+        // Act
+        contentItem.AlterPhoneNumberVerificationResult(result);
+        contentItem.AlterPhoneNumberVerificationResult(result);
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Equal(PhoneNumberVerificationStatus.Failed, part.VerificationStatus);
+        Assert.Equal(2, part.FailedAttemptCount);
+        Assert.Equal(2, part.VerificationAttemptCount);
+        Assert.Equal("Provider returned 429 Too Many Requests.", part.LastError);
+        Assert.Equal(_now, part.LastAttemptUtc);
+        Assert.Null(part.LastVerifiedUtc);
+    }
+
+    [Fact]
+    public void AlterPhoneNumberVerificationResult_WhenFailedAfterVerified_DoesNotDowngradeStatus()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
+        var verified = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = "14159929960",
+            NormalizedPhoneNumber = "+14159929960",
+            Status = PhoneNumberVerificationStatus.Verified,
+            VerificationProvider = "AbstractApi",
+            VerificationDateUtc = _now,
+        };
+
+        contentItem.AlterPhoneNumberVerificationResult(verified, "user-1", revalidationIntervalDays: 30);
+
+        var failed = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = "14159929960",
+            Status = PhoneNumberVerificationStatus.Failed,
+            VerificationProvider = "AbstractApi",
+            VerificationDateUtc = _now.AddDays(31),
+            ErrorMessage = "Provider rate limit exceeded.",
+        };
+
+        // Act
+        contentItem.AlterPhoneNumberVerificationResult(failed);
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, part.VerificationStatus);
+        Assert.Equal(_now, part.LastVerifiedUtc);
+        Assert.Equal(_now.AddDays(30), part.NextVerificationDueUtc);
+        Assert.Equal(1, part.FailedAttemptCount);
+        Assert.Equal("Provider rate limit exceeded.", part.LastError);
+    }
+
+    [Fact]
+    public void AlterPhoneNumberVerificationResult_WhenCompletedAfterFailure_ResetsFailureState()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart());
+        var failed = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = "14159929960",
+            Status = PhoneNumberVerificationStatus.Failed,
+            VerificationProvider = "AbstractApi",
+            VerificationDateUtc = _now,
+            ErrorMessage = "Transient error.",
+        };
+
+        contentItem.AlterPhoneNumberVerificationResult(failed);
+
+        var verified = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = "14159929960",
+            NormalizedPhoneNumber = "+14159929960",
+            Status = PhoneNumberVerificationStatus.Verified,
+            VerificationProvider = "AbstractApi",
+            VerificationDateUtc = _now.AddMinutes(5),
+        };
+
+        // Act
+        contentItem.AlterPhoneNumberVerificationResult(verified, "user-1", revalidationIntervalDays: 30);
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, part.VerificationStatus);
+        Assert.Equal(0, part.FailedAttemptCount);
+        Assert.Null(part.LastError);
+        Assert.Equal(_now.AddMinutes(5), part.LastVerifiedUtc);
+    }
+
+    [Fact]
+    public void RequeuePhoneNumberVerification_WhenExhausted_ResetsFailureCountersAndDueDate()
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart
+        {
+            VerificationStatus = PhoneNumberVerificationStatus.Failed,
+            FailedAttemptCount = 3,
+            LastError = "Provider rate limit exceeded.",
+            NextVerificationDueUtc = _now.AddDays(30),
+        });
+
+        // Act
+        contentItem.RequeuePhoneNumberVerification();
+
+        // Assert
+        Assert.True(contentItem.TryGet<PhoneNumberVerificationPart>(out var part));
+
+        Assert.Equal(0, part.FailedAttemptCount);
+        Assert.Null(part.LastError);
+        Assert.Null(part.NextVerificationDueUtc);
+    }
+
+    [Theory]
+    [InlineData(0, 3, false)]
+    [InlineData(2, 3, false)]
+    [InlineData(3, 3, true)]
+    [InlineData(4, 3, true)]
+    public void HasReachedMaxVerificationAttempts_ReturnsExpectedResult(int failedAttemptCount, int maxAttempts, bool expected)
+    {
+        // Arrange
+        var contentItem = CreateContentItem(new PhoneNumberVerificationPart
+        {
+            FailedAttemptCount = failedAttemptCount,
+        });
+
+        // Act
+        var reached = contentItem.HasReachedMaxVerificationAttempts(maxAttempts);
+
+        // Assert
+        Assert.Equal(expected, reached);
+    }
+
+    [Fact]
     public void TryGetPhoneNumberVerificationResult_WhenResultStored_ReturnsResult()
     {
         // Arrange

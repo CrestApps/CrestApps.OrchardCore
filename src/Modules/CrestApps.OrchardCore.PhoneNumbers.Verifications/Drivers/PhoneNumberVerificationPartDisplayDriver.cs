@@ -32,6 +32,9 @@ public sealed class PhoneNumberVerificationPartDisplayDriver : ContentPartDispla
         viewModel.LastVerifiedUtc = part.LastVerifiedUtc;
         viewModel.NextVerificationDueUtc = part.NextVerificationDueUtc;
         viewModel.VerificationAttemptCount = part.VerificationAttemptCount;
+        viewModel.FailedAttemptCount = part.FailedAttemptCount;
+        viewModel.LastError = part.LastError;
+        viewModel.LastAttemptUtc = part.LastAttemptUtc;
         viewModel.NormalizedPhoneNumber = part.NormalizedPhoneNumber ?? part.PhoneNumber;
 
         if (!part.TryGetPhoneNumberVerificationResult(out var result))

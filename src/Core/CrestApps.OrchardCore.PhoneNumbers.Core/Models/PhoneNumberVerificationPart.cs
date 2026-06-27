@@ -51,6 +51,24 @@ public sealed class PhoneNumberVerificationPart : ContentPart
     public int VerificationAttemptCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of consecutive verification requests that failed because the
+    /// request itself could not be completed (for example, a provider rate limit or HTTP error).
+    /// This counter resets to zero whenever a verification request completes (valid or invalid).
+    /// </summary>
+    public int FailedAttemptCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message from the most recent failed verification request, if any.
+    /// </summary>
+    public string LastError { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the most recent verification attempt, whether it
+    /// completed successfully or failed.
+    /// </summary>
+    public DateTime? LastAttemptUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the next verification becomes due.
     /// </summary>
     public DateTime? NextVerificationDueUtc { get; set; }

@@ -45,6 +45,16 @@ public sealed class PhoneNumberVerificationPartIndex : MapIndex
     public DateTime? LastVerifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of consecutive failed verification requests for this record.
+    /// </summary>
+    public int FailedAttemptCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the most recent verification attempt, successful or failed.
+    /// </summary>
+    public DateTime? LastAttemptUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the next verification becomes due.
     /// </summary>
     public DateTime? NextVerificationDueUtc { get; set; }

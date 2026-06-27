@@ -53,10 +53,16 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
             var session = scope.ServiceProvider.GetRequiredService<ISession>();
             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
+            var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
+            var maxAttempts = settings.MaxVerificationAttempts > 0
+                ? settings.MaxVerificationAttempts
+                : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
             var now = clock.UtcNow;
 
             var dueIndexes = await session.QueryIndex<PhoneNumberVerificationPartIndex>(index =>
                     (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)
+                    && index.FailedAttemptCount < maxAttempts
                     && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
                 .OrderBy(index => index.ContentItemId)
                 .Take(MaxItemsPerRun)

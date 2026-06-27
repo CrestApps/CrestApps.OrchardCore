@@ -64,7 +64,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         {
             _logger.LogWarning("Twilio Lookup credentials are not configured. Skipping phone number verification.");
 
-            return CreateFailedResult(phoneNumber, null);
+            return CreateFailedResult(phoneNumber, null, "Twilio Lookup credentials are not configured.");
         }
 
         var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
@@ -87,7 +87,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         {
             _logger.LogError("Twilio Lookup returned status code {StatusCode} while verifying a phone number.", (int)response.StatusCode);
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, $"Twilio Lookup returned HTTP status code {(int)response.StatusCode}.");
         }
 
         TwilioLookupResponse parsed;
@@ -102,12 +102,12 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         {
             _logger.LogError(ex, "Failed to parse the Twilio Lookup response.");
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "Failed to parse the Twilio Lookup response.");
         }
 
         if (parsed is null)
         {
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "The Twilio Lookup response was empty.");
         }
 
         return MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _clock.UtcNow, _phoneNumberService);
@@ -166,7 +166,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         return result;
     }
 
-    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload)
+    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload, string errorMessage)
     {
         return new PhoneNumberVerificationResult
         {
@@ -176,6 +176,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             RawProviderResponse = payload,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,
+            ErrorMessage = errorMessage,
         };
     }
 

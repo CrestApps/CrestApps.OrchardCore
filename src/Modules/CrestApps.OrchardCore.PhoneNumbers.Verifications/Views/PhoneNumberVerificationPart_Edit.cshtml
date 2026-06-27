@@ -56,6 +56,25 @@
 
             <dt class="col-sm-3">@T["Attempts"]</dt>
             <dd class="col-sm-9">@Model.VerificationAttemptCount</dd>
+
+            @if (Model.LastAttemptUtc.HasValue)
+            {
+                <dt class="col-sm-3">@T["Last attempt"]</dt>
+                <dd class="col-sm-9">@Model.LastAttemptUtc.Value.ToString("g")</dd>
+            }
+
+            @if (Model.FailedAttemptCount > 0)
+            {
+                <dt class="col-sm-3">@T["Failed attempts"]</dt>
+                <dd class="col-sm-9">@Model.FailedAttemptCount</dd>
+            }
         </dl>
+        @if (!string.IsNullOrEmpty(Model.LastError))
+        {
+            <div class="alert alert-warning mt-3 mb-0">
+                <strong>@T["Last verification error"]</strong>
+                <div>@Model.LastError</div>
+            </div>
+        }
     </div>
 </div>

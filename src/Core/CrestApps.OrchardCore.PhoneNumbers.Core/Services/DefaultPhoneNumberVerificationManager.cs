@@ -120,13 +120,13 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         try
         {
             result = await provider.VerifyAsync(normalizedPhoneNumber, cancellationToken)
-                ?? CreateFailedResult(phoneNumber, normalizedPhoneNumber, providerKey);
+                ?? CreateFailedResult(phoneNumber, normalizedPhoneNumber, providerKey, "The verification provider returned no result.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "The phone number verification provider '{ProviderKey}' failed to verify a phone number.", providerKey);
 
-            result = CreateFailedResult(phoneNumber, normalizedPhoneNumber, providerKey);
+            result = CreateFailedResult(phoneNumber, normalizedPhoneNumber, providerKey, ex.Message);
         }
 
         result.PhoneNumber ??= phoneNumber;
@@ -155,7 +155,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         return phoneNumber;
     }
 
-    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string normalizedPhoneNumber, string providerKey)
+    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string normalizedPhoneNumber, string providerKey, string errorMessage)
     {
         return new PhoneNumberVerificationResult
         {
@@ -165,6 +165,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
             VerificationDateUtc = _clock.UtcNow,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,
+            ErrorMessage = errorMessage,
         };
     }
 }

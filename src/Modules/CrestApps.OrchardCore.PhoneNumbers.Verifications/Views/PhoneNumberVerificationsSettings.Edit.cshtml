@@ -10,6 +10,13 @@
 </div>
 
 <div class="mb-3">
+    <label asp-for="MaxVerificationAttempts" class="form-label">@T["Maximum verification attempts"]</label>
+    <input type="number" min="1" class="form-control" asp-for="MaxVerificationAttempts" />
+    <span asp-validation-for="MaxVerificationAttempts" class="text-danger"></span>
+    <span class="hint">@T["The number of consecutive failed verification requests (for example, provider rate limits or HTTP errors) before a record stops being retried automatically. Exhausted records appear in the verification records queue and can be re-queued manually."]</span>
+</div>
+
+<div class="mb-3">
     <label asp-for="SelectedProvider" class="form-label">@T["Default provider"]</label>
     @if (Model.Providers.Count > 0)
     {

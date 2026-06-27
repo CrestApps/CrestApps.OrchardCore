@@ -80,7 +80,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         {
             _logger.LogError("AbstractAPI returned status code {StatusCode} while verifying a phone number.", (int)response.StatusCode);
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, $"AbstractAPI returned HTTP status code {(int)response.StatusCode}.");
         }
 
         AbstractApiResponse parsed;
@@ -95,12 +95,12 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         {
             _logger.LogError(ex, "Failed to parse the AbstractAPI phone validation response.");
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "Failed to parse the AbstractAPI phone validation response.");
         }
 
         if (parsed is null)
         {
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "The AbstractAPI phone validation response was empty.");
         }
 
         return MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
@@ -156,7 +156,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         return result;
     }
 
-    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload)
+    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload, string errorMessage)
     {
         return new PhoneNumberVerificationResult
         {
@@ -166,6 +166,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             RawProviderResponse = payload,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,
+            ErrorMessage = errorMessage,
         };
     }
 

@@ -55,6 +55,7 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
         return Initialize<PhoneNumberVerificationsSettingsViewModel>("PhoneNumberVerificationsSettings_Edit", viewModel =>
         {
             viewModel.RevalidationIntervalDays = settings.RevalidationIntervalDays;
+            viewModel.MaxVerificationAttempts = settings.MaxVerificationAttempts;
             viewModel.SelectedProvider = settings.SelectedProvider;
             viewModel.Providers = _providerOptions.Providers.Values
                 .Select(provider => new SelectListItem(provider.DisplayName ?? provider.Key, provider.Key))
@@ -85,9 +86,17 @@ public sealed class PhoneNumberVerificationsSettingsDisplayDriver : SiteDisplayD
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.RevalidationIntervalDays), S["The revalidation interval must be greater than zero."]);
         }
 
+        if (viewModel.MaxVerificationAttempts <= 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.MaxVerificationAttempts), S["The maximum verification attempts must be greater than zero."]);
+        }
+
         settings.RevalidationIntervalDays = viewModel.RevalidationIntervalDays > 0
             ? viewModel.RevalidationIntervalDays
             : PhoneNumberVerificationsSettings.DefaultRevalidationIntervalDays;
+        settings.MaxVerificationAttempts = viewModel.MaxVerificationAttempts > 0
+            ? viewModel.MaxVerificationAttempts
+            : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
         settings.SelectedProvider = viewModel.SelectedProvider;
 
         return Edit(site, settings, context);

@@ -1,0 +1,106 @@
+@model PhoneNumberVerificationRecordsViewModel
+
+@{
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Number Verification Records"])</h1></zone>
+
+<form asp-action="Index" asp-controller="Records" method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-md-5">
+        <label asp-for="Q" class="form-label">@T["Search by phone number"]</label>
+        <input type="text" class="form-control" asp-for="Q" placeholder="@T["Phone number"]" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Status" class="form-label">@T["Status"]</label>
+        <select asp-for="Status" asp-items="Model.Statuses" class="form-select"></select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">@T["Search"]</button>
+        <a asp-action="Index" asp-controller="Records" class="btn btn-link">@T["Reset"]</a>
+    </div>
+</form>
+
+@if (Model.Entries.Count == 0)
+{
+    <p class="alert alert-info">@T["No phone number verification records match the current filter."]</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>@T["Phone number"]</th>
+                <th>@T["Status"]</th>
+                <th>@T["Provider"]</th>
+                <th>@T["Last attempt"]</th>
+                <th class="text-end">@T["Attempts"]</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Model.Entries)
+            {
+                var statusClass = entry.VerificationStatus switch
+                {
+                    PhoneNumberVerificationStatus.Verified => "text-bg-success",
+                    PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+                    PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+                    _ => "text-bg-secondary",
+                };
+                var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
+
+                <tr>
+                    <td>
+                        <a href="@editUrl">@(string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber)</a>
+                        @if (!string.IsNullOrEmpty(entry.DisplayText))
+                        {
+                            <div class="text-muted small">@entry.DisplayText</div>
+                        }
+                    </td>
+                    <td>
+                        <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
+                        @if (entry.IsExhausted)
+                        {
+                            <span class="badge text-bg-danger ms-1" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
+                        }
+                        @if (!string.IsNullOrEmpty(entry.LastError))
+                        {
+                            <div class="text-danger small">@entry.LastError</div>
+                        }
+                    </td>
+                    <td>@entry.VerificationProvider</td>
+                    <td>
+                        @if (entry.LastAttemptUtc.HasValue)
+                        {
+                            @entry.LastAttemptUtc.Value.ToString("g")
+                        }
+                        else
+                        {
+                            <span class="text-muted">@T["Never"]</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        @entry.VerificationAttemptCount
+                        @if (entry.FailedAttemptCount > 0)
+                        {
+                            <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        @if (entry.FailedAttemptCount > 0)
+                        {
+                            <form asp-action="Retry" asp-controller="Records" method="post" class="d-inline">
+                                <input type="hidden" name="contentItemId" value="@entry.ContentItemId" />
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @await DisplayAsync(Model.Pager)
+}

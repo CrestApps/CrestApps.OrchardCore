@@ -64,7 +64,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         {
             _logger.LogWarning("Veriphone API key is not configured. Skipping phone number verification.");
 
-            return CreateFailedResult(phoneNumber, null);
+            return CreateFailedResult(phoneNumber, null, "Veriphone API key is not configured.");
         }
 
         var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
@@ -85,7 +85,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         {
             _logger.LogError("Veriphone returned status code {StatusCode} while verifying a phone number.", (int)response.StatusCode);
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, $"Veriphone returned HTTP status code {(int)response.StatusCode}.");
         }
 
         VeriphoneResponse parsed;
@@ -100,13 +100,13 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         {
             _logger.LogError(ex, "Failed to parse the Veriphone phone validation response.");
 
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "Failed to parse the Veriphone phone validation response.");
         }
 
         if (parsed is null ||
             !string.Equals(parsed.Status, "success", StringComparison.OrdinalIgnoreCase))
         {
-            return CreateFailedResult(phoneNumber, payload);
+            return CreateFailedResult(phoneNumber, payload, "The Veriphone phone validation request did not complete successfully.");
         }
 
         return MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
@@ -165,7 +165,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         return result;
     }
 
-    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload)
+    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload, string errorMessage)
     {
         return new PhoneNumberVerificationResult
         {
@@ -175,6 +175,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             RawProviderResponse = payload,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,
+            ErrorMessage = errorMessage,
         };
     }
 

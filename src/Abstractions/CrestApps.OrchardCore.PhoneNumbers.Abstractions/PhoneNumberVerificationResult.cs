@@ -140,6 +140,13 @@ public sealed class PhoneNumberVerificationResult
     public PhoneNumberVerificationStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets a human-readable error message describing why a verification request failed.
+    /// This is populated when the request itself could not be completed (for example, a provider
+    /// rate limit, an HTTP error, or a transport failure) rather than when a number is genuinely invalid.
+    /// </summary>
+    public string ErrorMessage { get; set; }
+
+    /// <summary>
     /// Gets the provider-extensible metadata bag for values that are not part of the common model.
     /// </summary>
     public JsonObject Metadata { get; init; } = [];

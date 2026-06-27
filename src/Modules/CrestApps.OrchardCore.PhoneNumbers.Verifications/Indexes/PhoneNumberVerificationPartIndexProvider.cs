@@ -33,6 +33,8 @@ public sealed class PhoneNumberVerificationPartIndexProvider : IndexProvider<Con
                     VerificationProvider = part.VerificationProvider,
                     LastVerifiedUtc = part.LastVerifiedUtc,
                     NextVerificationDueUtc = part.NextVerificationDueUtc,
+                    FailedAttemptCount = part.FailedAttemptCount,
+                    LastAttemptUtc = part.LastAttemptUtc,
                 };
 
                 if (part.TryGetPhoneNumberVerificationResult(out var result))

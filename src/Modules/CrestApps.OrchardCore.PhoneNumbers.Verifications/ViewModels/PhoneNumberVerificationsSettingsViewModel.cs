@@ -14,6 +14,12 @@ public class PhoneNumberVerificationsSettingsViewModel
     public int RevalidationIntervalDays { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of consecutive failed verification attempts before a record
+    /// stops being retried automatically.
+    /// </summary>
+    public int MaxVerificationAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the key of the provider used by default.
     /// </summary>
     public string SelectedProvider { get; set; }
