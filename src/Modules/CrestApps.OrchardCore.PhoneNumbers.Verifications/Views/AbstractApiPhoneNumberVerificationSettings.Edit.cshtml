@@ -16,7 +16,6 @@
     <select asp-for="AuthenticationType" class="form-select">
         <option value="@PhoneNumberVerificationAuthenticationType.ApiKey">@T["API key"]</option>
         <option value="@PhoneNumberVerificationAuthenticationType.Basic">@T["Basic"]</option>
-        <option value="@PhoneNumberVerificationAuthenticationType.ClientCredentials">@T["Client credentials"]</option>
     </select>
     <span class="hint">@T["The authentication strategy used when calling the provider. AbstractAPI uses API key authentication."]</span>
 </div>
@@ -51,24 +50,5 @@
     else
     {
         <span class="hint">@T["The password used when basic authentication is selected."]</span>
-    }
-</div>
-
-<div class="mb-3">
-    <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
-    <input type="text" class="form-control" asp-for="ClientId" autocomplete="off" />
-    <span class="hint">@T["The client identifier used when client credentials authentication is selected."]</span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="ClientSecret" class="form-label">@T["Client secret"]</label>
-    <input type="password" class="form-control" asp-for="ClientSecret" autocomplete="off" placeholder='@T["Enter a new client secret to replace the saved value"]' />
-    @if (Model.HasClientSecret)
-    {
-        <span class="hint text-success">@T["A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
-    }
-    else
-    {
-        <span class="hint">@T["The client secret used when client credentials authentication is selected."]</span>
     }
 </div>

@@ -14,9 +14,4 @@ public enum PhoneNumberVerificationAuthenticationType
     /// HTTP Basic authentication using a username and password.
     /// </summary>
     Basic = 1,
-
-    /// <summary>
-    /// OAuth client credentials using a client identifier and client secret.
-    /// </summary>
-    ClientCredentials = 2,
 }

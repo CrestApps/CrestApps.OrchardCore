@@ -32,16 +32,4 @@ public sealed class AbstractApiPhoneNumberVerificationSettings
     /// <see cref="PhoneNumberVerificationAuthenticationType.Basic"/>.
     /// </summary>
     public string ProtectedPassword { get; set; }
-
-    /// <summary>
-    /// Gets or sets the client identifier used when <see cref="AuthenticationType"/> is
-    /// <see cref="PhoneNumberVerificationAuthenticationType.ClientCredentials"/>.
-    /// </summary>
-    public string ClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the encrypted client secret used when <see cref="AuthenticationType"/> is
-    /// <see cref="PhoneNumberVerificationAuthenticationType.ClientCredentials"/>.
-    /// </summary>
-    public string ProtectedClientSecret { get; set; }
 }

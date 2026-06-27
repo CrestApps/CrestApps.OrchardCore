@@ -1,17 +1,16 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
-using OrchardCore.Flows.Models;
-using OrchardCore.Locking.Distributed;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
 
@@ -24,68 +23,76 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
     Schedule = "0 3 * * *",
     Description = "Revalidates contact phone numbers that are due for verification.",
     LockTimeout = 3_000,
-    LockExpiration = 60_000)]
+    LockExpiration = 1_800_000)]
 public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 {
     private const int BatchSize = 50;
-    private const string LockKey = "phone-number-revalidation";
 
-    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(3);
-    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(30);
+    // Upper bound on the number of due content items handled per run. This caps memory usage when a
+    // large backlog becomes due at once; any remainder is picked up by the next scheduled run.
+    private const int MaxItemsPerRun = 10_000;
 
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
+        var logger = serviceProvider.GetRequiredService<ILogger<PhoneNumberRevalidationBackgroundTask>>();
 
-        (var locker, var locked) = await distributedLock.TryAcquireLockAsync(LockKey, _lockTimeout, _lockExpiration);
+        string[] dueContentItemIds;
 
-        if (!locked)
+        // Snapshot the due content item ids up front. Processing a fixed snapshot guarantees forward
+        // progress even when some items fail verification and remain due, which would otherwise keep
+        // reappearing at the head of every page and stall a predicate-based pager.
+        await using (var scope = serviceProvider.CreateAsyncScope())
+        {
+            var verificationManager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
+
+            if (verificationManager.GetProviders().Count == 0)
+            {
+                return;
+            }
+
+            var session = scope.ServiceProvider.GetRequiredService<ISession>();
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var now = clock.UtcNow;
+
+            var dueIndexes = await session.QueryIndex<PhoneNumberVerificationPartIndex>(index =>
+                    (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)
+                    && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
+                .OrderBy(index => index.ContentItemId)
+                .Take(MaxItemsPerRun)
+                .ListAsync(cancellationToken);
+
+            dueContentItemIds = dueIndexes
+                .Select(index => index.ContentItemId)
+                .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        if (dueContentItemIds.Length == 0)
         {
             return;
         }
 
-        await using var acquiredLock = locker;
-
-        var logger = serviceProvider.GetRequiredService<ILogger<PhoneNumberRevalidationBackgroundTask>>();
-
-        // Track processed identifiers so content items that cannot be verified (for example, when no
-        // phone number can be resolved) do not cause the loop to reprocess the same batch indefinitely.
-        var processedContentItemIds = new HashSet<string>(StringComparer.Ordinal);
-
-        while (!cancellationToken.IsCancellationRequested)
+        foreach (var contentItemIds in dueContentItemIds.Chunk(BatchSize))
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             await using var scope = serviceProvider.CreateAsyncScope();
 
             var session = scope.ServiceProvider.GetRequiredService<ISession>();
-            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
             var verificationManager = scope.ServiceProvider.GetRequiredService<IPhoneNumberVerificationManager>();
             var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-            var now = clock.UtcNow;
 
-            if (verificationManager.GetProviders().Count == 0)
-            {
-                break;
-            }
-
-            var batch = await session.Query<ContentItem, PhoneNumberVerificationPartIndex>(index =>
-                    (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)
-                    && (index.NextVerificationDueUtc == null || index.NextVerificationDueUtc <= now))
-                .OrderBy(index => index.ContentItemId)
-                .Take(BatchSize)
+            var contentItems = await session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.Latest && index.ContentItemId.IsIn(contentItemIds))
                 .ListAsync(cancellationToken);
 
-            var pending = batch
-                .Where(contentItem => processedContentItemIds.Add(contentItem.ContentItemId))
-                .ToList();
-
-            if (pending.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var contentItem in pending)
+            foreach (var contentItem in contentItems)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -94,7 +101,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
 
                 try
                 {
-                    var phoneNumber = GetPhoneNumber(contentItem);
+                    var phoneNumber = GetStoredPhoneNumber(contentItem);
 
                     if (string.IsNullOrWhiteSpace(phoneNumber))
                     {
@@ -107,7 +114,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
                         result,
                         revalidationIntervalDays: settings.RevalidationIntervalDays);
 
-                    if (GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
+                    if (OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem) is { } phoneNumberContentItem)
                     {
                         phoneNumberContentItem.AlterPhoneNumberVerificationResult(
                             result,
@@ -126,7 +133,7 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
         }
     }
 
-    private static string GetPhoneNumber(ContentItem contentItem)
+    private static string GetStoredPhoneNumber(ContentItem contentItem)
     {
         if (!contentItem.TryGet<PhoneNumberVerificationPart>(out var part))
         {
@@ -146,53 +153,5 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
         return part.TryGetPhoneNumberVerificationResult(out var result)
             ? result.NormalizedPhoneNumber ?? result.PhoneNumber
             : null;
-    }
-
-    private static ContentItem GetPreferredPhoneNumberContentItem(ContentItem contact)
-    {
-        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart)
-            || bagPart.ContentItems is null
-            || bagPart.ContentItems.Count == 0)
-        {
-            return null;
-        }
-
-        var phoneNumbers = new PriorityQueue<ContentItem, int>();
-
-        foreach (var contentMethod in bagPart.ContentItems)
-        {
-            if (contentMethod.ContentType != OmnichannelConstants.ContentTypes.PhoneNumber
-                || !contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart)
-                || string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber))
-            {
-                continue;
-            }
-
-            var priority = GetPhoneNumberPriority(phonePart.Type?.Text);
-
-            if (priority is null)
-            {
-                continue;
-            }
-
-            phoneNumbers.Enqueue(contentMethod, priority.Value);
-        }
-
-        return phoneNumbers.Count > 0
-            ? phoneNumbers.Dequeue()
-            : null;
-    }
-
-    private static int? GetPhoneNumberPriority(string type)
-    {
-        return type switch
-        {
-            "Cell" => 1,
-            "Home" => 2,
-            "Office" => 3,
-            "Work" => 4,
-            "Other" => 5,
-            _ => null,
-        };
     }
 }

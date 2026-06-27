@@ -83,11 +83,6 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             return CreateFailedResult(phoneNumber, payload);
         }
 
-        return MapResponse(phoneNumber, payload);
-    }
-
-    private PhoneNumberVerificationResult MapResponse(string phoneNumber, string payload)
-    {
         AbstractApiResponse parsed;
 
         try
@@ -108,16 +103,26 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             return CreateFailedResult(phoneNumber, payload);
         }
 
+        return MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
+    }
+
+    internal static PhoneNumberVerificationResult MapResponse(
+        string phoneNumber,
+        AbstractApiResponse parsed,
+        string payload,
+        DateTime verificationDateUtc,
+        IPhoneNumberService phoneNumberService)
+    {
         var lineType = MapLineType(parsed.Type);
-        var normalized = !string.IsNullOrWhiteSpace(parsed.InternationalFormat)
-            ? parsed.InternationalFormat
-            : NormalizePhoneNumber(phoneNumber, parsed.Country?.Code);
+        var normalized = !string.IsNullOrWhiteSpace(parsed.Format?.International)
+            ? parsed.Format.International
+            : NormalizePhoneNumber(phoneNumberService, phoneNumber, parsed.Country?.Code);
 
         var result = new PhoneNumberVerificationResult
         {
             PhoneNumber = phoneNumber,
             NormalizedPhoneNumber = normalized,
-            NationalFormat = parsed.LocalFormat,
+            NationalFormat = parsed.Format?.Local,
             IsValid = parsed.Valid,
             IsReachable = parsed.Valid,
             IsMobile = lineType == PhoneNumberLineType.Mobile,
@@ -126,16 +131,17 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             LineType = lineType,
             CountryCode = parsed.Country?.Code,
             CountryName = parsed.Country?.Name,
+            CountryPrefix = NormalizeCountryPrefix(parsed.Country?.Prefix),
             Carrier = parsed.Carrier,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.AbstractApi,
-            VerificationDateUtc = _clock.UtcNow,
+            VerificationDateUtc = verificationDateUtc,
             RawProviderResponse = payload,
             Status = parsed.Valid ? PhoneNumberVerificationStatus.Verified : PhoneNumberVerificationStatus.Invalid,
         };
 
         if (!string.IsNullOrEmpty(normalized))
         {
-            var timeZones = _phoneNumberService.GetTimeZones(normalized);
+            var timeZones = phoneNumberService.GetTimeZones(normalized);
 
             result.TimeZone = timeZones.Count > 0
                 ? timeZones[0]
@@ -163,14 +169,28 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         };
     }
 
-    private string NormalizePhoneNumber(string phoneNumber, string regionCode)
+    private static string NormalizePhoneNumber(IPhoneNumberService phoneNumberService, string phoneNumber, string regionCode)
     {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
+        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
         {
             return e164Number;
         }
 
         return phoneNumber;
+    }
+
+    private static string NormalizeCountryPrefix(string countryPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(countryPrefix))
+        {
+            return null;
+        }
+
+        var trimmed = countryPrefix.Trim();
+
+        return trimmed.StartsWith('+')
+            ? trimmed
+            : "+" + trimmed;
     }
 
     private static Uri BuildRequestUri(string endpoint, string apiKey, string phoneNumber)

@@ -26,8 +26,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 | **Endpoint** | `https://phonevalidation.abstractapi.com/v1/` | The AbstractAPI Phone Validation endpoint. |
 | **Authentication type** | API key | The authentication strategy. AbstractAPI uses API key authentication. |
 | **API key** | _(empty)_ | The API key issued by AbstractAPI. Stored as a protected value. |
-| **Username** / **Password** | _(empty)_ | Used when basic authentication is selected. |
-| **Client ID** / **Client secret** | _(empty)_ | Used when client credentials authentication is selected. |
+| **Username** / **Password** | _(empty)_ | Used when basic authentication is selected (for proxies that front AbstractAPI). |
 
 ![AbstractAPI provider settings tab](/img/docs/phone-number-verifications-provider-settings.png)
 
@@ -37,7 +36,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 AbstractAPI authenticates requests with an API key supplied as the `api_key` query string parameter. Select **API key** as the authentication type and provide the key issued from your AbstractAPI dashboard. The key is stored using ASP.NET Core Data Protection and is never displayed again after it is saved — enter a new value to rotate it, or leave the field empty to keep the existing key.
 
-The **Basic** and **Client credentials** authentication types are provided for providers and proxies that front AbstractAPI with additional authentication. When **Basic** is selected and a username is provided, the request includes an HTTP `Authorization: Basic` header alongside the API key.
+The **Basic** authentication type is provided for proxies that front AbstractAPI with additional authentication. When **Basic** is selected and a username is provided, the request includes an HTTP `Authorization: Basic` header alongside the API key.
 
 ## Site settings
 
@@ -58,7 +57,7 @@ The provider settings are stored in the `AbstractApiPhoneNumberVerificationSetti
 }
 ```
 
-Secret values (`ProtectedApiKey`, `ProtectedPassword`, `ProtectedClientSecret`) are stored encrypted. Provision them through the admin UI so they are encrypted with the tenant's data-protection keys.
+Secret values (`ProtectedApiKey`, `ProtectedPassword`) are stored encrypted. Provision them through the admin UI so they are encrypted with the tenant's data-protection keys.
 
 ## Verification capabilities
 
@@ -67,10 +66,11 @@ AbstractAPI returns the following information, which the provider maps into the 
 | Result field | Source |
 | --- | --- |
 | `IsValid` / `IsReachable` | `valid` |
-| `NormalizedPhoneNumber` | `international_format` |
-| `NationalFormat` | `local_format` |
+| `NormalizedPhoneNumber` | `format.international` |
+| `NationalFormat` | `format.local` |
 | `LineType`, `IsMobile`, `IsLandline`, `IsVoip` | `type` |
 | `CountryCode` / `CountryName` | `country.code` / `country.name` |
+| `CountryPrefix` | `country.prefix` |
 | `Carrier` | `carrier` |
 | `TimeZone` | Derived from the normalized number via `IPhoneNumberService`. |
 | `RawProviderResponse` | The full JSON payload. |

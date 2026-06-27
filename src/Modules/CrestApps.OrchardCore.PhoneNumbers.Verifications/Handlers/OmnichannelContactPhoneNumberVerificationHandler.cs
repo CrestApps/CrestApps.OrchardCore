@@ -1,14 +1,13 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Flows.Models;
 using OrchardCore.Settings;
 using YesSql;
 
@@ -48,8 +47,8 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
             return Task.CompletedTask;
         }
 
-        var phoneNumberContentItem = GetPreferredPhoneNumberContentItem(contentItem);
-        var phoneNumber = GetPhoneNumber(phoneNumberContentItem);
+        var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
+        var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
 
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
@@ -114,8 +113,8 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
                 continue;
             }
 
-            var phoneNumberContentItem = GetPreferredPhoneNumberContentItem(contentItem);
-            var phoneNumber = GetPhoneNumber(phoneNumberContentItem);
+            var phoneNumberContentItem = OmnichannelContactPhoneNumberResolver.GetPreferredPhoneNumberContentItem(contentItem);
+            var phoneNumber = OmnichannelContactPhoneNumberResolver.GetPhoneNumber(phoneNumberContentItem);
 
             if (string.IsNullOrWhiteSpace(phoneNumber))
             {
@@ -169,63 +168,6 @@ internal sealed class OmnichannelContactPhoneNumberVerificationHandler : Content
         }
 
         await session.SaveChangesAsync();
-    }
-
-    private static ContentItem GetPreferredPhoneNumberContentItem(ContentItem contact)
-    {
-        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart)
-            || bagPart.ContentItems is null
-            || bagPart.ContentItems.Count == 0)
-        {
-            return null;
-        }
-
-        var phoneNumbers = new PriorityQueue<ContentItem, int>();
-
-        foreach (var contentMethod in bagPart.ContentItems)
-        {
-            if (contentMethod.ContentType != OmnichannelConstants.ContentTypes.PhoneNumber
-                || !contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart)
-                || string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber))
-            {
-                continue;
-            }
-
-            var priority = GetPhoneNumberPriority(phonePart.Type?.Text);
-
-            if (priority is null)
-            {
-                continue;
-            }
-
-            phoneNumbers.Enqueue(contentMethod, priority.Value);
-        }
-
-        return phoneNumbers.Count > 0
-            ? phoneNumbers.Dequeue()
-            : null;
-    }
-
-    private static string GetPhoneNumber(ContentItem contentItem)
-    {
-        return contentItem is not null
-            && contentItem.TryGet<PhoneNumberInfoPart>(out var phonePart)
-            && !string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber)
-            ? phonePart.Number.PhoneNumber.Trim()
-            : null;
-    }
-
-    private static int? GetPhoneNumberPriority(string type)
-    {
-        return type switch
-        {
-            "Cell" => 1,
-            "Home" => 2,
-            "Office" => 3,
-            "Work" => 4,
-            "Other" => 5,
-            _ => null,
-        };
     }
 
     private static bool IsSamePhoneNumber(

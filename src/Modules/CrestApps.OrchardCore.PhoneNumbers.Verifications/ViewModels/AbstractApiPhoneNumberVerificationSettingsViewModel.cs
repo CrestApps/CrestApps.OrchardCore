@@ -34,16 +34,6 @@ public class AbstractApiPhoneNumberVerificationSettingsViewModel
     public string Password { get; set; }
 
     /// <summary>
-    /// Gets or sets the client identifier used for client credentials authentication.
-    /// </summary>
-    public string ClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the client secret used for client credentials authentication.
-    /// </summary>
-    public string ClientSecret { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether an API key has already been stored.
     /// </summary>
     [BindNever]
@@ -54,10 +44,4 @@ public class AbstractApiPhoneNumberVerificationSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasPassword { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether a client secret has already been stored.
-    /// </summary>
-    [BindNever]
-    public bool HasClientSecret { get; set; }
 }

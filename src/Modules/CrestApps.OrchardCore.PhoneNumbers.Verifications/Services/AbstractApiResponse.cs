@@ -16,14 +16,9 @@ internal sealed class AbstractApiResponse
     public bool Valid { get; set; }
 
     /// <summary>
-    /// Gets or sets the international (E.164) format of the phone number.
+    /// Gets or sets the international and local formatted phone number values.
     /// </summary>
-    public string InternationalFormat { get; set; }
-
-    /// <summary>
-    /// Gets or sets the local format of the phone number.
-    /// </summary>
-    public string LocalFormat { get; set; }
+    public AbstractApiFormat Format { get; set; }
 
     /// <summary>
     /// Gets or sets the country information.

@@ -57,10 +57,8 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
             viewModel.Endpoint = settings.Endpoint;
             viewModel.AuthenticationType = settings.AuthenticationType;
             viewModel.Username = settings.Username;
-            viewModel.ClientId = settings.ClientId;
             viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
             viewModel.HasPassword = !string.IsNullOrWhiteSpace(settings.ProtectedPassword);
-            viewModel.HasClientSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
         }).Location("Content:5#AbstractAPI")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
@@ -86,7 +84,6 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
             : viewModel.Endpoint.Trim();
         settings.AuthenticationType = viewModel.AuthenticationType;
         settings.Username = viewModel.Username;
-        settings.ClientId = viewModel.ClientId;
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
 
@@ -98,11 +95,6 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         if (!string.IsNullOrWhiteSpace(viewModel.Password))
         {
             settings.ProtectedPassword = protector.Protect(viewModel.Password);
-        }
-
-        if (!string.IsNullOrWhiteSpace(viewModel.ClientSecret))
-        {
-            settings.ProtectedClientSecret = protector.Protect(viewModel.ClientSecret);
         }
 
         if (settings.AuthenticationType == PhoneNumberVerificationAuthenticationType.ApiKey

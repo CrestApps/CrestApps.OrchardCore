@@ -90,11 +90,6 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             return CreateFailedResult(phoneNumber, payload);
         }
 
-        return MapResponse(phoneNumber, settings.CountryCode, payload);
-    }
-
-    private PhoneNumberVerificationResult MapResponse(string phoneNumber, string countryCode, string payload)
-    {
         TwilioLookupResponse parsed;
 
         try
@@ -115,10 +110,21 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             return CreateFailedResult(phoneNumber, payload);
         }
 
+        return MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _clock.UtcNow, _phoneNumberService);
+    }
+
+    internal static PhoneNumberVerificationResult MapResponse(
+        string phoneNumber,
+        string countryCode,
+        TwilioLookupResponse parsed,
+        string payload,
+        DateTime verificationDateUtc,
+        IPhoneNumberService phoneNumberService)
+    {
         var lineType = MapLineType(parsed.LineTypeIntelligence?.Type);
         var normalized = !string.IsNullOrWhiteSpace(parsed.PhoneNumber)
             ? parsed.PhoneNumber
-            : NormalizePhoneNumber(phoneNumber, parsed.CountryCode ?? countryCode);
+            : NormalizePhoneNumber(phoneNumberService, phoneNumber, parsed.CountryCode ?? countryCode);
 
         var result = new PhoneNumberVerificationResult
         {
@@ -139,7 +145,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             RiskLevel = parsed.SmsPumpingRisk?.CarrierRiskCategory,
             IsAbuseDetected = parsed.SmsPumpingRisk?.NumberBlocked,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.Twilio,
-            VerificationDateUtc = _clock.UtcNow,
+            VerificationDateUtc = verificationDateUtc,
             RawProviderResponse = payload,
             Status = parsed.Valid
                 ? PhoneNumberVerificationStatus.Verified
@@ -148,7 +154,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
 
         if (!string.IsNullOrEmpty(normalized))
         {
-            var timeZones = _phoneNumberService.GetTimeZones(normalized);
+            var timeZones = phoneNumberService.GetTimeZones(normalized);
 
             result.TimeZone = timeZones.Count > 0
                 ? timeZones[0]
@@ -173,9 +179,9 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         };
     }
 
-    private string NormalizePhoneNumber(string phoneNumber, string regionCode)
+    private static string NormalizePhoneNumber(IPhoneNumberService phoneNumberService, string phoneNumber, string regionCode)
     {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
+        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
         {
             return e164Number;
         }

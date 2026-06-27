@@ -88,11 +88,6 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             return CreateFailedResult(phoneNumber, payload);
         }
 
-        return MapResponse(phoneNumber, payload);
-    }
-
-    private PhoneNumberVerificationResult MapResponse(string phoneNumber, string payload)
-    {
         VeriphoneResponse parsed;
 
         try
@@ -114,10 +109,20 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             return CreateFailedResult(phoneNumber, payload);
         }
 
+        return MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
+    }
+
+    internal static PhoneNumberVerificationResult MapResponse(
+        string phoneNumber,
+        VeriphoneResponse parsed,
+        string payload,
+        DateTime verificationDateUtc,
+        IPhoneNumberService phoneNumberService)
+    {
         var lineType = MapLineType(parsed.PhoneType);
         var normalized = !string.IsNullOrWhiteSpace(parsed.E164)
             ? parsed.E164
-            : NormalizePhoneNumber(phoneNumber, parsed.CountryCode);
+            : NormalizePhoneNumber(phoneNumberService, phoneNumber, parsed.CountryCode);
 
         var result = new PhoneNumberVerificationResult
         {
@@ -136,7 +141,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             Region = parsed.PhoneRegion,
             Carrier = parsed.Carrier,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.Veriphone,
-            VerificationDateUtc = _clock.UtcNow,
+            VerificationDateUtc = verificationDateUtc,
             RawProviderResponse = payload,
             Status = parsed.PhoneValid
                 ? PhoneNumberVerificationStatus.Verified
@@ -145,7 +150,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
 
         if (!string.IsNullOrEmpty(normalized))
         {
-            var timeZones = _phoneNumberService.GetTimeZones(normalized);
+            var timeZones = phoneNumberService.GetTimeZones(normalized);
 
             result.TimeZone = timeZones.Count > 0
                 ? timeZones[0]
@@ -173,9 +178,9 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         };
     }
 
-    private string NormalizePhoneNumber(string phoneNumber, string regionCode)
+    private static string NormalizePhoneNumber(IPhoneNumberService phoneNumberService, string phoneNumber, string regionCode)
     {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
+        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
         {
             return e164Number;
         }
