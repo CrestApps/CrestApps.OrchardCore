@@ -4,7 +4,6 @@
 var contentTransferImport = (function () {
     'use strict';
 
-    var FILE_FIELD_NAME = 'ImportContentFile.File';
     var UPLOAD_ID_FIELD_NAME = '__chunkedFileUploadId';
 
     var defaultMessages = {
@@ -72,7 +71,7 @@ var contentTransferImport = (function () {
             progressContainer.style.display = '';
 
             if (maxChunkSize > 0 && file.size > maxChunkSize) {
-                uploadChunked(file, url, token, maxChunkSize);
+                uploadChunked(file, fileInput.name, url, token, maxChunkSize);
             } else {
                 uploadWhole(file, url, token);
             }
@@ -109,7 +108,7 @@ var contentTransferImport = (function () {
             xhr.send(formData);
         }
 
-        function uploadChunked(file, url, token, chunkSize) {
+        function uploadChunked(file, fileFieldName, url, token, chunkSize) {
             var uploadId = crypto.randomUUID();
             var fileSize = file.size;
             var start = 0;
@@ -119,7 +118,7 @@ var contentTransferImport = (function () {
                 var chunk = file.slice(start, end);
 
                 var formData = new FormData(form);
-                formData.set(FILE_FIELD_NAME, new File([chunk], file.name, { type: file.type }));
+                formData.set(fileFieldName, new File([chunk], file.name, { type: file.type }));
                 formData.set(UPLOAD_ID_FIELD_NAME, uploadId);
 
                 var xhr = new XMLHttpRequest();
