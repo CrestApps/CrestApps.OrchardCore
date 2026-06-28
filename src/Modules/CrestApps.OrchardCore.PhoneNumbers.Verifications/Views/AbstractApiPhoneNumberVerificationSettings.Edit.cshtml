@@ -14,14 +14,6 @@
 </div>
 
 <div id="AbstractApi_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
-    <div class="ocat-wrapper">
-        <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
-        <div class="ocat-end">
-            <input type="url" class="form-control" asp-for="Endpoint" placeholder="https://phonevalidation.abstractapi.com/v1/" />
-            <span asp-validation-for="Endpoint" class="text-danger"></span>
-            <span class="hint">@T["The AbstractAPI Phone Validation endpoint."]</span>
-        </div>
-    </div>
 
     <div class="ocat-wrapper">
         <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>

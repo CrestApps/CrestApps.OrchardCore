@@ -14,11 +14,6 @@ public class AbstractApiPhoneNumberVerificationSettingsViewModel
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the API endpoint used to verify phone numbers.
-    /// </summary>
-    public string Endpoint { get; set; }
-
-    /// <summary>
     /// Gets or sets the API key used to authenticate with AbstractAPI.
     /// </summary>
     public string ApiKey { get; set; }

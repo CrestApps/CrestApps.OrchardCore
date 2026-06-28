@@ -17,6 +17,7 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVerificationProvider
 {
     private const string ProtectorPurpose = "PhoneNumberVerifications.AbstractApi";
+    private const string Endpoint = "https://phoneintelligence.abstractapi.com/v1/";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
@@ -66,11 +67,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             return CreateFailedResult(phoneNumber, null, "AbstractAPI API key is not configured.");
         }
 
-        var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
-            ? "https://phonevalidation.abstractapi.com/v1/"
-            : settings.Endpoint;
-
-        var requestUri = BuildRequestUri(endpoint, apiKey, phoneNumber);
+        var requestUri = BuildRequestUri(Endpoint, apiKey, phoneNumber);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
 

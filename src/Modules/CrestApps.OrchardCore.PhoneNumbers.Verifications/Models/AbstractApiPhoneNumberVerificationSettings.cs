@@ -13,11 +13,6 @@ public sealed class AbstractApiPhoneNumberVerificationSettings : IPhoneNumberVer
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the API endpoint used to verify phone numbers.
-    /// </summary>
-    public string Endpoint { get; set; } = "https://phonevalidation.abstractapi.com/v1/";
-
-    /// <summary>
     /// Gets or sets the encrypted API key used to authenticate with AbstractAPI.
     /// </summary>
     public string ProtectedApiKey { get; set; }

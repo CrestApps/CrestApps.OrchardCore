@@ -67,7 +67,6 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         return Initialize<AbstractApiPhoneNumberVerificationSettingsViewModel>("AbstractApiPhoneNumberVerificationSettings_Edit", viewModel =>
         {
             viewModel.IsEnabled = settings.IsEnabled;
-            viewModel.Endpoint = settings.Endpoint;
             viewModel.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
             viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
         }).Location("Content:5#AbstractAPI")
@@ -90,9 +89,6 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
-        settings.Endpoint = string.IsNullOrWhiteSpace(viewModel.Endpoint)
-            ? "https://phonevalidation.abstractapi.com/v1/"
-            : viewModel.Endpoint.Trim();
         settings.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
         settings.Username = null;
         settings.ProtectedPassword = null;

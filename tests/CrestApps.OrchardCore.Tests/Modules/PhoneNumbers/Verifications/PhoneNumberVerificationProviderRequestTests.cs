@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -46,7 +45,6 @@ public sealed class PhoneNumberVerificationProviderRequestTests
 
         var provider = CreateAbstractApiProvider(handler, new AbstractApiPhoneNumberVerificationSettings
         {
-            Endpoint = "https://phonevalidation.abstractapi.com/v1/",
             ProtectedApiKey = Protect("valid-api-key"),
             AuthenticationType = PhoneNumberVerificationAuthenticationType.Basic,
             Username = "stale-user",
@@ -75,7 +73,6 @@ public sealed class PhoneNumberVerificationProviderRequestTests
 
         var provider = CreateAbstractApiProvider(handler, new AbstractApiPhoneNumberVerificationSettings
         {
-            Endpoint = "https://phonevalidation.abstractapi.com/v1/",
             ProtectedApiKey = Protect(" valid-api-key \r\n"),
         });
 
@@ -95,10 +92,7 @@ public sealed class PhoneNumberVerificationProviderRequestTests
     {
         // Arrange
         var handler = new RecordingHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK));
-        var provider = CreateAbstractApiProvider(handler, new AbstractApiPhoneNumberVerificationSettings
-        {
-            Endpoint = "https://phonevalidation.abstractapi.com/v1/",
-        });
+        var provider = CreateAbstractApiProvider(handler, new AbstractApiPhoneNumberVerificationSettings());
 
         // Act
         var result = await provider.VerifyAsync("+14152007986", TestContext.Current.CancellationToken);
