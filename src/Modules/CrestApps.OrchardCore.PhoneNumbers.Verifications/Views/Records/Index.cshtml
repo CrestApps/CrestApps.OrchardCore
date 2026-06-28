@@ -129,6 +129,10 @@ else
                 };
                 var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
                 var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
+                var provider = string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider;
+                var lastAttempt = entry.LastAttemptUtc.HasValue
+                    ? entry.LastAttemptUtc.Value.ToString("g")
+                    : T["Never"].Value;
 
                 <li class="list-group-item">
                     <div class="row align-items-center gx-3 gy-2">
@@ -147,38 +151,20 @@ else
                                 <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
                             }
                         </div>
-                        <div class="col-6 col-lg-auto">
-                            <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
-                            @if (entry.IsExhausted)
-                            {
-                                <span class="badge text-bg-danger ms-1" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
-                            }
-                        </div>
-                        <div class="col-6 col-lg-auto text-lg-center">
-                            <div class="text-muted text-uppercase small">@T["Provider"]</div>
-                            <div>@(string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider)</div>
-                        </div>
-                        <div class="col-6 col-lg-auto text-lg-center">
-                            <div class="text-muted text-uppercase small">@T["Attempts"]</div>
-                            <div>
-                                @entry.VerificationAttemptCount
+                        <div class="col-12 col-lg-auto">
+                            <div class="tags d-flex flex-wrap gap-1 justify-content-lg-end">
+                                <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
+                                @if (entry.IsExhausted)
+                                {
+                                    <span class="badge text-bg-danger" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
+                                }
+                                <span class="badge text-bg-light border text-body" title="@T["Provider"]">@T["Provider: {0}", provider]</span>
+                                <span class="badge text-bg-light border text-body" title="@T["Attempts"]">@T["Attempts: {0}", entry.VerificationAttemptCount]</span>
                                 @if (entry.FailedAttemptCount > 0)
                                 {
-                                    <span class="text-danger">(@T["{0} failed", entry.FailedAttemptCount])</span>
+                                    <span class="badge text-bg-light border text-danger" title="@T["Failed attempts"]">@T["Failed: {0}", entry.FailedAttemptCount]</span>
                                 }
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-auto text-lg-center">
-                            <div class="text-muted text-uppercase small">@T["Last attempt"]</div>
-                            <div>
-                                @if (entry.LastAttemptUtc.HasValue)
-                                {
-                                    @entry.LastAttemptUtc.Value.ToString("g")
-                                }
-                                else
-                                {
-                                    <span class="text-muted">@T["Never"]</span>
-                                }
+                                <span class="badge text-bg-light border text-body" title="@T["Last attempt"]">@T["Last attempt: {0}", lastAttempt]</span>
                             </div>
                         </div>
                         <div class="col-12 col-lg-auto text-lg-end">
@@ -190,8 +176,8 @@ else
                     </div>
                     @if (!string.IsNullOrEmpty(entry.LastError))
                     {
-                        <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">
-                            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@entry.LastError
+                        <div class="text-danger small mt-2">
+                            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i><code class="text-danger">@entry.LastError</code>
                         </div>
                     }
                 </li>

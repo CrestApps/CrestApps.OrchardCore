@@ -57,7 +57,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
 
         var settings = await _siteService.GetSettingsAsync<AbstractApiPhoneNumberVerificationSettings>();
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-        var apiKey = Unprotect(protector, settings.ProtectedApiKey);
+        var apiKey = Unprotect(protector, settings.ProtectedApiKey)?.Trim();
 
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -223,15 +223,16 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
     {
         var builder = new UriBuilder(endpoint);
         var query = new StringBuilder(builder.Query.TrimStart('?'));
+        var normalizedApiKey = apiKey?.Trim();
 
         if (query.Length > 0)
         {
             query.Append('&');
         }
 
-        if (!string.IsNullOrWhiteSpace(apiKey))
+        if (!string.IsNullOrWhiteSpace(normalizedApiKey))
         {
-            query.Append("api_key=").Append(Uri.EscapeDataString(apiKey)).Append('&');
+            query.Append("api_key=").Append(Uri.EscapeDataString(normalizedApiKey)).Append('&');
         }
 
         query.Append("phone=").Append(Uri.EscapeDataString(phoneNumber));

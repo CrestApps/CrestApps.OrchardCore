@@ -65,6 +65,32 @@ public sealed class PhoneNumberVerificationProviderRequestTests
     }
 
     [Fact]
+    public async Task AbstractApi_VerifyAsync_TrimsUnprotectedApiKeyBeforeSending()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(CreateValidAbstractApiPayload(), Encoding.UTF8, "application/json"),
+        });
+
+        var provider = CreateAbstractApiProvider(handler, new AbstractApiPhoneNumberVerificationSettings
+        {
+            Endpoint = "https://phonevalidation.abstractapi.com/v1/",
+            ProtectedApiKey = Protect(" valid-api-key \r\n"),
+        });
+
+        // Act
+        var result = await provider.VerifyAsync("+14152007986", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(PhoneNumberVerificationStatus.Verified, result.Status);
+        Assert.NotNull(handler.Request);
+        Assert.Contains("api_key=valid-api-key", handler.Request.RequestUri.Query);
+        Assert.DoesNotContain("%20valid-api-key", handler.Request.RequestUri.Query);
+        Assert.DoesNotContain("valid-api-key%20", handler.Request.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task AbstractApi_VerifyAsync_WhenApiKeyCannotBeResolved_ReturnsFailedWithoutCallingProvider()
     {
         // Arrange
@@ -119,6 +145,27 @@ public sealed class PhoneNumberVerificationProviderRequestTests
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
+    }
+
+    private static string CreateValidAbstractApiPayload()
+    {
+        return """
+        {
+            "phone": "14152007986",
+            "valid": true,
+            "format": {
+                "international": "+14152007986",
+                "local": "(415) 200-7986"
+            },
+            "country": {
+                "code": "US",
+                "name": "United States",
+                "prefix": "+1"
+            },
+            "type": "mobile",
+            "carrier": "T-Mobile USA, Inc."
+        }
+        """;
     }
 
     private sealed class RecordingHttpMessageHandler : HttpMessageHandler

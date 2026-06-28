@@ -101,7 +101,7 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
 
         if (!string.IsNullOrWhiteSpace(viewModel.ApiKey))
         {
-            settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey);
+            settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey.Trim());
         }
 
         if (viewModel.IsEnabled)

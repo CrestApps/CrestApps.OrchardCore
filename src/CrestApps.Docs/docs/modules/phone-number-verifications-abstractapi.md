@@ -32,7 +32,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 ## Authentication
 
-AbstractAPI authenticates requests with an API key supplied as the `api_key` query string parameter. Provide the key issued from your AbstractAPI dashboard. The key is stored using ASP.NET Core Data Protection and is never displayed again after it is saved — enter a new value to rotate it, or leave the field empty to keep the existing key.
+AbstractAPI authenticates requests with an API key supplied as the `api_key` query string parameter. Provide the key issued from your AbstractAPI dashboard. The key is trimmed before it is protected and again after it is unprotected for outbound requests, so accidental leading or trailing whitespace from copy/paste is not sent to AbstractAPI. The key is stored using ASP.NET Core Data Protection and is never displayed again after it is saved — enter a new value to rotate it, or leave the field empty to keep the existing key.
 
 ## Site settings
 
@@ -82,7 +82,7 @@ AbstractAPI returns the following information, which the provider maps into the 
 
 | Symptom | Resolution |
 | --- | --- |
-| Verifications always return `Failed` | Confirm the API key is valid and that the endpoint is reachable. Check the application logs for the AbstractAPI status code, safe endpoint, and whether an API key was configured. |
+| Verifications always return `Failed` | Confirm the API key is valid and that the endpoint is reachable. Re-enter and save the API key if it may have been copied with hidden whitespace. Check the application logs for the AbstractAPI status code, safe endpoint, and whether an API key was configured. |
 | The **AbstractAPI** tab is missing | Ensure the **AbstractAPI Phone Number Verification** feature is enabled. |
 | Numbers are not normalized to E.164 | Provide numbers with a country context, or enable the **Phone Numbers Services** feature so `IPhoneNumberService` can normalize them. |
 | Rotated key has no effect | Saving an empty API key keeps the previous key. Enter the new key explicitly to replace it. |

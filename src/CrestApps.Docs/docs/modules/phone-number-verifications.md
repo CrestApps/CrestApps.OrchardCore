@@ -127,7 +127,7 @@ A **Phone Verifications Queue** dashboard is available under **Tools** for users
 - see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected. The status buckets are mutually exclusive and always sum to the total: **Pending** counts records awaiting verification (unverified status, including records just re-queued), **Failed** counts records whose last request failed but can still be retried automatically, and **Needs attention** counts records that have reached the maximum failed attempts,
 - search records by raw or normalized phone number,
 - sort records by most or least recently attempted, or newest or oldest created,
-- review each record's phone number, provider, result, total and failed attempt counts, the last attempt timestamp, and the most recent provider error,
+- review each record's phone number, status, provider, total and failed attempt counts, and last attempt timestamp as compact tags, with the most recent provider error rendered as a red code-style message,
 - page through large result sets,
 - re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed or needs-attention record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
 
