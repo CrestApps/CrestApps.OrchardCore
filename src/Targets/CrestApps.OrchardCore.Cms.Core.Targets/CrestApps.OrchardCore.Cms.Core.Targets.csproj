@@ -60,6 +60,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DialPad/CrestApps.OrchardCore.DialPad.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.DncRegistry.Azure/CrestApps.OrchardCore.DncRegistry.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Ollama/CrestApps.OrchardCore.Ollama.csproj" PrivateAssets="none" />
@@ -75,6 +76,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>

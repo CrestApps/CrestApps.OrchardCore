@@ -46,6 +46,8 @@
             <i class="@verificationIconClass ms-1" title="@verificationTitle" aria-label="@verificationTitle"></i>
         }
         <span asp-validation-for="PhoneNumber"></span>
+        @* Placeholder for telephony integrations (for example the soft phone) to attach a dial button. *@
+        <span class="phone-field-dial" data-phone-dial></span>
         @if (!string.IsNullOrEmpty(settings.Hint))
         {
             <span class="hint">@settings.Hint</span>

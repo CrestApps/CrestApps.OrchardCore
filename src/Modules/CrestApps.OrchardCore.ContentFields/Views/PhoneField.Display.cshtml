@@ -28,6 +28,8 @@
 {
     <p class="text-muted">@Model.PartFieldDefinition.DisplayName()</p>
     <a href="tel:@Model.Field.PhoneNumber">@(Model.Field.NationalNumber ?? Model.Field.PhoneNumber)</a>
+    @* Placeholder for telephony integrations (for example the soft phone) to attach a dial button. *@
+    <span class="phone-field-dial" data-phone-dial data-phone-number="@Model.Field.PhoneNumber"></span>
     <i class="@verificationIconClass ms-1" title="@verificationTitle" aria-label="@verificationTitle"></i>
 }
 

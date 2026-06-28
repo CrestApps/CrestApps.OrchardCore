@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore DialPad Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Integrates the DialPad telephony platform as a provider for the CrestApps Telephony soft phone.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony DialPad</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ensure this module directly depends on the Telephony module so that when someone installs it,
+      they won't need to manually include the Telephony package. This resolves the feature dependency
+      while the DialPad code itself depends only on the provider-agnostic Telephony abstractions.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
