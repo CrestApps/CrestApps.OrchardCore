@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/scripts/content-transfer-import.js"
+    ],
+    "output": "wwwroot/scripts/content-transfer-import.js"
+  }
+]

@@ -1,0 +1,306 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+
+/// <summary>
+/// Verifies phone numbers using the AbstractAPI Phone Validation service and maps the
+/// native response into the provider-agnostic <see cref="PhoneNumberVerificationResult"/>.
+/// </summary>
+public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVerificationProvider
+{
+    private const string ProtectorPurpose = "PhoneNumberVerifications.AbstractApi";
+    private const string Endpoint = "https://phoneintelligence.abstractapi.com/v1/";
+
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ISiteService _siteService;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AbstractApiPhoneNumberVerificationProvider"/> class.
+    /// </summary>
+    /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="siteService">The site service used to read provider settings.</param>
+    /// <param name="dataProtectionProvider">The data protection provider used to decrypt secrets.</param>
+    /// <param name="phoneNumberService">The phone number service used to resolve time zones.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger.</param>
+    public AbstractApiPhoneNumberVerificationProvider(
+        IHttpClientFactory httpClientFactory,
+        ISiteService siteService,
+        IDataProtectionProvider dataProtectionProvider,
+        IPhoneNumberService phoneNumberService,
+        IClock clock,
+        ILogger<AbstractApiPhoneNumberVerificationProvider> logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _siteService = siteService;
+        _dataProtectionProvider = dataProtectionProvider;
+        _phoneNumberService = phoneNumberService;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<PhoneNumberVerificationResult> VerifyAsync(string phoneNumber, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(phoneNumber);
+
+        var settings = await _siteService.GetSettingsAsync<AbstractApiPhoneNumberVerificationSettings>();
+        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+        var apiKey = Unprotect(protector, settings.ProtectedApiKey)?.Trim();
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            _logger.LogWarning("AbstractAPI API key is not configured. Skipping phone number verification.");
+
+            return CreateFailedResult(phoneNumber, null, "AbstractAPI API key is not configured.");
+        }
+
+        var requestUri = BuildRequestUri(apiKey, phoneNumber);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+        var client = _httpClientFactory.CreateClient(nameof(AbstractApiPhoneNumberVerificationProvider));
+
+        PhoneNumberVerificationProviderLogMessages.Starting(
+            _logger,
+            "AbstractAPI",
+            requestUri,
+            "ApiKey",
+            !string.IsNullOrWhiteSpace(apiKey));
+
+        using var response = await client.SendAsync(request, cancellationToken);
+
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        PhoneNumberVerificationProviderLogMessages.ResponseReceived(
+            _logger,
+            "AbstractAPI",
+            (int)response.StatusCode,
+            payload?.Length ?? 0);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            PhoneNumberVerificationProviderLogMessages.NonSuccessStatusCode(
+                _logger,
+                "AbstractAPI",
+                (int)response.StatusCode,
+                response.ReasonPhrase);
+
+            return CreateFailedResult(phoneNumber, payload, $"AbstractAPI returned HTTP status code {(int)response.StatusCode}.");
+        }
+
+        AbstractApiResponse parsed;
+
+        try
+        {
+            parsed = JsonSerializer.Deserialize<AbstractApiResponse>(
+                payload,
+                PhoneNumberVerificationProviderJsonSerializerOptions.Default);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse the AbstractAPI phone validation response.");
+
+            return CreateFailedResult(phoneNumber, payload, "Failed to parse the AbstractAPI phone validation response.");
+        }
+
+        if (parsed is null)
+        {
+            return CreateFailedResult(phoneNumber, payload, "The AbstractAPI phone validation response was empty.");
+        }
+
+        var result = MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
+
+        PhoneNumberVerificationProviderLogMessages.Completed(_logger, "AbstractAPI", result);
+
+        return result;
+    }
+
+    internal static PhoneNumberVerificationResult MapResponse(
+        string phoneNumber,
+        AbstractApiResponse parsed,
+        string payload,
+        DateTime verificationDateUtc,
+        IPhoneNumberService phoneNumberService)
+    {
+        var validation = parsed.PhoneValidation;
+        var format = validation?.Format ?? parsed.Format;
+        var country = validation?.Country ?? parsed.Country;
+        var isValid = validation?.IsValid ?? validation?.Valid ?? parsed.Valid;
+        var lineStatus = validation?.LineStatus;
+        var isVerified = isValid && PhoneNumberVerificationLineStatusHelper.IsActiveOrUnknown(lineStatus);
+        var lineType = MapLineType(validation?.Type ?? parsed.Type);
+        var normalized = !string.IsNullOrWhiteSpace(format?.International)
+            ? format.International
+            : NormalizePhoneNumber(phoneNumberService, phoneNumber, country?.Code);
+
+        var result = new PhoneNumberVerificationResult
+        {
+            PhoneNumber = phoneNumber,
+            NormalizedPhoneNumber = normalized,
+            NationalFormat = format?.Local,
+            IsValid = isValid,
+            IsReachable = isVerified,
+            IsMobile = lineType == PhoneNumberLineType.Mobile,
+            IsLandline = lineType == PhoneNumberLineType.Landline,
+            IsVoip = lineType == PhoneNumberLineType.Voip,
+            LineType = lineType,
+            CountryCode = country?.Code,
+            CountryName = country?.Name,
+            CountryPrefix = NormalizeCountryPrefix(country?.Prefix),
+            Carrier = validation?.Carrier ?? parsed.Carrier,
+            LineStatus = lineStatus,
+            MinimumAge = NormalizeMinimumAge(validation?.MinimumAge),
+            VerificationProvider = PhoneNumberVerificationsConstants.Providers.AbstractApi,
+            VerificationDateUtc = verificationDateUtc,
+            RawProviderResponse = payload,
+            Status = isVerified
+                ? PhoneNumberVerificationStatus.Verified
+                : PhoneNumberVerificationStatus.Invalid,
+        };
+
+        if (!string.IsNullOrEmpty(normalized))
+        {
+            var timeZones = phoneNumberService.GetTimeZones(normalized);
+
+            result.TimeZone = timeZones.Count > 0
+                ? timeZones[0]
+                : null;
+        }
+
+        var location = validation?.Location ?? parsed.Location;
+
+        if (!string.IsNullOrWhiteSpace(location))
+        {
+            result.Metadata["location"] = location;
+        }
+
+        return result;
+    }
+
+    private static string NormalizeMinimumAge(JsonElement? minimumAge)
+    {
+        if (!minimumAge.HasValue)
+        {
+            return null;
+        }
+
+        var value = minimumAge.Value;
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.String => value.GetString(),
+            _ => value.ToString(),
+        };
+    }
+
+    private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload, string errorMessage)
+    {
+        return new PhoneNumberVerificationResult
+        {
+            PhoneNumber = phoneNumber,
+            VerificationProvider = PhoneNumberVerificationsConstants.Providers.AbstractApi,
+            VerificationDateUtc = _clock.UtcNow,
+            RawProviderResponse = payload,
+            Status = PhoneNumberVerificationStatus.Failed,
+            LineType = PhoneNumberLineType.Unknown,
+            ErrorMessage = errorMessage,
+        };
+    }
+
+    private static string NormalizePhoneNumber(IPhoneNumberService phoneNumberService, string phoneNumber, string regionCode)
+    {
+        if (phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164Number))
+        {
+            return e164Number;
+        }
+
+        return phoneNumber;
+    }
+
+    private static string NormalizeCountryPrefix(string countryPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(countryPrefix))
+        {
+            return null;
+        }
+
+        var trimmed = countryPrefix.Trim();
+
+        return trimmed.StartsWith('+')
+            ? trimmed
+            : "+" + trimmed;
+    }
+
+    internal static Uri BuildRequestUri(string apiKey, string phoneNumber)
+    {
+        var builder = new UriBuilder(Endpoint);
+        var query = new StringBuilder(builder.Query.TrimStart('?'));
+        var normalizedApiKey = apiKey?.Trim();
+
+        if (query.Length > 0)
+        {
+            query.Append('&');
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedApiKey))
+        {
+            query.Append("api_key=").Append(Uri.EscapeDataString(normalizedApiKey)).Append('&');
+        }
+
+        query.Append("phone=").Append(Uri.EscapeDataString(phoneNumber));
+        builder.Query = query.ToString();
+
+        return builder.Uri;
+    }
+
+    private string Unprotect(IDataProtector protector, string protectedValue)
+    {
+        if (string.IsNullOrWhiteSpace(protectedValue))
+        {
+            return null;
+        }
+
+        try
+        {
+            return protector.Unprotect(protectedValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to decrypt an AbstractAPI secret. The value may have been encrypted with a different key.");
+
+            return null;
+        }
+    }
+
+    private static PhoneNumberLineType MapLineType(string type)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return PhoneNumberLineType.Unknown;
+        }
+
+        return type.ToLower(CultureInfo.InvariantCulture) switch
+        {
+            "mobile" => PhoneNumberLineType.Mobile,
+            "landline" => PhoneNumberLineType.Landline,
+            "voip" => PhoneNumberLineType.Voip,
+            "toll_free" or "tollfree" => PhoneNumberLineType.TollFree,
+            "premium" or "premium_rate" => PhoneNumberLineType.Premium,
+            _ => PhoneNumberLineType.Unknown,
+        };
+    }
+}

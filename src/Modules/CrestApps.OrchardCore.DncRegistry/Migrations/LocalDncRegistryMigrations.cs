@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.DncRegistry.Indexes;
+using CrestApps.OrchardCore.DncRegistry.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -18,7 +19,7 @@ internal sealed class LocalDncRegistryMigrations : DataMigration
             .Column<string>("ListId", column => column.WithLength(26))
             .Column<string>("CountryCode", column => column.WithLength(2))
             .Column<string>("Name", column => column.WithLength(255))
-            .Column<int>("Status")
+            .Column<LocalDncListStatus>("Status")
             .Column<DateTime>("CreatedUtc"),
             collection: DncRegistryConstants.CollectionName
         );

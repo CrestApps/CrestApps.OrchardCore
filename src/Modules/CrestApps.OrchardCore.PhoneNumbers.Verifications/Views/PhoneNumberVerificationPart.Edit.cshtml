@@ -1,0 +1,118 @@
+@model PhoneNumberVerificationPartViewModel
+
+@{
+    var statusClass = Model.VerificationStatus switch
+    {
+        PhoneNumberVerificationStatus.Verified => "text-bg-success",
+        PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+        PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<div class="card">
+    <div class="card-header">@T["Phone Number Verification"]</div>
+    <div class="card-body">
+        <p class="hint">@T["This data is managed automatically by the Phone Number Verifications module. It is updated when a verification result is stored or revalidated."]</p>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Status"]</label>
+            <div class="ocat-end">
+                <span class="badge @statusClass">@Model.VerificationStatus.ToString()</span>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.NormalizedPhoneNumber))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Normalized number"]</label>
+                <div class="ocat-end">@Model.NormalizedPhoneNumber</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.VerificationProvider))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Provider"]</label>
+                <div class="ocat-end">@Model.VerificationProvider</div>
+            </div>
+        }
+
+        @if (Model.LineType != PhoneNumberLineType.Unknown)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Line type"]</label>
+                <div class="ocat-end">@Model.LineType.ToString()</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.LineStatus))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Line status"]</label>
+                <div class="ocat-end">@Model.LineStatus</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.MinimumAge))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Minimum age"]</label>
+                <div class="ocat-end">@Model.MinimumAge</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.Carrier))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Carrier"]</label>
+                <div class="ocat-end">@Model.Carrier</div>
+            </div>
+        }
+
+        @if (Model.LastVerifiedUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Last verified"]</label>
+                <div class="ocat-end">@Model.LastVerifiedUtc.Value.ToString("g")</div>
+            </div>
+        }
+
+        @if (Model.NextVerificationDueUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Next verification due"]</label>
+                <div class="ocat-end">@Model.NextVerificationDueUtc.Value.ToString("g")</div>
+            </div>
+        }
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Attempts"]</label>
+            <div class="ocat-end">@Model.VerificationAttemptCount</div>
+        </div>
+
+        @if (Model.LastAttemptUtc.HasValue)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Last attempt"]</label>
+                <div class="ocat-end">@Model.LastAttemptUtc.Value.ToString("g")</div>
+            </div>
+        }
+
+        @if (Model.FailedAttemptCount > 0)
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Failed attempts"]</label>
+                <div class="ocat-end">@Model.FailedAttemptCount</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.LastError))
+        {
+            <div class="alert alert-warning mt-3 mb-0">
+                <strong>@T["Last verification error"]</strong>
+                <div>@Model.LastError</div>
+            </div>
+        }
+    </div>
+</div>
