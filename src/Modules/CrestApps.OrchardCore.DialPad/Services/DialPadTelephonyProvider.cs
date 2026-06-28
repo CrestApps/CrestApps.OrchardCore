@@ -63,7 +63,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
     public LocalizedString Name => S["DialPad"];
 
     /// <inheritdoc/>
-    public string AuthenticationScheme => TelephonyAuthenticationSchemes.OAuth2;
+    public string AuthenticationScheme => TelephonyConstants.AuthenticationSchemes.OAuth2;
 
     /// <inheritdoc/>
     public bool SupportsProofKeyForCodeExchange => true;
@@ -161,7 +161,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
                 State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = DialPadConstants.ProviderTechnicalName,
-                StartedUtc = DateTimeOffset.UtcNow,
+                StartedUtc = _clock.UtcNow,
             };
 
             return TelephonyResult.Success(call);

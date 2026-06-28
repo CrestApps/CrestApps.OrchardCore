@@ -11,7 +11,7 @@ internal sealed class FakeAuthTelephonyProvider : ITelephonyProvider, ITelephony
 {
     public bool RequiresUserAuthentication { get; set; } = true;
 
-    public string AuthenticationScheme { get; set; } = TelephonyAuthenticationSchemes.OAuth2;
+    public string AuthenticationScheme { get; set; } = TelephonyConstants.AuthenticationSchemes.OAuth2;
 
     public bool SupportsProofKeyForCodeExchange { get; set; }
 

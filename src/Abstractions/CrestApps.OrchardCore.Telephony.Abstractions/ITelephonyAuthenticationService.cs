@@ -30,8 +30,8 @@ public interface ITelephonyAuthenticationService
     /// <param name="redirectUri">The callback URL used when the authorization request was created.</param>
     /// <param name="codeVerifier">The PKCE code verifier generated when the authorization request was created, or <see langword="null"/> when PKCE is not used.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><see langword="true"/> when the user was connected successfully; otherwise <see langword="false"/>.</returns>
-    Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default);
+    /// <returns>The authorization completion result.</returns>
+    Task<TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Disconnects the current user from the configured provider by removing the stored tokens.

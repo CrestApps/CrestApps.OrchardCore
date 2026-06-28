@@ -30,7 +30,7 @@ public sealed class TelephonyConnectionStatus
 
     /// <summary>
     /// Gets or sets the authentication scheme the provider uses when per-user authentication is required,
-    /// for example <see cref="TelephonyAuthenticationSchemes.OAuth2"/>. The soft phone uses this value to
+    /// for example <see cref="TelephonyConstants.AuthenticationSchemes.OAuth2"/>. The soft phone uses this value to
     /// select the matching authentication experience, which keeps the widget extensible to new scenarios.
     /// </summary>
     public string AuthenticationScheme { get; set; }

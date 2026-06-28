@@ -18,6 +18,17 @@ public static class TelephonyConstants
     public const string TokenProtectorPurpose = "CrestApps.OrchardCore.Telephony.UserTokens";
 
     /// <summary>
+    /// Contains the well-known authentication scheme identifiers a telephony provider can use.
+    /// </summary>
+    public static class AuthenticationSchemes
+    {
+        /// <summary>
+        /// The OAuth 2.0 authorization code scheme, used by providers such as DialPad.
+        /// </summary>
+        public const string OAuth2 = "oauth2";
+    }
+
+    /// <summary>
     /// Contains the names of the routes exposed by the Telephony module.
     /// </summary>
     public static class RouteNames

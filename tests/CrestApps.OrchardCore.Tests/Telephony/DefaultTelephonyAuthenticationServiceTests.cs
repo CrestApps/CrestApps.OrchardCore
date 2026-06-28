@@ -57,7 +57,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         // Assert
         Assert.True(status.RequiresAuthentication);
         Assert.False(status.IsConnected);
-        Assert.Equal(TelephonyAuthenticationSchemes.OAuth2, status.AuthenticationScheme);
+        Assert.Equal(TelephonyConstants.AuthenticationSchemes.OAuth2, status.AuthenticationScheme);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.Succeeded);
         Assert.NotNull(stored);
         Assert.Equal("exchanged", stored.AccessToken);
     }

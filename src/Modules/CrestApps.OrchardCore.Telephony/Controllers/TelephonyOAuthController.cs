@@ -118,7 +118,8 @@ public sealed class TelephonyOAuthController : Controller
                         !string.IsNullOrEmpty(storedState) &&
                         string.Equals(storedState, state, StringComparison.Ordinal))
                     {
-                        success = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier);
+                        var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier);
+                        success = result.Succeeded;
                     }
                 }
             }

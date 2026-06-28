@@ -15,7 +15,7 @@ public interface ITelephonyAuthenticationProvider
 
     /// <summary>
     /// Gets the authentication scheme identifier the provider uses, for example
-    /// <see cref="TelephonyAuthenticationSchemes.OAuth2"/>. The soft phone uses this to select the
+    /// <see cref="TelephonyConstants.AuthenticationSchemes.OAuth2"/>. The soft phone uses this to select the
     /// matching authentication experience.
     /// </summary>
     string AuthenticationScheme { get; }

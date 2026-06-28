@@ -109,14 +109,18 @@ the browser.
 
 ## Registering the provider in code
 
-The provider is registered by the module's startup using the shared extension method:
+The provider is registered by the module's startup with a named HTTP client that uses the standard
+ASP.NET Core resiliency pipeline, plus the tenant-aware provider options configuration:
 
 ```csharp
-services
-    .AddDialPadTelephonyProvider()
-    .AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
+services.AddHttpClient(DialPadConstants.ProviderTechnicalName)
+    .AddStandardResilienceHandler();
+
+services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
+services.AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
 ```
 
-`AddDialPadTelephonyProvider` registers the named HTTP client and an
-`IConfigureOptions<TelephonyProviderOptions>` that reflects whether DialPad is enabled based on the
-tenant settings.
+The `DialPadProviderOptionsConfigurations` implementation contributes the DialPad provider only when
+the tenant settings enable it. The named HTTP client is resolved by the provider for REST API and OAuth
+token calls, so transient DialPad failures go through the configured retry, timeout, circuit-breaker,
+and attempt-limiter policies.

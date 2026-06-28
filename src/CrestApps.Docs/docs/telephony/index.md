@@ -224,7 +224,7 @@ To add a new provider:
    `TelephonyConstants.SettingsGroupId` so the provider gets its own tab on the telephony settings
    screen.
 5. For per-user authentication, also implement `ITelephonyAuthenticationProvider`. Declare the
-   `AuthenticationScheme` (for example `TelephonyAuthenticationSchemes.OAuth2`), build the
+   `AuthenticationScheme` (for example `TelephonyConstants.AuthenticationSchemes.OAuth2`), build the
    authorization URL, exchange the authorization code for tokens, and refresh tokens. The framework
    stores the tokens securely on the user's account and supplies them back to your provider through
    `ITelephonyAuthenticationService`. Providers that only use a shared account key do not implement

@@ -116,11 +116,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     }
 
     /// <inheritdoc/>
-    public async Task<bool> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(code))
         {
-            return false;
+            return TelephonyResult.Failed("The authorization code is required.");
         }
 
         var name = await GetDefaultProviderNameAsync();
@@ -128,7 +128,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         if (string.IsNullOrEmpty(name) || provider is not ITelephonyAuthenticationProvider authenticationProvider)
         {
-            return false;
+            return TelephonyResult.Failed("No telephony authentication provider is configured.");
         }
 
         var context = new TelephonyCodeExchangeContext
@@ -142,14 +142,14 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
         {
-            return false;
+            return TelephonyResult.Failed("The telephony provider did not return a valid access token.");
         }
 
         tokens.ProviderName = name;
 
         await _tokenStore.StoreAsync(name, tokens, cancellationToken);
 
-        return true;
+        return TelephonyResult.Success();
     }
 
     /// <inheritdoc/>
