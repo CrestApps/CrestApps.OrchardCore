@@ -114,7 +114,21 @@ ASP.NET Core resiliency pipeline, plus the tenant-aware provider options configu
 
 ```csharp
 services.AddHttpClient(DialPadConstants.ProviderTechnicalName)
-    .AddStandardResilienceHandler();
+    .AddStandardResilienceHandler(options =>
+    {
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+
+        options.Retry.MaxRetryAttempts = 3;
+        options.Retry.Delay = TimeSpan.FromSeconds(2);
+        options.Retry.BackoffType = DelayBackoffType.Exponential;
+        options.Retry.UseJitter = true;
+
+        options.CircuitBreaker.FailureRatio = 0.1;
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+        options.CircuitBreaker.MinimumThroughput = 100;
+        options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
+    });
 
 services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
 services.AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
