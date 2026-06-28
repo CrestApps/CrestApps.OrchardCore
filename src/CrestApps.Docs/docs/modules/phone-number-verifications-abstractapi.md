@@ -24,9 +24,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | **Endpoint** | `https://phonevalidation.abstractapi.com/v1/` | The AbstractAPI Phone Validation endpoint. |
-| **Authentication type** | API key | The authentication strategy. AbstractAPI uses API key authentication. |
 | **API key** | _(empty)_ | The API key issued by AbstractAPI. Stored as a protected value. |
-| **Username** / **Password** | _(empty)_ | Used when basic authentication is selected (for proxies that front AbstractAPI). |
 
 ![AbstractAPI provider settings tab](/img/docs/phone-number-verifications-provider-settings.png)
 
@@ -34,9 +32,7 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 ## Authentication
 
-AbstractAPI authenticates requests with an API key supplied as the `api_key` query string parameter. Select **API key** as the authentication type and provide the key issued from your AbstractAPI dashboard. The key is stored using ASP.NET Core Data Protection and is never displayed again after it is saved — enter a new value to rotate it, or leave the field empty to keep the existing key.
-
-The **Basic** authentication type is provided for proxies that front AbstractAPI with additional authentication. When **Basic** is selected and a username is provided, the request includes an HTTP `Authorization: Basic` header alongside the API key.
+AbstractAPI authenticates requests with an API key supplied as the `api_key` query string parameter. Provide the key issued from your AbstractAPI dashboard. The key is stored using ASP.NET Core Data Protection and is never displayed again after it is saved — enter a new value to rotate it, or leave the field empty to keep the existing key.
 
 ## Site settings
 
@@ -49,7 +45,6 @@ The provider settings are stored in the `AbstractApiPhoneNumberVerificationSetti
       "name": "settings",
       "AbstractApiPhoneNumberVerificationSettings": {
         "Endpoint": "https://phonevalidation.abstractapi.com/v1/",
-        "AuthenticationType": "ApiKey",
         "ProtectedApiKey": "encrypted-api-key"
       }
     }
@@ -57,7 +52,7 @@ The provider settings are stored in the `AbstractApiPhoneNumberVerificationSetti
 }
 ```
 
-Secret values (`ProtectedApiKey`, `ProtectedPassword`) are stored encrypted. Provision them through the admin UI so they are encrypted with the tenant's data-protection keys.
+Secret values (`ProtectedApiKey`) are stored encrypted. Provision them through the admin UI so they are encrypted with the tenant's data-protection keys.
 
 ## Verification capabilities
 
@@ -80,14 +75,14 @@ AbstractAPI returns the following information, which the provider maps into the 
 
 1. Create an account at [abstractapi.com](https://www.abstractapi.com/api/phone-validation-api) and copy the Phone Validation API key.
 2. Enable the **AbstractAPI Phone Number Verification** feature under **Configuration** -> **Features**.
-3. Open **Settings** -> **Phone Number Verifications**, select the **AbstractAPI** tab, set **Authentication type** to **API key**, paste the key, and save.
+3. Open **Settings** -> **Phone Number Verifications**, select the **AbstractAPI** tab, paste the key, and save.
 4. On the **General** tab, select **AbstractAPI** as the default provider.
 
 ## Troubleshooting
 
 | Symptom | Resolution |
 | --- | --- |
-| Verifications always return `Failed` | Confirm the API key is valid and that the endpoint is reachable. Check the application logs for the AbstractAPI status code. |
+| Verifications always return `Failed` | Confirm the API key is valid and that the endpoint is reachable. Check the application logs for the AbstractAPI status code, safe endpoint, and whether an API key was configured. |
 | The **AbstractAPI** tab is missing | Ensure the **AbstractAPI Phone Number Verification** feature is enabled. |
 | Numbers are not normalized to E.164 | Provide numbers with a country context, or enable the **Phone Numbers Services** feature so `IPhoneNumberService` can normalize them. |
 | Rotated key has no effect | Saving an empty API key keeps the previous key. Enter the new key explicitly to replace it. |

@@ -68,10 +68,8 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         {
             viewModel.IsEnabled = settings.IsEnabled;
             viewModel.Endpoint = settings.Endpoint;
-            viewModel.AuthenticationType = settings.AuthenticationType;
-            viewModel.Username = settings.Username;
+            viewModel.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
             viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
-            viewModel.HasPassword = !string.IsNullOrWhiteSpace(settings.ProtectedPassword);
         }).Location("Content:5#AbstractAPI")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
@@ -95,8 +93,9 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
         settings.Endpoint = string.IsNullOrWhiteSpace(viewModel.Endpoint)
             ? "https://phonevalidation.abstractapi.com/v1/"
             : viewModel.Endpoint.Trim();
-        settings.AuthenticationType = viewModel.AuthenticationType;
-        settings.Username = viewModel.Username;
+        settings.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
+        settings.Username = null;
+        settings.ProtectedPassword = null;
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
 
@@ -105,19 +104,13 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
             settings.ProtectedApiKey = protector.Protect(viewModel.ApiKey);
         }
 
-        if (!string.IsNullOrWhiteSpace(viewModel.Password))
-        {
-            settings.ProtectedPassword = protector.Protect(viewModel.Password);
-        }
-
         if (viewModel.IsEnabled)
         {
             settings.IsEnabled = true;
 
-            if (settings.AuthenticationType == PhoneNumberVerificationAuthenticationType.ApiKey
-                && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+            if (string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required when using API key authentication."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ApiKey), S["An API key is required."]);
             }
         }
         else

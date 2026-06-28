@@ -79,13 +79,30 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
 
         var client = _httpClientFactory.CreateClient(nameof(TwilioPhoneNumberVerificationProvider));
 
+        PhoneNumberVerificationProviderLogMessages.Starting(
+            _logger,
+            "Twilio Lookup",
+            request.RequestUri,
+            settings.AuthenticationType.ToString(),
+            credentials is not null);
+
         using var response = await client.SendAsync(request, cancellationToken);
 
         var payload = await response.Content.ReadAsStringAsync(cancellationToken);
 
+        PhoneNumberVerificationProviderLogMessages.ResponseReceived(
+            _logger,
+            "Twilio Lookup",
+            (int)response.StatusCode,
+            payload?.Length ?? 0);
+
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Twilio Lookup returned status code {StatusCode} while verifying a phone number.", (int)response.StatusCode);
+            PhoneNumberVerificationProviderLogMessages.NonSuccessStatusCode(
+                _logger,
+                "Twilio Lookup",
+                (int)response.StatusCode,
+                response.ReasonPhrase);
 
             return CreateFailedResult(phoneNumber, payload, $"Twilio Lookup returned HTTP status code {(int)response.StatusCode}.");
         }
@@ -110,7 +127,11 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             return CreateFailedResult(phoneNumber, payload, "The Twilio Lookup response was empty.");
         }
 
-        return MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _clock.UtcNow, _phoneNumberService);
+        var result = MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _clock.UtcNow, _phoneNumberService);
+
+        PhoneNumberVerificationProviderLogMessages.Completed(_logger, "Twilio Lookup", result);
+
+        return result;
     }
 
     internal static PhoneNumberVerificationResult MapResponse(

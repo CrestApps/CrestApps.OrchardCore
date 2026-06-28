@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
@@ -60,6 +59,13 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
         var apiKey = Unprotect(protector, settings.ProtectedApiKey);
 
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            _logger.LogWarning("AbstractAPI API key is not configured. Skipping phone number verification.");
+
+            return CreateFailedResult(phoneNumber, null, "AbstractAPI API key is not configured.");
+        }
+
         var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
             ? "https://phonevalidation.abstractapi.com/v1/"
             : settings.Endpoint;
@@ -68,17 +74,32 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
 
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
 
-        ApplyAuthentication(request, settings, protector);
-
         var client = _httpClientFactory.CreateClient(nameof(AbstractApiPhoneNumberVerificationProvider));
+
+        PhoneNumberVerificationProviderLogMessages.Starting(
+            _logger,
+            "AbstractAPI",
+            requestUri,
+            "ApiKey",
+            !string.IsNullOrWhiteSpace(apiKey));
 
         using var response = await client.SendAsync(request, cancellationToken);
 
         var payload = await response.Content.ReadAsStringAsync(cancellationToken);
 
+        PhoneNumberVerificationProviderLogMessages.ResponseReceived(
+            _logger,
+            "AbstractAPI",
+            (int)response.StatusCode,
+            payload?.Length ?? 0);
+
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("AbstractAPI returned status code {StatusCode} while verifying a phone number.", (int)response.StatusCode);
+            PhoneNumberVerificationProviderLogMessages.NonSuccessStatusCode(
+                _logger,
+                "AbstractAPI",
+                (int)response.StatusCode,
+                response.ReasonPhrase);
 
             return CreateFailedResult(phoneNumber, payload, $"AbstractAPI returned HTTP status code {(int)response.StatusCode}.");
         }
@@ -103,7 +124,11 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             return CreateFailedResult(phoneNumber, payload, "The AbstractAPI phone validation response was empty.");
         }
 
-        return MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
+        var result = MapResponse(phoneNumber, parsed, payload, _clock.UtcNow, _phoneNumberService);
+
+        PhoneNumberVerificationProviderLogMessages.Completed(_logger, "AbstractAPI", result);
+
+        return result;
     }
 
     internal static PhoneNumberVerificationResult MapResponse(
@@ -194,7 +219,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             : "+" + trimmed;
     }
 
-    private static Uri BuildRequestUri(string endpoint, string apiKey, string phoneNumber)
+    internal static Uri BuildRequestUri(string endpoint, string apiKey, string phoneNumber)
     {
         var builder = new UriBuilder(endpoint);
         var query = new StringBuilder(builder.Query.TrimStart('?'));
@@ -213,21 +238,6 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         builder.Query = query.ToString();
 
         return builder.Uri;
-    }
-
-    private void ApplyAuthentication(
-        HttpRequestMessage request,
-        AbstractApiPhoneNumberVerificationSettings settings,
-        IDataProtector protector)
-    {
-        if (settings.AuthenticationType == PhoneNumberVerificationAuthenticationType.Basic
-            && !string.IsNullOrWhiteSpace(settings.Username))
-        {
-            var password = Unprotect(protector, settings.ProtectedPassword);
-            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{settings.Username}:{password}"));
-
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-        }
     }
 
     private string Unprotect(IDataProtector protector, string protectedValue)

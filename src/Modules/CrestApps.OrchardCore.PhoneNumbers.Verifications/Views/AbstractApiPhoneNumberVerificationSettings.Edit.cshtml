@@ -1,4 +1,3 @@
-@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
 @model AbstractApiPhoneNumberVerificationSettingsViewModel
 
 <h4 class="card-title">@T["AbstractAPI"]</h4>
@@ -25,86 +24,18 @@
     </div>
 
     <div class="ocat-wrapper">
-        <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+        <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
         <div class="ocat-end">
-            <select asp-for="AuthenticationType" class="form-select auth-type-select">
-                <option value="@PhoneNumberVerificationAuthenticationType.ApiKey">@T["API key"]</option>
-                <option value="@PhoneNumberVerificationAuthenticationType.Basic">@T["Basic"]</option>
-            </select>
-            <span class="hint">@T["The authentication strategy used when calling the provider. AbstractAPI uses API key authentication."]</span>
-        </div>
-    </div>
-
-    <div class="authentication-type-dependent authentication-type-dependent-@PhoneNumberVerificationAuthenticationType.ApiKey@(Model.AuthenticationType == PhoneNumberVerificationAuthenticationType.ApiKey ? string.Empty : " d-none")">
-        <div class="ocat-wrapper">
-            <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
-            <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder='@T["Enter a new API key to replace the saved key"]' />
-                <span asp-validation-for="ApiKey" class="text-danger"></span>
-                @if (Model.HasApiKey)
-                {
-                    <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
-                }
-                else
-                {
-                    <span class="hint">@T["The API key provided by AbstractAPI for authenticating requests."]</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div class="authentication-type-dependent authentication-type-dependent-@PhoneNumberVerificationAuthenticationType.Basic@(Model.AuthenticationType == PhoneNumberVerificationAuthenticationType.Basic ? string.Empty : " d-none")">
-        <div class="ocat-wrapper">
-            <label asp-for="Username" class="ocat-label">@T["Username"]</label>
-            <div class="ocat-end">
-                <input type="text" class="form-control" asp-for="Username" autocomplete="off" />
-                <span class="hint">@T["The username used when basic authentication is selected."]</span>
-            </div>
-        </div>
-
-        <div class="ocat-wrapper">
-            <label asp-for="Password" class="ocat-label">@T["Password"]</label>
-            <div class="ocat-end">
-                <input type="password" class="form-control" asp-for="Password" autocomplete="off" placeholder='@T["Enter a new password to replace the saved value"]' />
-                @if (Model.HasPassword)
-                {
-                    <span class="hint text-success">@T["A password has been securely stored. Enter a new value to replace it, or leave empty to keep the existing password."]</span>
-                }
-                else
-                {
-                    <span class="hint">@T["The password used when basic authentication is selected."]</span>
-                }
-            </div>
+            <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder='@T["Enter a new API key to replace the saved key"]' />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+            @if (Model.HasApiKey)
+            {
+                <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["The API key provided by AbstractAPI for authenticating requests."]</span>
+            }
         </div>
     </div>
 </div>
-
-<script at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var container = document.getElementById('AbstractApi_Provider_Settings');
-
-        if (!container) {
-            return;
-        }
-
-        var authSelect = container.querySelector('.auth-type-select');
-
-        if (!authSelect) {
-            return;
-        }
-
-        function toggleSections() {
-            var sections = container.querySelectorAll('.authentication-type-dependent');
-            for (var i = 0; i < sections.length; i++) {
-                sections[i].classList.add('d-none');
-
-                if (sections[i].classList.contains('authentication-type-dependent-' + authSelect.value)) {
-                    sections[i].classList.remove('d-none');
-                }
-            }
-        }
-
-        authSelect.addEventListener('change', toggleSections);
-        toggleSections();
-    });
-</script>
