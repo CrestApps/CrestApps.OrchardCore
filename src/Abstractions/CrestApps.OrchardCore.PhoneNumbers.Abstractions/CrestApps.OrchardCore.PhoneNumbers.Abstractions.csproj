@@ -11,4 +11,8 @@
     <PackageTags>$(PackageTags) PhoneNumbers Abstractions</PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
+
 </Project>

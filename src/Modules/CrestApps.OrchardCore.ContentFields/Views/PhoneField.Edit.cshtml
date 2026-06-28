@@ -1,10 +1,31 @@
 @model CrestApps.OrchardCore.ContentFields.ViewModels.EditPhoneFieldViewModel
+@using System.Globalization
+@using System.Text.Json.Nodes
 @using CrestApps.OrchardCore.ContentFields.Settings
+@using OrchardCore.ContentManagement
 @using OrchardCore.ContentManagement.Metadata.Models
 @using OrchardCore.Mvc.Utilities
 @{
     var settings = Model.PartFieldDefinition.GetSettings<PhoneFieldSettings>();
     var initialCountry = Model.CountryCode?.ToLowerInvariant() ?? string.Empty;
+    var verification = GetPhoneVerificationInfo(Model.Part, Model.PhoneNumber);
+    var verificationStatus = verification.Matches ? verification.Status : "Unverified";
+    var verificationIconClass = verificationStatus switch
+    {
+        "Verified" => "fas fa-check-circle text-success",
+        "Invalid" => "fas fa-times-circle text-danger",
+        "Failed" => "fas fa-exclamation-triangle text-warning",
+        _ => "fas fa-question-circle text-muted",
+    };
+    var verificationTitle = verificationStatus switch
+    {
+        "Verified" when verification.LastVerifiedUtc.HasValue => T["Phone number verified on {0}.", verification.LastVerifiedUtc.Value.ToString("g")].Value,
+        "Verified" => T["Phone number is verified."].Value,
+        "Invalid" when verification.LastVerifiedUtc.HasValue => T["Phone number is invalid. Last checked on {0}.", verification.LastVerifiedUtc.Value.ToString("g")].Value,
+        "Invalid" => T["Phone number is invalid."].Value,
+        "Failed" => T["Phone number verification failed."].Value,
+        _ => T["Phone number has not been verified."].Value,
+    };
 }
 
 <div class="ocat-wrapper field-wrapper @($"field-wrapper-{Model.PartFieldDefinition.PartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()} content-field-international-telephone" + (Model.PartFieldDefinition.IsNamedPart() ? $" field-wrapper-{Model.PartFieldDefinition.ContentTypePartDefinition.Name.HtmlClassify()}-{Model.PartFieldDefinition.Name.HtmlClassify()}" : string.Empty))"
@@ -20,6 +41,10 @@
         <input type="hidden" asp-for="PhoneNumber" data-phone-e164="true" />
         <input type="hidden" asp-for="CountryCode" data-phone-country="true" />
         <input type="hidden" asp-for="NationalNumber" data-phone-national="true" />
+        @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+        {
+            <i class="@verificationIconClass ms-1" title="@verificationTitle" aria-label="@verificationTitle"></i>
+        }
         <span asp-validation-for="PhoneNumber"></span>
         @if (!string.IsNullOrEmpty(settings.Hint))
         {
@@ -31,3 +56,102 @@
 <style asp-name="intl-tel-input" at="Head"></style>
 <style asp-name="international-telephone-editor" at="Head"></style>
 <script asp-name="international-telephone-editor" at="Foot"></script>
+
+@functions {
+    private sealed class PhoneVerificationInfo
+    {
+        public string Status { get; set; } = "Unverified";
+
+        public DateTime? LastVerifiedUtc { get; set; }
+
+        public bool Matches { get; set; }
+    }
+
+    private static PhoneVerificationInfo GetPhoneVerificationInfo(ContentPart part, string phoneNumber)
+    {
+        var info = new PhoneVerificationInfo();
+
+        if (part?.ContentItem?.Content is not JsonObject content ||
+            !content.TryGetPropertyValue("PhoneNumberVerificationPart", out var partNode) ||
+            partNode is not JsonObject verificationPart)
+        {
+            return info;
+        }
+
+        info.Status = ReadStatus(verificationPart);
+        info.LastVerifiedUtc = ReadDateTime(verificationPart, "LastVerifiedUtc");
+        info.Matches = PhoneNumberMatches(verificationPart, phoneNumber);
+
+        return info;
+    }
+
+    private static string ReadStatus(JsonObject verificationPart)
+    {
+        if (!verificationPart.TryGetPropertyValue("VerificationStatus", out var node) || node is not JsonValue value)
+        {
+            return "Unverified";
+        }
+
+        if (value.TryGetValue<int>(out var status))
+        {
+            return status switch
+            {
+                1 => "Verified",
+                2 => "Invalid",
+                3 => "Failed",
+                _ => "Unverified",
+            };
+        }
+
+        if (value.TryGetValue<string>(out var text) && !string.IsNullOrWhiteSpace(text))
+        {
+            return int.TryParse(text, CultureInfo.InvariantCulture, out status)
+                ? status switch
+                {
+                    1 => "Verified",
+                    2 => "Invalid",
+                    3 => "Failed",
+                    _ => "Unverified",
+                }
+                : text;
+        }
+
+        return "Unverified";
+    }
+
+    private static DateTime? ReadDateTime(JsonObject verificationPart, string propertyName)
+    {
+        if (!verificationPart.TryGetPropertyValue(propertyName, out var node) || node is not JsonValue value)
+        {
+            return null;
+        }
+
+        if (value.TryGetValue<DateTime>(out var dateTime))
+        {
+            return dateTime;
+        }
+
+        return value.TryGetValue<string>(out var text) &&
+            DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out dateTime)
+            ? dateTime
+            : null;
+    }
+
+    private static bool PhoneNumberMatches(JsonObject verificationPart, string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return false;
+        }
+
+        return string.Equals(ReadString(verificationPart, "PhoneNumber"), phoneNumber, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(ReadString(verificationPart, "NormalizedPhoneNumber"), phoneNumber, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ReadString(JsonObject obj, string propertyName)
+    {
+        return obj.TryGetPropertyValue(propertyName, out var node) && node is JsonValue value && value.TryGetValue<string>(out var text)
+            ? text
+            : null;
+    }
+}

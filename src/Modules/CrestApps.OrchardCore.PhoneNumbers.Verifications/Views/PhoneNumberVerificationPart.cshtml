@@ -1,0 +1,17 @@
+@model PhoneNumberVerificationPartViewModel
+
+@{
+    var statusClass = Model.VerificationStatus switch
+    {
+        PhoneNumberVerificationStatus.Verified => "text-bg-success",
+        PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+        PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<span class="badge @statusClass" title="@T["Phone number verification status"]">@Model.VerificationStatus.ToString()</span>
+@if (Model.LastVerifiedUtc.HasValue)
+{
+    <span class="text-muted ms-1">@T["Verified {0}", Model.LastVerifiedUtc.Value.ToString("g")]</span>
+}

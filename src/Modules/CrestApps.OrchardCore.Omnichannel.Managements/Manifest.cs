@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.TimeZones;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -10,20 +10,20 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,
-    Category = "Communications",
+    Category = "Communication",
     Description = "Provides way to manage Omnichannel Contacts",
     Dependencies =
     [
         OmnichannelConstants.Features.Area,
         UsersConstants.Feature.Area,
         "CrestApps.OrchardCore.ContentFields",
-        PhoneNumbersConstants.Features.Area,
+        PhoneNumberVerificationsConstants.Features.PhoneNumbers,
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
         "OrchardCore.Flows",

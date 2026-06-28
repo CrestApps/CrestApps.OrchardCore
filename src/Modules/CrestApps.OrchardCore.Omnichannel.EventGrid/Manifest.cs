@@ -7,13 +7,13 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel (Azure Event Grid)",
     Id = "CrestApps.OrchardCore.Omnichannel.EventGrid",
-    Category = "Communications",
+    Category = "Communication",
     Description = "Provides was to communicate using Azure Event Grid",
     Dependencies =
     [

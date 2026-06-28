@@ -1,0 +1,223 @@
+@model PhoneNumberVerificationRecordsViewModel
+
+@{
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+
+    var filters = new[]
+    {
+        PhoneNumberVerificationRecordFilter.All,
+        PhoneNumberVerificationRecordFilter.Verified,
+        PhoneNumberVerificationRecordFilter.Invalid,
+        PhoneNumberVerificationRecordFilter.Failed,
+        PhoneNumberVerificationRecordFilter.Pending,
+        PhoneNumberVerificationRecordFilter.NeedsAttention,
+    };
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Phone Verifications Queue"])</h1></zone>
+
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
+    @foreach (var filter in filters)
+    {
+        var count = Model.Counts.TryGetValue(filter, out var value) ? value : 0;
+        var isActive = Model.Status == filter;
+        var label = filter switch
+        {
+            PhoneNumberVerificationRecordFilter.All => T["All"],
+            PhoneNumberVerificationRecordFilter.Verified => T["Verified"],
+            PhoneNumberVerificationRecordFilter.Invalid => T["Invalid"],
+            PhoneNumberVerificationRecordFilter.Failed => T["Failed"],
+            PhoneNumberVerificationRecordFilter.Pending => T["Pending"],
+            PhoneNumberVerificationRecordFilter.NeedsAttention => T["Needs attention"],
+            _ => T[filter.ToString()],
+        };
+        var accent = filter switch
+        {
+            PhoneNumberVerificationRecordFilter.Verified => "text-success",
+            PhoneNumberVerificationRecordFilter.Invalid => "text-danger",
+            PhoneNumberVerificationRecordFilter.Failed => "text-warning",
+            PhoneNumberVerificationRecordFilter.NeedsAttention => "text-danger",
+            _ => "text-body",
+        };
+
+        <div class="col">
+            <a asp-action="Index" asp-route-status="@filter" asp-route-q="@Model.Q" asp-route-sort="@Model.Sort"
+               class="card h-100 text-decoration-none @(isActive ? "border-primary border-2" : "")"
+               title="@T["Show {0} records", label]">
+                <div class="card-body py-3">
+                    <h6 class="card-subtitle text-muted mb-1">@label</h6>
+                    <p class="h3 mb-0 @accent">@count</p>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+<form asp-action="Index" asp-controller="Records" method="get">
+    <input type="hidden" asp-for="Status" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3 gy-2 align-items-center">
+                <div class="col-12 col-md">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Q" class="form-control" placeholder="@T["Search by phone number"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <div class="d-flex align-items-center gap-2">
+                        <label asp-for="Sort" class="col-form-label text-nowrap">@T["Sort by"]</label>
+                        <select asp-for="Sort" asp-items="Model.Sorts" class="form-select" onchange="this.form.submit()"></select>
+                    </div>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary">@T["Search"]</button>
+                    <a asp-action="Index" asp-controller="Records" class="btn btn-link">@T["Reset"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Entries.Count == 0)
+{
+    <div class="alert alert-info text-center">@T["No phone number verifications match the current filter."]</div>
+}
+else
+{
+    <form asp-action="RetrySelected" asp-controller="Records" method="post">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <input type="hidden" name="q" value="@Model.Q" />
+
+        @if (Model.CanVerifyPhoneNumbers)
+        {
+            <div class="card text-bg-theme mb-3 position-sticky action-bar">
+                <div class="card-body">
+                    <div class="row gx-3 gy-2 align-items-center">
+                        <div class="col-12 col-md-auto">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="select-all-records" />
+                                <label class="form-check-label" for="select-all-records">@T["Select all on this page"]</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md">
+                            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                                <button type="submit" class="btn btn-secondary" formaction="@Url.Action("RetrySelected", "Records")">
+                                    <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>@T["Retry selected"]
+                                </button>
+                                <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
+                                        title="@T["Re-queues every failed or needs-attention record across all pages that matches the current search."]">
+                                    <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <ul class="list-group">
+            @foreach (var entry in Model.Entries)
+            {
+                var statusClass = entry.VerificationStatus switch
+                {
+                    PhoneNumberVerificationStatus.Verified => "text-bg-success",
+                    PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+                    PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+                    _ => "text-bg-secondary",
+                };
+                var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
+                var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
+                var provider = string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider;
+                var lastAttempt = entry.LastAttemptUtc.HasValue
+                    ? entry.LastAttemptUtc.Value.ToString("g")
+                    : T["Never"].Value;
+
+                <li class="list-group-item">
+                    <div class="row align-items-center gx-3 gy-2">
+                        @if (Model.CanVerifyPhoneNumbers)
+                        {
+                            <div class="col-auto">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input record-checkbox" type="checkbox" name="contentItemIds" value="@entry.ContentItemId" aria-label="@T["Select record"]" />
+                                </div>
+                            </div>
+                        }
+                        <div class="col-12 col-lg">
+                            <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
+                            @if (!string.IsNullOrEmpty(entry.DisplayText))
+                            {
+                                <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
+                            }
+                        </div>
+                        <div class="col-12 col-lg-auto">
+                            <div class="tags d-flex flex-wrap gap-1 justify-content-lg-end">
+                                <span class="badge @statusClass">@entry.VerificationStatus.ToString()</span>
+                                @if (entry.IsExhausted)
+                                {
+                                    <span class="badge text-bg-danger" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
+                                }
+                                <span class="badge text-bg-light border text-body" title="@T["Provider"]">@T["Provider: {0}", provider]</span>
+                                @if (!string.IsNullOrEmpty(entry.LineStatus))
+                                {
+                                    <span class="badge text-bg-light border text-body" title="@T["Line status"]">@T["Line status: {0}", entry.LineStatus]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(entry.MinimumAge))
+                                {
+                                    <span class="badge text-bg-light border text-body" title="@T["Minimum age"]">@T["Minimum age: {0}", entry.MinimumAge]</span>
+                                }
+                                <span class="badge text-bg-light border text-body" title="@T["Attempts"]">@T["Attempts: {0}", entry.VerificationAttemptCount]</span>
+                                @if (entry.FailedAttemptCount > 0)
+                                {
+                                    <span class="badge text-bg-light border text-danger" title="@T["Failed attempts"]">@T["Failed: {0}", entry.FailedAttemptCount]</span>
+                                }
+                                <span class="badge text-bg-light border text-body" title="@T["Last attempt"]">@T["Last attempt: {0}", lastAttempt]</span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-auto text-lg-end">
+                            @if (Model.CanVerifyPhoneNumbers && entry.FailedAttemptCount > 0)
+                            {
+                                <button type="submit" name="contentItemId" value="@entry.ContentItemId" formaction="@Url.Action("Retry", "Records")" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
+                            }
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(entry.LastError))
+                    {
+                        <div class="text-danger small mt-2">
+                            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i><code class="text-danger">@entry.LastError</code>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    </form>
+
+    @await DisplayAsync(Model.Pager)
+}
+
+<script at="Foot">
+    (function () {
+        var selectAll = document.getElementById('select-all-records');
+
+        if (!selectAll) {
+            return;
+        }
+
+        var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.record-checkbox'));
+
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = selectAll.checked;
+            });
+        });
+
+        checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                selectAll.checked = checkboxes.every(function (item) {
+                    return item.checked;
+                });
+            });
+        });
+    })();
+</script>

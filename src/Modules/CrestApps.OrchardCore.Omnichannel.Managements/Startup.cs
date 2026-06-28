@@ -16,7 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -170,7 +170,7 @@ public sealed class AISubjectFlowStartup : StartupBase
     }
 }
 
-[RequireFeatures(ContentTransferConstants.Feature.ModuleId, PhoneNumbersConstants.Features.Area)]
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId, PhoneNumberVerificationsConstants.Features.PhoneNumbers)]
 public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

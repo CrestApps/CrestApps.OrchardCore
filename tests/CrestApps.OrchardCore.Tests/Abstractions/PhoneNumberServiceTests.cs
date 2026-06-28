@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Abstractions;
 

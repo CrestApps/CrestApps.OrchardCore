@@ -1,7 +1,7 @@
 using PhoneNumbers;
 using PhoneNumberToTimeZonesMapper = PhoneNumbers.PhoneNumberToTimeZonesMapper;
 
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IPhoneNumberService"/> backed by libphonenumber.
