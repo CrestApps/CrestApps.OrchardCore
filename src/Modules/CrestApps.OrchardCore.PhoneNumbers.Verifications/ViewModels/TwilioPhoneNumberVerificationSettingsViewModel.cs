@@ -14,11 +14,6 @@ public class TwilioPhoneNumberVerificationSettingsViewModel
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the Twilio Lookup endpoint template used to verify phone numbers.
-    /// </summary>
-    public string Endpoint { get; set; }
-
-    /// <summary>
     /// Gets or sets the Twilio Lookup authentication strategy.
     /// </summary>
     public TwilioPhoneNumberVerificationAuthenticationType AuthenticationType { get; set; }

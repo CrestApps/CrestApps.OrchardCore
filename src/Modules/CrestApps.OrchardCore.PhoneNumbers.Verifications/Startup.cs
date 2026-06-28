@@ -68,7 +68,8 @@ public sealed class AbstractApiStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(AbstractApiPhoneNumberVerificationProvider));
+        services.AddHttpClient(nameof(AbstractApiPhoneNumberVerificationProvider))
+            .AddStandardResilienceHandler();
 
         services.AddPhoneNumberVerificationProvider<AbstractApiPhoneNumberVerificationProvider, AbstractApiPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.AbstractApi,
@@ -102,7 +103,8 @@ public sealed class VeriphoneStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(VeriphonePhoneNumberVerificationProvider));
+        services.AddHttpClient(nameof(VeriphonePhoneNumberVerificationProvider))
+            .AddStandardResilienceHandler();
 
         services.AddPhoneNumberVerificationProvider<VeriphonePhoneNumberVerificationProvider, VeriphonePhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Veriphone,
@@ -136,7 +138,8 @@ public sealed class TwilioStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(TwilioPhoneNumberVerificationProvider));
+        services.AddHttpClient(nameof(TwilioPhoneNumberVerificationProvider))
+            .AddStandardResilienceHandler();
 
         services.AddPhoneNumberVerificationProvider<TwilioPhoneNumberVerificationProvider, TwilioPhoneNumberVerificationSettings>(
             PhoneNumberVerificationsConstants.Providers.Twilio,

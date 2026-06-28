@@ -95,6 +95,11 @@ public sealed class PhoneNumberVerificationResult
     public string LineStatus { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider-specific minimum observed line age when available.
+    /// </summary>
+    public string MinimumAge { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional provider risk score, where higher values indicate higher risk.
     /// </summary>
     public double? RiskScore { get; set; }

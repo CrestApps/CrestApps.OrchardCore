@@ -8,19 +8,9 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 public sealed class TwilioPhoneNumberVerificationSettings : IPhoneNumberVerificationProviderSettings
 {
     /// <summary>
-    /// The default Twilio Lookup endpoint template.
-    /// </summary>
-    public const string DefaultEndpoint = "https://lookups.twilio.com/v2/PhoneNumbers/{PhoneNumber}";
-
-    /// <summary>
     /// Gets or sets a value indicating whether the provider is enabled and available for selection.
     /// </summary>
     public bool IsEnabled { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Twilio Lookup endpoint template used to verify phone numbers.
-    /// </summary>
-    public string Endpoint { get; set; } = DefaultEndpoint;
 
     /// <summary>
     /// Gets or sets the Twilio Lookup authentication strategy.

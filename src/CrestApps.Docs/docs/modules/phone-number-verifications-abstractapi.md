@@ -23,7 +23,6 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| **Endpoint** | `https://phonevalidation.abstractapi.com/v1/` | The AbstractAPI Phone Validation endpoint. |
 | **API key** | _(empty)_ | The API key issued by AbstractAPI. Stored as a protected value. |
 
 ![AbstractAPI provider settings tab](/img/docs/phone-number-verifications-provider-settings.png)
@@ -44,7 +43,6 @@ The provider settings are stored in the `AbstractApiPhoneNumberVerificationSetti
     {
       "name": "settings",
       "AbstractApiPhoneNumberVerificationSettings": {
-        "Endpoint": "https://phonevalidation.abstractapi.com/v1/",
         "ProtectedApiKey": "encrypted-api-key"
       }
     }
@@ -67,9 +65,13 @@ AbstractAPI returns the following information, which the provider maps into the 
 | `CountryCode` / `CountryName` | `country.code` / `country.name` |
 | `CountryPrefix` | `country.prefix` |
 | `Carrier` | `carrier` |
+| `LineStatus` | `phone_validation.line_status` when returned. |
+| `MinimumAge` | `phone_validation.minimum_age` when returned. |
 | `TimeZone` | Derived from the normalized number via `IPhoneNumberService`. |
 | `RawProviderResponse` | The full JSON payload. |
 | `Metadata["location"]` | `location` |
+
+When AbstractAPI returns `phone_validation.line_status`, the provider only verifies numbers whose line status is `active`. If the response does not include a line status, the provider falls back to the `valid` flag alone.
 
 ## Sample configuration
 

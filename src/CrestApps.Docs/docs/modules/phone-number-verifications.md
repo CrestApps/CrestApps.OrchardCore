@@ -60,6 +60,7 @@ Providers return a provider-agnostic `PhoneNumberVerificationResult`:
 | `TimeZone` | The IANA time zone identifier. |
 | `LineType` | The normalized line type. |
 | `LineStatus` | The provider-specific line status, when available. |
+| `MinimumAge` | The provider-specific minimum observed line age, when available. |
 | `RiskScore` / `RiskLevel` | Optional provider risk information. |
 | `IsDisposable` / `IsAbuseDetected` | Optional provider risk flags. |
 | `VerificationProvider` | The provider key that produced the result. |
@@ -110,7 +111,7 @@ When a phone field is rendered for display or editing, the UI shows a status ico
 
 ## Resilience and retries
 
-The framework distinguishes a **completed** verification (the provider returned a definitive `Verified` or `Invalid` answer) from a **failed request** (a provider rate limit, HTTP error, transport failure, or unparseable response). A failed request never marks a number as `Invalid`, because the number's validity was never actually determined.
+The framework distinguishes a **completed** verification (the provider returned a definitive `Verified` or `Invalid` answer) from a **failed request** (a provider rate limit, HTTP error, transport failure, or unparseable response). A failed request never marks a number as `Invalid`, because the number's validity was never actually determined. Built-in provider HTTP clients are created through `IHttpClientFactory` and registered with the standard .NET HTTP resilience handler so transient network and service failures are retried consistently.
 
 When a verification request fails:
 
@@ -127,7 +128,7 @@ A **Phone Verifications Queue** dashboard is available under **Tools** for users
 - see clickable status tiles (All, Verified, Invalid, Failed, Pending, and Needs attention) that show per-status counts and filter the list when selected. The status buckets are mutually exclusive and always sum to the total: **Pending** counts records awaiting verification (unverified status, including records just re-queued), **Failed** counts records whose last request failed but can still be retried automatically, and **Needs attention** counts records that have reached the maximum failed attempts,
 - search records by raw or normalized phone number,
 - sort records by most or least recently attempted, or newest or oldest created,
-- review each record's phone number, status, provider, total and failed attempt counts, and last attempt timestamp as compact tags, with the most recent provider error rendered as a red code-style message,
+- review each record's phone number, status, provider, line status, minimum age, total and failed attempt counts, and last attempt timestamp as compact tags, with the most recent provider error rendered as a red code-style message,
 - page through large result sets,
 - re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed or needs-attention record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
 
@@ -237,7 +238,8 @@ public sealed class MyProviderStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(MyPhoneNumberVerificationProvider));
+        services.AddHttpClient(nameof(MyPhoneNumberVerificationProvider))
+            .AddStandardResilienceHandler();
 
         services.AddPhoneNumberVerificationProvider<MyPhoneNumberVerificationProvider>(
             "MyProvider",

@@ -68,7 +68,6 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
         return Initialize<TwilioPhoneNumberVerificationSettingsViewModel>("TwilioPhoneNumberVerificationSettings_Edit", viewModel =>
         {
             viewModel.IsEnabled = settings.IsEnabled;
-            viewModel.Endpoint = settings.Endpoint;
             viewModel.AuthenticationType = settings.AuthenticationType;
             viewModel.ApiKeySid = settings.ApiKeySid;
             viewModel.AccountSid = settings.AccountSid;
@@ -97,9 +96,6 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
-        settings.Endpoint = string.IsNullOrWhiteSpace(viewModel.Endpoint)
-            ? TwilioPhoneNumberVerificationSettings.DefaultEndpoint
-            : viewModel.Endpoint.Trim();
         settings.AuthenticationType = viewModel.AuthenticationType;
         settings.ApiKeySid = viewModel.ApiKeySid?.Trim();
         settings.AccountSid = viewModel.AccountSid?.Trim();

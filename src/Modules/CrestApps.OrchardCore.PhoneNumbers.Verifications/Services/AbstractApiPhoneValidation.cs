@@ -1,24 +1,21 @@
+using System.Text.Json;
+
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 
 /// <summary>
-/// Represents the raw response returned by the AbstractAPI Phone Validation endpoint.
+/// Represents the nested phone validation object returned by the AbstractAPI Phone Intelligence endpoint.
 /// </summary>
-internal sealed class AbstractApiResponse
+internal sealed class AbstractApiPhoneValidation
 {
-    /// <summary>
-    /// Gets or sets the phone number echoed by the provider.
-    /// </summary>
-    public string Phone { get; set; }
-
     /// <summary>
     /// Gets or sets a value indicating whether the phone number is valid.
     /// </summary>
-    public bool Valid { get; set; }
+    public bool? Valid { get; set; }
 
     /// <summary>
-    /// Gets or sets the nested phone validation data returned by the Phone Intelligence endpoint.
+    /// Gets or sets a value indicating whether the phone number is valid when returned as <c>is_valid</c>.
     /// </summary>
-    public AbstractApiPhoneValidation PhoneValidation { get; set; }
+    public bool? IsValid { get; set; }
 
     /// <summary>
     /// Gets or sets the international and local formatted phone number values.
@@ -36,7 +33,7 @@ internal sealed class AbstractApiResponse
     public string Location { get; set; }
 
     /// <summary>
-    /// Gets or sets the reported line type (e.g., mobile, landline, voip).
+    /// Gets or sets the reported line type.
     /// </summary>
     public string Type { get; set; }
 
@@ -44,4 +41,14 @@ internal sealed class AbstractApiResponse
     /// Gets or sets the carrier associated with the phone number.
     /// </summary>
     public string Carrier { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-specific line status.
+    /// </summary>
+    public string LineStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-specific minimum observed line age.
+    /// </summary>
+    public JsonElement? MinimumAge { get; set; }
 }

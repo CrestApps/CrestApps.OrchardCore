@@ -159,6 +159,14 @@ else
                                     <span class="badge text-bg-danger" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
                                 }
                                 <span class="badge text-bg-light border text-body" title="@T["Provider"]">@T["Provider: {0}", provider]</span>
+                                @if (!string.IsNullOrEmpty(entry.LineStatus))
+                                {
+                                    <span class="badge text-bg-light border text-body" title="@T["Line status"]">@T["Line status: {0}", entry.LineStatus]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(entry.MinimumAge))
+                                {
+                                    <span class="badge text-bg-light border text-body" title="@T["Minimum age"]">@T["Minimum age: {0}", entry.MinimumAge]</span>
+                                }
                                 <span class="badge text-bg-light border text-body" title="@T["Attempts"]">@T["Attempts: {0}", entry.VerificationAttemptCount]</span>
                                 @if (entry.FailedAttemptCount > 0)
                                 {

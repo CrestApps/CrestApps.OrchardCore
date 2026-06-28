@@ -24,6 +24,7 @@
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="YesSql.Core" />
   </ItemGroup>

@@ -145,6 +145,8 @@ public sealed class RecordsController : Controller
                 continue;
             }
 
+            part.TryGetPhoneNumberVerificationResult(out var result);
+
             entries.Add(new PhoneNumberVerificationRecordEntry
             {
                 ContentItemId = contentItem.ContentItemId,
@@ -161,6 +163,8 @@ public sealed class RecordsController : Controller
                 FailedAttemptCount = part.FailedAttemptCount,
                 LastError = part.LastError,
                 IsExhausted = part.HasReachedMaxVerificationAttempts(maxAttempts),
+                LineStatus = result?.LineStatus,
+                MinimumAge = result?.MinimumAge,
             });
         }
 

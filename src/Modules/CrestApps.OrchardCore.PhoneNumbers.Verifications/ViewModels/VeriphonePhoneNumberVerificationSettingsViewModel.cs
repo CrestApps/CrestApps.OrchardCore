@@ -13,11 +13,6 @@ public class VeriphonePhoneNumberVerificationSettingsViewModel
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the API endpoint used to verify phone numbers.
-    /// </summary>
-    public string Endpoint { get; set; }
-
-    /// <summary>
     /// Gets or sets the API key used to authenticate with Veriphone.
     /// </summary>
     public string ApiKey { get; set; }

@@ -23,7 +23,6 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| **Endpoint** | `https://lookups.twilio.com/v2/PhoneNumbers/{PhoneNumber}` | The Twilio Lookup endpoint template. `{PhoneNumber}` is replaced with the submitted phone number. |
 | **Authentication type** | API key SID and secret | The Twilio authentication strategy. |
 | **API key SID** / **API key secret** | _(empty)_ | Recommended production credentials. The secret is stored as a protected value. |
 | **Account SID** / **Auth Token** | _(empty)_ | Local testing credentials. The token is stored as a protected value. |
@@ -58,7 +57,6 @@ The provider settings are stored in the `TwilioPhoneNumberVerificationSettings` 
     {
       "name": "settings",
       "TwilioPhoneNumberVerificationSettings": {
-        "Endpoint": "https://lookups.twilio.com/v2/PhoneNumbers/{PhoneNumber}",
         "AuthenticationType": "ApiKey",
         "ApiKeySid": "SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         "ProtectedApiKeySecret": "encrypted-api-key-secret",
@@ -90,6 +88,8 @@ Twilio returns the following information, which the provider maps into the commo
 | `RawProviderResponse` | The full JSON payload. |
 | `Metadata["validationErrors"]` | `validation_errors` |
 | `Metadata["mobileCountryCode"]` / `Metadata["mobileNetworkCode"]` | `line_type_intelligence.mobile_country_code` / `line_type_intelligence.mobile_network_code` |
+
+When the `line_status` data package returns a status, the provider only verifies numbers whose line status is `active`. If the response does not include line status data, the provider falls back to the `valid` flag alone.
 
 ## Sample configuration
 

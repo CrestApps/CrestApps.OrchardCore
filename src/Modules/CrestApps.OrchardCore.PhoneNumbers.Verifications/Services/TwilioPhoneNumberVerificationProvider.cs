@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerificationProvider
 {
     private const string ProtectorPurpose = "PhoneNumberVerifications.Twilio";
+    private const string Endpoint = "https://lookups.twilio.com/v2/PhoneNumbers/{PhoneNumber}";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
@@ -67,13 +68,9 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             return CreateFailedResult(phoneNumber, null, "Twilio Lookup credentials are not configured.");
         }
 
-        var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
-            ? TwilioPhoneNumberVerificationSettings.DefaultEndpoint
-            : settings.Endpoint;
-
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            BuildRequestUri(endpoint, phoneNumber, settings.CountryCode, settings.Fields));
+            BuildRequestUri(phoneNumber, settings.CountryCode, settings.Fields));
 
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
@@ -147,13 +144,16 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             ? parsed.PhoneNumber
             : NormalizePhoneNumber(phoneNumberService, phoneNumber, parsed.CountryCode ?? countryCode);
 
+        var lineStatus = parsed.LineStatus?.Status;
+        var isVerified = parsed.Valid && PhoneNumberVerificationLineStatusHelper.IsActiveOrUnknown(lineStatus);
+
         var result = new PhoneNumberVerificationResult
         {
             PhoneNumber = phoneNumber,
             NormalizedPhoneNumber = normalized,
             NationalFormat = parsed.NationalFormat,
             IsValid = parsed.Valid,
-            IsReachable = parsed.Valid,
+            IsReachable = isVerified,
             IsMobile = lineType == PhoneNumberLineType.Mobile,
             IsLandline = lineType == PhoneNumberLineType.Landline,
             IsVoip = lineType == PhoneNumberLineType.Voip,
@@ -161,14 +161,14 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             CountryCode = parsed.CountryCode,
             CountryPrefix = NormalizeCountryPrefix(parsed.CallingCountryCode),
             Carrier = parsed.LineTypeIntelligence?.CarrierName,
-            LineStatus = parsed.LineStatus?.Status,
+            LineStatus = lineStatus,
             RiskScore = parsed.SmsPumpingRisk?.SmsPumpingRiskScore,
             RiskLevel = parsed.SmsPumpingRisk?.CarrierRiskCategory,
             IsAbuseDetected = parsed.SmsPumpingRisk?.NumberBlocked,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.Twilio,
             VerificationDateUtc = verificationDateUtc,
             RawProviderResponse = payload,
-            Status = parsed.Valid
+            Status = isVerified
                 ? PhoneNumberVerificationStatus.Verified
                 : PhoneNumberVerificationStatus.Invalid,
         };
@@ -250,15 +250,12 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
     }
 
     private static Uri BuildRequestUri(
-        string endpoint,
         string phoneNumber,
         string countryCode,
         string fields)
     {
         var encodedPhoneNumber = Uri.EscapeDataString(phoneNumber);
-        var requestEndpoint = endpoint.Contains("{PhoneNumber}", StringComparison.OrdinalIgnoreCase)
-            ? endpoint.Replace("{PhoneNumber}", encodedPhoneNumber, StringComparison.OrdinalIgnoreCase)
-            : endpoint.TrimEnd('/') + "/" + encodedPhoneNumber;
+        var requestEndpoint = Endpoint.Replace("{PhoneNumber}", encodedPhoneNumber, StringComparison.OrdinalIgnoreCase);
         var builder = new UriBuilder(requestEndpoint);
         var query = new StringBuilder(builder.Query.TrimStart('?'));
 

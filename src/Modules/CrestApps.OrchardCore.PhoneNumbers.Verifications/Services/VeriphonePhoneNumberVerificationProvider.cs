@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerificationProvider
 {
     private const string ProtectorPurpose = "PhoneNumberVerifications.Veriphone";
+    private const string Endpoint = "https://api.veriphone.io/v2/verify";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
@@ -67,11 +68,7 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
             return CreateFailedResult(phoneNumber, null, "Veriphone API key is not configured.");
         }
 
-        var endpoint = string.IsNullOrWhiteSpace(settings.Endpoint)
-            ? VeriphonePhoneNumberVerificationSettings.DefaultEndpoint
-            : settings.Endpoint;
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, BuildRequestUri(endpoint, phoneNumber));
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildRequestUri(phoneNumber));
 
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
@@ -229,9 +226,9 @@ public sealed class VeriphonePhoneNumberVerificationProvider : IPhoneNumberVerif
         }
     }
 
-    private static Uri BuildRequestUri(string endpoint, string phoneNumber)
+    private static Uri BuildRequestUri(string phoneNumber)
     {
-        var builder = new UriBuilder(endpoint);
+        var builder = new UriBuilder(Endpoint);
         var query = new StringBuilder(builder.Query.TrimStart('?'));
 
         if (query.Length > 0)

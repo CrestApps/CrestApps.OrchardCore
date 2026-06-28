@@ -45,5 +45,7 @@ public sealed class PhoneNumberVerificationPartDisplayDriver : ContentPartDispla
         viewModel.NormalizedPhoneNumber ??= result.NormalizedPhoneNumber ?? result.PhoneNumber;
         viewModel.Carrier = result.Carrier;
         viewModel.LineType = result.LineType;
+        viewModel.LineStatus = result.LineStatus;
+        viewModel.MinimumAge = result.MinimumAge;
     }
 }

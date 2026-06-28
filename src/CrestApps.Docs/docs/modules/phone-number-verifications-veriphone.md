@@ -23,7 +23,6 @@ Configure the provider under **Settings** -> **Phone Number Verifications** on t
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| **Endpoint** | `https://api.veriphone.io/v2/verify` | The Veriphone phone number verification endpoint. |
 | **API key** | _(empty)_ | The API key issued by Veriphone. Stored as a protected value. |
 
 ## Authentication
@@ -40,7 +39,6 @@ The provider settings are stored in the `VeriphonePhoneNumberVerificationSetting
     {
       "name": "settings",
       "VeriphonePhoneNumberVerificationSettings": {
-        "Endpoint": "https://api.veriphone.io/v2/verify",
         "ProtectedApiKey": "encrypted-api-key"
       }
     }

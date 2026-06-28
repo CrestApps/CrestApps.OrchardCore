@@ -68,7 +68,6 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
         return Initialize<VeriphonePhoneNumberVerificationSettingsViewModel>("VeriphonePhoneNumberVerificationSettings_Edit", viewModel =>
         {
             viewModel.IsEnabled = settings.IsEnabled;
-            viewModel.Endpoint = settings.Endpoint;
             viewModel.HasApiKey = !string.IsNullOrWhiteSpace(settings.ProtectedApiKey);
         }).Location("Content:6#Veriphone")
         .OnGroup(SettingsGroupId)
@@ -90,10 +89,6 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
         var viewModel = new VeriphonePhoneNumberVerificationSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
-
-        settings.Endpoint = string.IsNullOrWhiteSpace(viewModel.Endpoint)
-            ? VeriphonePhoneNumberVerificationSettings.DefaultEndpoint
-            : viewModel.Endpoint.Trim();
 
         if (!string.IsNullOrWhiteSpace(viewModel.ApiKey))
         {

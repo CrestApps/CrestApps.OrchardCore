@@ -59,4 +59,14 @@ public class PhoneNumberVerificationPartViewModel
     /// Gets or sets the line type from the stored result.
     /// </summary>
     public PhoneNumberLineType LineType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-specific line status from the stored result.
+    /// </summary>
+    public string LineStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-specific minimum observed line age from the stored result.
+    /// </summary>
+    public string MinimumAge { get; set; }
 }

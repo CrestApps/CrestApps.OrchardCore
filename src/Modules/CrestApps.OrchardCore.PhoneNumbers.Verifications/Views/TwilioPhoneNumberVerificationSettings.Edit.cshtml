@@ -16,15 +16,6 @@
 
 <div id="Twilio_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
     <div class="ocat-wrapper">
-        <label asp-for="Endpoint" class="ocat-label">@T["Endpoint"]</label>
-        <div class="ocat-end">
-            <input type="text" class="form-control" asp-for="Endpoint" placeholder="@TwilioPhoneNumberVerificationSettings.DefaultEndpoint" />
-            <span asp-validation-for="Endpoint" class="text-danger"></span>
-            <span class="hint">@T["The Twilio Lookup endpoint template. Use {{PhoneNumber}} where the submitted phone number should be inserted."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
         <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
         <div class="ocat-end">
             <select asp-for="AuthenticationType" class="form-select auth-type-select">

@@ -46,6 +46,22 @@
             </div>
         }
 
+        @if (!string.IsNullOrEmpty(Model.LineStatus))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Line status"]</label>
+                <div class="ocat-end">@Model.LineStatus</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.MinimumAge))
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Minimum age"]</label>
+                <div class="ocat-end">@Model.MinimumAge</div>
+            </div>
+        }
+
         @if (!string.IsNullOrEmpty(Model.Carrier))
         {
             <div class="ocat-wrapper">

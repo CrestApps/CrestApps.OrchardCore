@@ -67,7 +67,7 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             return CreateFailedResult(phoneNumber, null, "AbstractAPI API key is not configured.");
         }
 
-        var requestUri = BuildRequestUri(Endpoint, apiKey, phoneNumber);
+        var requestUri = BuildRequestUri(apiKey, phoneNumber);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
 
@@ -135,30 +135,40 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
         DateTime verificationDateUtc,
         IPhoneNumberService phoneNumberService)
     {
-        var lineType = MapLineType(parsed.Type);
-        var normalized = !string.IsNullOrWhiteSpace(parsed.Format?.International)
-            ? parsed.Format.International
-            : NormalizePhoneNumber(phoneNumberService, phoneNumber, parsed.Country?.Code);
+        var validation = parsed.PhoneValidation;
+        var format = validation?.Format ?? parsed.Format;
+        var country = validation?.Country ?? parsed.Country;
+        var isValid = validation?.IsValid ?? validation?.Valid ?? parsed.Valid;
+        var lineStatus = validation?.LineStatus;
+        var isVerified = isValid && PhoneNumberVerificationLineStatusHelper.IsActiveOrUnknown(lineStatus);
+        var lineType = MapLineType(validation?.Type ?? parsed.Type);
+        var normalized = !string.IsNullOrWhiteSpace(format?.International)
+            ? format.International
+            : NormalizePhoneNumber(phoneNumberService, phoneNumber, country?.Code);
 
         var result = new PhoneNumberVerificationResult
         {
             PhoneNumber = phoneNumber,
             NormalizedPhoneNumber = normalized,
-            NationalFormat = parsed.Format?.Local,
-            IsValid = parsed.Valid,
-            IsReachable = parsed.Valid,
+            NationalFormat = format?.Local,
+            IsValid = isValid,
+            IsReachable = isVerified,
             IsMobile = lineType == PhoneNumberLineType.Mobile,
             IsLandline = lineType == PhoneNumberLineType.Landline,
             IsVoip = lineType == PhoneNumberLineType.Voip,
             LineType = lineType,
-            CountryCode = parsed.Country?.Code,
-            CountryName = parsed.Country?.Name,
-            CountryPrefix = NormalizeCountryPrefix(parsed.Country?.Prefix),
-            Carrier = parsed.Carrier,
+            CountryCode = country?.Code,
+            CountryName = country?.Name,
+            CountryPrefix = NormalizeCountryPrefix(country?.Prefix),
+            Carrier = validation?.Carrier ?? parsed.Carrier,
+            LineStatus = lineStatus,
+            MinimumAge = NormalizeMinimumAge(validation?.MinimumAge),
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.AbstractApi,
             VerificationDateUtc = verificationDateUtc,
             RawProviderResponse = payload,
-            Status = parsed.Valid ? PhoneNumberVerificationStatus.Verified : PhoneNumberVerificationStatus.Invalid,
+            Status = isVerified
+                ? PhoneNumberVerificationStatus.Verified
+                : PhoneNumberVerificationStatus.Invalid,
         };
 
         if (!string.IsNullOrEmpty(normalized))
@@ -170,12 +180,31 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
                 : null;
         }
 
-        if (!string.IsNullOrWhiteSpace(parsed.Location))
+        var location = validation?.Location ?? parsed.Location;
+
+        if (!string.IsNullOrWhiteSpace(location))
         {
-            result.Metadata["location"] = parsed.Location;
+            result.Metadata["location"] = location;
         }
 
         return result;
+    }
+
+    private static string NormalizeMinimumAge(JsonElement? minimumAge)
+    {
+        if (!minimumAge.HasValue)
+        {
+            return null;
+        }
+
+        var value = minimumAge.Value;
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.String => value.GetString(),
+            _ => value.ToString(),
+        };
     }
 
     private PhoneNumberVerificationResult CreateFailedResult(string phoneNumber, string payload, string errorMessage)
@@ -216,9 +245,9 @@ public sealed class AbstractApiPhoneNumberVerificationProvider : IPhoneNumberVer
             : "+" + trimmed;
     }
 
-    internal static Uri BuildRequestUri(string endpoint, string apiKey, string phoneNumber)
+    internal static Uri BuildRequestUri(string apiKey, string phoneNumber)
     {
-        var builder = new UriBuilder(endpoint);
+        var builder = new UriBuilder(Endpoint);
         var query = new StringBuilder(builder.Query.TrimStart('?'));
         var normalizedApiKey = apiKey?.Trim();
 
