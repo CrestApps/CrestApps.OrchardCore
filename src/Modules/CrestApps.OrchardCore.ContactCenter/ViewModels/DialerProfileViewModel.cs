@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -30,9 +31,19 @@ public class DialerProfileViewModel
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the available campaigns.
+    /// </summary>
+    public IList<SelectListItem> CampaignOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the queue identifier.
     /// </summary>
     public string QueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available queues.
+    /// </summary>
+    public IList<SelectListItem> QueueOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the dialing mode.
@@ -40,9 +51,14 @@ public class DialerProfileViewModel
     public DialerMode Mode { get; set; } = DialerMode.Preview;
 
     /// <summary>
-    /// Gets or sets the dialer provider technical name.
+    /// Gets or sets the Contact Center voice provider technical name.
     /// </summary>
     public string ProviderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available voice call providers.
+    /// </summary>
+    public IList<SelectListItem> ProviderOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the number of calls per available agent.

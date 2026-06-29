@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -24,14 +25,24 @@ public class AgentWorkspaceViewModel
     public IList<string> SelectedQueueIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the campaign identifiers, comma separated, the agent is signed in to.
+    /// Gets or sets the campaigns the agent can sign in to for outbound dialer work.
     /// </summary>
-    public string CampaignIds { get; set; }
+    public IList<SelectListItem> CampaignOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the skill identifiers, comma separated, used by routing strategies.
+    /// Gets or sets the selected campaign identifiers.
     /// </summary>
-    public string Skills { get; set; }
+    public IList<string> SelectedCampaignIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the skills the agent can select for routing.
+    /// </summary>
+    public IList<SelectListItem> SkillOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the selected skill names.
+    /// </summary>
+    public IList<string> SelectedSkills { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the optional presence reason submitted by the agent.

@@ -35,7 +35,7 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public DialerMode Mode { get; set; } = DialerMode.Preview;
 
     /// <summary>
-    /// Gets or sets the technical name of the dialer provider that places calls, or null for the default.
+    /// Gets or sets the technical name of the Contact Center voice provider that places calls, or null for the default.
     /// </summary>
     public string ProviderName { get; set; }
 

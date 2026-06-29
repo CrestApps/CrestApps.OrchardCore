@@ -183,6 +183,27 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineStyle("crestapps-bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/css/bootstrap-select.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/css/bootstrap-select.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.0/dist/css/bootstrap-select.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.0/dist/css/bootstrap-select.css")
+            .SetVersion("1.2.0");
+
+        _manifest
+            .DefineScript("crestapps-bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/js/bootstrap-select.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/js/bootstrap-select.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.0/dist/js/bootstrap-select.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.0/dist/js/bootstrap-select.js")
+            .SetDependencies("bootstrap")
+            .SetVersion("1.2.0");
+
+        _manifest
             .DefineStyle("intl-tel-input")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/css/intlTelInput.min.css",

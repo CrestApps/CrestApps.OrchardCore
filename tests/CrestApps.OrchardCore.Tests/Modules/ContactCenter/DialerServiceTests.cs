@@ -25,8 +25,8 @@ public sealed class DialerServiceTests
         var interactionManager = CreateInteractionManager(interaction);
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
         var activityManager = CreateActivityManager(activity);
-        var provider = CreateProvider(DialerDialResult.Failure("provider_failed", "Provider rejected the request."));
-        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, provider);
+        var voiceCallRouter = CreateVoiceCallRouter(Failure("provider_failed", "Provider rejected the request."));
+        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, voiceCallRouter);
 
         // Act
         var started = await service.RunCycleAsync(CreateProfile(), TestContext.Current.CancellationToken);
@@ -53,8 +53,8 @@ public sealed class DialerServiceTests
         };
 
         var activityManager = CreateActivityManager(activity);
-        var provider = CreateProvider(DialerDialResult.Success("call1"));
-        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, provider);
+        var voiceCallRouter = CreateVoiceCallRouter(Success("call1"));
+        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, voiceCallRouter);
 
         // Act
         var started = await service.RunCycleAsync(CreateProfile(), TestContext.Current.CancellationToken);
@@ -62,7 +62,7 @@ public sealed class DialerServiceTests
         // Assert
         Assert.Equal(0, started);
         Assert.Equal(ActivityStatus.Failed, activity.Status);
-        provider.Verify(p => p.PlaceCallAsync(It.IsAny<DialerDialRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        voiceCallRouter.Verify(p => p.RouteOutboundAsync(It.IsAny<ContactCenterDialRequest>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         reservationService.Verify(s => s.CancelAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -82,8 +82,8 @@ public sealed class DialerServiceTests
         var reservationService = new Mock<IActivityReservationService>();
         var interactionManager = CreateInteractionManager(new Interaction { ItemId = "int1" });
         var activityManager = CreateActivityManager(new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" });
-        var provider = CreateProvider(DialerDialResult.Success("call1"));
-        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, provider);
+        var voiceCallRouter = CreateVoiceCallRouter(Success("call1"));
+        var service = CreateService(assignmentService, reservationService, interactionManager, activityManager, voiceCallRouter);
         var profile = CreateProfile();
         profile.CallsPerAgent = 1;
 
@@ -140,16 +140,20 @@ public sealed class DialerServiceTests
         return activityManager;
     }
 
-    private static Mock<IDialerProvider> CreateProvider(DialerDialResult result)
+    private static Mock<IVoiceContactCenterCallRouter> CreateVoiceCallRouter(ContactCenterVoiceProviderResult result)
     {
-        var provider = new Mock<IDialerProvider>();
-        provider.SetupGet(p => p.TechnicalName).Returns("test");
-        provider.SetupGet(p => p.Capabilities).Returns(DialerProviderCapabilities.Outbound);
-        provider
-            .Setup(p => p.PlaceCallAsync(It.IsAny<DialerDialRequest>(), It.IsAny<CancellationToken>()))
+        var voiceCallRouter = new Mock<IVoiceContactCenterCallRouter>();
+        voiceCallRouter
+            .Setup(router => router.CanRouteOutbound("test"))
+            .Returns(true);
+        voiceCallRouter
+            .Setup(router => router.GetOutboundProviderName("test"))
+            .Returns("test");
+        voiceCallRouter
+            .Setup(router => router.RouteOutboundAsync(It.IsAny<ContactCenterDialRequest>(), "test", It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
 
-        return provider;
+        return voiceCallRouter;
     }
 
     private static DialerService CreateService(
@@ -157,10 +161,8 @@ public sealed class DialerServiceTests
         Mock<IActivityReservationService> reservationService,
         Mock<IInteractionManager> interactionManager,
         Mock<IOmnichannelActivityManager> activityManager,
-        Mock<IDialerProvider> provider)
+        Mock<IVoiceContactCenterCallRouter> voiceCallRouter)
     {
-        var providerResolver = new Mock<IDialerProviderResolver>();
-        providerResolver.Setup(r => r.Get("test")).Returns(provider.Object);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
@@ -169,9 +171,28 @@ public sealed class DialerServiceTests
             reservationService.Object,
             interactionManager.Object,
             activityManager.Object,
-            providerResolver.Object,
+            voiceCallRouter.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             clock.Object,
             new Mock<ILogger<DialerService>>().Object);
+    }
+
+    private static ContactCenterVoiceProviderResult Success(string providerCallId)
+    {
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = providerCallId,
+        };
+    }
+
+    private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
+    {
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = false,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+        };
     }
 }

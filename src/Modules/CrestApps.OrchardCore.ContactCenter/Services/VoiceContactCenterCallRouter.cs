@@ -13,11 +13,11 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Default <see cref="IInboundVoiceService"/> implementation. It creates the CRM activity and the
-/// interaction for an inbound call, resolves the target queue and subject, enqueues the work, reserves
-/// an available agent, and offers the ringing call to that agent through the Telephony soft phone.
+/// Default <see cref="IVoiceContactCenterCallRouter"/> implementation. It routes inbound voice calls
+/// into CRM activities and outbound voice dial requests to provider implementations while Telephony
+/// remains responsible for media execution.
 /// </summary>
-public sealed class InboundVoiceService : IInboundVoiceService
+public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter, IInboundVoiceService
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
 
@@ -33,10 +33,11 @@ public sealed class InboundVoiceService : IInboundVoiceService
     private readonly IAgentProfileManager _agentManager;
     private readonly IInboundContactLookup _contactLookup;
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
+    private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IClock _clock;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InboundVoiceService"/> class.
+    /// Initializes a new instance of the <see cref="VoiceContactCenterCallRouter"/> class.
     /// </summary>
     /// <param name="channelEndpointManager">The channel endpoint manager used to map the dialed number to an endpoint.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service used to resolve the subject and campaign.</param>
@@ -50,8 +51,9 @@ public sealed class InboundVoiceService : IInboundVoiceService
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
+    /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
     /// <param name="clock">The clock used to stamp times.</param>
-    public InboundVoiceService(
+    public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IOmnichannelActivityManager activityManager,
@@ -64,6 +66,7 @@ public sealed class InboundVoiceService : IInboundVoiceService
         IAgentProfileManager agentManager,
         IInboundContactLookup contactLookup,
         IIncomingCallDispatcher incomingCallDispatcher,
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -78,11 +81,57 @@ public sealed class InboundVoiceService : IInboundVoiceService
         _agentManager = agentManager;
         _contactLookup = contactLookup;
         _incomingCallDispatcher = incomingCallDispatcher;
+        _voiceProviderResolver = voiceProviderResolver;
         _clock = clock;
     }
 
     /// <inheritdoc/>
-    public async Task<InboundVoiceRoutingResult> HandleInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default)
+    public bool CanRouteOutbound(string providerName = null)
+    {
+        var provider = _voiceProviderResolver.Get(providerName);
+
+        return provider?.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial) == true;
+    }
+
+    /// <inheritdoc/>
+    public string GetOutboundProviderName(string providerName = null)
+    {
+        return _voiceProviderResolver.Get(providerName)?.TechnicalName;
+    }
+
+    /// <inheritdoc/>
+    public Task<InboundVoiceRoutingResult> HandleInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default)
+    {
+        return RouteInboundAsync(inboundEvent, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> RouteOutboundAsync(
+        ContactCenterDialRequest request,
+        string providerName = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var provider = _voiceProviderResolver.Get(providerName);
+
+        if (provider is null)
+        {
+            return Failure("provider_unavailable", "No Contact Center voice provider is registered for outbound voice routing.");
+        }
+
+        if (!provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial))
+        {
+            return Failure("dialing_not_supported", "The Contact Center voice provider does not support outbound dialing.");
+        }
+
+        var result = await provider.DialAsync(request, cancellationToken);
+
+        return result ?? Failure("provider_returned_no_result", "The Contact Center voice provider did not return a result.");
+    }
+
+    /// <inheritdoc/>
+    public async Task<InboundVoiceRoutingResult> RouteInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
 
@@ -195,6 +244,16 @@ public sealed class InboundVoiceService : IInboundVoiceService
         return interaction.TechnicalMetadata.TryGetValue(ServiceAddressMetadataKey, out var value)
             ? value?.ToString()
             : null;
+    }
+
+    private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
+    {
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = false,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+        };
     }
 
     private async Task<SubjectFlowSettings> ResolveFlowAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)

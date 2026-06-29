@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.DialPad;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
@@ -25,12 +26,12 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DialPadConstants.Feature.Dialer,
-    Name = "DialPad Dialer",
-    Description = "Implements the dialer-agnostic Contact Center dialer provider over DialPad so outbound campaigns dial through DialPad.",
+    Name = "DialPad Contact Center Voice",
+    Description = "Implements the Contact Center voice provider boundary over DialPad so the Voice Contact Center Call Router can place outbound calls through DialPad.",
     Category = "Communications",
     Dependencies =
     [
         DialPadConstants.Feature.Area,
-        "CrestApps.OrchardCore.ContactCenter.Dialer",
+        ContactCenterConstants.Feature.Voice,
     ]
 )]

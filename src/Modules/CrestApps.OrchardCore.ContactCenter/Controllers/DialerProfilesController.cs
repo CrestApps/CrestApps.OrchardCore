@@ -1,10 +1,22 @@
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Routing;
+using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
@@ -15,37 +27,117 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 [Feature(ContactCenterConstants.Feature.Dialer)]
 public sealed class DialerProfilesController : Controller
 {
+    private const string _optionsSearch = "Options.Search";
+
     private readonly IDialerProfileManager _manager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<DialerProfile> _displayManager;
+    private readonly INotifier _notifier;
+
+    internal readonly IHtmlLocalizer H;
+    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerProfilesController"/> class.
     /// </summary>
     /// <param name="manager">The dialer profile manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayManager">The display manager.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfilesController(
         IDialerProfileManager manager,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<DialerProfile> displayManager,
+        INotifier notifier,
+        IHtmlLocalizer<DialerProfilesController> htmlLocalizer,
+        IStringLocalizer<DialerProfilesController> stringLocalizer)
     {
         _manager = manager;
         _authorizationService = authorizationService;
+        _updateModelAccessor = updateModelAccessor;
+        _displayManager = displayManager;
+        _notifier = notifier;
+        H = htmlLocalizer;
+        S = stringLocalizer;
     }
 
     /// <summary>
     /// Lists the dialer profiles.
     /// </summary>
+    /// <param name="options">The catalog entry options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The list view.</returns>
     [Admin("contact-center/dialers", "ContactCenterDialersIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        CatalogEntryOptions options,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageDialer))
         {
             return Forbid();
         }
 
-        var profiles = await _manager.GetAllAsync();
+        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        {
+            Name = options.Search,
+        });
 
-        return View(profiles);
+        var routeData = new RouteData();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            routeData.Values.TryAdd(_optionsSearch, options.Search);
+        }
+
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<DialerProfile>>
+        {
+            Models = [],
+            Options = options,
+            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+        };
+
+        foreach (var model in result.Entries)
+        {
+            viewModel.Models.Add(new CatalogEntryViewModel<DialerProfile>
+            {
+                Model = model,
+                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
+            });
+        }
+
+        return View(viewModel);
+    }
+
+    /// <summary>
+    /// Applies the dialer profile list filter.
+    /// </summary>
+    /// <param name="model">The submitted list model.</param>
+    /// <returns>A redirect to the filtered list.</returns>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("contact-center/dialers", "ContactCenterDialersIndex")]
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageDialer))
+        {
+            return Forbid();
+        }
+
+        return RedirectToAction(nameof(Index), new RouteValueDictionary
+        {
+            { _optionsSearch, model.Options?.Search },
+        });
     }
 
     /// <summary>
@@ -60,33 +152,46 @@ public sealed class DialerProfilesController : Controller
             return Forbid();
         }
 
-        return View(new DialerProfileViewModel());
+        var model = await _manager.NewAsync();
+        var viewModel = new EditCatalogEntryViewModel
+        {
+            DisplayName = S["Dialer Profile"],
+            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
+        };
+
+        return View(viewModel);
     }
 
     /// <summary>
     /// Persists a new dialer profile.
     /// </summary>
-    /// <param name="model">The submitted profile.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
-    public async Task<IActionResult> CreatePost(DialerProfileViewModel model)
+    [Admin("contact-center/dialers/create", "ContactCenterDialersCreate")]
+    public async Task<IActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageDialer))
         {
             return Forbid();
         }
 
-        if (!ModelState.IsValid)
+        var model = await _manager.NewAsync();
+        var viewModel = new EditCatalogEntryViewModel
         {
-            return View(model);
+            DisplayName = S["New Dialer Profile"],
+            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
+        };
+
+        if (ModelState.IsValid)
+        {
+            await _manager.CreateAsync(model);
+            await _notifier.SuccessAsync(H["A new dialer profile has been created successfully."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
-        var profile = await _manager.NewAsync();
-        Apply(profile, model);
-        await _manager.CreateAsync(profile);
-
-        return RedirectToAction(nameof(Index));
+        return View(viewModel);
     }
 
     /// <summary>
@@ -102,61 +207,59 @@ public sealed class DialerProfilesController : Controller
             return Forbid();
         }
 
-        var profile = await _manager.FindByIdAsync(id);
+        var model = await _manager.FindByIdAsync(id);
 
-        if (profile is null)
+        if (model is null)
         {
             return NotFound();
         }
 
-        return View(new DialerProfileViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
-            Id = profile.ItemId,
-            Name = profile.Name,
-            Description = profile.Description,
-            CampaignId = profile.CampaignId,
-            QueueId = profile.QueueId,
-            Mode = profile.Mode,
-            ProviderName = profile.ProviderName,
-            CallsPerAgent = profile.CallsPerAgent,
-            MaxAttempts = profile.MaxAttempts,
-            RetryDelayMinutes = profile.RetryDelayMinutes,
-            CallerId = profile.CallerId,
-            RespectDoNotCall = profile.RespectDoNotCall,
-            Enabled = profile.Enabled,
-        });
+            DisplayName = model.Name,
+            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
+        };
+
+        return View(viewModel);
     }
 
     /// <summary>
     /// Persists changes to a dialer profile.
     /// </summary>
-    /// <param name="model">The submitted profile.</param>
+    /// <param name="id">The profile identifier.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
-    public async Task<IActionResult> EditPost(DialerProfileViewModel model)
+    [Admin("contact-center/dialers/edit/{id}", "ContactCenterDialersEdit")]
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageDialer))
         {
             return Forbid();
         }
 
-        var profile = await _manager.FindByIdAsync(model.Id);
+        var model = await _manager.FindByIdAsync(id);
 
-        if (profile is null)
+        if (model is null)
         {
             return NotFound();
         }
 
-        if (!ModelState.IsValid)
+        var viewModel = new EditCatalogEntryViewModel
         {
-            return View(model);
+            DisplayName = model.Name,
+            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
+        };
+
+        if (ModelState.IsValid)
+        {
+            await _manager.UpdateAsync(model);
+            await _notifier.SuccessAsync(H["The dialer profile has been updated successfully."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
-        Apply(profile, model);
-        await _manager.UpdateAsync(profile);
-
-        return RedirectToAction(nameof(Index));
+        return View(viewModel);
     }
 
     /// <summary>
@@ -165,6 +268,7 @@ public sealed class DialerProfilesController : Controller
     /// <param name="id">The profile identifier.</param>
     /// <returns>A redirect to the list.</returns>
     [HttpPost]
+    [Admin("contact-center/dialers/delete/{id}", "ContactCenterDialersDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageDialer))
@@ -177,24 +281,9 @@ public sealed class DialerProfilesController : Controller
         if (profile is not null)
         {
             await _manager.DeleteAsync(profile);
+            await _notifier.SuccessAsync(H["The dialer profile has been deleted successfully."]);
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static void Apply(Core.Models.DialerProfile profile, DialerProfileViewModel model)
-    {
-        profile.Name = model.Name;
-        profile.Description = model.Description;
-        profile.CampaignId = model.CampaignId;
-        profile.QueueId = model.QueueId;
-        profile.Mode = model.Mode;
-        profile.ProviderName = model.ProviderName;
-        profile.CallsPerAgent = model.CallsPerAgent;
-        profile.MaxAttempts = model.MaxAttempts;
-        profile.RetryDelayMinutes = model.RetryDelayMinutes;
-        profile.CallerId = model.CallerId;
-        profile.RespectDoNotCall = model.RespectDoNotCall;
-        profile.Enabled = model.Enabled;
     }
 }

@@ -1,37 +1,57 @@
-@model IEnumerable<ActivityQueue>
+@using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Core.Models
 
-<zone Name="Title"><h1>@T["Queues"]</h1></zone>
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<ActivityQueue>>
 
-<div class="mb-3">
-    <a class="btn btn-primary" asp-action="Create">@T["Add queue"]</a>
-</div>
+<zone Name="Title"><h1>@RenderTitleSegments(T["Queues"])</h1></zone>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>@T["Name"]</th>
-            <th>@T["Default priority"]</th>
-            <th>@T["SLA (s)"]</th>
-            <th>@T["Required skills"]</th>
-            <th>@T["Enabled"]</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var queue in Model)
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Queue"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group with-checkbox" id="queues-list">
+        @if (Model.Models.Count > 0)
         {
-            <tr>
-                <td><a asp-action="Edit" asp-route-id="@queue.ItemId">@queue.Name</a></td>
-                <td>@queue.DefaultPriority</td>
-                <td>@queue.SlaThresholdSeconds</td>
-                <td>@string.Join(", ", queue.RequiredSkills)</td>
-                <td>@(queue.Enabled ? T["Yes"] : T["No"])</td>
-                <td>
-                    <form asp-action="Delete" asp-route-id="@queue.ItemId" method="post">
-                        <button type="submit" class="btn btn-danger btn-sm">@T["Delete"]</button>
-                    </form>
-                </td>
-            </tr>
+            <li class="list-group-item text-bg-theme ignore-elements">
+                @(Model.Models.Count == 1 ? T["1 item"] : T["{0} items", Model.Models.Count])
+            </li>
+
+            @foreach (var entry in Model.Models)
+            {
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
         }
-    </tbody>
-</table>
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @T["<strong>Nothing here!</strong> There are no queues at the moment."]
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+@await DisplayAsync(Model.Pager)

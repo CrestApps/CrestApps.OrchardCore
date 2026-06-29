@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -42,14 +43,24 @@ public class QueueViewModel
     public int ReservationTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Gets or sets the comma-separated skills required to receive work from the queue.
+    /// Gets or sets the selected skills required to receive work from the queue.
     /// </summary>
-    public string RequiredSkills { get; set; }
+    public IList<string> RequiredSkills { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available skills used by routing strategies.
+    /// </summary>
+    public IList<SelectListItem> SkillOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the inbound channel endpoint identifier mapped to this queue.
     /// </summary>
     public string InboundChannelEndpointId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available inbound channel endpoints.
+    /// </summary>
+    public IList<SelectListItem> InboundChannelEndpointOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the queue is enabled.

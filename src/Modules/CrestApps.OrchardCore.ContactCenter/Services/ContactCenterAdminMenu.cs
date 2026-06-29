@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the Contact Center entries to the admin navigation.
+/// Adds the Contact Center entries to the Interaction Center admin navigation.
 /// </summary>
 public sealed class ContactCenterAdminMenu : AdminNavigationProvider
 {
@@ -24,21 +24,22 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Contact Center"], "6", contactCenter => contactCenter
-                .AddClass("contact-center")
-                .Id("contactCenter")
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
                 .Add(S["Agent Workspace"], S["Agent Workspace"].PrefixPosition(), workspace => workspace
+                    .AddClass("agent-workspace")
+                    .Id("agentWorkspace")
                     .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.SignIntoQueues)
                     .LocalNav())
                 .Add(S["Queues"], S["Queues"].PrefixPosition(), queues => queues
+                    .AddClass("contact-center-queues")
+                    .Id("contactCenterQueues")
                     .Action("Index", "Queues", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageQueues)
-                    .LocalNav())
-                .Add(S["Dialer Profiles"], S["Dialer Profiles"].PrefixPosition(), dialer => dialer
-                    .Action("Index", "DialerProfiles", "CrestApps.OrchardCore.ContactCenter")
-                    .Permission(ContactCenterPermissions.ManageDialer)
-                    .LocalNav()));
+                    .LocalNav()),
+                priority: 1);
 
         return ValueTask.CompletedTask;
     }

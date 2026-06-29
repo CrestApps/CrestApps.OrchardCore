@@ -96,8 +96,8 @@ projected into the interaction.
 
 ## Agent workspace
 
-Agents receive Contact Center work in the Contact Center Agent Workspace inside the CRM admin
-experience. The workspace is the place where agents sign in to allowed queues and outbound
+Agents receive Contact Center work in the **Interaction Center → Agent Workspace** screen inside the
+CRM admin experience. The workspace is the place where agents sign in to allowed queues and outbound
 campaigns, set presence and reason codes, receive activity offers, accept or reject reservations,
 work the active CRM activity, use injected Telephony call controls, review interaction history, and
 complete wrap-up/disposition.
@@ -107,9 +107,10 @@ compliance rules. Inbound queues, callback queues, preview dial queues, power/pr
 campaigns, and future channels all offer Activities through the same real-time workspace model.
 
 The current workspace lets agents choose queues, campaigns, skills, and presence using the standard
-Orchard admin layout. Queue and dialer admin screens expose routing skills, inbound endpoint mapping,
-provider names, pacing limits, retry settings, and do-not-call preference flags so providers and
-future desktop panels can extend the model without replacing the base UI.
+Orchard admin layout. Campaign and skill selection use searchable multi-select lists instead of raw
+identifier fields; campaigns come from the Omnichannel Management **Interaction Center** campaign
+catalog. Queue and dialer profile admin screens use display drivers and extensible summary/editor
+shapes so providers and future desktop panels can extend the model without replacing the base UI.
 
 ## Voice provider integration
 
@@ -122,18 +123,21 @@ orchestration beyond basic call control:
 - Place or move provider calls in provider-side queues after Contact Center chooses the queue.
 - Publish queue events and synchronize PBX presence when supported.
 
-Contact Center remains the brain: it selects the Activity, queue, agent, campaign, dialer mode, and
-compliance gates, then sends provider-neutral intents to the provider adapter.
+Contact Center remains the brain: the **Voice Contact Center Call Router** selects or receives the
+Activity, queue, agent, campaign, dialer mode, and compliance gates, then sends provider-neutral
+voice intents to the provider adapter.
 
 Providers register `IContactCenterVoiceProvider` implementations and are resolved through
-`IContactCenterVoiceProviderResolver`, mirroring the dialer provider resolver pattern.
+`IContactCenterVoiceProviderResolver`. The router uses those providers for outbound dialing and
+keeps provider-side queue placement and call assignment behind the same voice boundary.
 
 ## Inbound voice
 
 > **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`
 
-The **Contact Center Voice** feature routes inbound provider calls to an available agent and offers
-them through the [Telephony](../telephony/index.md) soft-phone incoming-call modal. It depends on the
+The **Contact Center Voice** feature adds the Voice Contact Center Call Router for inbound and
+outbound voice work. For inbound calls, it routes provider calls to an available agent and offers them
+through the [Telephony](../telephony/index.md) soft-phone incoming-call modal. It depends on the
 Queues feature and the Telephony soft phone.
 
 When a normalized inbound call arrives, the feature:
@@ -174,8 +178,8 @@ POST /api/contact-center/voice/inbound
 ```
 
 The endpoint requires the `Manage interactions` permission. Provider-specific webhooks that validate
-their own provider signature can instead call `IInboundVoiceService` directly, the same way the
-Omnichannel SMS webhook handles inbound messages.
+their own provider signature can instead call `IVoiceContactCenterCallRouter` directly, the same way
+the Omnichannel SMS webhook handles inbound messages.
 
 ### Shared disposition for inbound and outbound
 
@@ -187,11 +191,11 @@ outbound calls are wrapped up through the same subject workflow.
 ## UI extensibility
 
 All Contact Center UI is built with Orchard Core display management: shapes, display drivers,
-placement, templates, and shape alternates. CRUD screens should follow the AI Profile UI pattern,
-where controllers load catalog entries through managers and build summary/editor shapes with
-`IDisplayManager<T>`. Activity screens remain Omnichannel screens that Contact Center augments with
-display drivers for reservation state, interaction history, dialer controls, wrap-up, and supervisor
-decorations.
+placement, templates, and shape alternates. The queue and dialer profile CRUD screens follow the
+Omnichannel Campaigns UI pattern: controllers load catalog entries through managers and build
+summary/editor shapes with `IDisplayManager<T>`. Activity screens remain Omnichannel screens that
+Contact Center augments with display drivers for reservation state, interaction history, dialer
+controls, wrap-up, and supervisor decorations.
 
 ## Status
 

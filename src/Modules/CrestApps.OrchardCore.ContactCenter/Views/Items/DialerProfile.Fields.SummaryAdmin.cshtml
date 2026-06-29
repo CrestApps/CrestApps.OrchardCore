@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<DialerProfile>
+
+<h5>@Model.Value.Name</h5>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted">@Model.Value.Description</div>
+}
+
+<div class="mt-1">
+    <span class="badge text-bg-secondary">@T["Mode: {0}", Model.Value.Mode]</span>
+    @if (!string.IsNullOrWhiteSpace(Model.Value.ProviderName))
+    {
+        <span class="badge text-bg-secondary">@T["Provider: {0}", Model.Value.ProviderName]</span>
+    }
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge text-bg-warning">@T["Disabled"]</span>
+    }
+</div>

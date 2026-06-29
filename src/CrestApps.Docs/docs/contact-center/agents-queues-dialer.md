@@ -2,12 +2,13 @@
 sidebar_label: Agents, Queues & Dialer
 sidebar_position: 1
 title: Agents, Queues, Routing, and Dialer
-description: Contact Center agent presence, queues, skill-aware routing, reservations, availability-based assignment, and dialer-agnostic outbound dialing.
+description: Contact Center agent presence, queues, skill-aware routing, reservations, availability-based assignment, and voice-routed outbound dialing.
 ---
 
 This phase adds the operational core of the Contact Center: agent presence, work queues,
-reservations, skill-aware routing, availability-based assignment, and a dialer-agnostic outbound
-dialer. Each capability is a separate, feature-gated module so tenants enable only what they need.
+reservations, skill-aware routing, availability-based assignment, and an outbound dialer that routes
+voice calls through Contact Center Voice providers. Each capability is a separate, feature-gated
+module so tenants enable only what they need.
 
 ## Features
 
@@ -15,8 +16,8 @@ dialer. Each capability is a separate, feature-gated module so tenants enable on
 | --- | --- | --- |
 | Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in. |
 | Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Work queues, queue items, reservations, and availability-based assignment. |
-| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Dialer-agnostic outbound profiles, pacing, and dialer activity batches. |
-| DialPad Dialer | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the dialer-agnostic provider. |
+| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer activity batches routed through Contact Center Voice. |
+| DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the Contact Center voice provider boundary. |
 
 ## Agents and presence
 
@@ -24,9 +25,11 @@ An **agent profile** links an Orchard user to Contact Center configuration: disp
 skills, queue membership, campaign membership, and live presence. Presence states are `Offline`,
 `Available`, `Reserved`, `Busy`, `WrapUp`, and `Break`.
 
-Agents sign in from **Contact Center → Agent Workspace**, selecting the queues and campaigns they
-want to receive work from. Signing in sets presence to `Available`; signing out sets it to `Offline`.
-The `SignIntoQueues` permission grants self-service sign-in and presence changes.
+Agents sign in from **Interaction Center → Agent Workspace**, selecting the queues and campaigns they
+want to receive work from. Campaigns come from Omnichannel Management and are shown in a searchable
+multi-select list; skills are also selected from a searchable multi-select list. Signing in sets
+presence to `Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission grants
+self-service sign-in and presence changes.
 
 ## Queues, reservations, and assignment
 
@@ -48,25 +51,32 @@ background task expires stale reservations and assigns waiting work every minute
 
 ## Dialer
 
-A **dialer profile** ties a campaign and queue to a dialing mode (`Manual`, `Preview`, `Power`,
-`Progressive`, `Predictive`), a provider, calls-per-agent pacing, and attempt limits. Power and
-progressive profiles run automatically each minute: the Contact Center reserves an available agent,
-creates an outbound interaction, and asks the configured provider to place the call. Manual and
-preview profiles wait for agent action. Dialer activity batches load **unassigned** inventory the
-dialer reserves later.
+A **dialer profile** ties an Interaction Center campaign and queue to a dialing mode (`Manual`,
+`Preview`, `Power`, `Progressive`, `Predictive`), a Contact Center voice provider, calls-per-agent
+pacing, and attempt limits. Power and progressive profiles run automatically each minute: the Contact
+Center reserves an available agent, creates an outbound interaction, and asks the Voice Contact Center
+Call Router to place the call. Manual and preview profiles wait for agent action. Dialer activity
+batches load **unassigned** inventory the dialer reserves later.
 
-## Dialer-agnostic providers
+## Voice Contact Center Call Router
 
-The dialer never talks to a telephony platform directly. It calls `IDialerProvider` and resolves the
-configured provider through `IDialerProviderResolver`, so any platform can be the calling engine
-while the Contact Center keeps all assignment, queue, pacing, and compliance logic. The
-`DialPad.Dialer` feature implements `IDialerProvider` over the DialPad telephony provider; enable it
-to dial through DialPad.
+The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`,
+which resolves the configured `IContactCenterVoiceProvider`, so the Contact Center keeps assignment,
+queue, pacing, and compliance logic while the provider executes call operations. The
+`DialPad.Dialer` feature implements `IContactCenterVoiceProvider` over the DialPad telephony
+provider; enable it to dial through DialPad.
 
 Voice providers that support contact-center orchestration beyond soft-phone call control can also
 register `IContactCenterVoiceProvider`. The `IContactCenterVoiceProviderResolver` resolves those
 providers by technical name so future PBX integrations can participate in provider-side queueing,
 call assignment, and voice-specific orchestration without coupling Contact Center to one provider.
+
+## Admin UX and extensibility
+
+Contact Center admin entries live under **Interaction Center**. Queue and dialer profile CRUD screens
+match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and create/edit
+screens render display-driver editor shapes. This keeps the UI extensible for provider panels,
+compliance fields, routing strategies, and future supervisor controls.
 
 ## Enable via recipe
 

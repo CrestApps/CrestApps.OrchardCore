@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,6 +19,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Communication",
     Dependencies =
     [
+        OmnichannelConstants.Features.Managements,
         "OrchardCore.Users",
     ]
 )]
@@ -41,25 +43,24 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Agents,
-        "CrestApps.OrchardCore.Omnichannel.Managements",
     ]
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Dialer,
     Name = "Contact Center Dialer",
-    Description = "Adds dialer-agnostic outbound dialing profiles, pacing, and dialer activity batches over any installed dialer provider.",
+    Description = "Adds outbound dialing profiles, pacing, and dialer activity batches that route calls through Contact Center Voice providers.",
     Category = "Communication",
     Dependencies =
     [
-        ContactCenterConstants.Feature.Queues,
+        ContactCenterConstants.Feature.Voice,
     ]
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Voice,
     Name = "Contact Center Voice",
-    Description = "Routes inbound provider calls into queued CRM activities and offers them to available agents through the Telephony soft phone.",
+    Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations.",
     Category = "Communication",
     Dependencies =
     [

@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IDialerService"/>. The Contact Center owns the
-/// agent reservation, attempt limits, and compliance decisions; calling is delegated to a provider.
+/// agent reservation, attempt limits, and compliance decisions; voice calling is routed through the
+/// Voice Contact Center Call Router.
 /// </summary>
 public sealed class DialerService : IDialerService
 {
@@ -17,7 +18,7 @@ public sealed class DialerService : IDialerService
     private readonly IActivityReservationService _reservationService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
-    private readonly IDialerProviderResolver _providerResolver;
+    private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -29,7 +30,7 @@ public sealed class DialerService : IDialerService
     /// <param name="reservationService">The reservation service used to release failed attempts.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
-    /// <param name="providerResolver">The dialer provider resolver.</param>
+    /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp attempts.</param>
     /// <param name="logger">The logger instance.</param>
@@ -38,7 +39,7 @@ public sealed class DialerService : IDialerService
         IActivityReservationService reservationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
-        IDialerProviderResolver providerResolver,
+        IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterEventPublisher publisher,
         IClock clock,
         ILogger<DialerService> logger)
@@ -47,7 +48,7 @@ public sealed class DialerService : IDialerService
         _reservationService = reservationService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
-        _providerResolver = providerResolver;
+        _voiceCallRouter = voiceCallRouter;
         _publisher = publisher;
         _clock = clock;
         _logger = logger;
@@ -68,21 +69,9 @@ public sealed class DialerService : IDialerService
             return 0;
         }
 
-        var provider = _providerResolver.Get(profile.ProviderName);
-
-        if (provider is null)
+        if (!_voiceCallRouter.CanRouteOutbound(profile.ProviderName))
         {
-            _logger.LogWarning("No dialer provider is registered for dialer profile '{Profile}'.", profile.Name);
-
-            return 0;
-        }
-
-        if (!provider.Capabilities.HasFlag(DialerProviderCapabilities.Outbound))
-        {
-            _logger.LogWarning(
-                "Dialer provider '{Provider}' does not support outbound dialing for dialer profile '{Profile}'.",
-                provider.TechnicalName,
-                profile.Name);
+            _logger.LogWarning("No Contact Center voice provider can route outbound calls for dialer profile '{Profile}'.", profile.Name);
 
             return 0;
         }
@@ -99,7 +88,7 @@ public sealed class DialerService : IDialerService
         {
             attempted++;
 
-            if (await TryDialAsync(profile, reservation, provider, cancellationToken))
+            if (await TryDialAsync(profile, reservation, cancellationToken))
             {
                 started++;
             }
@@ -113,7 +102,7 @@ public sealed class DialerService : IDialerService
         return started;
     }
 
-    private async Task<bool> TryDialAsync(DialerProfile profile, ActivityReservation reservation, IDialerProvider provider, CancellationToken cancellationToken)
+    private async Task<bool> TryDialAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken)
     {
         var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
@@ -140,15 +129,15 @@ public sealed class DialerService : IDialerService
         interaction.ActivityItemId = activity.ItemId;
         interaction.QueueId = profile.QueueId;
         interaction.AgentId = reservation.AgentId;
-        interaction.ProviderName = provider.TechnicalName;
+        interaction.ProviderName = _voiceCallRouter.GetOutboundProviderName(profile.ProviderName);
         interaction.CustomerAddress = activity.PreferredDestination;
         await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
 
-        DialerDialResult result;
+        ContactCenterVoiceProviderResult result;
 
         try
         {
-            result = await provider.PlaceCallAsync(new DialerDialRequest
+            result = await _voiceCallRouter.RouteOutboundAsync(new ContactCenterDialRequest
             {
                 ActivityId = activity.ItemId,
                 InteractionId = interaction.ItemId,
@@ -157,23 +146,32 @@ public sealed class DialerService : IDialerService
                 CampaignId = profile.CampaignId,
                 Destination = activity.PreferredDestination,
                 CallerId = profile.CallerId,
-            }, cancellationToken);
+            }, profile.ProviderName, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(
                 ex,
-                "Dialer provider '{Provider}' failed while dialing activity '{ActivityItemId}' for profile '{Profile}'.",
-                provider.TechnicalName,
+                "The Voice Contact Center Call Router failed while dialing activity '{ActivityItemId}' for profile '{Profile}'.",
                 activity.ItemId,
                 profile.Name);
 
-            result = DialerDialResult.Failure("provider_exception", ex.Message);
+            result = new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                ErrorCode = "provider_exception",
+                ErrorMessage = ex.Message,
+            };
         }
 
         if (result.Succeeded && string.IsNullOrEmpty(result.ProviderCallId))
         {
-            result = DialerDialResult.Failure("missing_provider_call_id", "The dialer provider did not return a call identifier.");
+            result = new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                ErrorCode = "missing_provider_call_id",
+                ErrorMessage = "The Contact Center voice provider did not return a call identifier.",
+            };
         }
 
         activity.Attempts++;

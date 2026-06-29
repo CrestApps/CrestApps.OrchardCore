@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ActivityQueue>
+
+<h5>@Model.Value.Name</h5>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted">@Model.Value.Description</div>
+}
+
+<div class="mt-1">
+    <span class="badge text-bg-secondary">@T["Priority: {0}", Model.Value.DefaultPriority]</span>
+    <span class="badge text-bg-secondary">@T["SLA: {0}s", Model.Value.SlaThresholdSeconds]</span>
+    @if (Model.Value.RequiredSkills.Count > 0)
+    {
+        <span class="badge text-bg-secondary">@T["Skills: {0}", string.Join(", ", Model.Value.RequiredSkills)]</span>
+    }
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge text-bg-warning">@T["Disabled"]</span>
+    }
+</div>

@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -45,7 +47,6 @@ public sealed class Startup : StartupBase
             .AddDataMigration<InteractionEventIndexMigrations>();
 
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
-        services.AddNavigationProvider<ContactCenterAdminMenu>();
     }
 }
 
@@ -88,9 +89,12 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingService, ActivityRoutingService>()
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
-            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
+            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
+            .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services
+            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
             .AddDataMigration<ActivityQueueIndexMigrations>()
             .AddIndexProvider<QueueItemIndexProvider>()
@@ -99,11 +103,12 @@ public sealed class QueuesStartup : StartupBase
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
+        services.AddNavigationProvider<ContactCenterAdminMenu>();
     }
 }
 
 /// <summary>
-/// Registers dialer-agnostic outbound dialing profiles, pacing, and dialer activity batch sources.
+/// Registers outbound dialing profiles, pacing, and dialer activity batch sources.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
 public sealed class DialerStartup : StartupBase
@@ -124,10 +129,13 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerProviderResolver, DialerProviderResolver>();
 
         services
+            .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
             .AddIndexProvider<DialerProfileIndexProvider>()
             .AddDataMigration<DialerProfileIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>();
+        services.AddNavigationProvider<ContactCenterDialerAdminMenu>();
 
         services.Configure<ActivityBatchSourceOptions>(options =>
         {
@@ -149,8 +157,8 @@ public sealed class DialerStartup : StartupBase
 }
 
 /// <summary>
-/// Registers inbound voice routing that turns provider calls into queued CRM activities and offers
-/// them to available agents through the Telephony soft phone.
+/// Registers the Voice Contact Center Call Router that routes inbound and outbound voice calls while
+/// Telephony providers execute media operations.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Voice)]
 public sealed class VoiceStartup : StartupBase
@@ -160,7 +168,9 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
-            .AddScoped<IInboundVoiceService, InboundVoiceService>()
+            .AddScoped<VoiceContactCenterCallRouter>()
+            .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
+            .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
     }
 }

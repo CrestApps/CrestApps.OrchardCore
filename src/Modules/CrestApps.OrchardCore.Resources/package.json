@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@crestapps/ai-chat-ui": "1.0.0-rc.3",
+    "@crestapps/bootstrap-select": "1.2.0",
     "chart.js": "^4.5.1",
     "intl-tel-input": "29.1.0"
   },

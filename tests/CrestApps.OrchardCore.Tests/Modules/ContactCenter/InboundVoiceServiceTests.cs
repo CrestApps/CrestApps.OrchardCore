@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -212,6 +213,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IIncomingCallDispatcher> IncomingCallDispatcher { get; } = new();
 
+        public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
+
         public void SetupNoContext()
         {
             ChannelEndpointManager
@@ -235,12 +238,12 @@ public sealed class InboundVoiceServiceTests
                 .ReturnsAsync(new Interaction { ItemId = "int1" });
         }
 
-        public InboundVoiceService CreateService()
+        public VoiceContactCenterCallRouter CreateService()
         {
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-            return new InboundVoiceService(
+            return new VoiceContactCenterCallRouter(
                 ChannelEndpointManager.Object,
                 SubjectFlowSettingsService.Object,
                 ActivityManager.Object,
@@ -253,6 +256,7 @@ public sealed class InboundVoiceServiceTests
                 AgentManager.Object,
                 ContactLookup.Object,
                 IncomingCallDispatcher.Object,
+                VoiceProviderResolver.Object,
                 clock.Object);
         }
     }

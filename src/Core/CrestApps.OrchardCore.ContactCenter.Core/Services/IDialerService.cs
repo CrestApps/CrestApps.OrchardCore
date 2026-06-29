@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Orchestrates outbound dialing: reserves agents through routing, creates communication-history
-/// interactions, and asks a dialer-agnostic provider to place each call.
+/// interactions, and asks the Voice Contact Center Call Router to place each call.
 /// </summary>
 public interface IDialerService
 {

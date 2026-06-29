@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provider-agnostic ingress for inbound voice events. A telephony provider or PBX integration posts
 /// a normalized <see cref="InboundVoiceEvent"/> to this endpoint, which routes the call through the
 /// Contact Center. Provider-specific webhooks that validate provider signatures may alternatively call
-/// <see cref="IInboundVoiceService"/> directly.
+/// <see cref="IVoiceContactCenterCallRouter"/> directly.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -20,19 +20,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 [Feature(ContactCenterConstants.Feature.Voice)]
 public sealed class VoiceIngressController : ControllerBase
 {
-    private readonly IInboundVoiceService _inboundVoiceService;
+    private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IAuthorizationService _authorizationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceIngressController"/> class.
     /// </summary>
-    /// <param name="inboundVoiceService">The inbound voice service that routes the call.</param>
+    /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="authorizationService">The authorization service.</param>
     public VoiceIngressController(
-        IInboundVoiceService inboundVoiceService,
+        IVoiceContactCenterCallRouter voiceCallRouter,
         IAuthorizationService authorizationService)
     {
-        _inboundVoiceService = inboundVoiceService;
+        _voiceCallRouter = voiceCallRouter;
         _authorizationService = authorizationService;
     }
 
@@ -54,7 +54,7 @@ public sealed class VoiceIngressController : ControllerBase
             return BadRequest();
         }
 
-        var result = await _inboundVoiceService.HandleInboundAsync(inboundEvent, HttpContext.RequestAborted);
+        var result = await _voiceCallRouter.RouteInboundAsync(inboundEvent, HttpContext.RequestAborted);
 
         return Ok(result);
     }
