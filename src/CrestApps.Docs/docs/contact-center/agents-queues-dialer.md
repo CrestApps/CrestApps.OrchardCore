@@ -15,7 +15,7 @@ module so tenants enable only what they need.
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in. |
-| Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Work queues, queue items, reservations, and availability-based assignment. |
+| Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, work queues, queue items, reservations, and availability-based assignment. |
 | Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer activity batches routed through Contact Center Voice. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the Contact Center voice provider boundary. |
 
@@ -27,9 +27,24 @@ skills, queue membership, campaign membership, and live presence. Presence state
 
 Agents sign in from **Interaction Center → Agent Workspace**, selecting the queues and campaigns they
 want to receive work from. Campaigns come from Omnichannel Management and are shown in a searchable
-multi-select list; skills are also selected from a searchable multi-select list. Signing in sets
+multi-select list; skills are selected from the managed Contact Center skill catalog. Signing in sets
 presence to `Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission grants
-self-service sign-in and presence changes.
+self-service sign-in.
+
+Agents change presence from the floating soft phone widget. When the Contact Center queues feature is
+enabled and an agent has a profile, the soft phone shows a **Contact Center presence** selector so
+availability changes stay close to call handling instead of the queue/campaign sign-in screen.
+
+## Skills
+
+Administrators manage routeable capabilities from **Interaction Center → Skills**. A skill has a
+unique name, description, and enabled state. Enabled skills appear in the Agent Workspace and queue
+editor selectors; disabled skills remain on existing agents and queues but are hidden from new
+selections.
+
+Queues can require one or more skills. Agents must select every required skill to be eligible for
+that queue, and the default routing strategy filters out agents missing any required skill before
+longest-idle scoring runs.
 
 ## Queues, reservations, and assignment
 
@@ -73,10 +88,11 @@ call assignment, and voice-specific orchestration without coupling Contact Cente
 
 ## Admin UX and extensibility
 
-Contact Center admin entries live under **Interaction Center**. Queue and dialer profile CRUD screens
-match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and create/edit
-screens render display-driver editor shapes. This keeps the UI extensible for provider panels,
-compliance fields, routing strategies, and future supervisor controls.
+Contact Center admin entries live under **Interaction Center**. Skills, queues, and dialer profile
+CRUD screens match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and
+create/edit screens render display-driver editor shapes with the required root edit wrapper templates.
+This keeps the UI extensible for provider panels, compliance fields, routing strategies, and future
+supervisor controls.
 
 ## Enable via recipe
 

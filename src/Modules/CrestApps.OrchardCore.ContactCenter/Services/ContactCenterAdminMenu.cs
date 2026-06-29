@@ -38,6 +38,12 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
                     .Id("contactCenterQueues")
                     .Action("Index", "Queues", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageQueues)
+                    .LocalNav())
+                .Add(S["Skills"], S["Skills"].PrefixPosition(), skills => skills
+                    .AddClass("contact-center-skills")
+                    .Id("contactCenterSkills")
+                    .Action("Index", "Skills", "CrestApps.OrchardCore.ContactCenter")
+                    .Permission(ContactCenterPermissions.ManageSkills)
                     .LocalNav()),
                 priority: 1);
 

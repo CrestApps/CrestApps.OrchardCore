@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -45,7 +46,7 @@ public class AgentWorkspaceViewModel
     public IList<string> SelectedSkills { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the optional presence reason submitted by the agent.
+    /// Gets a value indicating whether the agent is currently signed in.
     /// </summary>
-    public string PresenceReason { get; set; }
+    public bool IsSignedIn => Profile is not null && Profile.PresenceStatus != AgentPresenceStatus.Offline;
 }

@@ -99,13 +99,17 @@ Enable the **Telephony Soft Phone** feature
 (`CrestApps.OrchardCore.Telephony.SoftPhone`) to inject a floating soft phone into the site.
 Configure where it appears on the **Soft Phone** tab of the telephony settings:
 
-- **Show the soft phone on the admin dashboard** displays the widget on admin pages.
+- **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
+  by default.
 - **Show the soft phone on the front end** displays the widget on the website.
 - **Accent color** controls the widget's button and control colors.
 
 You can enable the soft phone on the admin, the front end, or both. The widget is rendered when its
 surface is enabled and the current user has the `Use the telephony soft phone` permission, so the
 soft phone only appears for authorized users.
+
+Modules can contribute extension shapes to the widget. Contact Center uses this extension point to
+show agent presence controls in the soft phone when the current user has an agent profile.
 
 ### Moving and persisting the widget
 

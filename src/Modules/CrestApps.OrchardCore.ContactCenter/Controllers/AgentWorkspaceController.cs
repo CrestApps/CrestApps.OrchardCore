@@ -12,7 +12,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
 /// <summary>
-/// Provides the agent workspace where agents sign in to queues and campaigns and change presence.
+/// Provides the agent workspace where agents sign in to queues and campaigns.
 /// </summary>
 [Admin]
 [Feature(ContactCenterConstants.Feature.Queues)]
@@ -72,7 +72,6 @@ public sealed class AgentWorkspaceController : Controller
             SelectedCampaignIds = selectedCampaignIds,
             SkillOptions = await _optionsProvider.GetSkillOptionsAsync(selectedSkills),
             SelectedSkills = selectedSkills,
-            PresenceReason = profile?.PresenceReason,
         });
     }
 
@@ -122,11 +121,11 @@ public sealed class AgentWorkspaceController : Controller
     }
 
     /// <summary>
-    /// Sets the agent presence state.
+    /// Sets the agent presence state from the soft phone widget.
     /// </summary>
     /// <param name="status">The presence state.</param>
     /// <param name="presenceReason">The optional reason code.</param>
-    /// <returns>A redirect to the workspace.</returns>
+    /// <returns>A redirect to the referring page or the workspace.</returns>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetPresence(AgentPresenceStatus status, string presenceReason)
@@ -137,6 +136,11 @@ public sealed class AgentWorkspaceController : Controller
         }
 
         await _presenceManager.SetPresenceAsync(GetUserId(), status, presenceReason);
+
+        if (Request.Headers.Referer.Count > 0)
+        {
+            return Redirect(Request.Headers.Referer.ToString());
+        }
 
         return RedirectToAction(nameof(Index));
     }

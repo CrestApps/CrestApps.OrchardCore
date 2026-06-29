@@ -16,7 +16,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IContactCenterSkillManager _skillManager;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
 
@@ -25,19 +25,19 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// </summary>
     /// <param name="campaignManager">The omnichannel campaign manager.</param>
     /// <param name="queueManager">The activity queue manager.</param>
-    /// <param name="agentProfileManager">The agent profile manager.</param>
+    /// <param name="skillManager">The Contact Center skill manager.</param>
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
     /// <param name="voiceProviders">The registered voice call providers.</param>
     public ContactCenterAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         IActivityQueueManager queueManager,
-        IAgentProfileManager agentProfileManager,
+        IContactCenterSkillManager skillManager,
         IOmnichannelChannelEndpointManager channelEndpointManager,
         IEnumerable<IContactCenterVoiceProvider> voiceProviders)
     {
         _campaignManager = campaignManager;
         _queueManager = queueManager;
-        _agentProfileManager = agentProfileManager;
+        _skillManager = skillManager;
         _channelEndpointManager = channelEndpointManager;
         _voiceProviders = voiceProviders;
     }
@@ -75,21 +75,16 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task<IList<SelectListItem>> GetSkillOptionsAsync(IEnumerable<string> selectedSkills)
     {
         var selected = CreateSelectedSet(selectedSkills, StringComparer.OrdinalIgnoreCase);
-        var queues = await _queueManager.GetAllAsync();
-        var agents = await _agentProfileManager.GetAllAsync();
+        var skills = await _skillManager.ListEnabledAsync();
 
-        var skills = queues
-            .SelectMany(queue => queue.RequiredSkills)
-            .Concat(agents.SelectMany(agent => agent.Skills))
-            .Concat(selected)
-            .Where(skill => !string.IsNullOrWhiteSpace(skill))
-            .Select(skill => skill.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(skill => skill, StringComparer.CurrentCultureIgnoreCase);
+        var options = skills
+            .OrderBy(skill => skill.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(skill => new SelectListItem(skill.Name, skill.Name, selected.Contains(skill.Name)))
+            .ToList();
 
-        return skills
-            .Select(skill => new SelectListItem(skill, skill, selected.Contains(skill)))
-            .ToArray();
+        AddMissingSelectedOptions(options, selected, StringComparer.OrdinalIgnoreCase);
+
+        return options;
     }
 
     internal async Task<IList<SelectListItem>> GetInboundChannelEndpointOptionsAsync(string selectedEndpointId)

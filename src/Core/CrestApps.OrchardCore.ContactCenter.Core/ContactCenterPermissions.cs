@@ -33,6 +33,11 @@ public static class ContactCenterPermissions
     public static readonly Permission ManageQueues = new("ManageContactCenterQueues", "Manage Contact Center queues", [ManageContactCenter]);
 
     /// <summary>
+    /// Grants management of skills used by routing and agent sign-in.
+    /// </summary>
+    public static readonly Permission ManageSkills = new("ManageContactCenterSkills", "Manage Contact Center skills", [ManageContactCenter]);
+
+    /// <summary>
     /// Grants management of dialer profiles and outbound dialing.
     /// </summary>
     public static readonly Permission ManageDialer = new("ManageContactCenterDialer", "Manage the Contact Center dialer", [ManageContactCenter]);

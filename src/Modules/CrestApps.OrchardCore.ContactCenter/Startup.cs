@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
@@ -80,6 +81,8 @@ public sealed class QueuesStartup : StartupBase
         services
             .AddScoped<IActivityQueueStore, ActivityQueueStore>()
             .AddScoped<IActivityQueueManager, ActivityQueueManager>()
+            .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
+            .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
             .AddScoped<IQueueItemStore, QueueItemStore>()
             .AddScoped<IQueueItemManager, QueueItemManager>()
             .AddScoped<IActivityReservationStore, ActivityReservationStore>()
@@ -90,13 +93,18 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
-            .AddScoped<ContactCenterAdminFormOptionsProvider>();
+            .AddScoped<ContactCenterAdminFormOptionsProvider>()
+            .AddScoped<ISoftPhoneWidgetExtensionProvider, ContactCenterSoftPhoneWidgetExtensionProvider>();
 
         services
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
+            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
             .AddDataMigration<ActivityQueueIndexMigrations>()
+            .AddIndexProvider<ContactCenterSkillIndexProvider>()
+            .AddDataMigration<ContactCenterSkillIndexMigrations>()
             .AddIndexProvider<QueueItemIndexProvider>()
             .AddDataMigration<QueueItemIndexMigrations>()
             .AddIndexProvider<ActivityReservationIndexProvider>()

@@ -106,11 +106,13 @@ Managers configure queue membership, campaign assignment, dialer mode, priority,
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
 campaigns, and future channels all offer Activities through the same real-time workspace model.
 
-The current workspace lets agents choose queues, campaigns, skills, and presence using the standard
-Orchard admin layout. Campaign and skill selection use searchable multi-select lists instead of raw
+The current workspace lets agents choose queues, campaigns, and skills using the standard Orchard
+admin layout. Campaign and skill selection use searchable multi-select lists instead of raw
 identifier fields; campaigns come from the Omnichannel Management **Interaction Center** campaign
-catalog. Queue and dialer profile admin screens use display drivers and extensible summary/editor
-shapes so providers and future desktop panels can extend the model without replacing the base UI.
+catalog, and skills come from **Interaction Center → Skills**. Presence changes are exposed in the
+floating soft phone widget so availability stays near call handling. Skill, queue, and dialer profile
+admin screens use display drivers and extensible summary/editor shapes so providers and future
+desktop panels can extend the model without replacing the base UI.
 
 ## Voice provider integration
 
@@ -191,8 +193,8 @@ outbound calls are wrapped up through the same subject workflow.
 ## UI extensibility
 
 All Contact Center UI is built with Orchard Core display management: shapes, display drivers,
-placement, templates, and shape alternates. The queue and dialer profile CRUD screens follow the
-Omnichannel Campaigns UI pattern: controllers load catalog entries through managers and build
+placement, templates, and shape alternates. The skill, queue, and dialer profile CRUD screens follow
+the Omnichannel Campaigns UI pattern: controllers load catalog entries through managers and build
 summary/editor shapes with `IDisplayManager<T>`. Activity screens remain Omnichannel screens that
 Contact Center augments with display drivers for reservation state, interaction history, dialer
 controls, wrap-up, and supervisor decorations.

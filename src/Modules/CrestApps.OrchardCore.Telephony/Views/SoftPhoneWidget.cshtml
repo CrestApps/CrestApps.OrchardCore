@@ -8,6 +8,7 @@
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
     var capabilities = Model.Capabilities is int caps ? caps : 0;
+    var extensions = Model.Extensions as IEnumerable<object> ?? [];
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
@@ -83,6 +84,11 @@
                 <i class="fa-solid fa-link"></i> @T["Connect to provider"]
             </button>
         </div>
+
+        @foreach (var extension in extensions)
+        {
+            @await DisplayAsync(extension)
+        }
 
         <div class="telephony-soft-phone__body" data-telephony-body>
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">

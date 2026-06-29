@@ -5,93 +5,70 @@
 
 <zone Name="Title"><h1>@T["Agent workspace"]</h1></zone>
 
-@if (Model.Profile is not null)
+@if (Model.IsSignedIn)
 {
-    <div class="alert alert-info">
-        @T["Current presence: {0}", Model.Profile.PresenceStatus]
+    <div class="alert alert-info" role="status">
+        @T["You are signed in to Contact Center work."]
     </div>
 }
 
-<form asp-action="SignIn" method="post">
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <p class="mb-2">@T["Select the queues you want to receive work from, then sign in."]</p>
+@if (!Model.IsSignedIn)
+{
+    <form asp-action="SignIn" method="post">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <p class="mb-2">@T["Select the queues, campaigns, and skills you want to receive work from, then sign in."]</p>
+            </div>
         </div>
-    </div>
 
-    <div class="ocat-wrapper">
-        <label class="ocat-label">@T["Queues"]</label>
-        <div class="ocat-end">
-            @foreach (var queue in Model.AvailableQueues)
-            {
-                var selected = Model.SelectedQueueIds.Contains(queue.ItemId);
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Queues"]</label>
+            <div class="ocat-end">
+                @foreach (var queue in Model.AvailableQueues)
+                {
+                    var selected = Model.SelectedQueueIds.Contains(queue.ItemId);
 
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="selectedQueueIds" value="@queue.ItemId" id="q_@queue.ItemId" checked="@selected" />
-                    <label class="form-check-label" for="q_@queue.ItemId">@queue.Name</label>
-                </div>
-            }
-            <span class="hint">@T["Only selected queues can reserve and offer work to you."]</span>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="selectedQueueIds" value="@queue.ItemId" id="q_@queue.ItemId" checked="@selected" />
+                        <label class="form-check-label" for="q_@queue.ItemId">@queue.Name</label>
+                    </div>
+                }
+                <span class="hint">@T["Only selected queues can reserve and offer work to you."]</span>
+            </div>
         </div>
-    </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="SelectedCampaignIds">
-        <label asp-for="SelectedCampaignIds" class="ocat-label">@T["Campaigns"]</label>
-        <div class="ocat-end">
-            <select asp-for="SelectedCampaignIds" asp-items="Model.CampaignOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select campaigns"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" data-style="btn-outline-secondary" title="@T["Any campaign"]"></select>
-            <span asp-validation-for="SelectedCampaignIds"></span>
-            <span class="hint">@T["Select the outbound campaigns you can receive dialer work from."]</span>
+        <div class="ocat-wrapper" asp-validation-class-for="SelectedCampaignIds">
+            <label asp-for="SelectedCampaignIds" class="ocat-label">@T["Campaigns"]</label>
+            <div class="ocat-end">
+                <select asp-for="SelectedCampaignIds" asp-items="Model.CampaignOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select campaigns"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" data-style="btn-outline-secondary" title="@T["Any campaign"]"></select>
+                <span asp-validation-for="SelectedCampaignIds"></span>
+                <span class="hint">@T["Select the outbound campaigns you can receive dialer work from."]</span>
+            </div>
         </div>
-    </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="SelectedSkills">
-        <label asp-for="SelectedSkills" class="ocat-label">@T["Skills"]</label>
-        <div class="ocat-end">
-            <select asp-for="SelectedSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" data-style="btn-outline-secondary" title="@T["No skills"]"></select>
-            <span asp-validation-for="SelectedSkills"></span>
-            <span class="hint">@T["Select the routing skills that match the work you can handle."]</span>
+        <div class="ocat-wrapper" asp-validation-class-for="SelectedSkills">
+            <label asp-for="SelectedSkills" class="ocat-label">@T["Skills"]</label>
+            <div class="ocat-end">
+                <select asp-for="SelectedSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" data-style="btn-outline-secondary" title="@T["No skills"]"></select>
+                <span asp-validation-for="SelectedSkills"></span>
+                <span class="hint">@T["Select the routing skills that match the work you can handle."]</span>
+            </div>
         </div>
-    </div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button type="submit" class="btn btn-success">@T["Sign in"]</button>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-success">@T["Sign in"]</button>
+            </div>
         </div>
-    </div>
-</form>
-
-<form asp-action="SignOutAgent" method="post" class="mt-2">
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button type="submit" class="btn btn-secondary">@T["Sign out"]</button>
+    </form>
+}
+else
+{
+    <form asp-action="SignOutAgent" method="post">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-secondary">@T["Sign out"]</button>
+            </div>
         </div>
-    </div>
-</form>
-
-<form asp-action="SetPresence" method="post" class="mt-2">
-    <div class="ocat-limited-wrapper">
-        <label for="status" class="ocat-label">@T["Presence"]</label>
-        <div class="ocat-limited">
-            <select id="status" name="status" class="form-select">
-                <option value="@AgentPresenceStatus.Available" selected="@(Model.Profile?.PresenceStatus == AgentPresenceStatus.Available)">@T["Available"]</option>
-                <option value="@AgentPresenceStatus.Break" selected="@(Model.Profile?.PresenceStatus == AgentPresenceStatus.Break)">@T["Break"]</option>
-                <option value="@AgentPresenceStatus.WrapUp" selected="@(Model.Profile?.PresenceStatus == AgentPresenceStatus.WrapUp)">@T["Wrap-up"]</option>
-                <option value="@AgentPresenceStatus.Offline" selected="@(Model.Profile?.PresenceStatus == AgentPresenceStatus.Offline)">@T["Offline"]</option>
-            </select>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="PresenceReason">
-        <label asp-for="PresenceReason" class="ocat-label">@T["Reason"]</label>
-        <div class="ocat-end">
-            <input asp-for="PresenceReason" class="form-control" />
-            <span asp-validation-for="PresenceReason"></span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <button type="submit" class="btn btn-primary">@T["Update presence"]</button>
-        </div>
-    </div>
-</form>
+    </form>
+}

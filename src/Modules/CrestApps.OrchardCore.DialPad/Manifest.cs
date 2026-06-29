@@ -10,14 +10,14 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Integrates the DialPad telephony platform with the Telephony soft phone.",
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Id = DialPadConstants.Feature.Area,
     Name = "DialPad",
     Description = "Provides the DialPad telephony provider and its settings.",
-    Category = "Communications",
+    Category = "Communication",
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
@@ -28,7 +28,7 @@ using OrchardCore.Modules.Manifest;
     Id = DialPadConstants.Feature.Dialer,
     Name = "DialPad Contact Center Voice",
     Description = "Implements the Contact Center voice provider boundary over DialPad so the Voice Contact Center Call Router can place outbound calls through DialPad.",
-    Category = "Communications",
+    Category = "Communication",
     Dependencies =
     [
         DialPadConstants.Feature.Area,

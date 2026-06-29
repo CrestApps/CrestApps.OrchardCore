@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -23,6 +24,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ITelephonyProviderResolver _providerResolver;
+    private readonly IEnumerable<ISoftPhoneWidgetExtensionProvider> _extensionProviders;
     private readonly IResourceManager _resourceManager;
     private readonly AdminOptions _adminOptions;
 
@@ -34,6 +36,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
     /// <param name="siteService">The site service.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
+    /// <param name="extensionProviders">The soft phone widget extension providers.</param>
     /// <param name="resourceManager">The resource manager.</param>
     /// <param name="adminOptions">The admin options.</param>
     public SoftPhoneWidgetFilter(
@@ -42,6 +45,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         ISiteService siteService,
         IAuthorizationService authorizationService,
         ITelephonyProviderResolver providerResolver,
+        IEnumerable<ISoftPhoneWidgetExtensionProvider> extensionProviders,
         IResourceManager resourceManager,
         IOptions<AdminOptions> adminOptions)
     {
@@ -50,6 +54,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         _siteService = siteService;
         _authorizationService = authorizationService;
         _providerResolver = providerResolver;
+        _extensionProviders = extensionProviders;
         _resourceManager = resourceManager;
         _adminOptions = adminOptions.Value;
     }
@@ -103,6 +108,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
             ? SoftPhoneWidgetSettings.DefaultAccentColor
             : settings.AccentColor;
         shape.Properties["Capabilities"] = capabilities;
+        shape.Properties["Extensions"] = await BuildExtensionsAsync(context.HttpContext.RequestAborted);
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 
@@ -114,5 +120,17 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
     private bool IsAdminPage(ResultExecutingContext context)
     {
         return context.HttpContext.Request.Path.StartsWithSegments('/' + _adminOptions.AdminUrlPrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<IList<object>> BuildExtensionsAsync(CancellationToken cancellationToken)
+    {
+        var extensionContext = new SoftPhoneWidgetExtensionContext();
+
+        foreach (var provider in _extensionProviders)
+        {
+            await provider.BuildAsync(extensionContext, cancellationToken);
+        }
+
+        return extensionContext.Shapes;
     }
 }
