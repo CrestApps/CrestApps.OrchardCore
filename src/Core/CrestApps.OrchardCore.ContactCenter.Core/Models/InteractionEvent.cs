@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.Core.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -7,12 +9,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// Represents a single durable Contact Center domain event. Interaction events form the auditable,
 /// replayable history of everything that happens to an interaction across the contact center.
 /// </summary>
-public sealed class InteractionEvent : Entity
+public sealed class InteractionEvent : CatalogItem, IEntity
 {
     /// <summary>
-    /// Gets or sets the stable identifier of the event.
+    /// Gets or sets extensible Orchard entity metadata for the event.
     /// </summary>
-    public string ItemId { get; set; }
+    public JsonObject EntityProperties { get; set; } = [];
+
+    JsonObject IEntity.Properties
+    {
+        get => EntityProperties;
+    }
 
     /// <summary>
     /// Gets or sets the identifier of the interaction the event belongs to.

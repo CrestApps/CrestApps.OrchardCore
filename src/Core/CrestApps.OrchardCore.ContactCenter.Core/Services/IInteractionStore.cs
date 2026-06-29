@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
@@ -7,30 +8,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Defines the persistence contract for interactions.
 /// </summary>
-public interface IInteractionStore
+public interface IInteractionStore : ICatalog<Interaction>
 {
-    /// <summary>
-    /// Creates the specified interaction.
-    /// </summary>
-    /// <param name="interaction">The interaction to create.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    ValueTask CreateAsync(Interaction interaction, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Updates the specified interaction.
-    /// </summary>
-    /// <param name="interaction">The interaction to update.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    ValueTask UpdateAsync(Interaction interaction, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Finds the interaction with the specified identifier.
-    /// </summary>
-    /// <param name="id">The interaction identifier.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The matching interaction, or <see langword="null"/> when none is found.</returns>
-    ValueTask<Interaction> FindByIdAsync(string id, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Finds the interaction linked to the specified CRM activity.
     /// </summary>

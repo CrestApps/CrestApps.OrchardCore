@@ -176,8 +176,8 @@ public sealed class ActivityBatchesController : Controller
     /// <summary>
     /// Creates a new .
     /// </summary>
-    [Admin("omnichannel/activity/batches/create/{source?}", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> Create(string source = ActivitySources.Manual)
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -208,8 +208,8 @@ public sealed class ActivityBatchesController : Controller
     /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("omnichannel/activity/batches/create/{source?}", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> CreatePost(string source = ActivitySources.Manual)
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -824,9 +824,14 @@ public sealed class ActivityBatchesController : Controller
 
     private static bool TryGetActivityBatchSource(string source, ActivityBatchSourceOptions options, out ActivityBatchSourceEntry sourceEntry)
     {
-        var normalizedSource = string.IsNullOrWhiteSpace(source)
-            ? ActivitySources.Manual
-            : source.Trim();
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            sourceEntry = null;
+
+            return false;
+        }
+
+        var normalizedSource = source.Trim();
 
         return options.Sources.TryGetValue(normalizedSource, out sourceEntry);
     }

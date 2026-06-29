@@ -1,4 +1,7 @@
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -23,7 +26,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
-            .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>();
+            .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
+            .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
         services
             .AddIndexProvider<InteractionIndexProvider>()

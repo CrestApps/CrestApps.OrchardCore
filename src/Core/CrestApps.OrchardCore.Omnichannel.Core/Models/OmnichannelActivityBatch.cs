@@ -22,7 +22,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// <summary>
     /// Gets or sets the activity source used when loading activities from this batch.
     /// </summary>
-    public string Source { get; set; } = ActivitySources.Manual;
+    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the subject content type.

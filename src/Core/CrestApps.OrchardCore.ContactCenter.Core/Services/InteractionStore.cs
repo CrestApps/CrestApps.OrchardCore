@@ -2,6 +2,7 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,44 +10,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IInteractionStore"/>.
 /// </summary>
-public sealed class InteractionStore : IInteractionStore
+public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionIndex>, IInteractionStore
 {
-    private readonly ISession _session;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     public InteractionStore(ISession session)
+        : base(session)
     {
-        _session = session;
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask CreateAsync(Interaction interaction, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-
-        await _session.SaveAsync(interaction, ContactCenterConstants.CollectionName);
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask UpdateAsync(Interaction interaction, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-
-        await _session.SaveAsync(interaction, ContactCenterConstants.CollectionName);
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask<Interaction> FindByIdAsync(string id, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(id);
-
-        return await _session.Query<Interaction, InteractionIndex>(
-            index => index.ItemId == id,
-            collection: ContactCenterConstants.CollectionName)
-            .FirstOrDefaultAsync(cancellationToken);
+        CollectionName = ContactCenterConstants.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -54,7 +27,7 @@ public sealed class InteractionStore : IInteractionStore
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
 
-        return await _session.Query<Interaction, InteractionIndex>(
+        return await Session.Query<Interaction, InteractionIndex>(
             index => index.ActivityItemId == activityItemId,
             collection: ContactCenterConstants.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
@@ -66,7 +39,7 @@ public sealed class InteractionStore : IInteractionStore
     {
         ArgumentException.ThrowIfNullOrEmpty(correlationId);
 
-        return await _session.Query<Interaction, InteractionIndex>(
+        return await Session.Query<Interaction, InteractionIndex>(
             index => index.CorrelationId == correlationId,
             collection: ContactCenterConstants.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
@@ -76,7 +49,7 @@ public sealed class InteractionStore : IInteractionStore
     /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
-        var query = _session.Query<Interaction, InteractionIndex>(
+        var query = Session.Query<Interaction, InteractionIndex>(
             index => index.Status == status,
             collection: ContactCenterConstants.CollectionName)
             .OrderBy(index => index.CreatedUtc);

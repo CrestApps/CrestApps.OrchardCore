@@ -94,6 +94,32 @@ supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-
 routing, queue, or supervisor data; voice call state continues to flow through Telephony and is
 projected into the interaction.
 
+## Agent workspace
+
+Agents receive Contact Center work in the Contact Center Agent Workspace inside the CRM admin
+experience. The workspace is the place where agents sign in to allowed queues and outbound
+campaigns, set presence and reason codes, receive activity offers, accept or reject reservations,
+work the active CRM activity, use injected Telephony call controls, review interaction history, and
+complete wrap-up/disposition.
+
+Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and
+compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
+campaigns, and future channels all offer Activities through the same real-time workspace model.
+
+## Voice provider integration
+
+The Telephony module continues to own soft-phone call control and media execution. Contact Center
+adds optional voice-provider abstractions for PBX providers that can participate in contact-center
+orchestration beyond basic call control:
+
+- Dial on behalf of a dialer.
+- Assign an existing provider call to an agent after Contact Center chooses the assignment.
+- Place or move provider calls in provider-side queues after Contact Center chooses the queue.
+- Publish queue events and synchronize PBX presence when supported.
+
+Contact Center remains the brain: it selects the Activity, queue, agent, campaign, dialer mode, and
+compliance gates, then sends provider-neutral intents to the provider adapter.
+
 ## UI extensibility
 
 All Contact Center UI is built with Orchard Core display management: shapes, display drivers,

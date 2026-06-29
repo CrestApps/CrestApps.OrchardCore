@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// </summary>
 internal sealed class ContactCenterPermissionProvider : IPermissionProvider
 {
-    private readonly IEnumerable<Permission> _allPermissions =
+    private static readonly IEnumerable<Permission> _allPermissions =
     [
         ContactCenterPermissions.ManageContactCenter,
         ContactCenterPermissions.ManageInteractions,

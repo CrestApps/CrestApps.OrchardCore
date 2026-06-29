@@ -8,14 +8,14 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides the contact center orchestration layer that turns the CRM into a full contact center.",
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Area,
     Name = "Contact Center",
     Description = "Provides the interaction lifecycle, the durable domain event log, baseline permissions, and admin navigation.",
-    Category = "Communications",
+    Category = "Communication",
     Dependencies =
     [
         "OrchardCore.Users",

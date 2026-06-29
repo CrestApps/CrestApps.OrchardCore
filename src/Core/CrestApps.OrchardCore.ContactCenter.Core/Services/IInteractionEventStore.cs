@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -5,15 +6,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Defines the persistence contract for the durable interaction event history.
 /// </summary>
-public interface IInteractionEventStore
+public interface IInteractionEventStore : ICatalog<InteractionEvent>
 {
-    /// <summary>
-    /// Creates the specified interaction event.
-    /// </summary>
-    /// <param name="interactionEvent">The interaction event to create.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    ValueTask CreateAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Lists the events recorded for the specified interaction, oldest first.
     /// </summary>

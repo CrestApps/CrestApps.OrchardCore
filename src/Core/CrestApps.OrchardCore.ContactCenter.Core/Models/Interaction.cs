@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Entities;
 
@@ -8,12 +10,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// Represents a communication event associated with a CRM activity. The CRM activity remains the
 /// universal work item; an interaction captures the technical communication history for one attempt.
 /// </summary>
-public sealed class Interaction : Entity, IModifiedUtcAwareModel
+public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
 {
     /// <summary>
-    /// Gets or sets the stable identifier of the interaction.
+    /// Gets or sets extensible Orchard entity metadata for the interaction.
     /// </summary>
-    public string ItemId { get; set; }
+    public JsonObject EntityProperties { get; set; } = [];
+
+    JsonObject IEntity.Properties
+    {
+        get => EntityProperties;
+    }
 
     /// <summary>
     /// Gets or sets the channel the interaction is conducted on.

@@ -1,103 +1,70 @@
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using OrchardCore;
-using OrchardCore.Modules;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Provides the default implementation of <see cref="IInteractionManager"/>.
+/// Provides the default implementation of <see cref="IInteractionManager"/> that delegates storage
+/// to <see cref="IInteractionStore"/> and loads entries through catalog handlers.
 /// </summary>
-public sealed class InteractionManager : IInteractionManager
+public sealed class InteractionManager : CatalogManager<Interaction>, IInteractionManager
 {
     private readonly IInteractionStore _store;
-    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionManager"/> class.
     /// </summary>
     /// <param name="store">The underlying interaction store.</param>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="handlers">The catalog entry handlers for interactions.</param>
+    /// <param name="logger">The logger instance.</param>
     public InteractionManager(
         IInteractionStore store,
-        IClock clock)
+        IEnumerable<ICatalogEntryHandler<Interaction>> handlers,
+        ILogger<CatalogManager<Interaction>> logger)
+        : base(store, handlers, logger)
     {
         _store = store;
-        _clock = clock;
-    }
-
-    /// <inheritdoc/>
-    public ValueTask<Interaction> NewAsync()
-    {
-        return ValueTask.FromResult(new Interaction
-        {
-            ItemId = IdGenerator.GenerateId(),
-            CorrelationId = IdGenerator.GenerateId(),
-            CreatedUtc = _clock.UtcNow,
-        });
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask CreateAsync(Interaction interaction, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-
-        EnsureIdentity(interaction);
-
-        if (interaction.CreatedUtc == default)
-        {
-            interaction.CreatedUtc = _clock.UtcNow;
-        }
-
-        await _store.CreateAsync(interaction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask UpdateAsync(Interaction interaction, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-
-        EnsureIdentity(interaction);
-        interaction.ModifiedUtc = _clock.UtcNow;
-
-        await _store.UpdateAsync(interaction, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public ValueTask<Interaction> FindByIdAsync(string id, CancellationToken cancellationToken = default)
-    {
-        return _store.FindByIdAsync(id, cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<Interaction> FindByActivityIdAsync(string activityItemId, CancellationToken cancellationToken = default)
     {
-        return await _store.FindByActivityIdAsync(activityItemId, cancellationToken);
+        var interaction = await _store.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interaction;
     }
 
     /// <inheritdoc/>
     public async Task<Interaction> FindByCorrelationIdAsync(string correlationId, CancellationToken cancellationToken = default)
     {
-        return await _store.FindByCorrelationIdAsync(correlationId, cancellationToken);
+        var interaction = await _store.FindByCorrelationIdAsync(correlationId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interaction;
     }
 
     /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
-        return await _store.PageByStatusAsync(page, pageSize, status, cancellationToken);
-    }
+        var result = await _store.PageByStatusAsync(page, pageSize, status, cancellationToken);
 
-    private static void EnsureIdentity(Interaction interaction)
-    {
-        if (string.IsNullOrEmpty(interaction.ItemId))
+        foreach (var entry in result.Entries)
         {
-            interaction.ItemId = IdGenerator.GenerateId();
+            await LoadAsync(entry, cancellationToken);
         }
 
-        if (string.IsNullOrEmpty(interaction.CorrelationId))
-        {
-            interaction.CorrelationId = IdGenerator.GenerateId();
-        }
+        return result;
     }
 }

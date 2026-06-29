@@ -60,6 +60,8 @@ Required CRM alignment:
 - Activities need classification metadata such as kind (call, email, SMS, meeting, task) and source (manual, preview dial, power dial, progressive dial, predictive dial, callback, inbound, workflow, API). Workflows must ignore source and react only to the activity and final disposition.
 - Activity batches select an activity source before showing the editor. Manual batches require user assignment while loading; dialer batches hide user selection and load unassigned activities with an available assignment status so the dialer can reserve and assign them later.
 - Dispositions belong to activities, not interactions. Provider, agent, AI, and workflow outcomes must converge through a single activity disposition service before subject actions/workflows run.
+- Contact Center must provide the agent workspace where agents receive work. Agents sign in to queues and/or campaign assignments, set presence, accept or reject offers, handle the active activity, use injected Telephony controls, review interaction history, and complete wrap-up from the CRM UI.
+- PBX/voice providers that can do more than soft-phone call control may implement Contact Center voice-provider abstractions for dialer dialing, call assignment, provider-side queues, queue events, and PBX presence synchronization.
 
 ### Existing real-time boundary
 
@@ -76,7 +78,9 @@ Design implication: Contact Center should add its own real-time event stream for
 - No real-time agent presence or capacity model.
 - No inbound routing orchestration.
 - No outbound dialer orchestration beyond manual CRM activities and automated SMS processing.
+- No Contact Center agent workspace for queue/campaign sign-in, current offer handling, active activity, injected phone controls, and wrap-up.
 - No contact-center-level call session mapping between provider calls and business interactions.
+- No Contact Center voice-provider abstraction that lets PBX providers participate in dialer dialing, call assignment, and provider-side queue behavior.
 - No supervisor dashboard or live queue metric projection.
 - No durable domain event stream/outbox for contact center orchestration.
 - Existing OrchardCore.Workflows integration for Omnichannel Management has been removed; Contact Center needs an explicit workflow strategy.
@@ -127,6 +131,7 @@ Design implication: Contact Center should add its own real-time event stream for
    - Voice channel adapter that integrates Contact Center with the Telephony module.
    - Owns call session mapping and Contact Center voice lifecycle projection.
    - Depends on Telephony but does not replace Telephony.
+   - Exposes `IContactCenterVoiceProvider` extension points so PBX providers can implement dialer dialing, provider-side call assignment, provider queue placement, queue events, and PBX presence synchronization when supported.
 
 6. `CrestApps.OrchardCore.ContactCenter.Dialer`
    - Outbound campaign dialing modes: manual, preview, power, progressive, and later predictive.
@@ -139,32 +144,36 @@ Design implication: Contact Center should add its own real-time event stream for
    - Supervisor live monitoring, agent monitoring, queue controls, coaching/assist metadata, SLA alerts, and operational command permissions.
    - Live call-control primitives: silent monitor, whisper coaching, barge-in, and take-over, expressed as orchestration intents that Telephony/providers execute.
 
-9. `CrestApps.OrchardCore.ContactCenter.EntryPoints`
+9. `CrestApps.OrchardCore.ContactCenter.AgentWorkspace`
+   - Agent workspace UI where agents sign in/out of queues and campaigns, change presence, receive activity offers, accept or reject work, see the active activity, use injected Telephony call controls, review interaction history, and complete wrap-up.
+   - Uses shapes, display drivers, placement, and SignalR snapshots/events so modules can inject provider controls, campaign panels, compliance warnings, AI assist, and supervisor coaching without replacing the workspace.
+
+10. `CrestApps.OrchardCore.ContactCenter.EntryPoints`
    - Inbound entry points, DID/number-to-entry-point mapping, IVR/self-service decision flows, business-hours/holiday gating, queue selection, announcements, and screen-pop context.
    - Reuses subject flows and the optional Workflows bridge for decision logic instead of hardcoding IVR trees.
 
-10. `CrestApps.OrchardCore.ContactCenter.Recording`
+11. `CrestApps.OrchardCore.ContactCenter.Recording`
    - Recording orchestration: start/stop/pause/resume intents, consent capture, recording metadata, retention/disposal policy, and access auditing.
    - Stores recording metadata and references only; media capture and storage stay with Telephony/providers or a configured media store.
 
-11. `CrestApps.OrchardCore.ContactCenter.Compliance`
+12. `CrestApps.OrchardCore.ContactCenter.Compliance`
    - Outbound calling windows, abandonment-rate caps, safe-harbor/abandon messaging, caller-ID/local-presence policy, list scrubbing/recycling, consent tracking, and suppression auditing.
    - Reuses existing DNC registry and contact communication preferences rather than duplicating them.
 
-12. `CrestApps.OrchardCore.ContactCenter.Analytics`
+13. `CrestApps.OrchardCore.ContactCenter.Analytics`
    - Metric projections, historical reporting, SLA snapshots, campaign performance, agent performance, queue performance, adherence, and export-ready reporting data.
 
-13. `CrestApps.OrchardCore.ContactCenter.Quality`
+14. `CrestApps.OrchardCore.ContactCenter.Quality`
    - Optional quality management: evaluation forms/scorecards, recording review, calibration, and coaching records. Advanced phase.
 
-14. `CrestApps.OrchardCore.ContactCenter.Workflows`
+15. `CrestApps.OrchardCore.ContactCenter.Workflows`
    - Optional OrchardCore.Workflows bridge for tenants that want workflow activities/events in addition to Subject Flows and Subject Actions.
    - Should be feature-gated because current Omnichannel Management intentionally removed its direct Workflows dependency.
 
-15. `CrestApps.OrchardCore.ContactCenter.AI`
+16. `CrestApps.OrchardCore.ContactCenter.AI`
    - Optional AI assist, virtual agent, summarization, disposition suggestions, quality insights, and future AI routing recommendations.
 
-16. `CrestApps.OrchardCore.ContactCenter.Deployment`
+17. `CrestApps.OrchardCore.ContactCenter.Deployment`
    - Recipes and deployment steps for queues, routing policies, skills, agent profiles, dialer profiles, entry points, recording/compliance policies, supervisor dashboards, and tenant defaults.
 
 ## Domain architecture overview
@@ -329,6 +338,14 @@ Capacity model:
 - Capacity is per channel and per agent profile.
 - Routing must reserve capacity before offering work.
 
+Agent workspace:
+
+- Agents use the Contact Center Agent Workspace in the CRM admin experience to receive work.
+- The workspace shows queue sign-in, campaign sign-in, presence/reason selection, current reservation/offer, active activity, customer/contact summary, interaction history, Telephony call controls, wrap-up, required disposition, and supervisor/AI assistance.
+- Agents can opt into queues and campaigns they are permitted to handle. Managers configure queue membership, campaign assignment, dialing mode, priority, and capacity rules.
+- Inbound queues, callback queues, preview dial queues, power/progressive/predictive campaigns, and future channels all deliver activity offers through the same workspace offer model.
+- The workspace is shape-driven: Telephony injects call controls, Contact Center injects reservation/wrap-up/presence, providers inject provider-specific call state, and optional modules inject AI assist, compliance, or supervisor coaching.
+
 ### 6. Campaign Dialer
 
 | Area | Design |
@@ -458,11 +475,11 @@ Event envelope requirements:
 | Area | Design |
 | --- | --- |
 | Purpose | Preserve a clean separation between Contact Center business orchestration and Telephony provider/media execution. |
-| Responsibilities | Define which layer owns routing, call actions, call state, provider metadata, and business interaction state. |
+| Responsibilities | Define which layer owns routing, call actions, call state, provider metadata, business activity state, and provider-side contact center capabilities. |
 | Data owned | Boundary contracts, channel adapter mappings, provider call references, and normalized channel session metadata. |
 | Events consumed | RoutingDecisionMade, OutboundDialRequested, AgentAcceptedInteraction, TelephonyCallStateChanged, ProviderWebhookReceived. |
 | Events emitted | CallControlRequested, CallControlAccepted, CallControlFailed, ChannelSessionEventReceived, ProviderEventNormalized. |
-| Interactions | Contact Center Voice talks to Telephony through provider-agnostic Telephony services. Telephony providers never read Contact Center queues or routing policies. |
+| Interactions | Contact Center Voice talks to Telephony through provider-agnostic Telephony services for soft-phone/media control. PBX providers that support provider-side dialer or queue behavior can also implement `IContactCenterVoiceProvider`; Contact Center still owns the routing/campaign/reservation decision and sends provider-neutral intents to the provider adapter. Telephony providers never read Contact Center queues or routing policies directly. |
 | Why it exists | This prevents business logic from leaking into providers and prevents Telephony from becoming an orchestration engine. |
 
 Ownership rules:
@@ -476,12 +493,21 @@ Ownership rules:
 | CRM activity lifecycle | CRM plus Contact Center orchestration |
 | Call-control request intent | Contact Center or agent UI |
 | Provider call execution | Telephony |
+| Provider dialer dial execution | PBX provider through `IContactCenterVoiceProvider` when supported, otherwise Telephony dial |
+| Provider-side call assignment | PBX provider through `IContactCenterVoiceProvider`; Contact Center owns the assignment decision |
+| Provider-side queue placement | PBX provider through `IContactCenterVoiceProvider`; Contact Center owns the queue decision |
 | Provider authentication | Telephony |
 | Provider/media state truth | Telephony/provider |
-| Business interaction state truth | Contact Center |
+| CRM activity/work state truth | CRM plus Contact Center orchestration |
 | Call session business projection | Contact Center Voice |
 | Persistent call history currently used by soft phone | Telephony |
 | Enterprise interaction history and analytics | Contact Center |
+
+Provider extension contract:
+
+- `IContactCenterVoiceProvider` is optional and complements `ITelephonyProvider`; it does not replace soft-phone call control.
+- Providers implement it when they can dial on behalf of a dialer, assign provider calls to agents, place/move calls in provider-side queues, publish queue events, or synchronize PBX presence.
+- Contact Center remains the brain: it chooses the activity, queue, agent, campaign, dialer mode, and compliance gates, then asks the provider to execute a specific operation.
 
 ### 10. Workflow Integration
 
