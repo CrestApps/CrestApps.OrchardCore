@@ -133,4 +133,6 @@ decorations.
 
 The Contact Center is under active, phased development. The first milestone is a voice MVP that
 proves agents can run inbound and outbound voice work entirely inside the CRM while preserving the
-Telephony boundary. This documentation will expand as each capability ships.
+Telephony boundary. This documentation will expand as each capability ships. See
+[Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue, reservation, and dialer
+features.

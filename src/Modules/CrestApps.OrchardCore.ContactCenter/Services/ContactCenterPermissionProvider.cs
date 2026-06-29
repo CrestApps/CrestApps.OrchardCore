@@ -14,6 +14,10 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageContactCenter,
         ContactCenterPermissions.ManageInteractions,
         ContactCenterPermissions.ViewInteractions,
+        ContactCenterPermissions.ManageAgents,
+        ContactCenterPermissions.ManageQueues,
+        ContactCenterPermissions.ManageDialer,
+        ContactCenterPermissions.SignIntoQueues,
     ];
 
     /// <inheritdoc/>
@@ -24,6 +28,15 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = "Agent",
+                Permissions =
+                [
+                    ContactCenterPermissions.ViewInteractions,
+                    ContactCenterPermissions.SignIntoQueues,
+                ],
             },
         ];
 

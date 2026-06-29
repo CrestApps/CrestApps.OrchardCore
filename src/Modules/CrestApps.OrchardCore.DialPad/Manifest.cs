@@ -22,3 +22,15 @@ using OrchardCore.Modules.Manifest;
         TelephonyConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = DialPadConstants.Feature.Dialer,
+    Name = "DialPad Dialer",
+    Description = "Implements the dialer-agnostic Contact Center dialer provider over DialPad so outbound campaigns dial through DialPad.",
+    Category = "Communications",
+    Dependencies =
+    [
+        DialPadConstants.Feature.Area,
+        "CrestApps.OrchardCore.ContactCenter.Dialer",
+    ]
+)]

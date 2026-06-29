@@ -1,0 +1,32 @@
+@model IEnumerable<DialerProfile>
+<zone Name="Title"><h1>@T["Dialer Profiles"]</h1></zone>
+<div class="mb-3">
+    <a class="btn btn-primary" asp-action="Create">@T["Add Dialer Profile"]</a>
+</div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>@T["Name"]</th>
+            <th>@T["Mode"]</th>
+            <th>@T["Provider"]</th>
+            <th>@T["Enabled"]</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var profile in Model)
+        {
+            <tr>
+                <td><a asp-action="Edit" asp-route-id="@profile.ItemId">@profile.Name</a></td>
+                <td>@profile.Mode</td>
+                <td>@profile.ProviderName</td>
+                <td>@(profile.Enabled ? T["Yes"] : T["No"])</td>
+                <td>
+                    <form asp-action="Delete" asp-route-id="@profile.ItemId" method="post">
+                        <button type="submit" class="btn btn-danger btn-sm">@T["Delete"]</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

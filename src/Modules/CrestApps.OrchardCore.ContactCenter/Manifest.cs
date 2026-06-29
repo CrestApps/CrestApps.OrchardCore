@@ -21,3 +21,37 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Users",
     ]
 )]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Agents,
+    Name = "Contact Center Agents",
+    Description = "Adds agent profiles, presence, capacity, skills, and queue/campaign sign-in.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Queues,
+    Name = "Contact Center Queues",
+    Description = "Adds work queues, queue items, reservations, and availability-based activity assignment.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Agents,
+        "CrestApps.OrchardCore.Omnichannel.Managements",
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Dialer,
+    Name = "Contact Center Dialer",
+    Description = "Adds dialer-agnostic outbound dialing profiles, pacing, and dialer activity batches over any installed dialer provider.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+    ]
+)]

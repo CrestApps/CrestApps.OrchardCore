@@ -1,0 +1,32 @@
+@model IEnumerable<ActivityQueue>
+<zone Name="Title"><h1>@T["Queues"]</h1></zone>
+<div class="mb-3">
+    <a class="btn btn-primary" asp-action="Create">@T["Add Queue"]</a>
+</div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>@T["Name"]</th>
+            <th>@T["Default Priority"]</th>
+            <th>@T["SLA (s)"]</th>
+            <th>@T["Enabled"]</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var queue in Model)
+        {
+            <tr>
+                <td><a asp-action="Edit" asp-route-id="@queue.ItemId">@queue.Name</a></td>
+                <td>@queue.DefaultPriority</td>
+                <td>@queue.SlaThresholdSeconds</td>
+                <td>@(queue.Enabled ? T["Yes"] : T["No"])</td>
+                <td>
+                    <form asp-action="Delete" asp-route-id="@queue.ItemId" method="post">
+                        <button type="submit" class="btn btn-danger btn-sm">@T["Delete"]</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
