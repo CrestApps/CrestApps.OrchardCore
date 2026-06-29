@@ -29,6 +29,21 @@ public static class ContactCenterConstants
         /// The identifier of the base Contact Center feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
+
+        /// <summary>
+        /// The identifier of the agent, presence, and queue-membership feature.
+        /// </summary>
+        public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
+
+        /// <summary>
+        /// The identifier of the queue and reservation feature.
+        /// </summary>
+        public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
+
+        /// <summary>
+        /// The identifier of the outbound dialer feature.
+        /// </summary>
+        public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
     }
 
     /// <summary>
@@ -127,5 +142,75 @@ public static class ContactCenterConstants
         /// Raised when an interaction fails.
         /// </summary>
         public const string InteractionFailed = "InteractionFailed";
+
+        /// <summary>
+        /// Raised when an activity is added to a queue.
+        /// </summary>
+        public const string QueueItemAdded = "QueueItemAdded";
+
+        /// <summary>
+        /// Raised when a queue item is reserved for an agent.
+        /// </summary>
+        public const string QueueItemReserved = "QueueItemReserved";
+
+        /// <summary>
+        /// Raised when a queue item is assigned to an agent.
+        /// </summary>
+        public const string QueueItemAssigned = "QueueItemAssigned";
+
+        /// <summary>
+        /// Raised when a queue item leaves the queue.
+        /// </summary>
+        public const string QueueItemDequeued = "QueueItemDequeued";
+
+        /// <summary>
+        /// Raised when an agent signs in.
+        /// </summary>
+        public const string AgentSignedIn = "AgentSignedIn";
+
+        /// <summary>
+        /// Raised when an agent signs out.
+        /// </summary>
+        public const string AgentSignedOut = "AgentSignedOut";
+
+        /// <summary>
+        /// Raised when an agent presence state changes.
+        /// </summary>
+        public const string AgentPresenceChanged = "AgentPresenceChanged";
+
+        /// <summary>
+        /// Raised when an agent is reserved for an offer.
+        /// </summary>
+        public const string AgentReserved = "AgentReserved";
+
+        /// <summary>
+        /// Raised when an agent reservation is released.
+        /// </summary>
+        public const string AgentReleased = "AgentReleased";
+
+        /// <summary>
+        /// Raised when a dialer run starts.
+        /// </summary>
+        public const string DialerRunStarted = "DialerRunStarted";
+
+        /// <summary>
+        /// Raised when a dialer attempt is scheduled.
+        /// </summary>
+        public const string DialerAttemptScheduled = "DialerAttemptScheduled";
+
+        /// <summary>
+        /// Raised when a dialer attempt starts dialing.
+        /// </summary>
+        public const string DialerAttemptStarted = "DialerAttemptStarted";
+
+        /// <summary>
+        /// Raised when a dialer attempt completes.
+        /// </summary>
+        public const string DialerAttemptCompleted = "DialerAttemptCompleted";
+
+        /// <summary>
+        /// Raised when a callback is scheduled.
+        /// </summary>
+        public const string CallbackScheduled = "CallbackScheduled";
     }
 }

@@ -1,0 +1,17 @@
+@model AgentWorkspaceViewModel
+<zone Name="Title"><h1>@T["Agent Workspace"]</h1></zone>
+<form asp-action="SignIn" method="post">
+    <p>@T["Select the queues you want to receive work from, then sign in."]</p>
+    @foreach (var queue in Model.AvailableQueues)
+    {
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="selectedQueueIds" value="@queue.ItemId" id="q_@queue.ItemId" />
+            <label class="form-check-label" for="q_@queue.ItemId">@queue.Name</label>
+        </div>
+    }
+    <div class="mb-3 mt-2"><label asp-for="CampaignIds">@T["Campaign ids (comma separated)"]</label><input asp-for="CampaignIds" class="form-control" /></div>
+    <button type="submit" class="btn btn-success">@T["Sign in"]</button>
+</form>
+<form asp-action="SignOutAgent" method="post" class="mt-2">
+    <button type="submit" class="btn btn-secondary">@T["Sign out"]</button>
+</form>

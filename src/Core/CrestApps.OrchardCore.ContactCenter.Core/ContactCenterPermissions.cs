@@ -21,4 +21,24 @@ public static class ContactCenterPermissions
     /// Grants read-only access to interactions.
     /// </summary>
     public static readonly Permission ViewInteractions = new("ViewInteractions", "View interactions", [ManageInteractions, ManageContactCenter]);
+
+    /// <summary>
+    /// Grants management of agent profiles, presence, and queue membership.
+    /// </summary>
+    public static readonly Permission ManageAgents = new("ManageContactCenterAgents", "Manage Contact Center agents", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants management of queues, queue items, and assignment.
+    /// </summary>
+    public static readonly Permission ManageQueues = new("ManageContactCenterQueues", "Manage Contact Center queues", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants management of dialer profiles and outbound dialing.
+    /// </summary>
+    public static readonly Permission ManageDialer = new("ManageContactCenterDialer", "Manage the Contact Center dialer", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants an agent the ability to sign in to queues and campaigns and change their own presence.
+    /// </summary>
+    public static readonly Permission SignIntoQueues = new("ContactCenterSignIntoQueues", "Sign in to Contact Center queues and campaigns");
 }

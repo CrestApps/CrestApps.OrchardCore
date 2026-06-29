@@ -88,5 +88,10 @@ public static class DialPadConstants
         /// The identifier of the DialPad provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.DialPad";
+
+        /// <summary>
+        /// The identifier of the DialPad Contact Center dialer feature.
+        /// </summary>
+        public const string Dialer = "CrestApps.OrchardCore.DialPad.Dialer";
     }
 }

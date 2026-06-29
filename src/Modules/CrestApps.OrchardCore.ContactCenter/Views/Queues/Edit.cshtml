@@ -1,0 +1,13 @@
+@model QueueViewModel
+<zone Name="Title"><h1>@T["Edit Queue"]</h1></zone>
+<form asp-action="Edit" method="post">
+    <input asp-for="Id" type="hidden" />
+    <div class="mb-3"><label asp-for="Name">@T["Name"]</label><input asp-for="Name" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="Description">@T["Description"]</label><input asp-for="Description" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="DefaultPriority">@T["Default priority"]</label><select asp-for="DefaultPriority" asp-items="Html.GetEnumSelectList<InteractionPriority>()" class="form-select"></select></div>
+    <div class="mb-3"><label asp-for="SlaThresholdSeconds">@T["SLA threshold (seconds)"]</label><input asp-for="SlaThresholdSeconds" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="ReservationTimeoutSeconds">@T["Reservation timeout (seconds)"]</label><input asp-for="ReservationTimeoutSeconds" class="form-control" /></div>
+    <div class="form-check mb-3"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div>
+    <button type="submit" class="btn btn-primary">@T["Save"]</button>
+    <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+</form>
