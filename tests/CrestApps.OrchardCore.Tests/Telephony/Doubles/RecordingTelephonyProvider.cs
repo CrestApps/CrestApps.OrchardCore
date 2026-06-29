@@ -52,6 +52,9 @@ internal sealed class RecordingTelephonyProvider : ITelephonyProvider
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
         => Record("Reject", call);
 
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+        => Record("SendToVoicemail", call);
+
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
         LastOperation = "GetClientCredentials";

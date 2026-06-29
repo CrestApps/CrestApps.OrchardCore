@@ -28,7 +28,8 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider
                 TelephonyCapabilities.Transfer |
                 TelephonyCapabilities.Merge |
                 TelephonyCapabilities.SendDigits |
-                TelephonyCapabilities.ReceiveCalls;
+                TelephonyCapabilities.ReceiveCalls |
+                TelephonyCapabilities.Voicemail;
         }
     }
 
@@ -85,6 +86,9 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider
         => Update(call?.CallId, c => { c.State = CallState.Connected; c.Direction = CallDirection.Inbound; });
 
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
+        => HangupAsync(call, cancellationToken);
+
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
         => HangupAsync(call, cancellationToken);
 
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)

@@ -108,7 +108,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
-            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>();
+            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>()
+            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>();
 
         // Subject Flow Settings.
         services

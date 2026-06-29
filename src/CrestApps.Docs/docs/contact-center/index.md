@@ -120,6 +120,62 @@ orchestration beyond basic call control:
 Contact Center remains the brain: it selects the Activity, queue, agent, campaign, dialer mode, and
 compliance gates, then sends provider-neutral intents to the provider adapter.
 
+## Inbound voice
+
+> **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`
+
+The **Contact Center Voice** feature routes inbound provider calls to an available agent and offers
+them through the [Telephony](../telephony/index.md) soft-phone incoming-call modal. It depends on the
+Queues feature and the Telephony soft phone.
+
+When a normalized inbound call arrives, the feature:
+
+1. Resolves the dialed number to an Omnichannel **channel endpoint**, then resolves the configured
+   **subject flow** for that endpoint to obtain the subject content type and campaign.
+2. Looks up the **contact** by the caller's phone number (matched against the contact's normalized
+   primary cell and home numbers).
+3. Creates an `OmnichannelActivity` (`Kind = Call`, `Source = Inbound`) with its **Subject** content
+   item, and an `Interaction` (`Voice`, `Inbound`) linked to that activity.
+4. Enqueues the activity into the inbound **queue** and reserves the longest-idle available agent who
+   is signed in to that queue.
+5. Offers the ringing call to that agent through `IIncomingCallDispatcher`, which raises the
+   soft-phone modal.
+
+### Routing the dialed number to a queue
+
+Each queue has an optional **inbound channel endpoint** (`InboundChannelEndpointId`). Calls received
+on that endpoint are queued there. When no queue maps the endpoint and exactly one enabled queue has
+no endpoint mapping, that queue is used as the default inbound queue, so a single-queue tenant works
+without extra configuration.
+
+### Matched customers in the modal
+
+The feature contributes an `IIncomingCallContextProvider` to the Telephony modal. For a ringing
+inbound call offered to an agent, it lists the customers matched by the caller's number - each card
+links to the contact content item and offers an **Answer & open** shortcut - and wires the accept and
+decline offer-lifecycle actions back to the reservation. The agent's signed-in inbound queue scopes
+the context shown. See [Incoming calls](../telephony/index.md#incoming-calls) for the modal contract.
+
+### Ingress
+
+A provider or PBX integration posts a normalized `InboundVoiceEvent` to the authenticated ingress
+endpoint:
+
+```text
+POST /api/contact-center/voice/inbound
+```
+
+The endpoint requires the `Manage interactions` permission. Provider-specific webhooks that validate
+their own provider signature can instead call `IInboundVoiceService` directly, the same way the
+Omnichannel SMS webhook handles inbound messages.
+
+### Shared disposition for inbound and outbound
+
+Both inbound and outbound work is an `OmnichannelActivity` with a Subject, and both are dispositioned
+through the single, source-neutral `IActivityDispositionService`. Completing an activity records the
+disposition and completion metadata and then runs the configured Subject Actions, so inbound and
+outbound calls are wrapped up through the same subject workflow.
+
 ## UI extensibility
 
 All Contact Center UI is built with Orchard Core display management: shapes, display drivers,
@@ -133,6 +189,7 @@ decorations.
 
 The Contact Center is under active, phased development. The first milestone is a voice MVP that
 proves agents can run inbound and outbound voice work entirely inside the CRM while preserving the
-Telephony boundary. This documentation will expand as each capability ships. See
+Telephony boundary. Inbound voice routing and the soft-phone incoming-call modal now ship in the
+[Inbound voice](#inbound-voice) feature. This documentation will expand as each capability ships. See
 [Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue, reservation, and dialer
 features.

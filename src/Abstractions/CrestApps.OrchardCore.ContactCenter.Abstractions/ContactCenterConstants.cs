@@ -44,6 +44,11 @@ public static class ContactCenterConstants
         /// The identifier of the outbound dialer feature.
         /// </summary>
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
+
+        /// <summary>
+        /// The identifier of the inbound voice integration feature.
+        /// </summary>
+        public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
     }
 
     /// <summary>

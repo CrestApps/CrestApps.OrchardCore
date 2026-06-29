@@ -81,7 +81,8 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
                 TelephonyCapabilities.Transfer |
                 TelephonyCapabilities.Merge |
                 TelephonyCapabilities.SendDigits |
-                TelephonyCapabilities.ReceiveCalls;
+                TelephonyCapabilities.ReceiveCalls |
+                TelephonyCapabilities.Voicemail;
         }
     }
 
@@ -251,6 +252,15 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
     /// <inheritdoc/>
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
         => ExecuteCallActionAsync(call?.CallId, "reject", body: null, () => BuildCall(call?.CallId, CallState.Disconnected, direction: CallDirection.Inbound), cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+        => ExecuteCallActionAsync(
+            call?.CallId,
+            "transfer",
+            new Dictionary<string, object> { ["to_voicemail"] = true },
+            () => BuildCall(call?.CallId, CallState.Disconnected, direction: CallDirection.Inbound),
+            cancellationToken);
 
     /// <inheritdoc/>
     public async Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)

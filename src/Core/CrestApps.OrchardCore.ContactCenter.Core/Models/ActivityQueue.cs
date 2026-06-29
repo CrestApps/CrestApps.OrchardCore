@@ -45,6 +45,13 @@ public sealed class ActivityQueue : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the identifier of the inbound channel endpoint (the dialed number or DID) whose
+    /// calls are routed to this queue. When set, the inbound voice flow enqueues calls received on
+    /// that endpoint into this queue.
+    /// </summary>
+    public string InboundChannelEndpointId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the queue was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

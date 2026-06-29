@@ -29,6 +29,7 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
+        services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
         services.AddTransient<IPostConfigureOptions<TelephonySettings>, TelephonySettingsConfiguration>();
 
         services.AddScoped<ITelephonyUserAccessor, DefaultTelephonyUserAccessor>();

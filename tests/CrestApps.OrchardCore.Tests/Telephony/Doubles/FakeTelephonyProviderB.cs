@@ -46,6 +46,9 @@ internal sealed class FakeTelephonyProviderB : ITelephonyProvider
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
         => Task.FromResult(TelephonyResult.Success());
 
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+        => Task.FromResult(TelephonyResult.Success());
+
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new TelephonyClientCredentials { ProviderName = "B" });
 }

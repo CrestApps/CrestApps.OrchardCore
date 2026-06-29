@@ -29,7 +29,7 @@ public sealed class ActivityReservationServiceTests
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
 
         // Act
-        var reservation = await service.ReserveAsync(item, agent, 30);
+        var reservation = await service.ReserveAsync(item, agent, 30, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ReservationStatus.Pending, reservation.Status);
@@ -55,7 +55,7 @@ public sealed class ActivityReservationServiceTests
         var service = CreateService(reservationManager, queueItemManager, agentManager, activityManager, new Mock<IContactCenterEventPublisher>());
 
         // Act
-        var count = await service.ExpireDueAsync();
+        var count = await service.ExpireDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, count);

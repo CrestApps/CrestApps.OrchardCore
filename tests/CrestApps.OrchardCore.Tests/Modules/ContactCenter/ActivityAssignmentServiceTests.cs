@@ -19,7 +19,7 @@ public sealed class ActivityAssignmentServiceTests
         var service = CreateService(queueItemManager, new Mock<IAgentProfileManager>(), new Mock<IActivityReservationService>());
 
         // Act
-        var reservation = await service.AssignNextAsync("q1");
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(reservation);
@@ -42,7 +42,7 @@ public sealed class ActivityAssignmentServiceTests
         var service = CreateService(queueItemManager, agentManager, new Mock<IActivityReservationService>());
 
         // Act
-        var reservation = await service.AssignNextAsync("q1");
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(reservation);
@@ -78,7 +78,7 @@ public sealed class ActivityAssignmentServiceTests
         var service = new ActivityAssignmentService(queueItemManager.Object, agentManager.Object, queueManager.Object, reservationService.Object);
 
         // Act
-        var reservation = await service.AssignNextAsync("q1");
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(reservation);

@@ -71,6 +71,10 @@ public sealed class DefaultTelephonyService : ITelephonyService
         => InvokeAsync((provider, token) => provider.RejectAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+        => InvokeAsync((provider, token) => provider.SendToVoicemailAsync(call, token), cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
         var provider = await _resolver.GetAsync();

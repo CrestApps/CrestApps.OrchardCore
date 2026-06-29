@@ -24,7 +24,7 @@ public sealed class AgentPresenceManagerServiceTests
         var service = new AgentPresenceManagerService(agentManager.Object, publisher.Object, clock.Object);
 
         // Act
-        var profile = await service.SignInAsync("u1", ["q1", "q2"], []);
+        var profile = await service.SignInAsync("u1", ["q1", "q2"], [], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(AgentPresenceStatus.Available, profile.PresenceStatus);
@@ -44,7 +44,7 @@ public sealed class AgentPresenceManagerServiceTests
         var service = new AgentPresenceManagerService(agentManager.Object, new Mock<IContactCenterEventPublisher>().Object, clock.Object);
 
         // Act
-        var profile = await service.SignOutAsync("u1");
+        var profile = await service.SignOutAsync("u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(AgentPresenceStatus.Offline, profile.PresenceStatus);

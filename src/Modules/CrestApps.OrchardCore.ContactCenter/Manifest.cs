@@ -55,3 +55,15 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.Queues,
     ]
 )]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Voice,
+    Name = "Contact Center Voice",
+    Description = "Routes inbound provider calls into queued CRM activities and offers them to available agents through the Telephony soft phone.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+        "CrestApps.OrchardCore.Telephony.SoftPhone",
+    ]
+)]

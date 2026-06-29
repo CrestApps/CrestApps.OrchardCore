@@ -55,6 +55,7 @@ operations:
 | Merge calls | `MergeAsync` |
 | Send DTMF digits | `SendDigitsAsync` |
 | Answer / Reject inbound | `AnswerAsync` / `RejectAsync` |
+| Send to voicemail | `SendToVoicemailAsync` |
 | Client bootstrap | `GetClientCredentialsAsync` |
 
 Each provider also advertises the operations it supports through the `Capabilities` property (a
@@ -73,8 +74,9 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 
 Every hub method runs in its own Orchard Core shell scope and is authorized against the
 `Use the telephony soft phone` permission. The hub returns a `TelephonyResult` to the caller and
-pushes `CallStateChanged`, `IncomingCall`, and `ReceiveError` events to the connected client through
-the strongly-typed `ITelephonyClient` interface.
+pushes `CallStateChanged`, `IncomingCall` (with its contextual cards), and `ReceiveError` events to
+the connected client through the strongly-typed `ITelephonyClient` interface. It also exposes
+`Answer`, `Reject`, and `Voicemail` operations for a ringing inbound call.
 
 ## Site settings
 
@@ -138,6 +140,64 @@ The widget's footer is a tab bar that switches the panel between two views:
 The footer is designed to be extensible, so additional tabs can be added in the future. The history
 is read from the hub's `GetInteractions` method and is backed by the persisted interaction store
 described below, so it survives page reloads and is available independently of the provider.
+
+## Incoming calls
+
+When an inbound call is offered to a user, the soft phone raises an **incoming-call modal** with
+three actions:
+
+- **Answer** connects the call (`AnswerAsync`).
+- **Send to voicemail** routes the caller to voicemail (`SendToVoicemailAsync`); it is shown only when
+  the provider advertises the `Voicemail` capability.
+- **Ignore** declines the ringing call on this device (`RejectAsync`).
+
+The modal appears for a ringing **inbound** call even when the panel is closed, and it hides itself
+once the call connects or ends.
+
+### Offering a call to a user
+
+Inbound calls are pushed to a specific user through `IIncomingCallDispatcher`. It runs every
+registered `IIncomingCallContextProvider`, builds the `IncomingCallContext`, and sends
+`IncomingCall(call, context)` to that user's soft-phone connections through
+`IHubContext<TelephonyHub, ITelephonyClient>`:
+
+```csharp
+await _incomingCallDispatcher.DispatchAsync(agentUserId, call);
+```
+
+Telephony owns the modal and the media controls; it does not decide who receives a call. An
+orchestration module (such as the [Contact Center](../contact-center/index.md)) resolves the target
+user, reserves the agent, and calls the dispatcher.
+
+### Enriching the modal from another module
+
+Other modules contribute records and shortcuts to the modal by implementing
+`IIncomingCallContextProvider` and adding `IncomingCallCard` entries:
+
+```csharp
+public sealed class MyContextProvider : IIncomingCallContextProvider
+{
+    public Task ContributeAsync(IncomingCallContributionContext context, CancellationToken cancellationToken = default)
+    {
+        context.Cards.Add(new IncomingCallCard
+        {
+            Title = "Jane Doe",
+            Subtitle = context.Call.From,
+            Icon = "fa-solid fa-user",
+            Url = "/Admin/Contents/ContentItems/<id>/Edit",
+        });
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+Each card is rendered with an **Answer & open** shortcut (answers the call and opens the card's
+`Url`) and an **Open** link. A provider can also set `context.Properties["acceptUrl"]` and
+`context.Properties["declineUrl"]`; when present, the modal posts to them as the agent answers or
+ignores the call, which lets an orchestration module track the offer lifecycle. The
+[Contact Center Voice](../contact-center/index.md) feature uses this seam to list customers matched by
+the caller's phone number and to drive its reservation lifecycle.
 
 ## Adding the soft phone to the website
 
@@ -203,9 +263,10 @@ provider** — the data remains even if the provider integration is later remove
 
 The soft phone reads this history through the hub's `GetInteractions` method to render its history
 panel. Outbound calls placed from the soft phone are recorded automatically. Inbound and missed
-calls are fully modeled (direction and outcome), but populating them requires the provider module to
-report inbound events (for example through a provider webhook); the soft phone records the outbound
-calls it initiates.
+calls are fully modeled (direction and outcome). Inbound calls reach the soft phone through
+`IIncomingCallDispatcher` (see [Incoming calls](#incoming-calls)); a provider module or an
+orchestration module such as the Contact Center reports the inbound event and offers the call to a
+user.
 
 ## Writing a provider
 

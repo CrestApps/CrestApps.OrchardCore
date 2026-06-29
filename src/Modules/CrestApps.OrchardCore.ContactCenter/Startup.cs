@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
@@ -141,5 +142,21 @@ public sealed class DialerStartup : StartupBase
                 entry.RequiresUserAssignment = false;
             });
         });
+    }
+}
+
+/// <summary>
+/// Registers inbound voice routing that turns provider calls into queued CRM activities and offers
+/// them to available agents through the Telephony soft phone.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Voice)]
+public sealed class VoiceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IInboundContactLookup, InboundContactLookup>()
+            .AddScoped<IInboundVoiceService, InboundVoiceService>()
+            .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
     }
 }

@@ -24,7 +24,8 @@
     Transfer: 1 << 5,
     Merge: 1 << 6,
     SendDigits: 1 << 7,
-    ReceiveCalls: 1 << 8
+    ReceiveCalls: 1 << 8,
+    Voicemail: 1 << 9
   };
   var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
   function normalizeState(state) {
@@ -100,10 +101,18 @@
       history: rootElement.querySelector('[data-telephony-history]'),
       historyList: rootElement.querySelector('[data-telephony-history-list]'),
       footer: rootElement.querySelector('[data-telephony-footer]'),
-      tabs: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-tab]'))
+      tabs: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-tab]')),
+      incoming: rootElement.querySelector('[data-telephony-incoming]'),
+      incomingCaller: rootElement.querySelector('[data-telephony-incoming-caller]'),
+      incomingQueue: rootElement.querySelector('[data-telephony-incoming-queue]'),
+      incomingCards: rootElement.querySelector('[data-telephony-incoming-cards]'),
+      incomingAnswer: rootElement.querySelector('[data-telephony-incoming-answer]'),
+      incomingVoicemail: rootElement.querySelector('[data-telephony-incoming-voicemail]'),
+      incomingIgnore: rootElement.querySelector('[data-telephony-incoming-ignore]')
     };
     var connection = null;
     var currentCall = null;
+    var incomingContext = null;
     var requiresAuthentication = false;
     var isConnected = false;
     var isAvailable = false;
@@ -322,6 +331,7 @@
       }
     }
     function render() {
+      renderIncoming();
       var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
       var active = isActive(stateName);
       rootElement.classList.toggle('telephony-soft-phone--in-call', active);
@@ -530,6 +540,155 @@
       render();
     }
 
+    // ---- Incoming call modal ----
+
+    function isRingingInbound() {
+      if (!currentCall) {
+        return false;
+      }
+      var inbound = currentCall.direction === 1 || currentCall.direction === 'Inbound';
+      return normalizeState(currentCall.state) === 'Ringing' && inbound;
+    }
+    function renderIncoming() {
+      var visible = isRingingInbound();
+      show(dom.incoming, visible);
+      rootElement.classList.toggle('telephony-soft-phone--incoming', visible);
+      if (!visible) {
+        incomingContext = null;
+        return;
+      }
+      if (dom.incomingCaller) {
+        dom.incomingCaller.textContent = currentCall && (currentCall.from || currentCall.to) || strings.incomingCall || 'Incoming call';
+      }
+      var queueText = incomingContext && incomingContext.properties ? incomingContext.properties.queue : '';
+      if (dom.incomingQueue) {
+        dom.incomingQueue.textContent = queueText || '';
+        dom.incomingQueue.hidden = !queueText;
+      }
+      show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail));
+      renderIncomingCards();
+    }
+    function renderIncomingCards() {
+      if (!dom.incomingCards) {
+        return;
+      }
+      var cards = incomingContext && incomingContext.cards ? incomingContext.cards : [];
+      if (!cards.length) {
+        dom.incomingCards.innerHTML = '';
+        dom.incomingCards.hidden = true;
+        return;
+      }
+      var html = '';
+      var heading = incomingContext && incomingContext.heading || strings.matchedRecords;
+      if (heading) {
+        html += '<div class="telephony-incoming__cards-heading">' + escapeHtml(heading) + '</div>';
+      }
+      cards.forEach(function (card) {
+        html += buildIncomingCard(card);
+      });
+      dom.incomingCards.innerHTML = html;
+      dom.incomingCards.hidden = false;
+      Array.prototype.forEach.call(dom.incomingCards.querySelectorAll('[data-telephony-card-answer]'), function (button) {
+        button.addEventListener('click', function () {
+          answerIncoming(button.getAttribute('data-url'));
+        });
+      });
+    }
+    function buildIncomingCard(card) {
+      var icon = card.icon ? '<span class="telephony-incoming__card-icon"><i class="' + escapeHtml(card.icon) + '"></i></span>' : '';
+      var body = '<div class="telephony-incoming__card-title">' + escapeHtml(card.title || '') + '</div>';
+      if (card.subtitle) {
+        body += '<div class="telephony-incoming__card-subtitle">' + escapeHtml(card.subtitle) + '</div>';
+      }
+      if (card.description) {
+        body += '<div class="telephony-incoming__card-desc">' + escapeHtml(card.description) + '</div>';
+      }
+      if (card.badges && card.badges.length) {
+        body += '<div class="telephony-incoming__card-badges">';
+        card.badges.forEach(function (badge) {
+          body += '<span class="badge bg-secondary">' + escapeHtml(badge) + '</span>';
+        });
+        body += '</div>';
+      }
+      if (card.links && card.links.length) {
+        body += '<div class="telephony-incoming__card-links">';
+        card.links.forEach(function (link) {
+          if (link && link.url) {
+            var linkIcon = link.icon ? '<i class="' + escapeHtml(link.icon) + '"></i> ' : '';
+            var target = link.openInNewTab ? ' target="_blank" rel="noopener"' : '';
+            body += '<a href="' + escapeHtml(link.url) + '"' + target + '>' + linkIcon + escapeHtml(link.text || link.url) + '</a>';
+          }
+        });
+        body += '</div>';
+      }
+      var actions = '';
+      if (card.url) {
+        var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
+        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
+        actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(strings.open || 'Open') + '</a>';
+      }
+      return '<div class="telephony-incoming__card">' + icon + '<div class="telephony-incoming__card-body">' + body + '</div>' + (actions ? '<div class="telephony-incoming__card-actions">' + actions + '</div>' : '') + '</div>';
+    }
+    function postLifecycle(key) {
+      if (!incomingContext || !incomingContext.properties) {
+        return;
+      }
+      var url = incomingContext.properties[key];
+      if (!url) {
+        return;
+      }
+      var headers = {
+        'Content-Type': 'application/json'
+      };
+      if (config.antiForgeryToken) {
+        headers['RequestVerificationToken'] = config.antiForgeryToken;
+      }
+      try {
+        fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: headers,
+          body: JSON.stringify({
+            callId: currentCallId()
+          })
+        })["catch"](function () {});
+      } catch (e) {/* lifecycle callbacks are best-effort */}
+    }
+    function answerIncoming(openUrl) {
+      var id = currentCallId();
+      if (openUrl) {
+        window.open(openUrl, '_blank', 'noopener');
+      }
+      postLifecycle('acceptUrl');
+      if (id) {
+        togglePanel(true);
+        invoke('Answer', {
+          callId: id
+        });
+      }
+    }
+    function voicemailIncoming() {
+      var id = currentCallId();
+      postLifecycle('declineUrl');
+      if (id) {
+        invoke('Voicemail', {
+          callId: id
+        });
+      }
+    }
+    function ignoreIncoming() {
+      var id = currentCallId();
+      postLifecycle('declineUrl');
+      if (id) {
+        invoke('Reject', {
+          callId: id
+        });
+      } else {
+        currentCall = null;
+        render();
+      }
+    }
+
     // ---- Connection status and authentication ----
 
     function refreshConnectionStatus() {
@@ -670,10 +829,10 @@
         }
         render();
       });
-      connection.on('IncomingCall', function (call) {
+      connection.on('IncomingCall', function (call, context) {
         currentCall = call;
+        incomingContext = context || null;
         activeTab = 'keypad';
-        togglePanel(true);
         render();
       });
       connection.on('ReceiveError', function (message) {
@@ -743,6 +902,17 @@
       }
       if (dom.merge) {
         dom.merge.addEventListener('click', merge);
+      }
+      if (dom.incomingAnswer) {
+        dom.incomingAnswer.addEventListener('click', function () {
+          answerIncoming(null);
+        });
+      }
+      if (dom.incomingVoicemail) {
+        dom.incomingVoicemail.addEventListener('click', voicemailIncoming);
+      }
+      if (dom.incomingIgnore) {
+        dom.incomingIgnore.addEventListener('click', ignoreIncoming);
       }
       if (dom.connect) {
         dom.connect.addEventListener('click', handleConnect);
