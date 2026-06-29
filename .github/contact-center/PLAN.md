@@ -1,0 +1,1379 @@
+# Contact Center Module Architecture and Implementation Plan
+
+> **Status:** Active. This is the durable, repository-tracked design and progress document for the Contact Center module set. It is referenced from `.github/copilot-instructions.md` so every AI session reviews it before doing Contact Center work.
+>
+> **How to use this document:**
+>
+> - Read the **Progress status** section (bottom) first to see what is done and what is next.
+> - Treat the **Phased delivery plan** as the source of truth for scope and ordering. Start at the lowest incomplete phase.
+> - Keep the **Progress status** section current after each meaningful change (what shipped, what is in progress, decisions made).
+> - Never write competitor product names in code, comments, public docs, or identifiers. Adopt only the industry-standard concepts and terminology captured in the **Standard contact center terminology and metrics** section.
+> - Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item. `Interaction` is communication history for one attempt and never owns workflow or disposition.
+
+## Problem statement
+
+Design an enterprise-grade Contact Center orchestration layer for the existing Orchard Core communications platform. The Contact Center must extend Omnichannel Management instead of introducing a separate work model, sit between CRM and Telephony, own routing and communication orchestration, and allow agents and supervisors to operate directly inside the CRM UI without depending on an external contact center system.
+
+The design is intentionally domain- and architecture-focused. It does not include code or low-level implementation details.
+
+## Current codebase baseline
+
+### Existing Telephony boundary
+
+- `src\Abstractions\CrestApps.OrchardCore.Telephony.Abstractions` defines provider-agnostic soft-phone abstractions such as provider, service, client callbacks, call requests, call references, capabilities, calls, call state, direction, and persisted telephony interactions.
+- `src\Modules\CrestApps.OrchardCore.Telephony` registers the Telephony feature, the soft-phone feature, the SignalR hub, provider resolver, call-control service, authentication services, settings, permissions, and persisted call history.
+- `TelephonyHub` exposes user-initiated call-control operations and pushes call state changes to the current soft-phone client through SignalR.
+- `ITelephonyService` delegates dial, answer, reject, hangup, hold, resume, mute, transfer, merge, send digits, credentials, and provider capabilities to the configured provider.
+- `TelephonyInteraction` stores provider-independent call history for the soft phone, but this is currently a call-centric history model, not a business interaction orchestration model.
+- `src\Modules\CrestApps.OrchardCore.DialPad` is one provider module that implements the Telephony provider boundary.
+
+Design implication: Telephony must remain the media and provider execution layer. Contact Center must not own media, provider authentication, or provider-specific call execution.
+
+### Existing Omnichannel and CRM boundary
+
+- `src\Modules\CrestApps.OrchardCore.Omnichannel` is the base omnichannel layer and configures the shared `Omnichannel` YesSql collection.
+- `src\Core\CrestApps.OrchardCore.Omnichannel.Core` owns shared CRM communication models:
+  - contacts via `OmnichannelContactPart`
+  - activities via `OmnichannelActivity`
+  - activity batches via `OmnichannelActivityBatch`
+  - campaigns via `OmnichannelCampaign`
+  - dispositions via `OmnichannelDisposition`
+  - channel endpoints via `OmnichannelChannelEndpoint`
+  - subject flow settings via `SubjectFlowSettings`
+  - subject actions via `SubjectAction`
+  - messages and inbound omnichannel events
+- `OmnichannelActivity` is the CRM task/work item and remains the universal unit of work for Contact Center. It stores channel, endpoint, manual or automated interaction type, AI session, contact, campaign, schedule, assignee, completion, disposition, subject content type, subject payload, urgency, and status.
+- Current activity statuses are task-oriented and narrow: not started, awaiting agent response, awaiting customer answer, completed, and purged.
+- `src\Modules\CrestApps.OrchardCore.Omnichannel.Managements` provides Interaction Center CRM screens for contacts, subject flows, campaigns, dispositions, channel endpoints, activities, batches, bulk activity management, and subject actions.
+- Subject-driven behavior currently lives in Subject Flows and Subject Actions. The changelog states that the OrchardCore.Workflows dependency and previous workflow activities/events were removed from Omnichannel Management.
+- `AutomatedActivitiesProcessorBackgroundTask` processes scheduled automated activities every five minutes and dispatches them to channel-specific `IOmnichannelProcessor` implementations.
+- `src\Modules\CrestApps.OrchardCore.Omnichannel.Sms` provides automated SMS activity processing and inbound SMS event handling, including AI chat session integration and disposition/action completion.
+
+Design implication: CRM remains the system of record for contacts, activities, campaigns, subjects, dispositions, subject actions, and the CRM timeline. Contact Center must not introduce a second work-item/task model. It extends activities with assignment/reservation and classification metadata, uses activities as queue and dialer inventory, records one or more `Interaction` history records for each activity, and routes all disposition changes through the CRM activity-disposition path.
+
+Required CRM alignment:
+
+- Contacts are customer records only. Dialers and queues never operate directly on contacts.
+- Subjects are workflow/disposition definitions only. They provide scripts, subject actions, rules, and automation behavior for activities.
+- Activities are the only business work items. They may be created with `AssignedToId = null` so dialers and routing can dynamically reserve and assign ownership later.
+- Activities need Contact Center assignment metadata (for example assignment status, reservation id, reserved-by actor, reservation timestamps, and reservation expiry) so multiple dialer or routing instances cannot claim the same work.
+- Activities need classification metadata such as kind (call, email, SMS, meeting, task) and source (manual, preview dial, power dial, progressive dial, predictive dial, callback, inbound, workflow, API). Workflows must ignore source and react only to the activity and final disposition.
+- Activity batches select an activity source before showing the editor. Manual batches require user assignment while loading; dialer batches hide user selection and load unassigned activities with an available assignment status so the dialer can reserve and assign them later.
+- Dispositions belong to activities, not interactions. Provider, agent, AI, and workflow outcomes must converge through a single activity disposition service before subject actions/workflows run.
+
+### Existing real-time boundary
+
+- `src\Modules\CrestApps.OrchardCore.SignalR` provides the shared SignalR feature and hub registration pattern.
+- Telephony already uses SignalR for soft-phone call-control requests and current-user call state updates.
+
+Design implication: Contact Center should add its own real-time event stream for agent desktop, supervisor dashboard, and queue monitors, and it should consume or normalize Telephony events instead of overloading TelephonyHub with routing responsibilities.
+
+### Current gaps to solve
+
+- No communication-history Interaction domain object linked to CRM activities across voice sessions, future channels, routing, and analytics.
+- CRM activities need nullable ownership, assignment/reservation metadata, and source/kind classification so dialers can work unassigned inventory safely.
+- No queue model, queue membership, agent reservation, or routing decision model.
+- No real-time agent presence or capacity model.
+- No inbound routing orchestration.
+- No outbound dialer orchestration beyond manual CRM activities and automated SMS processing.
+- No contact-center-level call session mapping between provider calls and business interactions.
+- No supervisor dashboard or live queue metric projection.
+- No durable domain event stream/outbox for contact center orchestration.
+- Existing OrchardCore.Workflows integration for Omnichannel Management has been removed; Contact Center needs an explicit workflow strategy.
+- Existing CRM Activity statuses and manual/automated interaction types are too limited for contact center lifecycle management.
+
+## Design principles
+
+1. Activity first for work: `OmnichannelActivity` is the universal CRM work item for queues, dialers, wrap-up, dispositions, and workflows.
+2. Interaction first for communication history: every voice call, chat, SMS, email, or future channel attempt is an Interaction linked to an Activity; an Interaction never owns workflow or disposition.
+3. Source-driven activity loading: Activity batches are the common activity-loading surface and support source-specific UI/behavior for manual, dialer, callback, inbound, API, and future sources through Orchard display drivers and source options.
+4. Contact Center owns orchestration: routing, queues, reservations, presence, dialer pacing, wrap-up, lifecycle, and operational metrics.
+5. Telephony owns media execution: providers dial, answer, transfer, hang up, hold, resume, conference, and report provider call state.
+6. Domain events connect components: components publish and subscribe to events instead of directly invoking each other’s internal workflows.
+7. Feature-gated modularity: capabilities should be split into Orchard Core features so tenants can enable only the contact center capabilities they need.
+8. Tenant isolation by default: all state, events, real-time groups, settings, permissions, and analytics projections are tenant-scoped.
+9. Channel-agnostic core: voice is the MVP channel, but the same interaction, routing, queue, SLA, presence, and wrap-up concepts must support chat, SMS, email, and AI agents later.
+10. Industry-standard naming: use generic contact center terms in code and public docs. Do not name implementation artifacts after competing products.
+11. Durable resumability: keep a persistent project plan/progress document in the repository and reference it from `.github\copilot-instructions.md` so future AI sessions review it before changing Contact Center code.
+
+## Proposed module and feature breakdown
+
+### Shared abstractions and core services
+
+1. `CrestApps.OrchardCore.ContactCenter.Abstractions`
+   - Shared contracts and domain vocabulary for interactions, events, channel adapters, routing strategies, dialer strategies, real-time notifications, permissions, and feature constants.
+   - Depends only on stable abstractions needed by providers and optional channel adapters.
+
+2. `CrestApps.OrchardCore.ContactCenter.Core`
+   - Domain models, stores, managers, event dispatcher contracts, projections, and reusable policies that are not themselves Orchard modules.
+   - Uses tenant-local persistence patterns consistent with Omnichannel Core.
+
+### Orchard modules and features
+
+1. `CrestApps.OrchardCore.ContactCenter`
+   - Base Contact Center module and dependency root.
+   - Core feature: interaction management, event log, tenant settings, baseline permissions, and admin navigation.
+
+2. `CrestApps.OrchardCore.ContactCenter.Queues`
+   - Queues, queue membership, queue priorities, overflow rules, SLA settings, queue metrics, and queue monitor surfaces.
+
+3. `CrestApps.OrchardCore.ContactCenter.Routing`
+   - Routing engine, routing policies, routing strategies, reservation engine, business hours, skills, sticky-agent logic, and routing decision audit.
+
+4. `CrestApps.OrchardCore.ContactCenter.Agents`
+   - Agent profiles, presence, capacity, skill profiles, queue membership, agent reservations, and agent desktop state.
+
+5. `CrestApps.OrchardCore.ContactCenter.Voice`
+   - Voice channel adapter that integrates Contact Center with the Telephony module.
+   - Owns call session mapping and Contact Center voice lifecycle projection.
+   - Depends on Telephony but does not replace Telephony.
+
+6. `CrestApps.OrchardCore.ContactCenter.Dialer`
+   - Outbound campaign dialing modes: manual, preview, power, progressive, and later predictive.
+   - Pacing, retry, agent reservation before dialing, callback scheduling, DNC/compliance checks, and activity/campaign integration.
+
+7. `CrestApps.OrchardCore.ContactCenter.WrapUp`
+   - Wrap-up timers, required disposition rules, disposition validation, post-interaction completion, and CRM activity updates.
+
+8. `CrestApps.OrchardCore.ContactCenter.Supervision`
+   - Supervisor live monitoring, agent monitoring, queue controls, coaching/assist metadata, SLA alerts, and operational command permissions.
+   - Live call-control primitives: silent monitor, whisper coaching, barge-in, and take-over, expressed as orchestration intents that Telephony/providers execute.
+
+9. `CrestApps.OrchardCore.ContactCenter.EntryPoints`
+   - Inbound entry points, DID/number-to-entry-point mapping, IVR/self-service decision flows, business-hours/holiday gating, queue selection, announcements, and screen-pop context.
+   - Reuses subject flows and the optional Workflows bridge for decision logic instead of hardcoding IVR trees.
+
+10. `CrestApps.OrchardCore.ContactCenter.Recording`
+   - Recording orchestration: start/stop/pause/resume intents, consent capture, recording metadata, retention/disposal policy, and access auditing.
+   - Stores recording metadata and references only; media capture and storage stay with Telephony/providers or a configured media store.
+
+11. `CrestApps.OrchardCore.ContactCenter.Compliance`
+   - Outbound calling windows, abandonment-rate caps, safe-harbor/abandon messaging, caller-ID/local-presence policy, list scrubbing/recycling, consent tracking, and suppression auditing.
+   - Reuses existing DNC registry and contact communication preferences rather than duplicating them.
+
+12. `CrestApps.OrchardCore.ContactCenter.Analytics`
+   - Metric projections, historical reporting, SLA snapshots, campaign performance, agent performance, queue performance, adherence, and export-ready reporting data.
+
+13. `CrestApps.OrchardCore.ContactCenter.Quality`
+   - Optional quality management: evaluation forms/scorecards, recording review, calibration, and coaching records. Advanced phase.
+
+14. `CrestApps.OrchardCore.ContactCenter.Workflows`
+   - Optional OrchardCore.Workflows bridge for tenants that want workflow activities/events in addition to Subject Flows and Subject Actions.
+   - Should be feature-gated because current Omnichannel Management intentionally removed its direct Workflows dependency.
+
+15. `CrestApps.OrchardCore.ContactCenter.AI`
+   - Optional AI assist, virtual agent, summarization, disposition suggestions, quality insights, and future AI routing recommendations.
+
+16. `CrestApps.OrchardCore.ContactCenter.Deployment`
+   - Recipes and deployment steps for queues, routing policies, skills, agent profiles, dialer profiles, entry points, recording/compliance policies, supervisor dashboards, and tenant defaults.
+
+## Domain architecture overview
+
+```text
+CRM / Omnichannel Management
+Contacts, Activities, Campaigns, Subjects, Dispositions, Subject Actions
+        |
+        | business context, activity lifecycle updates
+        v
+Contact Center Orchestration
+Activity queues/reservations, routing, presence, dialer, wrap-up, interaction history, metrics
+        |
+        | call-control intents, call/session events
+        v
+Telephony
+Soft phone, provider resolver, provider call execution, provider call state
+        |
+        v
+Telephony Providers
+Dial, answer, transfer, hold, resume, conference, hangup, provider webhooks
+```
+
+The CRM layer answers “who is the customer, what activity is the work item, what subject defines the workflow, what disposition was selected, and what subject action or automation should run.”
+
+The Contact Center layer answers “which activity should be worked next, which queue owns it, which agent should reserve it, when should a dial occur, what communication history exists for the activity, and what real-time event should the UI see.”
+
+The Telephony layer answers “how does the configured provider execute this call action and what is the provider’s current call state.”
+
+## Component design
+
+### 1. Interaction Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Own durable communication history for CRM activities without becoming a second work-item model. |
+| Responsibilities | Create interactions from inbound events, outbound dialer attempts, manual agent actions, callbacks, transfers, and future channels; link each interaction to exactly one CRM activity; maintain provider identifiers, participants, call legs, queue history, transfer history, timestamps, recording/transcript references, correlation ids, and technical metadata; expose activity communication history to agent and supervisor UX. |
+| Data owned | Interaction, interaction participant, provider session references, communication status, call legs, queue history, transfer history, start/answer/end timestamps, recording and transcript references, technical metadata, correlation ids, tenant id, and audit metadata. |
+| Events consumed | ActivityScheduled, ActivityReserved, ActivityDialingStarted, ActivityWorkStarted, InboundChannelEventReceived, DialerAttemptRequested, CallStarted, CallAnswered, CallEnded, TransferRequested, ChannelSessionEnded. |
+| Events emitted | InteractionCreated, InteractionLinkedToActivity, InteractionStarted, InteractionUpdated, InteractionTransferred, InteractionEnded, InteractionFailed. |
+| Interactions | Reads the CRM activity id as the work anchor; receives Telephony call session projections; notifies Real-Time UX, Analytics, Recording, Quality, and the CRM timeline. It does not own disposition, workflow, campaign, subject, priority, or business rules. |
+| Why it exists | One activity can have many communication attempts (busy, no answer, connected). Interaction provides the durable communication history for those attempts while CRM Activity remains the business work item. |
+
+### 2. Call Session Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Maintain Contact Center’s voice-channel projection for active and historical calls without owning media execution. |
+| Responsibilities | Map provider call identifiers to interactions; normalize call states; track voice session lifecycle; handle hold, resume, transfer, consult transfer, blind transfer, conference, and disconnect events; correlate provider sessions with CRM/contact center state; preserve provider metadata for troubleshooting. |
+| Data owned | Call session, provider session id, provider name, interaction id, direction, from/to addresses, current normalized state, hold state, conference membership, transfer chain, start/answer/end timestamps, call duration, talk duration, hold duration, queue wait duration, and provider metadata. |
+| Events consumed | CallDialRequested, TelephonyCallStateChanged, IncomingCallReceived, CallAnswered, CallRejected, CallHeld, CallResumed, CallTransferRequested, CallTransferred, CallMerged, CallEnded, ProviderCallFailed. |
+| Events emitted | CallSessionCreated, CallStarted, CallRinging, CallAnswered, CallHeld, CallResumed, CallTransferStarted, CallTransferred, ConferenceStarted, CallEnded, CallSessionClosed. |
+| Interactions | Receives call-control results and provider call events from Telephony; updates Interaction Management; informs Wrap-Up when voice work ends; feeds Analytics and Real-Time UX. |
+| Why it exists | Telephony call state is provider/media truth, but Contact Center needs a business-oriented call session projection tied to interactions, queues, agents, and CRM activities. |
+
+Call state lifecycle:
+
+```text
+Planned -> Dialing -> Ringing -> Connected -> OnHold -> Connected -> Ending -> Ended
+       \             \          \                         \              \
+        \             \          \                         \              Failed
+         \             \          \                         Transferred
+          \             NoAnswer   Rejected
+           Canceled
+```
+
+### 3. Queue Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Hold and prioritize work waiting for agents across inbound, outbound, callback, and future channels. |
+| Responsibilities | Define queues; enqueue/dequeue interactions; maintain priorities; enforce queue eligibility; track wait time and SLA; apply overflow and escalation rules; manage queue memberships; expose live queue metrics; support reservation locks. |
+| Data owned | Queue, queue type, queue membership, queue priority rules, overflow rules, SLA thresholds, queue item, queue item status, queue item age, reservation lock, and queue metric projection. |
+| Events consumed | InteractionQueued, AgentPresenceChanged, AgentCapacityChanged, RoutingDecisionFailed, ReservationExpired, InteractionRequeued, QueueOverflowTriggered, BusinessHoursChanged. |
+| Events emitted | QueueItemAdded, QueueItemUpdated, QueueItemReserved, QueueItemDequeued, QueueItemOverflowed, QueueSlaWarningRaised, QueueSlaBreached, QueueMetricsUpdated. |
+| Interactions | Receives interactions from Interaction Management; provides eligible work to Routing Engine; uses Agent & Presence for available capacity; pushes live metrics to Real-Time UX and Supervisor layers. |
+| Why it exists | Queues are the operational inventory of the contact center. They decouple work arrival from assignment and make SLA, priority, and overflow behavior explicit. |
+
+Queue types:
+
+- Static queues: explicitly configured work queues.
+- Dynamic queues: rule-based queues resolved from subject, contact, campaign, channel, priority, geography, language, or custom metadata.
+- Campaign-based queues: outbound work grouped by CRM campaign and dialer profile.
+- Callback queues: scheduled customer callback work with due windows and customer preference constraints.
+
+Agent reservation model:
+
+- Routing creates a short-lived reservation before assignment is finalized.
+- A reserved agent is temporarily removed from matching capacity.
+- Reservation can be accepted, rejected, expired, canceled, or converted to assignment.
+- Reservation events are durable and visible in supervisor/audit views.
+
+### 4. Routing Engine
+
+| Area | Design |
+| --- | --- |
+| Purpose | Make auditable, policy-driven decisions about which agent, queue, workflow branch, or overflow path should handle an interaction. |
+| Responsibilities | Evaluate routing policies; match skills and queue membership; calculate priority; enforce business hours; apply sticky-agent preference; choose routing strategy; reserve an agent; publish decision results; explain routing outcomes for audit and supervisor troubleshooting. |
+| Data owned | Routing policy, routing rule, skill requirement, strategy settings, routing decision, decision reason, routing attempt, route score, escalation path, and routing audit trail. |
+| Events consumed | InteractionQueued, RoutingRequested, QueueItemAdded, AgentPresenceChanged, AgentCapacityChanged, ReservationExpired, BusinessHoursChanged, WorkflowRoutingDecisionReturned. |
+| Events emitted | RoutingStarted, RoutingDecisionMade, RoutingDecisionFailed, AgentReserved, InteractionRouted, InteractionRequeued, OverflowRequested. |
+| Interactions | Reads queues, agent presence, skills, capacity, CRM activity metadata, subject flow settings, and business hours; calls Workflow Integration only through a feature boundary; writes decisions back to Interaction Management and Queue Management. |
+| Why it exists | Routing logic must be centralized and auditable. It cannot live in Telephony, CRM screens, or provider-specific code. |
+
+Routing methods:
+
+- Skills-based: match required skills and proficiency levels.
+- Priority: rank by urgency, campaign priority, SLA age, customer tier, callback due time, and manual overrides.
+- Sticky agent: prefer the last successful agent, account owner, or assigned CRM user when available and allowed.
+- Round robin: fair distribution inside a queue or skill pool.
+- Least busy: prefer agents with the lowest active capacity usage.
+- Longest idle: prefer the available agent idle for the longest time.
+- Business hours: route, defer, callback, overflow, or play after-hours behavior based on queue calendars.
+- Workflow-based: optional workflows can return route target, priority, required skills, IVR-like branch, or callback intent.
+
+Decision execution:
+
+```text
+InteractionQueued
+  -> RoutingStarted
+  -> Candidate queues and agents resolved
+  -> Rules, skills, priority, business hours, and workflow decisions evaluated
+  -> Best candidate selected
+  -> Agent reservation created
+  -> Reservation accepted or expired
+  -> InteractionAssigned or InteractionRequeued
+```
+
+### 5. Agent & Presence Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Track agent availability, capacity, queue membership, skills, and real-time state. |
+| Responsibilities | Maintain agent profile; publish presence changes; calculate channel capacity; track current interactions; enforce wrap-up and break states; provide availability to routing; drive agent desktop state. |
+| Data owned | Agent profile, queue membership, skill profile, presence state, capacity profile, active capacity usage, current reservation, current interactions, last activity timestamp, supervisor/team assignment. |
+| Events consumed | AgentSignedIn, AgentSignedOut, PresenceSetRequested, InteractionAssigned, InteractionAccepted, InteractionStarted, CallAnswered, CallEnded, WrapUpStarted, WrapUpCompleted, ReservationExpired, BreakStarted, BreakEnded. |
+| Events emitted | AgentPresenceChanged, AgentCapacityChanged, AgentReserved, AgentReleased, AgentStateChanged, AgentSkillUpdated, AgentQueueMembershipChanged. |
+| Interactions | Provides candidate availability to Routing Engine; receives session events from Interaction and Call Session Management; pushes state to Real-Time UX and Supervisor layer. |
+| Why it exists | Contact centers depend on accurate live agent state. Routing, dialer pacing, supervisor monitoring, and agent UX all require a single tenant-scoped presence model. |
+
+Presence states:
+
+- Offline
+- Available
+- Busy
+- Reserved
+- Ringing
+- On interaction
+- On hold
+- Wrap-up
+- Break
+- Training
+- Meeting
+- Away
+- Do not disturb
+- After-hours unavailable
+
+Capacity model:
+
+- Voice normally consumes full voice capacity.
+- Future channels can use weighted capacity, such as multiple chats or SMS threads.
+- Capacity is per channel and per agent profile.
+- Routing must reserve capacity before offering work.
+
+### 6. Campaign Dialer
+
+| Area | Design |
+| --- | --- |
+| Purpose | Orchestrate outbound work from CRM activities while respecting agent capacity, pacing, retries, compliance, and customer preferences. |
+| Responsibilities | Select eligible unassigned or available activities; reserve activities and agents before dialing when required; assign owner only after reservation/acceptance or answer-prediction rules allow it; choose dialing mode; enforce pacing; apply retry rules; schedule callbacks; update CRM activity assignment status; create interaction communication-history records for each attempt; request Telephony dial actions through the voice adapter. |
+| Data owned | Dialer profile, dialing mode, dialer run, dialer attempt, pacing settings, retry policy, callback policy, compliance checks, suppression results, campaign queue state, and dialer metrics. |
+| Events consumed | DialerRunStarted, AgentCapacityChanged, QueueMetricsUpdated, ActivityEligibleForDialing, DialerAttemptCompleted, CallAnswered, CallEnded, DispositionSelected, CallbackScheduled. |
+| Events emitted | DialerAttemptScheduled, AgentReservedForDial, DialerAttemptStarted, OutboundDialRequested, DialerAttemptConnected, DialerAttemptFailed, DialerAttemptNoAnswer, DialerAttemptCompleted, DialerRunPaused, DialerRunCompleted. |
+| Interactions | Reads CRM activities first, then resolves contact, subject flow, endpoint, DNC/compliance flags, and time zone from that activity context; creates outbound interaction history records per attempt; reserves agents through Routing; asks Telephony through Contact Center Voice to dial. Dialers never operate directly on contacts. |
+| Why it exists | Outbound dialing is orchestration-heavy and should not be embedded in CRM activity screens or Telephony providers. |
+
+Dialing modes:
+
+- Manual: agent chooses and places the call from CRM UI.
+- Preview: agent reviews contact/activity first, then accepts or skips before dialing.
+- Power: system reserves agents and dials a controlled number of calls per available agent.
+- Progressive: system automatically dials when an agent becomes available, one call per reserved agent.
+- Predictive: future advanced mode that forecasts answer rates and agent availability to dial ahead safely.
+
+MVP dialer modes:
+
+- Manual and preview first.
+- Power dialer second.
+- Progressive after stable routing and reservations.
+- Predictive only after reliable historical metrics and abandonment controls exist.
+
+### 7. Disposition & Wrap-Up Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Govern post-communication activity completion, required outcomes, timers, notes, CRM activity updates, and follow-up automation. |
+| Responsibilities | Start wrap-up when interaction work ends; enforce required activity disposition rules by queue/subject/campaign; track wrap-up duration; save notes and outcome; update CRM activity through `IActivityDispositionService`; trigger subject actions and optional workflows; release agent capacity when wrap-up completes or times out. |
+| Data owned | Wrap-up session, wrap-up start/end, required disposition policy, disposition source, notes, completion state, timer policy, auto-close policy, and validation results. |
+| Events consumed | CallEnded, ChannelSessionEnded, InteractionWorkCompleted, DispositionSelected, WrapUpTimerExpired, AgentSubmittedWrapUp. |
+| Events emitted | WrapUpStarted, DispositionRequired, DispositionSelected, WrapUpCompleted, ActivityCompleted, SubjectActionsRequested, PostInteractionWorkflowRequested, AgentReleased. |
+| Interactions | Updates CRM Activity and Subject data; executes existing Subject Actions; optionally emits OrchardCore workflow events; informs Agent Presence and Analytics. It never dispositions an Interaction. |
+| Why it exists | Contact center work is not complete when the call ends. Wrap-up ensures business outcomes are captured consistently through the Activity and agents are released at the correct time. |
+
+Activity disposition service:
+
+- `IActivityDispositionService` is the only path for agent, provider, AI, workflow, dialer, and system outcomes to modify activity disposition or completion state.
+- It validates the disposition against the activity's Subject and configured Subject Actions.
+- It updates `OmnichannelActivity`, records audit metadata, publishes Contact Center/CRM domain events, and triggers existing Subject Actions or optional Workflow bridge behavior.
+- Telephony, provider adapters, soft-phone UI, and dialers must not update `OmnichannelActivity.DispositionId`, completion fields, or workflow outcomes directly.
+- Workflow execution remains source-agnostic: workflows see the final Activity + Disposition, not whether the outcome came from an agent, provider, AI, or system process.
+
+### 8. Event-Driven Architecture
+
+| Area | Design |
+| --- | --- |
+| Purpose | Decouple Contact Center components while preserving an auditable lifecycle history. |
+| Responsibilities | Define domain events; publish events after state transitions; maintain tenant-local event log; support durable outbox processing; create read models/projections; stream selected events to SignalR; provide correlation and replay for debugging. |
+| Data owned | Domain event envelope, event payload, event version, aggregate id, interaction id, tenant id, correlation id, causation id, actor, source component, timestamp, dispatch status, and projection checkpoints. |
+| Events consumed | All Contact Center domain events and selected Telephony/Omnichannel events. |
+| Events emitted | ProjectionUpdated, RealTimeNotificationRequested, EventDispatchFailed, EventDispatchRetried. |
+| Interactions | Used by every component as the communication mechanism; avoids direct coupling between routing, queues, presence, dialer, wrap-up, analytics, and UX. |
+| Why it exists | Contact center lifecycle is multi-step, asynchronous, and auditable. Events make that lifecycle reliable and observable. |
+
+Core domain events:
+
+- InteractionCreated
+- InteractionLinkedToActivity
+- InteractionQueued
+- InteractionRouted
+- InteractionAssigned
+- InteractionAccepted
+- InteractionRejected
+- InteractionRequeued
+- InteractionStarted
+- InteractionTransferred
+- InteractionCompleted
+- InteractionAbandoned
+- QueueItemAdded
+- QueueItemReserved
+- QueueItemDequeued
+- QueueMetricsUpdated
+- RoutingStarted
+- RoutingDecisionMade
+- RoutingDecisionFailed
+- AgentPresenceChanged
+- AgentCapacityChanged
+- AgentReserved
+- AgentReleased
+- CallSessionCreated
+- CallStarted
+- CallRinging
+- CallAnswered
+- CallHeld
+- CallResumed
+- CallTransferRequested
+- CallTransferred
+- ConferenceStarted
+- CallEnded
+- DialerRunStarted
+- DialerAttemptScheduled
+- DialerAttemptStarted
+- DialerAttemptCompleted
+- CallbackScheduled
+- WrapUpStarted
+- DispositionRequired
+- DispositionSelected
+- WrapUpCompleted
+- ActivityCompleted
+- WorkflowRequested
+- WorkflowCompleted
+- SlaWarningRaised
+- SlaBreached
+
+Event envelope requirements:
+
+- Tenant id
+- Event id
+- Event type
+- Schema version
+- Aggregate type and id
+- Interaction id when available
+- Correlation id
+- Causation id
+- Actor user id or system actor
+- Source component
+- UTC timestamp
+- Idempotency key for external/provider-originated events
+
+### 9. Provider Abstraction Boundary
+
+| Area | Design |
+| --- | --- |
+| Purpose | Preserve a clean separation between Contact Center business orchestration and Telephony provider/media execution. |
+| Responsibilities | Define which layer owns routing, call actions, call state, provider metadata, and business interaction state. |
+| Data owned | Boundary contracts, channel adapter mappings, provider call references, and normalized channel session metadata. |
+| Events consumed | RoutingDecisionMade, OutboundDialRequested, AgentAcceptedInteraction, TelephonyCallStateChanged, ProviderWebhookReceived. |
+| Events emitted | CallControlRequested, CallControlAccepted, CallControlFailed, ChannelSessionEventReceived, ProviderEventNormalized. |
+| Interactions | Contact Center Voice talks to Telephony through provider-agnostic Telephony services. Telephony providers never read Contact Center queues or routing policies. |
+| Why it exists | This prevents business logic from leaking into providers and prevents Telephony from becoming an orchestration engine. |
+
+Ownership rules:
+
+| Responsibility | Owner |
+| --- | --- |
+| Routing decisions | Contact Center |
+| Queue selection | Contact Center |
+| Agent reservation | Contact Center |
+| Agent presence/capacity | Contact Center |
+| CRM activity lifecycle | CRM plus Contact Center orchestration |
+| Call-control request intent | Contact Center or agent UI |
+| Provider call execution | Telephony |
+| Provider authentication | Telephony |
+| Provider/media state truth | Telephony/provider |
+| Business interaction state truth | Contact Center |
+| Call session business projection | Contact Center Voice |
+| Persistent call history currently used by soft phone | Telephony |
+| Enterprise interaction history and analytics | Contact Center |
+
+### 10. Workflow Integration
+
+| Area | Design |
+| --- | --- |
+| Purpose | Allow tenant-specific business logic to participate in routing and lifecycle automation without hardcoding customer behavior into Contact Center services. |
+| Responsibilities | Integrate with current Subject Flows and Subject Actions first; add optional OrchardCore.Workflows bridge for advanced tenants; support pre-call routing decisions, IVR-like branching, post-call automation, callback scheduling, and disposition-driven activity creation. |
+| Data owned | Workflow trigger definitions, workflow invocation records, workflow outputs, routing workflow results, callback workflow results, and failure/audit records. |
+| Events consumed | InteractionCreated, InboundInteractionReceived, RoutingStarted, CallEnded, WrapUpCompleted, DispositionSelected, CallbackRequested. |
+| Events emitted | WorkflowRequested, WorkflowCompleted, WorkflowFailed, RoutingAttributesUpdated, CallbackScheduled, SubjectActionExecutionRequested. |
+| Interactions | Reads and updates CRM context; returns routing attributes to Routing Engine; triggers Subject Actions through the existing Omnichannel model; emits workflow events for optional workflows. |
+| Why it exists | Enterprise contact center behavior varies by tenant, queue, subject, campaign, compliance rules, and customer lifecycle. Workflow integration keeps orchestration extensible. |
+
+Workflow strategy:
+
+- MVP: use existing Subject Flows and Subject Actions as the primary CRM workflow mechanism.
+- Near-term: add Contact Center lifecycle events that can execute Subject Actions at wrap-up and activity completion.
+- Future optional feature: add an OrchardCore.Workflows bridge that depends on Workflows only when enabled.
+- Do not reintroduce Workflows as a hard dependency of Omnichannel Management.
+
+Workflow use cases:
+
+- Pre-call routing: enrich interaction with priority, skills, queue, sticky agent, or suppression reason.
+- IVR-like decisions: classify inbound voice intent, language, department, or callback preference before routing.
+- Post-call automation: create follow-up activity, update contact fields, notify internal users, schedule callback, or mark DNC preference.
+- Callback scheduling: convert missed/abandoned/ineligible work into scheduled callback queue items.
+
+### 11. Real-Time UX Model
+
+| Area | Design |
+| --- | --- |
+| Purpose | Deliver low-latency operational state to agents, supervisors, and queue monitors. |
+| Responsibilities | Stream domain event projections to SignalR groups; isolate tenant/user/queue/team streams; provide current snapshots on reconnect; support event ordering and idempotent UI updates. |
+| Data owned | Real-time subscription model, client group mapping, last-seen event cursor, UI projection payloads, and reconnect snapshot metadata. |
+| Events consumed | InteractionUpdated, QueueMetricsUpdated, AgentPresenceChanged, AgentReserved, CallSessionUpdated, WrapUpStarted, WrapUpCompleted, SlaBreached, DialerMetricsUpdated. |
+| Events emitted | AgentDesktopUpdated, SupervisorDashboardUpdated, QueueMonitorUpdated, ToastNotificationRequested, ClientSnapshotAvailable. |
+| Interactions | Receives projection events from the event dispatcher; pushes to CRM agent desktop, supervisor dashboards, and queue monitor widgets; does not own domain state. |
+| Why it exists | Agent and supervisor UX must reflect current contact center state without polling and without coupling screens to domain services. |
+
+Real-time streams:
+
+- Agent stream: current reservation, active interaction, call session state, wrap-up timer, next activity, disposition requirements, errors.
+- Supervisor stream: agent states, active interactions, queue depths, SLA warnings, dialer state, campaign progress.
+- Queue monitor stream: queue depth, oldest item age, average wait, answer rate, abandoned count, staffed agents, available agents.
+- Interaction stream: full lifecycle updates for an interaction detail screen.
+
+SignalR grouping model:
+
+- Per tenant shell boundary.
+- Per user for agent desktop.
+- Per queue for queue monitors.
+- Per supervisor team for supervisor dashboards.
+- Per interaction for detail views.
+
+UI extensibility requirements:
+
+- Use Orchard Core Display Management only: shapes, display drivers, placement, templates, and shape alternates.
+- CRUD screens for queues, routing policies, dialer profiles, agent profiles, entry points, and other Contact Center settings should follow the AI Profile UI pattern: controller loads a catalog entry through a manager, builds list rows with `IDisplayManager<T>.BuildDisplayAsync(..., "SummaryAdmin")`, builds editors with `BuildEditorAsync`/`UpdateEditorAsync`, and leaves sections extensible through display drivers.
+- Agent desktop and supervisor surfaces should be shape composition points, not custom rendering frameworks. Telephony can inject call controls, Contact Center can inject presence/reservation/wrap-up shapes, providers can inject provider-specific settings, and supervision/analytics modules can inject live queue metrics through placement.
+- Contact Center should extend existing Omnichannel activity shapes instead of replacing them. Activity list/detail/complete screens should expose display-driver groups and placement zones for reservation state, next-work actions, interaction history, dialer controls, wrap-up, and supervisor decorations.
+- New entity models that need extensibility should inherit from Orchard-compatible `Entity` infrastructure (for catalog entries this is provided through `CatalogItem`) so modules can use `entity.Put(...)` and `entity.TryGet(...)` metadata the same way AI profiles and Orchard users do.
+
+### 12. Supervisor & Analytics Layer
+
+| Area | Design |
+| --- | --- |
+| Purpose | Provide live operational oversight and historical performance reporting. |
+| Responsibilities | Build live dashboards; aggregate metrics; alert on SLA risk; expose agent monitoring; track campaign performance; provide drill-downs into interactions, queues, and outcomes. |
+| Data owned | Live queue metrics, agent state metrics, SLA snapshots, call metrics, interaction metrics, campaign metrics, dialer metrics, supervisor audit records, and historical metric projections. |
+| Events consumed | InteractionCreated, InteractionQueued, InteractionAssigned, InteractionCompleted, CallAnswered, CallEnded, AgentPresenceChanged, WrapUpCompleted, DispositionSelected, QueueMetricsUpdated, DialerAttemptCompleted, SlaBreached. |
+| Events emitted | SupervisorAlertRaised, MetricProjectionUpdated, SlaTrendUpdated, CampaignPerformanceUpdated. |
+| Interactions | Reads event log/projections; pushes real-time updates through SignalR; supports export/reporting surfaces and future BI integration. |
+| Why it exists | Supervisors need operational control and accountability. Analytics also feeds future dialer pacing, staffing, routing optimization, and AI insights. |
+
+Monitoring capabilities:
+
+- Live queue depth, oldest wait, average wait, service level, abandon rate, answer rate.
+- Agent live state, active interaction, idle time, handle time, wrap-up time, occupancy, capacity utilization.
+- SLA warning and breach tracking by queue, campaign, priority, and subject.
+- Call metrics: talk time, hold time, queue time, ring time, transfer count, conference count, completion outcome.
+- Campaign performance: attempts, connects, no answers, retries, callbacks, conversion outcomes, disposition mix.
+- Dialer safety: pacing, abandonment, no-agent events, retry exhaustion, compliance suppression.
+
+### 13. Security & Multi-Tenancy
+
+| Area | Design |
+| --- | --- |
+| Purpose | Ensure tenant isolation, role-based access, queue-level authorization, and auditability. |
+| Responsibilities | Scope data by tenant; define permissions; protect real-time groups; enforce queue membership and supervisor permissions; audit sensitive actions; isolate provider metadata; validate channel actions. |
+| Data owned | Permission definitions, role stereotypes, queue access policies, supervisor scope, audit event records, and security projection metadata. |
+| Events consumed | UserRoleChanged, QueueMembershipChanged, AgentProfileUpdated, SupervisorActionRequested, InteractionAccessRequested, ProviderActionRequested. |
+| Events emitted | AccessDenied, AuditRecorded, SupervisorActionAudited, SecurityPolicyChanged. |
+| Interactions | Works with Orchard Core roles, users, authorization, tenants, content item access, Contact Center queues, and CRM activity permissions. |
+| Why it exists | Contact center data contains customer information, agent performance data, provider metadata, and operational controls. Security must be designed into every boundary. |
+
+Permission model:
+
+- Contact Center Agent: use agent desktop, update own presence, accept/reject own reservations, complete assigned interactions.
+- Contact Center Supervisor: monitor assigned queues/teams, view live dashboards, assist/reassign/override within scope.
+- Queue Manager: manage queues, queue membership, skills, priorities, overflow, and SLA settings.
+- Dialer Manager: manage dialer profiles, start/pause campaigns, view dialer metrics, configure retry/pacing.
+- Contact Center Administrator: manage all Contact Center settings and permissions.
+- Auditor/Analyst: view historical interaction and metric reports without operational controls.
+
+Tenant isolation:
+
+- Tenant-local stores and indexes.
+- Tenant-local event log and projections.
+- Tenant-scoped SignalR hub routing.
+- Tenant-scoped settings, features, recipes, and permissions.
+- No cross-tenant queue, event, provider, or interaction access.
+
+### 14. Inbound Entry Points, IVR & Self-Service
+
+| Area | Design |
+| --- | --- |
+| Purpose | Define how inbound contacts enter the contact center, get qualified, and reach the right queue or self-service path before an agent is involved. |
+| Responsibilities | Map provider numbers/DIDs to entry points; run business-hours and holiday gating; run IVR-like decision flows; collect caller intent, language, and identifiers; resolve the contact for screen pop; select the target queue, skills, and priority; offer callback or voicemail when appropriate. |
+| Data owned | Entry point, number/DID mapping, IVR/self-service flow definition, prompt/announcement metadata, collected caller attributes, entry-point routing result, and self-service outcome. |
+| Events consumed | InboundChannelEventReceived, ProviderInboundCallReceived, BusinessHoursChanged, WorkflowRoutingDecisionReturned, SelfServiceCompleted. |
+| Events emitted | EntryPointMatched, SelfServiceStarted, SelfServiceCompleted, CallerIdentified, ScreenPopRequested, InteractionQualified, InteractionQueued, CallbackOffered, VoicemailRequested. |
+| Interactions | Receives normalized inbound events from Contact Center Voice; resolves CRM contact; optionally calls subject flows or the Workflows bridge for IVR-like branching; hands the qualified interaction to Queue Management and Routing. |
+| Why it exists | Inbound contact centers need a configurable front door that performs qualification, business-hours/holiday handling, screen pop, and self-service before consuming agent capacity. |
+
+Inbound entry behaviors:
+
+- Number/DID to entry-point mapping per tenant.
+- Business-hours and holiday calendars with open, closed, and special-day behavior.
+- IVR-like menu, intent capture, language selection, and authentication hooks.
+- Screen pop: resolve the contact and surface the 360 view to the agent on answer.
+- Self-service deflection, callback offer, and voicemail fallback.
+
+### 15. Call Recording & Compliance Recording
+
+| Area | Design |
+| --- | --- |
+| Purpose | Orchestrate recording lifecycle and recording governance without owning media capture. |
+| Responsibilities | Emit start/stop/pause/resume recording intents; capture consent state; enforce pause/resume around sensitive data (for example payment capture); track recording metadata and references; apply retention and disposal policy; audit recording access and playback. |
+| Data owned | Recording session, recording reference/location pointer, consent state, recording state (recording, paused, stopped), retention policy result, and recording access audit. |
+| Events consumed | CallStarted, CallAnswered, SensitiveDataEntryStarted, SensitiveDataEntryEnded, CallEnded, ConsentCaptured, RetentionPolicyChanged. |
+| Events emitted | RecordingStarted, RecordingPaused, RecordingResumed, RecordingStopped, RecordingStored, RecordingRetentionScheduled, RecordingPurged, RecordingAccessAudited. |
+| Interactions | Sends recording intents through Contact Center Voice to Telephony/providers; links recording metadata to the interaction and call session; feeds Quality and Analytics; enforces retention with Data Governance. |
+| Why it exists | Recording, consent, pause/resume for sensitive data, retention, and access auditing are core enterprise contact center requirements that must be orchestrated and audited even though media stays in the provider/media layer. |
+
+### 16. Live Monitoring & Supervisor Call Control
+
+| Area | Design |
+| --- | --- |
+| Purpose | Let supervisors observe and intervene on live interactions within their scope. |
+| Responsibilities | Provide silent monitor (listen only), whisper (coach the agent only), barge-in (join the call), and take-over (replace the agent); enforce supervisor scope and permissions; audit every monitoring action; surface live coaching context. |
+| Data owned | Monitor session, monitor mode, supervisor/agent/interaction references, monitor start/end, and monitoring audit record. |
+| Events consumed | SupervisorMonitorRequested, SupervisorWhisperRequested, SupervisorBargeRequested, SupervisorTakeOverRequested, CallEnded, AgentStateChanged. |
+| Events emitted | MonitorSessionStarted, WhisperStarted, BargeStarted, TakeOverStarted, MonitorSessionEnded, SupervisorActionAudited. |
+| Interactions | Expresses monitor/whisper/barge/take-over as orchestration intents that Telephony/providers execute when the provider supports them; updates Real-Time UX and audit. |
+| Why it exists | Live monitoring and intervention are standard supervisor capabilities for coaching, quality, and escalation, and they must be permissioned and fully audited. |
+
+Provider capability awareness:
+
+- Monitoring primitives depend on provider capabilities, similar to the existing Telephony capability flags.
+- When a provider cannot support a primitive, the UI must hide or disable it instead of failing silently.
+
+### 17. Outbound Compliance & List Management
+
+| Area | Design |
+| --- | --- |
+| Purpose | Keep outbound dialing within legal, contractual, and customer-preference constraints. |
+| Responsibilities | Enforce allowed calling windows by contact time zone and region; cap abandonment rate for power/predictive modes; play safe-harbor/abandon messaging when no agent connects; manage caller-ID and local-presence policy; scrub against DNC and communication preferences; manage retry limits, cool-down, and list recycling; record suppression reasons. |
+| Data owned | Compliance policy, calling-window rules, abandonment thresholds, caller-ID/local-presence policy, suppression result, list recycling state, and compliance audit record. |
+| Events consumed | ActivityEligibleForDialing, DialerAttemptCompleted, CallAbandoned, RetentionPolicyChanged, CommunicationPreferenceChanged. |
+| Events emitted | DialBlockedByCompliance, CallingWindowViolationPrevented, AbandonmentThresholdReached, SafeHarborMessagePlayed, SuppressionRecorded, ListRecycled. |
+| Interactions | Gates the Campaign Dialer before dialing; reuses DNC registry and contact communication preferences; feeds compliance metrics to Analytics. |
+| Why it exists | Power and predictive dialing are unsafe without enforced calling windows, abandonment caps, and suppression auditing. Compliance must be a first-class gate, not an afterthought. |
+
+### 18. Quality Management (advanced)
+
+| Area | Design |
+| --- | --- |
+| Purpose | Evaluate and improve interaction quality. |
+| Responsibilities | Define evaluation forms/scorecards; sample and assign interactions for review; link recordings, transcripts, and disposition; capture scores, calibration, and coaching; feed performance and training. |
+| Data owned | Evaluation form, evaluation assignment, evaluation result, calibration session, and coaching record. |
+| Events consumed | InteractionCompleted, RecordingStored, WrapUpCompleted, DispositionSelected. |
+| Events emitted | EvaluationAssigned, EvaluationCompleted, CoachingRecorded, CalibrationCompleted. |
+| Interactions | Reads recordings/transcripts/dispositions; feeds Analytics and agent performance; integrates with optional AI quality scoring. |
+| Why it exists | Quality management is a standard enterprise contact center pillar and a natural consumer of recordings, transcripts, and dispositions once the core platform is stable. |
+
+## Conceptual data model
+
+The data model below is conceptual only.
+
+| Entity | Purpose | Key relationships |
+| --- | --- | --- |
+| OmnichannelActivity | Universal CRM work item | Links to Contact, Campaign, Subject, Disposition, assignment/reservation metadata, ActivityKind, ActivitySource, and zero or more Interactions |
+| Interaction | Communication-history record for one activity attempt | Links to OmnichannelActivity, provider session/call id, queue history, transfer history, call legs, recording/transcript references |
+| InteractionParticipant | Customer, agent, supervisor, AI agent, external party | Belongs to Interaction |
+| InteractionEvent | Durable domain event history | References Interaction and event envelope |
+| ChannelSession | Generic per-channel session projection | Voice session now; chat/SMS/email later |
+| CallSession | Voice-specific channel session | References Interaction, Telephony provider call id, agent, queue |
+| Queue | Work container | Owns queue items, membership, SLA, routing policy |
+| QueueItem | Enqueued activity waiting for assignment | References OmnichannelActivity and Queue |
+| QueueMembership | Agent-to-queue relationship | References Queue and AgentProfile |
+| AgentProfile | Contact center agent configuration | References Orchard user, skills, capacity, teams |
+| AgentPresence | Live agent state | References AgentProfile and active reservations/activities/interactions |
+| AgentSkill | Agent skill and proficiency | References AgentProfile and Skill |
+| Skill | Routeable capability | Referenced by queues, policies, agents |
+| AgentReservation | Temporary assignment lock | References AgentProfile, OmnichannelActivity, QueueItem |
+| RoutingPolicy | Rules and strategy for routing | References Queue, Skills, BusinessHours, Workflow hooks |
+| RoutingDecision | Auditable result of routing | References OmnichannelActivity, Queue, Agent, score, reason |
+| DialerProfile | Outbound dialing configuration | References Campaign, Queue, pacing and retry policy |
+| DialerRun | Execution instance for outbound campaign work | References DialerProfile and campaign/activity set |
+| DialerAttempt | Single outbound attempt | References DialerRun, Interaction, Activity, CallSession |
+| WrapUpSession | Post-work completion period | References OmnichannelActivity, latest Interaction, Agent, Disposition |
+| ActivityDispositionRequest | Source-neutral disposition command | References OmnichannelActivity, Disposition, source, actor, notes |
+| MetricSnapshot | Aggregated operational analytics | References queue, agent, campaign, time bucket |
+| EntryPoint | Inbound front door configuration | References number/DID mapping, IVR flow, business hours, target queues |
+| NumberMapping | Provider number/DID to entry point | References EntryPoint and channel endpoint |
+| IvrFlowDefinition | Self-service/IVR decision flow | Referenced by EntryPoint; may delegate to subject flows or workflows |
+| BusinessHoursCalendar | Open/closed and holiday schedule | Referenced by queues, entry points, routing |
+| CallbackRequest | Scheduled or queued callback | References Interaction, Contact, Queue, due window |
+| RecordingSession | Recording lifecycle and reference | References Interaction, CallSession, consent, retention |
+| MonitorSession | Supervisor live monitoring action | References Supervisor, Agent, Interaction, monitor mode |
+| AgentStateReason | Reason code for presence/not-ready/break | References AgentProfile and presence state |
+| CompliancePolicy | Outbound calling constraints | References calling windows, abandonment caps, caller-ID policy |
+| RetentionPolicy | Data retention/disposal rules | References recordings, events, interactions, PII fields |
+| EvaluationForm | Quality scorecard definition | Referenced by evaluation assignments and results |
+| AuditRecord | Security and operational audit | References actor, action, target, tenant, correlation id |
+
+Relationship overview:
+
+```text
+Contact ContentItem
+  -> OmnichannelActivity
+       -> QueueItem / AgentReservation / WrapUpSession
+       -> Activity Disposition -> Subject Actions / Workflow bridge
+       -> Interaction*
+            -> CallSession / Provider session
+            -> QueueHistory / TransferHistory / CallLegs
+            -> Recording / Transcript reference
+            -> InteractionEvent*
+```
+
+## Interaction lifecycle diagram
+
+```text
+Created
+  -> LinkedToActivity
+  -> Queued
+  -> Routing
+  -> Reserved
+  -> Assigned
+  -> Offered
+  -> Accepted
+  -> Active
+  -> WorkCompleted
+  -> WrapUp
+  -> Completed
+
+Alternative paths:
+Queued -> Overflowed -> Queued
+Queued -> Abandoned
+Reserved -> ReservationExpired -> Queued
+Offered -> Rejected -> Queued
+Active -> Transferred -> Routing
+Active -> Failed -> WrapUp or Completed
+WorkCompleted -> CallbackScheduled -> Queued
+```
+
+## Inbound call routing sequence
+
+```text
+1. Telephony/provider receives inbound voice event.
+2. Contact Center Voice normalizes the provider event into an inbound channel session event.
+3. Interaction Management creates or finds the Interaction.
+4. CRM context is resolved: contact, campaign, subject, previous owner, communication preferences.
+5. Pre-routing workflow or subject-flow rules enrich priority, skills, queue, language, and callback options.
+6. Queue Management enqueues the interaction.
+7. Routing Engine evaluates business hours, queue rules, skills, priority, sticky agent, capacity, and strategy.
+8. Agent & Presence creates a reservation for the selected agent.
+9. Real-Time UX offers the interaction to the agent desktop.
+10. Agent accepts, and Contact Center asks Telephony to answer/connect/bridge according to the provider capability.
+11. Call Session Management tracks voice lifecycle events.
+12. When the call ends, Wrap-Up starts.
+13. Agent selects disposition and completes required fields.
+14. CRM activity is updated and Subject Actions or optional workflows run.
+15. Analytics projections and supervisor dashboards update.
+```
+
+## Outbound dialing sequence
+
+```text
+1. CRM campaign/activity batch produces eligible phone activities.
+2. Campaign Dialer selects eligible activities using schedule, timezone, DNC/compliance, retry, and priority rules.
+3. Dialer mode determines whether an agent previews first or the system reserves an agent before dialing.
+4. Routing Engine reserves an eligible agent and capacity.
+5. Interaction Management creates the outbound Interaction and links it to the CRM Activity.
+6. Contact Center Voice requests Telephony to dial using the configured channel endpoint/caller id.
+7. Telephony executes the provider dial action and returns provider call state.
+8. Call Session Management maps provider call id to Interaction.
+9. Agent desktop receives real-time dial/call state updates.
+10. Outcome is classified: connected, no answer, busy, failed, canceled, voicemail, callback, or completed.
+11. Wrap-Up enforces disposition and notes when agent-handled.
+12. CRM Activity, retry policy, callback schedule, and campaign metrics update.
+13. Agent capacity is released or the next dialer reservation begins.
+```
+
+## Event flow architecture
+
+```text
+Domain command
+  -> Domain service validates and changes aggregate state
+  -> Domain event appended to tenant event log
+  -> Outbox dispatches event to handlers
+  -> Handlers update projections and trigger next orchestration step
+  -> Real-time notifier streams projection event to SignalR groups
+  -> Analytics projector updates live and historical metrics
+```
+
+Rules:
+
+- Components do not mutate each other’s owned data directly.
+- Every cross-component transition is represented by an event.
+- Every event is tenant-scoped, versioned, correlated, and idempotent.
+- External/provider events are normalized before they enter the Contact Center event stream.
+- Real-time notifications are projections of domain events, not the source of truth.
+- Analytics are projections and can be rebuilt from event history.
+
+## Standard contact center terminology and metrics
+
+Use these industry-standard terms for type, member, event, metric, and permission naming. Do not name any code artifact, comment, or public doc after a competing product; use only the generic vocabulary below.
+
+Core domain vocabulary:
+
+- Interaction: any customer engagement across any channel.
+- Channel session: a per-channel session (voice call, chat, SMS thread, email) attached to an interaction.
+- Queue: a container of interactions waiting for handling.
+- Reservation (offer): a short-lived hold that offers an interaction to an agent before assignment.
+- Presence (agent state): the agent's current availability state.
+- Capacity: how much concurrent work an agent can handle, per channel.
+- Disposition (wrap code / outcome code): the business outcome selected at completion.
+- Wrap-up (after-call work, ACW): post-interaction completion time.
+- Entry point: the inbound front door that qualifies and routes a contact.
+- Skill: a routeable capability with optional proficiency.
+
+Operational metrics (use these names):
+
+- Service Level (SL): percent of interactions answered within a target threshold (for example, 80/20).
+- Average Speed of Answer (ASA): average queue wait before answer.
+- Average Handle Time (AHT): talk time plus hold time plus wrap-up time.
+- Average Talk Time and Average Hold Time.
+- Abandon Rate: percent of queued interactions abandoned before answer.
+- Occupancy: percent of logged-in time spent handling interactions.
+- Adherence and Shrinkage: schedule adherence and non-productive time (workforce metrics).
+- First Contact Resolution (FCR): resolved on the first interaction.
+- Answer Rate, Connect Rate, and Right-Party-Contact (RPC) rate (outbound).
+- Abandonment Rate cap (outbound dialing safety threshold).
+- Queue depth, oldest-in-queue age, and estimated wait time (EWT).
+
+Agent states (canonical set):
+
+- Offline, Available, Reserved, Ringing, On interaction, On hold, Wrap-up, Not ready (with reason code), Break (with reason code), Training, Meeting, Away, Do not disturb, After-hours unavailable.
+
+Transfer and conference taxonomy:
+
+- Blind (cold) transfer, Consultative (warm) transfer, Transfer to agent, Transfer to queue, Transfer to external number, Transfer to IVR/entry point.
+- Conference: add party, drop party, supervisor-initiated conference (barge).
+
+## MVP scope
+
+The MVP should prove that agents can operate voice contact center work fully inside CRM while preserving the Telephony boundary.
+
+MVP includes:
+
+1. Extended `OmnichannelActivity` as the universal work item with nullable owner, activity kind/source, assignment status, and reservation metadata.
+2. Durable Interaction entity as communication history linked to OmnichannelActivity, with provider ids, timestamps, queue/transfer/call-leg history, recording/transcript references, and technical metadata.
+3. Contact Center event log and baseline projections.
+4. Static queues over activities with priority, SLA thresholds, and queue metrics.
+5. Agent profiles, queue membership, presence, and single-voice-session capacity.
+6. Activity and agent reservation model.
+7. Basic routing: queue membership, available agents, priority, longest idle, round robin, business hours, and sticky assigned user preference.
+8. Voice channel adapter over existing Telephony abstractions.
+9. Call session mapping from Telephony call id to Interaction.
+10. Manual and preview outbound dialing that selects Activities, not Contacts.
+11. Power dialing after reservations are stable.
+12. Wrap-up timer, required activity disposition, notes, CRM activity completion, and Subject Action execution through `IActivityDispositionService`.
+13. Agent desktop CRM integration for next work, current activity, interaction history, call controls, and wrap-up.
+14. Supervisor live queue and agent monitor.
+15. Tenant-scoped permissions and audit trail.
+16. Documentation and persistent project plan reference in `.github\copilot-instructions.md`.
+17. A basic inbound entry point: number/DID to queue mapping, business-hours/holiday gating, and screen pop of the resolved contact on answer.
+18. Canonical agent state set with not-ready and break reason codes.
+
+MVP excludes (deferred to later phases, not dropped):
+
+- Call recording, pause/resume, and media storage (Phase 9).
+- Live monitoring, whisper, barge, and take-over (Phase 9).
+- Full IVR/self-service designer; MVP ships only basic entry-point gating (Phase 8).
+- Outbound compliance hardening: calling-window enforcement, abandonment caps, safe-harbor messaging, AMD, local presence (Phase 10).
+- Progressive and predictive dialing (Phase 13).
+- Quality management, evaluation forms, and speech/AI quality scoring (Phase 13).
+- Chat/SMS/email agent routing and AI virtual-agent handoff (Phase 13).
+- Workforce management, forecasting, and adherence scheduling.
+- External BI connectors and data warehouse export beyond built-in reports.
+- Multi-region active-active contact center scaling (single-region scale-out is Phase 12).
+
+## Phased delivery plan
+
+### Phase 0: Project governance and durable planning
+
+Goals:
+
+- Create a repository-tracked Contact Center design and progress document.
+- Add a reference to that document in `.github\copilot-instructions.md`.
+- Establish naming policy that avoids competitor names in code and public docs.
+- Document current boundaries: CRM owns business work data, Contact Center owns orchestration, Telephony owns media execution.
+- Create initial docs page under `src\CrestApps.Docs\docs\contact-center`.
+
+Deliverables:
+
+- Durable project plan/progress document.
+- Copilot instruction pointer.
+- Contact Center docs landing page.
+- Initial feature/module map.
+
+### Phase 1: Domain foundation
+
+Goals:
+
+- Introduce Contact Center abstractions and core domain vocabulary.
+- Establish `OmnichannelActivity` as the universal work item and Interaction as communication history.
+- Define event envelope, event log, and event projection strategy.
+- Extend existing Omnichannel activities with nullable ownership, classification, assignment, and reservation metadata.
+- Define baseline permissions and tenant settings.
+
+Deliverables:
+
+- Contact Center base feature.
+- Conceptual migrations/indexes for interaction history and event history.
+- Communication-history projection.
+- Activity extension model for assignment/reservation/classification.
+- Initial `IActivityDispositionService` contract for source-neutral activity disposition.
+- Baseline docs and changelog updates.
+- Unit tests for lifecycle rules and event envelopes.
+
+### Phase 2: Agent, presence, queue, and reservation foundation
+
+Goals:
+
+- Add agent profiles, queue membership, skills, presence, and capacity.
+- Add static queues, queue priorities, SLA thresholds, and queue item lifecycle.
+- Add reservation model and expiration behavior.
+- Add real-time presence and queue updates.
+
+Deliverables:
+
+- Agent management feature.
+- Queue management feature.
+- Reservation lifecycle.
+- Queue metric projections.
+- Agent and supervisor permissions.
+- Tests for presence transitions, reservation conflicts, queue ordering, and tenant isolation.
+
+### Phase 3: Routing MVP
+
+Goals:
+
+- Add routing policies and strategy pipeline.
+- Support longest idle, round robin, priority, sticky assigned user, business hours, and skills.
+- Produce auditable routing decisions.
+- Requeue or overflow when no agent is available.
+
+Deliverables:
+
+- Routing engine feature.
+- Routing decision records.
+- Routing audit view.
+- Queue overflow model.
+- Tests for routing strategies, tie breaking, business hours, and reservation failures.
+
+### Phase 4: Voice integration with Telephony
+
+Goals:
+
+- Add Contact Center Voice feature that depends on Telephony.
+- Map provider call/session identifiers to Contact Center interactions.
+- Normalize call session events into Contact Center domain events.
+- Define a provider inbound-event normalization boundary so inbound calls and provider webhooks enter Contact Center reliably.
+- Keep Telephony as the execution and provider state boundary.
+- Surface current interaction and call state in CRM UI.
+
+Deliverables:
+
+- Voice channel adapter.
+- Call session model.
+- Inbound voice event ingress and normalization strategy.
+- Outbound call-control integration.
+- Transfer and conference taxonomy (blind, consultative, to agent/queue/external).
+- Real-time voice session projection.
+- Tests for call mapping, state transitions, transfer, hold/resume, conference, and end-call wrap-up start.
+
+### Phase 5: Outbound dialer MVP
+
+Goals:
+
+- Use CRM campaigns, activities, contacts, subject flows, endpoints, and dispositions as dialer inputs.
+- Add manual and preview dialing.
+- Add power dialing after reservations are stable.
+- Add retry rules, callback scheduling, timezone checks, DNC/communication-preference suppression, and pacing safeguards.
+
+Deliverables:
+
+- Dialer profiles.
+- Dialer run and attempt projections.
+- Preview dialing agent UX.
+- Power dialing service.
+- Callback request model and callback queue.
+- Campaign and activity updates.
+- Tests for eligibility, suppression, retries, pacing, reservation-before-dial, and callback scheduling.
+
+Note: full outbound compliance (calling-window enforcement, abandonment caps, safe-harbor messaging, answering-machine detection, and caller-ID/local presence) is hardened in Phase 10. Phase 5 only enforces the existing DNC and communication-preference suppression and basic timezone checks.
+
+### Phase 6: Wrap-up and disposition lifecycle
+
+Goals:
+
+- Start wrap-up after interaction work ends.
+- Enforce required disposition rules by queue, subject, and campaign.
+- Track wrap-up time, notes, selected disposition, and completion.
+- Execute existing Subject Actions and optionally emit workflow events.
+- Release agent capacity after wrap-up completion or timeout.
+
+Deliverables:
+
+- Wrap-up feature.
+- Required disposition policies.
+- Activity completion integration.
+- Subject Action integration.
+- Timer and timeout behavior.
+- Tests for required dispositions, wrap-up release, activity update, and subject action execution.
+
+### Phase 7: Agent desktop and supervisor real-time UX
+
+Goals:
+
+- Add CRM-integrated agent desktop surfaces for available work, active interaction, call controls, customer context, subject form, and wrap-up.
+- Add screen pop of the resolved contact 360 view on interaction answer.
+- Add canonical agent states with not-ready and break reason codes.
+- Add supervisor live dashboard for queues, agents, SLA, active interactions, and dialer state.
+- Add queue monitor (wallboard) view with estimated wait time.
+
+Deliverables:
+
+- Agent desktop feature.
+- Screen pop integration.
+- Agent state and reason-code model.
+- Supervisor feature.
+- Queue monitor feature.
+- SignalR stream contracts and reconnect snapshots.
+- UI docs and permissions.
+- Playwright coverage for core agent and supervisor flows.
+
+### Phase 8: Inbound entry points, IVR and self-service
+
+Goals:
+
+- Add inbound entry points and number/DID-to-entry-point mapping.
+- Add business-hours and holiday calendars with open, closed, and special-day behavior.
+- Add IVR-like decision flows (menu, intent, language, authentication hooks) that can delegate to subject flows or the Workflows bridge.
+- Add self-service deflection, callback offer, and voicemail fallback.
+- Promote the basic MVP entry point into a configurable front door.
+
+Deliverables:
+
+- Entry point and number-mapping model.
+- Business-hours/holiday calendar model.
+- IVR/self-service flow definition and runtime.
+- Callback offer and voicemail fallback.
+- Tests for entry-point matching, business-hours/holiday gating, self-service outcomes, and queue selection.
+
+### Phase 9: Recording and live monitoring
+
+Goals:
+
+- Add recording orchestration: start/stop/pause/resume intents, consent capture, and recording metadata.
+- Add pause/resume around sensitive data entry (for example payment capture).
+- Add live monitoring: silent monitor, whisper, barge-in, and take-over, gated by provider capabilities and supervisor scope.
+- Audit all recording access and monitoring actions.
+
+Deliverables:
+
+- Recording session model and recording intents.
+- Consent and recording-state tracking.
+- Monitor session model and supervisor call-control intents.
+- Provider-capability gating for recording and monitoring.
+- Recording and monitoring audit records.
+- Tests for recording lifecycle, pause/resume, monitor modes, scope enforcement, and audit.
+
+### Phase 10: Outbound compliance hardening
+
+Goals:
+
+- Enforce allowed calling windows by contact time zone and region.
+- Cap abandonment rate for power and predictive dialing and play safe-harbor/abandon messaging.
+- Add answering-machine detection handling and outcome classification.
+- Add caller-ID and local-presence policy.
+- Add list scrubbing, retry cool-down, and list recycling with suppression auditing.
+
+Deliverables:
+
+- Compliance policy model and calling-window rules.
+- Abandonment-rate caps and safe-harbor messaging.
+- Answering-machine detection outcome handling.
+- Caller-ID/local-presence policy.
+- List recycling and suppression auditing.
+- Tests for calling-window enforcement, abandonment caps, AMD outcomes, caller-ID selection, and suppression auditing.
+
+### Phase 11: Optional Workflow bridge
+
+Goals:
+
+- Add feature-gated OrchardCore.Workflows integration without reintroducing Workflows as a hard dependency of Omnichannel Management.
+- Emit workflow events for routing, IVR-like decisions, wrap-up completion, callback scheduling, and SLA breach.
+- Allow workflows to return route attributes, priority, skills, callback time, or suppression result.
+
+Deliverables:
+
+- Contact Center Workflows feature.
+- Workflow events and tasks.
+- Workflow result model.
+- Failure and timeout behavior.
+- Tests for workflow result handling and fallback routing.
+
+### Phase 12: Analytics and operations
+
+Goals:
+
+- Build historical metric projections.
+- Add reports for queue, agent, interaction, call, wrap-up, campaign, and dialer performance.
+- Add SLA trend analysis and operational alerts.
+- Add export surfaces.
+
+Deliverables:
+
+- Analytics feature.
+- Metric snapshots.
+- Supervisor reporting.
+- Campaign performance reports.
+- SLA alerts.
+- Tests for projection correctness and rebuild behavior.
+
+### Phase 13: Scale-out, resilience and data governance
+
+Goals:
+
+- Validate multi-node operation: SignalR backplane, distributed reservation locking, and single-writer guarantees for queue/presence transitions.
+- Add provider/media resilience and failover behavior and stale-reservation/stale-session cleanup.
+- Add data retention and disposal for recordings, events, and interaction history.
+- Add PII handling, redaction, and right-to-erasure support aligned with existing platform conventions.
+
+Deliverables:
+
+- Scale-out validation and backplane configuration guidance.
+- Distributed locking and reconnection/cleanup behavior.
+- Retention and disposal jobs for recordings, events, and interactions.
+- PII redaction and erasure support.
+- Load/soak test guidance and tests for cleanup, retention, and failover.
+
+### Phase 14: Advanced capabilities
+
+Goals:
+
+- Add progressive dialing.
+- Add predictive dialing only after enough safe metrics and abandonment controls exist.
+- Add future non-voice channel routing.
+- Add AI assist, summarization, next-best-action, sentiment, disposition suggestion, and virtual agent handoff.
+- Add advanced supervisor controls and quality workflows.
+
+Deliverables:
+
+- Progressive dialer.
+- Predictive dialer safety design.
+- Chat/SMS/email routing adapters.
+- AI assistance feature.
+- Advanced analytics and quality insights.
+
+## Cross-cutting architecture requirements
+
+### Persistence
+
+- Contact Center state should follow existing tenant-local Orchard/YesSql patterns.
+- Interaction event history should be durable and replayable for projections.
+- Operational live state should be reconstructable from durable events and current snapshots.
+- Analytics projections should be rebuildable.
+
+### Idempotency
+
+- Provider events, dialer attempts, reservations, workflow results, and real-time reconnect snapshots must be idempotent.
+- Events should carry idempotency keys when sourced from external systems.
+
+### Concurrency
+
+- Agent reservations are the concurrency boundary for assignment.
+- Dialer attempts must not dial without valid capacity/reservation when a mode requires agent availability.
+- Queue dequeue and reservation conversion must be atomic at the domain level.
+
+### Observability
+
+- Every routing decision should explain the selected queue, agent, strategy, score, and skipped candidates.
+- Every dialer attempt should explain eligibility, suppression, pacing, and final outcome.
+- Every workflow or subject action execution should be auditable.
+- Every provider event should retain enough sanitized metadata for troubleshooting without exposing secrets.
+
+### Compliance
+
+- Reuse existing contact communication preferences and DNC integration.
+- Respect contact time zone for outbound calls.
+- Provide suppression reasons for audit.
+- Keep sensitive provider and customer data out of logs.
+
+### Documentation
+
+- Every phase that changes behavior must update `src\CrestApps.Docs`.
+- The changelog file matching `VersionPrefix` must be updated.
+- The persistent Contact Center project plan/progress document must be updated as work progresses.
+
+### Scale-out and high availability
+
+- Contact Center is real-time and stateful, so it must work across multiple application nodes.
+- SignalR requires a backplane (for example Redis) for multi-node real-time delivery; reconnect snapshots must rebuild client state.
+- Reservation, queue dequeue, and presence transitions need distributed locking or a single-writer strategy so two nodes cannot assign the same work.
+- Live operational state must be reconstructable from durable events plus current snapshots after a node restart.
+
+### Resilience and failover
+
+- Provider/media outages must degrade gracefully: stop dialing, hold queued work, and surface status instead of losing interactions.
+- Stale reservations, orphaned call sessions, and disconnected agents must be detected and cleaned up automatically.
+- Inbound provider events must be idempotent and survive retries and out-of-order delivery.
+- Dialer pacing must back off automatically when provider errors or abandonment thresholds rise.
+
+### Data retention and privacy
+
+- Recordings, transcripts, events, and interaction history must honor configurable retention and disposal policies.
+- PII must be redactable, and right-to-erasure must be supported in line with existing platform conventions.
+- Provider metadata and customer data must be kept out of logs, and recording/playback access must be audited.
+
+### Testing and validation strategy
+
+- Unit tests for lifecycle rules, routing strategies, reservation concurrency, dialer eligibility/suppression, compliance windows, and wrap-up enforcement.
+- Integration tests for end-to-end inbound and outbound flows against the in-memory/stub Telephony provider used by existing Telephony tests.
+- Playwright tests for agent desktop and supervisor flows, following the existing `CrestApps.OrchardCore.Telephony.PlaywrightTests` pattern.
+- Projection rebuild tests proving analytics and live state can be reconstructed from the event log.
+- Load/soak tests for queue throughput, reservation contention, and real-time fan-out before enabling power/predictive dialing.
+- Follow repository validation: `npm run rebuild` for assets, `dotnet build` with warnings-as-errors, and targeted `dotnet test`.
+
+### Migration strategy
+
+- Breaking changes are acceptable, so `OmnichannelActivity` is expanded rather than replaced.
+- Chosen direction: `OmnichannelActivity` remains the universal work item. `Interaction` links to an activity and stores communication history only; it does not wrap, replace, or disposition the activity.
+- Provide data migrations that add activity classification and assignment/reservation columns, then backfill sensible defaults for existing activities.
+- Keep the existing automated SMS activity processing working, or migrate it to create interaction history deliberately, not accidentally.
+- The existing Telephony `TelephonyInteraction` history stays for the soft phone; Contact Center adds its own interaction history rather than repurposing it.
+
+## Extensibility strategy
+
+### Future channels
+
+Voice is only the first channel. The domain model should support:
+
+- Chat sessions.
+- SMS threads.
+- Email conversations.
+- AI agent sessions.
+- Co-browsing or screen-share metadata.
+- Future custom channels.
+
+The extension point is a channel adapter that can:
+
+- Create or attach a channel session to an interaction.
+- Normalize channel events into Contact Center domain events.
+- Execute allowed channel actions through the owning channel/provider module.
+- Provide channel-specific capacity rules.
+- Provide channel-specific SLA and wrap-up behavior.
+
+### AI agents
+
+AI should be modeled as a participant or assistant, not as a replacement for the Interaction:
+
+- AI pre-routing classification.
+- AI agent self-service before human routing.
+- AI summarization after interaction.
+- AI disposition and next-action suggestions.
+- AI quality and compliance signals.
+- Human takeover and AI-to-agent handoff.
+
+### Routing strategies
+
+Routing strategies should be plug-in based:
+
+- Built-in strategies: priority, longest idle, least busy, round robin, sticky agent, business hours, skills.
+- Optional strategies: workflow-directed, AI-assisted, account-owner, geographic, language, customer tier.
+- Custom strategies should return explainable scores and reasons.
+
+### Dialer strategies
+
+Dialer modes should be strategy-based:
+
+- Manual.
+- Preview.
+- Power.
+- Progressive.
+- Predictive.
+
+All dialer strategies must share compliance checks, retry policies, callbacks, pacing safeguards, reservations, and event output.
+
+## Known design risks and decisions to validate
+
+1. Current Omnichannel Management removed OrchardCore.Workflows. The plan keeps Subject Flows and Subject Actions as the default workflow model and adds Workflows as an optional Contact Center feature.
+2. Existing `OmnichannelActivity` statuses are not rich enough for Contact Center. Breaking changes are acceptable, so the activity lifecycle can be expanded or bridged with Interaction state.
+3. Telephony currently records soft-phone call history and pushes current-user call state. Contact Center needs a separate business interaction history and may need Telephony/provider event ingress improvements for inbound routing.
+4. The Telephony abstraction may need a provider event normalization boundary so inbound calls and provider webhooks can enter Contact Center reliably.
+5. Contact Center real-time events should not reuse TelephonyHub for routing or supervisor data. A separate Contact Center real-time stream is needed.
+6. Dialer pacing and predictive dialing require reliable historical metrics before advanced modes are safe.
+7. Queue and presence accuracy depend on robust disconnect/reconnect handling and stale reservation cleanup.
+8. A persistent repo-tracked plan is needed because the session plan file is not enough for long-running multi-session work.
+9. Recording, pause/resume, and live monitoring (whisper/barge/take-over) depend on provider capabilities; capability flags and graceful degradation are required, mirroring the existing Telephony capability model.
+10. Outbound power and predictive dialing are legally sensitive; calling windows, abandonment-rate caps, and safe-harbor messaging must gate dialing before those modes are enabled.
+11. Real-time, stateful operation requires a SignalR backplane and distributed reservation locking for multi-node deployments; single-node assumptions must not leak into the design.
+12. Recording and PII introduce consent, retention, and right-to-erasure obligations that must be designed in from the recording phase, not added later.
+13. Inbound routing depends on reliable provider inbound events/webhooks; the Telephony provider boundary may need a normalization/ingress improvement to support entry points and screen pop.
+
+## Project todos
+
+1. Establish durable project planning and instructions references.
+2. Create Contact Center documentation landing page and architecture overview.
+3. Extend `OmnichannelActivity` as the universal work item and introduce Interaction as communication history.
+4. Add domain event log and projection model.
+5. Integrate Contact Center orchestration with existing Omnichannel activities, contacts, campaigns, subjects, dispositions, and subject actions.
+6. Add agent profile, presence, capacity, queue membership, and skills concepts.
+7. Add queue management, queue item lifecycle, priorities, SLA thresholds, overflow, and metrics.
+8. Add reservation-based routing with initial routing strategies.
+9. Add Contact Center Voice adapter and call session mapping over Telephony.
+10. Add inbound voice routing flow.
+11. Add outbound manual and preview dialing.
+12. Add power dialer and campaign pacing safeguards.
+13. Add wrap-up and required disposition enforcement.
+14. Add real-time agent desktop, supervisor dashboard, and queue monitor streams.
+15. Add security, roles, queue permissions, and audit logging.
+16. Add inbound entry points, business-hours/holiday calendars, IVR/self-service, screen pop, and callback/voicemail fallback.
+17. Add recording orchestration and live monitoring (silent monitor, whisper, barge, take-over) with consent and audit.
+18. Add outbound compliance hardening: calling windows, abandonment caps, safe-harbor messaging, AMD, caller-ID/local presence, and list recycling.
+19. Add optional OrchardCore.Workflows bridge.
+20. Add analytics, reports, and metric projections.
+21. Add scale-out/high-availability validation, resilience/failover, and data retention/privacy.
+22. Add quality management, future channel adapters, and AI assistance after the voice MVP is stable.
+
+## Progress status
+
+Keep this section current. Use the checklist below to track phase-level progress; add dated notes under "Change log" for meaningful decisions.
+
+### Phase checklist
+
+- [x] **Phase 0 — Project governance and durable planning**
+  - [x] Durable repo-tracked plan at `.github/contact-center/PLAN.md`
+  - [x] Pointer added to `.github/copilot-instructions.md`
+  - [x] Public docs landing page under `src/CrestApps.Docs/docs/contact-center`
+  - [x] Module/feature map confirmed against the solution and target bundle
+- [x] **Phase 1 — Domain foundation** (CRM activity extension, interaction history, event log, base module)
+  - [x] `CrestApps.OrchardCore.ContactCenter.Abstractions` (constants, channel/direction/status/priority/role enums, event vocabulary)
+  - [x] `OmnichannelActivity` extended with activity kind/source, assignment status, and reservation metadata so CRM activities remain the universal work item
+  - [x] Activity Batch UI changed to source-first creation with Manual and Dialer sources; Dialer batches load unassigned activities for later reservation
+  - [x] `IActivityDispositionService` contract added as the source-neutral path for activity dispositions
+  - [x] `CrestApps.OrchardCore.ContactCenter.Core` (Interaction + InteractionParticipant + InteractionEvent models, indexes, stores, `IInteractionManager`, event publisher, permissions)
+  - [x] `CrestApps.OrchardCore.ContactCenter` base module (Startup, index providers, migrations, permission provider)
+  - [x] Registered in `.slnx` and the `Cms.Core.Targets` bundle
+  - [x] 13 unit tests (event envelope, event publisher dispatch/idempotency/resilience, interaction manager lifecycle, entity metadata extensibility)
+  - [x] Docs landing page + `v2.0.0` changelog entry
+- [ ] Phase 2 — Agent, presence, queue, and reservation foundation
+- [ ] Phase 3 — Routing MVP
+- [ ] Phase 4 — Voice integration with Telephony
+- [ ] Phase 5 — Outbound dialer MVP
+- [ ] Phase 6 — Wrap-up and disposition lifecycle
+- [ ] Phase 7 — Agent desktop and supervisor real-time UX
+- [ ] Phase 8 — Inbound entry points, IVR and self-service
+- [ ] Phase 9 — Recording and live monitoring
+- [ ] Phase 10 — Outbound compliance hardening
+- [ ] Phase 11 — Optional Workflow bridge
+- [ ] Phase 12 — Analytics and operations
+- [ ] Phase 13 — Scale-out, resilience and data governance
+- [ ] Phase 14 — Advanced capabilities
+
+### Change log
+
+- Codebase analysis completed for Telephony, Omnichannel Core, Omnichannel Management, SMS automation, SignalR docs, target bundle, solution structure, docs, and tests.
+- Plan reviewed and expanded to add inbound entry points/IVR, call recording, live monitoring (silent monitor/whisper/barge/take-over), outbound compliance hardening, quality management, a standard terminology/metrics glossary, scale-out/high-availability, data retention/privacy, a testing strategy, and a migration strategy. Phases renumbered to 0-14.
+- Phase 0 started: promoted the session plan to this durable repo-tracked document, added the copilot-instructions pointer, and created the public Contact Center docs landing page.
+- Phase 0 completed and Phase 1 (Domain foundation) implemented: added the `ContactCenter.Abstractions`, `ContactCenter.Core`, and `ContactCenter` base module projects; extended `OmnichannelActivity` with kind/source/assignment/reservation metadata so CRM activities remain the universal work item; made `Interaction` an Orchard `Entity` communication-history record linked to activities; added the durable `InteractionEvent` log with idempotency and the `DefaultContactCenterEventPublisher`; added the `IActivityDispositionService` contract; registered everything in `.slnx` and the `Cms.Core.Targets` bundle; added 13 unit tests; and documented the feature on the docs landing page and the `v2.0.0` changelog. The base feature is headless by design — all future CRUD/agent/supervisor UI must use Display Management, display drivers, shapes, placement, and AI Profile-style catalog screens. Next: Phase 2 (agents, presence, activity queues, reservations).
+- Activity Batch source selection implemented: **Add Activity Batch** now opens a source modal like AI Provider Connections, sources are registered through `ActivityBatchSourceOptions`, and source cards use shape alternates. Manual batches keep the selected-user assignment flow. Dialer batches hide the user selector and load activities as unassigned `Available` dialer inventory for later reservation by dialer/routing services.

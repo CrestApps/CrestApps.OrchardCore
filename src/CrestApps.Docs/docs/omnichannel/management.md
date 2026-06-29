@@ -200,14 +200,17 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 ### 8) Create and Load an Activity Batch
 
 1. Go to `Interaction Center` → `Activity Batches`.
-2. Create a new batch:
+2. Click **Add Activity Batch** and choose a source:
+   - **Manual** loads activities assigned to the selected users immediately.
+   - **Dialer** loads unassigned activities that a dialer reserves and assigns later.
+3. Create the new batch:
    - Select contact type
    - Select subject type
-   - Assign users
-   - Optionally set lead created range filters
-3. Click `Load`.
+   - Assign users when the selected source requires assignment
+   - Optionally set lead created range, phone number, time zone, and last activity filters
+4. Click `Load`.
 
-The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint.
+The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint. Manual batches assign each created activity to a selected user. Dialer batches leave activities unassigned with assignment status `Available` so dialers can reserve and assign them safely later.
 
 ### 9) Complete Activities
 

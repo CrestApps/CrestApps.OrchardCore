@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,7 @@ public sealed class ActivityBatchesController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -66,6 +68,7 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
@@ -76,6 +79,7 @@ public sealed class ActivityBatchesController : Controller
         IClock clock,
         INotifier notifier,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer)
     {
@@ -86,6 +90,7 @@ public sealed class ActivityBatchesController : Controller
         _clock = clock;
         _notifier = notifier;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -124,11 +129,13 @@ public sealed class ActivityBatchesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelActivityBatch>>
+        var viewModel = new ListOmnichannelActivityBatchViewModel
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _activityBatchSourceOptions.Sources.Values
+                .OrderBy(source => source.DisplayName.Value),
         };
 
         foreach (var model in result.Entries)
@@ -169,19 +176,27 @@ public sealed class ActivityBatchesController : Controller
     /// <summary>
     /// Creates a new .
     /// </summary>
-    [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> Create()
+    [Admin("omnichannel/activity/batches/create/{source?}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> Create(string source = ActivitySources.Manual)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
             return Forbid();
         }
 
+        if (!TryGetActivityBatchSource(source, out var sourceEntry))
+        {
+            await _notifier.ErrorAsync(H["Unable to find an activity batch source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = await _manager.NewAsync();
+        model.Source = sourceEntry.Source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Activity Batch"],
+            DisplayName = sourceEntry.DisplayName,
             Editor = await _batchDisplayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -193,19 +208,27 @@ public sealed class ActivityBatchesController : Controller
     /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("omnichannel/activity/batches/create/{source?}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> CreatePost(string source = ActivitySources.Manual)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
             return Forbid();
         }
 
+        if (!TryGetActivityBatchSource(source, out var sourceEntry))
+        {
+            await _notifier.ErrorAsync(H["Unable to find an activity batch source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = await _manager.NewAsync();
+        model.Source = sourceEntry.Source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Activity Batch"],
+            DisplayName = sourceEntry.DisplayName,
             Editor = await _batchDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -413,9 +436,24 @@ public sealed class ActivityBatchesController : Controller
 
                 await using var readonlySession = session.Store.CreateSession(withTracking: false);
 
-                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync()).ToArray();
+                var sourceOptions = scope.ServiceProvider.GetRequiredService<IOptions<ActivityBatchSourceOptions>>().Value;
 
-                if (users.Length == 0)
+                if (!TryGetActivityBatchSource(batch.Source, sourceOptions, out var sourceEntry))
+                {
+                    batch.Status = OmnichannelActivityBatchStatus.New;
+
+                    await catalog.UpdateAsync(batch);
+
+                    logger.LogError("No valid activity batch source was found for the batch with ID '{BatchId}' and source '{Source}'.", batch.ItemId, batch.Source);
+                    return;
+                }
+
+                var requiresUserAssignment = sourceEntry.RequiresUserAssignment;
+                var users = requiresUserAssignment
+                    ? (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync()).ToArray()
+                    : [];
+
+                if (requiresUserAssignment && users.Length == 0)
                 {
                     batch.Status = OmnichannelActivityBatchStatus.New;
 
@@ -664,10 +702,14 @@ public sealed class ActivityBatchesController : Controller
                             return;
                         }
 
-                        var user = users[activityCounter++ % users.Length];
+                        var user = requiresUserAssignment
+                            ? users[activityCounter++ % users.Length]
+                            : null;
 
                         var activity = await activityManager.NewAsync();
 
+                        activity.Kind = GetActivityKind(flowSettings.Channel);
+                        activity.Source = sourceEntry.Source;
                         activity.InteractionType = flowSettings.InteractionType;
                         activity.Channel = flowSettings.Channel;
                         activity.ContactContentItemId = contact.ContentItemId;
@@ -677,15 +719,26 @@ public sealed class ActivityBatchesController : Controller
                         activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
                         activity.CampaignId = flowSettings.CampaignId;
                         activity.ScheduledUtc = scheduledUtc;
-                        activity.AssignedToId = user.UserId;
-                        activity.AssignedToUsername = user.UserName;
-                        activity.AssignedToUtc = now;
+                        if (user is not null)
+                        {
+                            activity.AssignedToId = user.UserId;
+                            activity.AssignedToUsername = user.UserName;
+                            activity.AssignedToUtc = now;
+                            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+                        }
+                        else
+                        {
+                            activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+                        }
+
                         activity.Instructions = batch.Instructions;
                         activity.CreatedUtc = now;
                         activity.CreatedById = loaderId;
                         activity.CreatedByUsername = loaderUserName;
                         activity.UrgencyLevel = batch.UrgencyLevel;
-                        activity.Status = ActivityStatus.NotStated;
+                        activity.Status = user is null
+                            ? ActivityStatus.Scheduled
+                            : ActivityStatus.NotStated;
 
                         batch.TotalLoaded++;
 
@@ -764,5 +817,37 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private bool TryGetActivityBatchSource(string source, out ActivityBatchSourceEntry sourceEntry)
+        => TryGetActivityBatchSource(source, _activityBatchSourceOptions, out sourceEntry);
+
+    private static bool TryGetActivityBatchSource(string source, ActivityBatchSourceOptions options, out ActivityBatchSourceEntry sourceEntry)
+    {
+        var normalizedSource = string.IsNullOrWhiteSpace(source)
+            ? ActivitySources.Manual
+            : source.Trim();
+
+        return options.Sources.TryGetValue(normalizedSource, out sourceEntry);
+    }
+
+    private static ActivityKind GetActivityKind(string channel)
+    {
+        if (string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+        {
+            return ActivityKind.Call;
+        }
+
+        if (string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
+        {
+            return ActivityKind.Sms;
+        }
+
+        if (string.Equals(channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            return ActivityKind.Email;
+        }
+
+        return ActivityKind.Task;
     }
 }

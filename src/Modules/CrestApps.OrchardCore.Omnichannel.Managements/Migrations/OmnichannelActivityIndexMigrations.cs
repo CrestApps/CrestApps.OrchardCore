@@ -14,6 +14,8 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Kind", column => column.WithLength(50))
+            .Column<string>("Source", column => column.WithLength(50))
             .Column<string>("Channel", column => column.WithLength(50))
             .Column<string>("ChannelEndpointId", column => column.WithLength(26))
             .Column<string>("PreferredDestination", column => column.WithLength(255))
@@ -27,6 +29,11 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
+            .Column<string>("AssignmentStatus", column => column.WithLength(50))
+            .Column<string>("ReservationId", column => column.WithLength(26))
+            .Column<string>("ReservedById", column => column.WithLength(26))
+            .Column<DateTime>("ReservedUtc")
+            .Column<DateTime>("ReservationExpiresUtc")
             .Column<string>("CreatedById", column => column.WithLength(26))
             .Column<string>("DispositionId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
@@ -53,6 +60,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         "DocumentId",
         "AssignedToId",
         "Status",
+        "AssignmentStatus",
         "InteractionType",
         "ScheduledUtc"),
         collection: OmnichannelConstants.CollectionName
@@ -68,6 +76,46 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivity_Assignment",
+        "AssignmentStatus",
+        "ReservationId",
+        "ReservedById",
+        "ScheduledUtc",
+        "DocumentId"),
+        collection: OmnichannelConstants.CollectionName
+        );
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds Contact Center assignment and classification columns to the activity index.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.AddColumn<string>("Kind", column => column.WithLength(50));
+            table.AddColumn<string>("Source", column => column.WithLength(50));
+            table.AddColumn<string>("AssignmentStatus", column => column.WithLength(50));
+            table.AddColumn<string>("ReservationId", column => column.WithLength(26));
+            table.AddColumn<string>("ReservedById", column => column.WithLength(26));
+            table.AddColumn<DateTime>("ReservedUtc");
+            table.AddColumn<DateTime>("ReservationExpiresUtc");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivity_Assignment",
+                "AssignmentStatus",
+                "ReservationId",
+                "ReservedById",
+                "ScheduledUtc",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        return 2;
     }
 }

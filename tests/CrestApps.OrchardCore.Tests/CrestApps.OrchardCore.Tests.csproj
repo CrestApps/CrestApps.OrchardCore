@@ -25,6 +25,7 @@
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
@@ -51,6 +52,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />

@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.Extensions.Options
+
+@inject IOptions<ActivityBatchSourceOptions> ActivityBatchSourceOptions
+
+@{
+    string source = Model.Source;
+
+    if (!ActivityBatchSourceOptions.Value.Sources.TryGetValue(source, out var entry))
+    {
+        return;
+    }
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@entry.DisplayName</h4>
+            <p class="hint">@entry.Description</p>
+
+            @if (entry.RequiresUserAssignment)
+            {
+                <span class="badge text-bg-secondary">@T["Assigns users when loaded"]</span>
+            }
+            else
+            {
+                <span class="badge text-bg-info">@T["Assigned later"]</span>
+            }
+        </div>
+
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Create"
+               asp-route-source="@source">@T["Add"]</a>
+        </div>
+    </div>
+</div>

@@ -16,6 +16,23 @@ public class OmnichannelActivityBatchViewModel
     public string DisplayText { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity source display name.
+    /// </summary>
+    [BindNever]
+    public string SourceDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selected source requires user assignment while loading.
+    /// </summary>
+    [BindNever]
+    public bool RequiresUserAssignment { get; set; }
+
+    /// <summary>
     /// Gets or sets the schedule at.
     /// </summary>
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]

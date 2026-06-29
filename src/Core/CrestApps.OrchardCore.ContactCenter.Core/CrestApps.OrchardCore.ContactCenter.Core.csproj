@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Contact Center Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core domain models, stores, managers, and the event log for the CrestApps OrchardCore
+      Contact Center module set. Owns communication-history interactions and the durable domain event history.
+    </Description>
+    <PackageTags>$(PackageTags) ContactCenter Interactions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

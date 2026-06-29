@@ -14,6 +14,17 @@ public sealed class OmnichannelActivity : CatalogItem
     public long Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of work the activity represents.
+    /// </summary>
+    public ActivityKind Kind { get; set; } = ActivityKind.Task;
+
+    /// <summary>
+    /// Gets or sets the source that created or is currently driving the activity.
+    /// Workflow processing must not depend on this value.
+    /// </summary>
+    public string Source { get; set; } = ActivitySources.Manual;
+
+    /// <summary>
     /// 'SMS', 'Chat', 'Email', etc.
     /// </summary>
     public string Channel { get; set; }
@@ -82,6 +93,36 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the assigned to utc.
     /// </summary>
     public DateTime? AssignedToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignment lifecycle status used by queues, dialers, and reservations.
+    /// </summary>
+    public ActivityAssignmentStatus AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active reservation identifier when a queue or dialer has reserved the activity.
+    /// </summary>
+    public string ReservationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user or system actor that reserved the activity.
+    /// </summary>
+    public string ReservedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the user or system actor that reserved the activity.
+    /// </summary>
+    public string ReservedByUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity was reserved.
+    /// </summary>
+    public DateTime? ReservedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity reservation expires.
+    /// </summary>
+    public DateTime? ReservationExpiresUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the created by id.
@@ -162,6 +203,13 @@ public enum ActivityStatus
     AwaitingAgentResponse,
     AwaitingCustomerAnswer,
     Completed,
+    Pending,
+    Scheduled,
+    Reserved,
+    Dialing,
+    InProgress,
+    Failed,
+    Cancelled,
     Purged,
 }
 

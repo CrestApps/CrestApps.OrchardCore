@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.ContactCenter</RootNamespace>
+    <Title>CrestApps OrchardCore Contact Center Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provider-agnostic abstractions and shared domain vocabulary for the CrestApps OrchardCore
+      Contact Center module set. Contains the interaction, channel, routing, and event constants
+      and enumerations shared across Contact Center features and channel adapters.
+    </Description>
+    <PackageTags>$(PackageTags) ContactCenter Interactions Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -137,6 +137,23 @@ public sealed class Startup : StartupBase
             });
         });
 
+        services.Configure<ActivityBatchSourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Manual, entry =>
+            {
+                entry.DisplayName = S["Manual"];
+                entry.Description = S["Loads activities assigned to selected users for manual agent work."];
+                entry.RequiresUserAssignment = true;
+            });
+
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.DisplayName = S["Dialer"];
+                entry.Description = S["Loads unassigned activities that dialers reserve and assign later."];
+                entry.RequiresUserAssignment = false;
+            });
+        });
+
         services.AddPermissionProvider<PermissionProvider>();
         services.AddNavigationProvider<AdminMenu>();
 

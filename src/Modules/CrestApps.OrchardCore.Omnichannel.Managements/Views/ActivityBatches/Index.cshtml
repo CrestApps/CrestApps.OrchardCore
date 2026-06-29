@@ -1,10 +1,11 @@
 @using CrestApps.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelActivityBatch>>
+@model ListOmnichannelActivityBatchViewModel
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Activity Batches"])</h1></zone>
 
@@ -24,7 +25,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Activity Batch"]</a>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddActivityBatch">@T["Add Activity Batch"]</button>
                 </div>
             </div>
         </div>
@@ -97,3 +98,36 @@
     </div>
 
 </form>
+
+<!-- Modal -->
+<div class="modal fade" id="modalAddActivityBatch" tabindex="-1" role="dialog" aria-labelledby="available-activity-batch-sources-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-activity-batch-sources-title">@T["Available Activity Batch Sources"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                @if (!Model.Sources.Any())
+                {
+                    <p class="p-3 mb-2 bg-warning text-white">@T["No activity batch sources are available at the moment."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-2">
+                        @foreach (var source in Model.Sources)
+                        {
+                            IShape shape = await New.OmnichannelActivityBatchSource_Link(Source: source.Source);
+                            shape.Metadata.Alternates.Add("OmnichannelActivityBatchSource_Link__" + source.Source);
+
+                            @await DisplayAsync(shape)
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>

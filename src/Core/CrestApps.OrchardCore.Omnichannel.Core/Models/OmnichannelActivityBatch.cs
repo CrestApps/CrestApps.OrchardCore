@@ -20,6 +20,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source used when loading activities from this batch.
+    /// </summary>
+    public string Source { get; set; } = ActivitySources.Manual;
+
+    /// <summary>
     /// Gets or sets the subject content type.
     /// </summary>
     public string SubjectContentType { get; set; }
@@ -156,6 +161,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
+            Source = Source,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
             UserIds = UserIds?.ToArray(),

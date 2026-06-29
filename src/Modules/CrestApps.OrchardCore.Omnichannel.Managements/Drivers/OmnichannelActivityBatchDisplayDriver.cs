@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -27,6 +28,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -40,6 +42,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <param name="session">The YesSql session.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
@@ -49,6 +52,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -58,6 +62,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         S = stringLocalizer;
     }
 
@@ -83,6 +88,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {
             model.DisplayText = batch.DisplayText;
+            model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
+            model.SourceDisplayName = GetSourceEntry(model.Source)?.DisplayName.Value ?? model.Source;
+            model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
             model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
@@ -119,7 +127,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 }
             }
 
-            if (batch.UserIds is { Length: > 0 })
+            if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
             {
                 var users = (await _session.Query<User, UserIndex>(x => x.UserId.IsIn(batch.UserIds)).ListAsync())
                     .OrderBy(user => Array.FindIndex(batch.UserIds, itemId => string.Equals(itemId, user.UserId, StringComparison.OrdinalIgnoreCase)));
@@ -181,8 +189,18 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)
     {
         var model = new OmnichannelActivityBatchViewModel();
+        model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        model.Source = string.IsNullOrEmpty(model.Source) ? batch.Source : model.Source;
+        model.Source = string.IsNullOrEmpty(model.Source) ? ActivitySources.Manual : model.Source;
+
+        var sourceEntry = GetSourceEntry(model.Source);
+
+        if (sourceEntry is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["The selected activity source is invalid."]);
+        }
 
         if (string.IsNullOrEmpty(model.DisplayText))
         {
@@ -203,7 +221,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
         }
 
-        if (model.UserIds is null || model.UserIds.Length == 0)
+        if ((sourceEntry?.RequiresUserAssignment ?? true) && (model.UserIds is null || model.UserIds.Length == 0))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserIds), S["At least one user is required."]);
         }
@@ -219,12 +237,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         }
 
         batch.DisplayText = model.DisplayText?.Trim();
+        batch.Source = model.Source?.Trim();
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
 
         batch.Instructions = model.Instructions?.Trim();
         batch.UrgencyLevel = model.UrgencyLevel;
-        batch.UserIds = model.UserIds ?? [];
+        batch.UserIds = sourceEntry?.RequiresUserAssignment == true ? model.UserIds ?? [] : [];
         batch.IncludeDoNoCalls = model.IncludeDoNoCalls;
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
@@ -245,5 +264,16 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         }
 
         return Edit(batch, context);
+    }
+
+    private ActivityBatchSourceEntry GetSourceEntry(string source)
+    {
+        var normalizedSource = string.IsNullOrWhiteSpace(source)
+            ? ActivitySources.Manual
+            : source.Trim();
+
+        _activityBatchSourceOptions.Sources.TryGetValue(normalizedSource, out var entry);
+
+        return entry;
     }
 }
