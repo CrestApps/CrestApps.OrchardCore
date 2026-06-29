@@ -27,4 +27,14 @@ public class AgentWorkspaceViewModel
     /// Gets or sets the campaign identifiers, comma separated, the agent is signed in to.
     /// </summary>
     public string CampaignIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the skill identifiers, comma separated, used by routing strategies.
+    /// </summary>
+    public string Skills { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional presence reason submitted by the agent.
+    /// </summary>
+    public string PresenceReason { get; set; }
 }

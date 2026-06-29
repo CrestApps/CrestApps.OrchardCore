@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.ContactCenter;
 public interface IContactCenterVoiceProvider
 {
     /// <summary>
+    /// Gets the stable technical name used to resolve the provider.
+    /// </summary>
+    string TechnicalName { get; }
+
+    /// <summary>
     /// Gets the localized, human-readable name of the provider.
     /// </summary>
     LocalizedString Name { get; }

@@ -29,6 +29,7 @@ public sealed class InboundVoiceService : IInboundVoiceService
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityQueueService _queueService;
     private readonly IActivityAssignmentService _assignmentService;
+    private readonly IActivityReservationService _reservationService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IInboundContactLookup _contactLookup;
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
@@ -45,6 +46,7 @@ public sealed class InboundVoiceService : IInboundVoiceService
     /// <param name="queueManager">The queue manager used to resolve the inbound queue.</param>
     /// <param name="queueService">The queue service used to enqueue the activity.</param>
     /// <param name="assignmentService">The assignment service used to reserve an available agent.</param>
+    /// <param name="reservationService">The reservation service used to release invalid offers.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
@@ -58,6 +60,7 @@ public sealed class InboundVoiceService : IInboundVoiceService
         IActivityQueueManager queueManager,
         IActivityQueueService queueService,
         IActivityAssignmentService assignmentService,
+        IActivityReservationService reservationService,
         IAgentProfileManager agentManager,
         IInboundContactLookup contactLookup,
         IIncomingCallDispatcher incomingCallDispatcher,
@@ -71,6 +74,7 @@ public sealed class InboundVoiceService : IInboundVoiceService
         _queueManager = queueManager;
         _queueService = queueService;
         _assignmentService = assignmentService;
+        _reservationService = reservationService;
         _agentManager = agentManager;
         _contactLookup = contactLookup;
         _incomingCallDispatcher = incomingCallDispatcher;
@@ -151,6 +155,8 @@ public sealed class InboundVoiceService : IInboundVoiceService
 
         if (agent is null || string.IsNullOrEmpty(agent.UserId))
         {
+            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
             return null;
         }
 
@@ -158,6 +164,8 @@ public sealed class InboundVoiceService : IInboundVoiceService
 
         if (interaction is null)
         {
+            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
             return null;
         }
 

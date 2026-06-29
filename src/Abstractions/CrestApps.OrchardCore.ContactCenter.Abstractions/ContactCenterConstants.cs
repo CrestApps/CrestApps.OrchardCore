@@ -149,6 +149,11 @@ public static class ContactCenterConstants
         public const string InteractionFailed = "InteractionFailed";
 
         /// <summary>
+        /// Raised when routing evaluates a queued activity and its candidate agents.
+        /// </summary>
+        public const string RoutingDecisionMade = "RoutingDecisionMade";
+
+        /// <summary>
         /// Raised when an activity is added to a queue.
         /// </summary>
         public const string QueueItemAdded = "QueueItemAdded";

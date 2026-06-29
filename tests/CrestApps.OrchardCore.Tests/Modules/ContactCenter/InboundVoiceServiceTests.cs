@@ -163,6 +163,29 @@ public sealed class InboundVoiceServiceTests
         harness.IncomingCallDispatcher.Verify(d => d.DispatchAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task OfferNextAsync_WhenReservedAgentCannotBeLoaded_ReleasesReservation()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", ActivityItemId = "act1", QueueId = "q1" });
+
+        harness.AgentManager
+            .Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentProfile)null);
+
+        var service = harness.CreateService();
+
+        // Act
+        var agentUserId = await service.OfferNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(agentUserId);
+        harness.ReservationService.Verify(s => s.RejectAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private sealed class Harness
     {
         public Mock<IOmnichannelChannelEndpointManager> ChannelEndpointManager { get; } = new();
@@ -180,6 +203,8 @@ public sealed class InboundVoiceServiceTests
         public Mock<IActivityQueueService> QueueService { get; } = new();
 
         public Mock<IActivityAssignmentService> AssignmentService { get; } = new();
+
+        public Mock<IActivityReservationService> ReservationService { get; } = new();
 
         public Mock<IAgentProfileManager> AgentManager { get; } = new();
 
@@ -224,6 +249,7 @@ public sealed class InboundVoiceServiceTests
                 QueueManager.Object,
                 QueueService.Object,
                 AssignmentService.Object,
+                ReservationService.Object,
                 AgentManager.Object,
                 ContactLookup.Object,
                 IncomingCallDispatcher.Object,

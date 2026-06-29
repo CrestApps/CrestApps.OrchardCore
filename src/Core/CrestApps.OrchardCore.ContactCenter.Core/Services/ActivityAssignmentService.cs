@@ -11,7 +11,9 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityQueueManager _queueManager;
+    private readonly IActivityRoutingService _routingService;
     private readonly IActivityReservationService _reservationService;
+    private readonly IContactCenterEventPublisher _publisher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityAssignmentService"/> class.
@@ -19,17 +21,23 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="queueManager">The queue manager.</param>
+    /// <param name="routingService">The routing service.</param>
     /// <param name="reservationService">The reservation service.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         IActivityQueueManager queueManager,
-        IActivityReservationService reservationService)
+        IActivityRoutingService routingService,
+        IActivityReservationService reservationService,
+        IContactCenterEventPublisher publisher)
     {
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
         _queueManager = queueManager;
+        _routingService = routingService;
         _reservationService = reservationService;
+        _publisher = publisher;
     }
 
     /// <inheritdoc/>
@@ -46,17 +54,26 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
 
         var agents = await _agentManager.ListAvailableForQueueAsync(queueId, cancellationToken);
-        var agent = agents.OrderBy(a => a.PresenceChangedUtc ?? DateTime.MaxValue).FirstOrDefault();
+        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
 
-        if (agent is null)
+        if (queue is null || !queue.Enabled)
         {
             return null;
         }
 
-        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
-        var timeout = queue?.ReservationTimeoutSeconds ?? 30;
+        var decision = await _routingService.SelectAgentAsync(queue, topItem, agents, cancellationToken);
+        await PublishRoutingDecisionAsync(decision, cancellationToken);
 
-        return await _reservationService.ReserveAsync(topItem, agent, timeout, cancellationToken);
+        if (!decision.Succeeded || decision.Agent is null)
+        {
+            return null;
+        }
+
+        var timeout = queue.ReservationTimeoutSeconds > 0
+            ? queue.ReservationTimeoutSeconds
+            : 30;
+
+        return await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -70,5 +87,41 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
 
         return count;
+    }
+
+    private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
+    {
+        var data = new ActivityRoutingDecisionEventData
+        {
+            QueueId = decision.Queue?.ItemId,
+            QueueItemId = decision.QueueItem?.ItemId,
+            ActivityItemId = decision.QueueItem?.ActivityItemId,
+            SelectedAgentId = decision.Agent?.ItemId,
+            Succeeded = decision.Succeeded,
+            Reason = decision.Reason,
+            Candidates = decision.Candidates
+                .Select(candidate => new ActivityRoutingCandidateDecisionData
+                {
+                    AgentId = candidate.Agent.ItemId,
+                    UserId = candidate.Agent.UserId,
+                    IsEligible = candidate.IsEligible,
+                    Score = candidate.Score,
+                    Reasons = [.. candidate.Reasons],
+                })
+                .ToArray(),
+        };
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.RoutingDecisionMade,
+            AggregateType = nameof(QueueItem),
+            AggregateId = decision.QueueItem?.ItemId,
+            ActorId = decision.Agent?.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Routing,
+        };
+
+        interactionEvent.SetData(data);
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 }

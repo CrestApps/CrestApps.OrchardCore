@@ -1,16 +1,122 @@
 @model DialerProfileViewModel
-<zone Name="Title"><h1>@T["Edit Dialer Profile"]</h1></zone>
+
+<zone Name="Title"><h1>@T["Edit dialer profile"]</h1></zone>
+
 <form asp-action="Edit" method="post">
     <input asp-for="Id" type="hidden" />
-    <div class="mb-3"><label asp-for="Name">@T["Name"]</label><input asp-for="Name" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="CampaignId">@T["Campaign Id"]</label><input asp-for="CampaignId" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="QueueId">@T["Queue Id"]</label><input asp-for="QueueId" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="Mode">@T["Mode"]</label><select asp-for="Mode" asp-items="Html.GetEnumSelectList<DialerMode>()" class="form-select"></select></div>
-    <div class="mb-3"><label asp-for="ProviderName">@T["Provider"]</label><input asp-for="ProviderName" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="CallsPerAgent">@T["Calls per agent"]</label><input asp-for="CallsPerAgent" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="MaxAttempts">@T["Max attempts"]</label><input asp-for="MaxAttempts" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="CallerId">@T["Caller Id"]</label><input asp-for="CallerId" class="form-control" /></div>
-    <div class="form-check mb-3"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div>
-    <button type="submit" class="btn btn-primary">@T["Save"]</button>
-    <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Description">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <input asp-for="Description" class="form-control" />
+            <span asp-validation-for="Description"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="CampaignId">
+        <label asp-for="CampaignId" class="ocat-label">@T["Campaign ID"]</label>
+        <div class="ocat-end">
+            <input asp-for="CampaignId" class="form-control" />
+            <span asp-validation-for="CampaignId"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="QueueId">
+        <label asp-for="QueueId" class="ocat-label">@T["Queue ID"]</label>
+        <div class="ocat-end">
+            <input asp-for="QueueId" class="form-control" />
+            <span asp-validation-for="QueueId"></span>
+            <span class="hint">@T["Agents signed in to this queue are reserved before power or progressive dialing."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Mode">
+        <label asp-for="Mode" class="ocat-label">@T["Mode"]</label>
+        <div class="ocat-limited">
+            <select asp-for="Mode" class="form-select">
+                <option value="@DialerMode.Manual">@T["Manual"]</option>
+                <option value="@DialerMode.Preview">@T["Preview"]</option>
+                <option value="@DialerMode.Power">@T["Power"]</option>
+                <option value="@DialerMode.Progressive">@T["Progressive"]</option>
+                <option value="@DialerMode.Predictive">@T["Predictive"]</option>
+            </select>
+            <span asp-validation-for="Mode"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+        <label asp-for="ProviderName" class="ocat-label">@T["Provider"]</label>
+        <div class="ocat-end">
+            <input asp-for="ProviderName" class="form-control" />
+            <span asp-validation-for="ProviderName"></span>
+            <span class="hint">@T["Use the dialer provider technical name, or leave empty to use the default registered provider."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent">
+        <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
+        <div class="ocat-limited">
+            <input asp-for="CallsPerAgent" class="form-control" />
+            <span asp-validation-for="CallsPerAgent"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts">
+        <label asp-for="MaxAttempts" class="ocat-label">@T["Max attempts"]</label>
+        <div class="ocat-limited">
+            <input asp-for="MaxAttempts" class="form-control" />
+            <span asp-validation-for="MaxAttempts"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes">
+        <label asp-for="RetryDelayMinutes" class="ocat-label">@T["Retry delay (minutes)"]</label>
+        <div class="ocat-limited">
+            <input asp-for="RetryDelayMinutes" class="form-control" />
+            <span asp-validation-for="RetryDelayMinutes"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="CallerId">
+        <label asp-for="CallerId" class="ocat-label">@T["Caller ID"]</label>
+        <div class="ocat-end">
+            <input asp-for="CallerId" class="form-control" />
+            <span asp-validation-for="CallerId"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="RespectDoNotCall">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="RespectDoNotCall" class="form-check-input" />
+                <label asp-for="RespectDoNotCall" class="form-check-label">@T["Respect do-not-call and communication preferences"]</label>
+            </div>
+            <span class="hint dashed">@T["Suppression enforcement is shared with the outbound compliance phase."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Enabled" class="form-check-input" />
+                <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
 </form>

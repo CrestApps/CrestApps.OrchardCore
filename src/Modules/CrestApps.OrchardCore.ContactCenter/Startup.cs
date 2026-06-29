@@ -85,6 +85,9 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityReservationManager, ActivityReservationManager>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
             .AddScoped<IActivityReservationService, ActivityReservationService>()
+            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
+            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
 
         services
@@ -156,6 +159,7 @@ public sealed class VoiceStartup : StartupBase
     {
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
+            .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IInboundVoiceService, InboundVoiceService>()
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
     }

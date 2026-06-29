@@ -113,13 +113,16 @@ public sealed class DialerProfilesController : Controller
         {
             Id = profile.ItemId,
             Name = profile.Name,
+            Description = profile.Description,
             CampaignId = profile.CampaignId,
             QueueId = profile.QueueId,
             Mode = profile.Mode,
             ProviderName = profile.ProviderName,
             CallsPerAgent = profile.CallsPerAgent,
             MaxAttempts = profile.MaxAttempts,
+            RetryDelayMinutes = profile.RetryDelayMinutes,
             CallerId = profile.CallerId,
+            RespectDoNotCall = profile.RespectDoNotCall,
             Enabled = profile.Enabled,
         });
     }
@@ -182,13 +185,16 @@ public sealed class DialerProfilesController : Controller
     private static void Apply(Core.Models.DialerProfile profile, DialerProfileViewModel model)
     {
         profile.Name = model.Name;
+        profile.Description = model.Description;
         profile.CampaignId = model.CampaignId;
         profile.QueueId = model.QueueId;
         profile.Mode = model.Mode;
         profile.ProviderName = model.ProviderName;
         profile.CallsPerAgent = model.CallsPerAgent;
         profile.MaxAttempts = model.MaxAttempts;
+        profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.CallerId = model.CallerId;
+        profile.RespectDoNotCall = model.RespectDoNotCall;
         profile.Enabled = model.Enabled;
     }
 }

@@ -32,12 +32,24 @@ public class QueueViewModel
     /// <summary>
     /// Gets or sets the SLA threshold in seconds.
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int SlaThresholdSeconds { get; set; } = 120;
 
     /// <summary>
     /// Gets or sets the reservation timeout in seconds.
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int ReservationTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the comma-separated skills required to receive work from the queue.
+    /// </summary>
+    public string RequiredSkills { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inbound channel endpoint identifier mapped to this queue.
+    /// </summary>
+    public string InboundChannelEndpointId { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the queue is enabled.

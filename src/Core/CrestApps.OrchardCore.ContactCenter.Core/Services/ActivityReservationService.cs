@@ -91,6 +91,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <inheritdoc/>
     public async Task<ActivityReservation> AcceptAsync(string reservationId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
         if (reservation is null || reservation.Status != ReservationStatus.Pending)
@@ -135,6 +137,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <inheritdoc/>
     public async Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
         if (reservation is null || reservation.Status != ReservationStatus.Pending)
@@ -143,6 +147,23 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> CancelAsync(string reservationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null || reservation.Status != ReservationStatus.Pending)
+        {
+            return null;
+        }
+
+        await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken);
 
         return reservation;
     }

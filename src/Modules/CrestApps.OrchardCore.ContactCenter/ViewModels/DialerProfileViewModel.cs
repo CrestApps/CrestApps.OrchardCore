@@ -20,6 +20,11 @@ public class DialerProfileViewModel
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile description.
+    /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
     /// Gets or sets the campaign identifier.
     /// </summary>
     public string CampaignId { get; set; }
@@ -42,17 +47,30 @@ public class DialerProfileViewModel
     /// <summary>
     /// Gets or sets the number of calls per available agent.
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int CallsPerAgent { get; set; } = 1;
 
     /// <summary>
     /// Gets or sets the maximum number of attempts per activity.
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int MaxAttempts { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the retry delay, in minutes.
+    /// </summary>
+    [Range(1, int.MaxValue)]
+    public int RetryDelayMinutes { get; set; } = 60;
 
     /// <summary>
     /// Gets or sets the caller identifier.
     /// </summary>
     public string CallerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether do-not-call and communication preferences are honored.
+    /// </summary>
+    public bool RespectDoNotCall { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.

@@ -63,6 +63,31 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
     }
 
+    [Fact]
+    public async Task CancelAsync_ReleasesPendingReservationAndMarksCanceled()
+    {
+        // Arrange
+        var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var queueItem = new QueueItem { ItemId = "qi-1", Status = QueueItemStatus.Reserved };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1" });
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+        var service = CreateService(reservationManager, queueItemManager, agentManager, activityManager, new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var canceled = await service.CancelAsync("r1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(reservation, canceled);
+        Assert.Equal(ReservationStatus.Canceled, reservation.Status);
+        Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
+    }
+
     private static ActivityReservationService CreateService(
         Mock<IActivityReservationManager> reservationManager,
         Mock<IQueueItemManager> queueItemManager,

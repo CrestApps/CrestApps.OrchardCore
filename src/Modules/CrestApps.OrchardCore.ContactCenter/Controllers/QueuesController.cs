@@ -117,6 +117,8 @@ public sealed class QueuesController : Controller
             DefaultPriority = queue.DefaultPriority,
             SlaThresholdSeconds = queue.SlaThresholdSeconds,
             ReservationTimeoutSeconds = queue.ReservationTimeoutSeconds,
+            RequiredSkills = ContactCenterFormHelpers.FormatList(queue.RequiredSkills),
+            InboundChannelEndpointId = queue.InboundChannelEndpointId,
             Enabled = queue.Enabled,
         });
     }
@@ -183,6 +185,8 @@ public sealed class QueuesController : Controller
         queue.DefaultPriority = model.DefaultPriority;
         queue.SlaThresholdSeconds = model.SlaThresholdSeconds;
         queue.ReservationTimeoutSeconds = model.ReservationTimeoutSeconds;
+        queue.RequiredSkills = ContactCenterFormHelpers.ParseList(model.RequiredSkills);
+        queue.InboundChannelEndpointId = model.InboundChannelEndpointId;
         queue.Enabled = model.Enabled;
     }
 }

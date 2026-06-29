@@ -1,13 +1,89 @@
 @model QueueViewModel
-<zone Name="Title"><h1>@T["Edit Queue"]</h1></zone>
+
+<zone Name="Title"><h1>@T["Edit queue"]</h1></zone>
+
 <form asp-action="Edit" method="post">
     <input asp-for="Id" type="hidden" />
-    <div class="mb-3"><label asp-for="Name">@T["Name"]</label><input asp-for="Name" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="Description">@T["Description"]</label><input asp-for="Description" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="DefaultPriority">@T["Default priority"]</label><select asp-for="DefaultPriority" asp-items="Html.GetEnumSelectList<InteractionPriority>()" class="form-select"></select></div>
-    <div class="mb-3"><label asp-for="SlaThresholdSeconds">@T["SLA threshold (seconds)"]</label><input asp-for="SlaThresholdSeconds" class="form-control" /></div>
-    <div class="mb-3"><label asp-for="ReservationTimeoutSeconds">@T["Reservation timeout (seconds)"]</label><input asp-for="ReservationTimeoutSeconds" class="form-control" /></div>
-    <div class="form-check mb-3"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div>
-    <button type="submit" class="btn btn-primary">@T["Save"]</button>
-    <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Description">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <input asp-for="Description" class="form-control" />
+            <span asp-validation-for="Description"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="DefaultPriority">
+        <label asp-for="DefaultPriority" class="ocat-label">@T["Default priority"]</label>
+        <div class="ocat-limited">
+            <select asp-for="DefaultPriority" class="form-select">
+                <option value="@InteractionPriority.Lowest">@T["Lowest"]</option>
+                <option value="@InteractionPriority.Low">@T["Low"]</option>
+                <option value="@InteractionPriority.Normal">@T["Normal"]</option>
+                <option value="@InteractionPriority.High">@T["High"]</option>
+                <option value="@InteractionPriority.Highest">@T["Highest"]</option>
+            </select>
+            <span asp-validation-for="DefaultPriority"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="SlaThresholdSeconds">
+        <label asp-for="SlaThresholdSeconds" class="ocat-label">@T["SLA threshold (seconds)"]</label>
+        <div class="ocat-limited">
+            <input asp-for="SlaThresholdSeconds" class="form-control" />
+            <span asp-validation-for="SlaThresholdSeconds"></span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="ReservationTimeoutSeconds">
+        <label asp-for="ReservationTimeoutSeconds" class="ocat-label">@T["Reservation timeout (seconds)"]</label>
+        <div class="ocat-limited">
+            <input asp-for="ReservationTimeoutSeconds" class="form-control" />
+            <span asp-validation-for="ReservationTimeoutSeconds"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
+        <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
+        <div class="ocat-end">
+            <input asp-for="RequiredSkills" class="form-control" />
+            <span asp-validation-for="RequiredSkills"></span>
+            <span class="hint">@T["Enter comma-separated skill names. Agents must have every listed skill to receive work from this queue."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
+        <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound channel endpoint ID"]</label>
+        <div class="ocat-end">
+            <input asp-for="InboundChannelEndpointId" class="form-control" />
+            <span asp-validation-for="InboundChannelEndpointId"></span>
+            <span class="hint">@T["Optional. Calls received on this Omnichannel endpoint route to this queue. Leave empty for a default inbound queue."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Enabled" class="form-check-input" />
+                <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+            </div>
+            <span class="hint dashed">@T["Disabled queues do not receive routing assignments."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
 </form>

@@ -1,13 +1,13 @@
 ---
 sidebar_label: Agents, Queues & Dialer
 sidebar_position: 1
-title: Agents, Queues, and Dialer
-description: Phase 2 and 5 of the Contact Center - agent presence, queues, reservations, availability-based assignment, and dialer-agnostic outbound dialing with the DialPad provider.
+title: Agents, Queues, Routing, and Dialer
+description: Contact Center agent presence, queues, skill-aware routing, reservations, availability-based assignment, and dialer-agnostic outbound dialing.
 ---
 
 This phase adds the operational core of the Contact Center: agent presence, work queues,
-reservations, availability-based assignment, and a dialer-agnostic outbound dialer. Each capability
-is a separate, feature-gated module so tenants enable only what they need.
+reservations, skill-aware routing, availability-based assignment, and a dialer-agnostic outbound
+dialer. Each capability is a separate, feature-gated module so tenants enable only what they need.
 
 ## Features
 
@@ -30,15 +30,21 @@ The `SignIntoQueues` permission grants self-service sign-in and presence changes
 
 ## Queues, reservations, and assignment
 
-A **queue** holds activities waiting for an agent, with a default priority, an SLA threshold, and a
-reservation timeout. Activities enter a queue as **queue items**; the system pairs the highest
-priority, oldest waiting item with the **longest-idle available agent** who is signed in to that
-queue and creates a short-lived **reservation**.
+A **queue** holds activities waiting for an agent, with a default priority, an SLA threshold, required
+skills, an optional inbound channel endpoint mapping, and a reservation timeout. Activities enter a
+queue as **queue items**; the system pairs the highest-priority, oldest waiting item with an eligible
+available agent signed in to that queue and creates a short-lived **reservation**.
 
-A reservation locks the activity for one agent and can be accepted, rejected, or expired. The CRM
-activity moves through `Available → Reserved → Assigned`, mirrored on the queue item and agent
-presence. Expired reservations return the item to the queue automatically. A background task expires
-stale reservations and assigns waiting work every minute.
+Routing is strategy-based. The default strategy chain first rejects agents that do not have every
+required queue skill, then scores the remaining candidates by longest idle time. Each assignment
+publishes an auditable routing-decision event that records the queue item, selected agent, candidate
+scores, and reasons, so later supervisor and analytics features can explain why work was offered to
+an agent.
+
+A reservation locks the activity for one agent and can be accepted, rejected, canceled, or expired.
+The CRM activity moves through `Available → Reserved → Assigned`, mirrored on the queue item and
+agent presence. Expired or canceled reservations return the item to the queue automatically. A
+background task expires stale reservations and assigns waiting work every minute.
 
 ## Dialer
 
@@ -56,6 +62,11 @@ configured provider through `IDialerProviderResolver`, so any platform can be th
 while the Contact Center keeps all assignment, queue, pacing, and compliance logic. The
 `DialPad.Dialer` feature implements `IDialerProvider` over the DialPad telephony provider; enable it
 to dial through DialPad.
+
+Voice providers that support contact-center orchestration beyond soft-phone call control can also
+register `IContactCenterVoiceProvider`. The `IContactCenterVoiceProviderResolver` resolves those
+providers by technical name so future PBX integrations can participate in provider-side queueing,
+call assignment, and voice-specific orchestration without coupling Contact Center to one provider.
 
 ## Enable via recipe
 

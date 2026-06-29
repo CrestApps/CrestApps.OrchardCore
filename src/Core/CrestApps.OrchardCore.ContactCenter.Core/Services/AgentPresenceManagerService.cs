@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -10,8 +11,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class AgentPresenceManagerService : IAgentPresenceManager
 {
+    private static readonly TimeSpan _signInLockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _signInLockExpiration = TimeSpan.FromMinutes(1);
+
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
 
     /// <summary>
@@ -19,14 +24,17 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// </summary>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize sign-in updates.</param>
     /// <param name="clock">The clock used to stamp presence changes.</param>
     public AgentPresenceManagerService(
         IAgentProfileManager agentManager,
         IContactCenterEventPublisher publisher,
+        IDistributedLock distributedLock,
         IClock clock)
     {
         _agentManager = agentManager;
         _publisher = publisher;
+        _distributedLock = distributedLock;
         _clock = clock;
     }
 
@@ -34,6 +42,18 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     public async Task<AgentProfile> SignInAsync(string userId, IEnumerable<string> queueIds, IEnumerable<string> campaignIds, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetSignInLockKey(userId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{userId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
 
         var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
@@ -48,6 +68,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
         profile.PresenceStatus = AgentPresenceStatus.Available;
         profile.PresenceChangedUtc = _clock.UtcNow;
+        profile.ActiveReservationId = null;
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
@@ -122,5 +143,10 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             ActorId = profile.UserId,
             SourceComponent = ContactCenterConstants.Components.Agents,
         }, cancellationToken);
+    }
+
+    private static string GetSignInLockKey(string userId)
+    {
+        return $"ContactCenterAgentSignIn:{userId}";
     }
 }

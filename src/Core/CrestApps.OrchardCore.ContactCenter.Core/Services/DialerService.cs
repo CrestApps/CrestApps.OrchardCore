@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class DialerService : IDialerService
 {
     private readonly IActivityAssignmentService _assignmentService;
+    private readonly IActivityReservationService _reservationService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IDialerProviderResolver _providerResolver;
@@ -25,6 +26,7 @@ public sealed class DialerService : IDialerService
     /// Initializes a new instance of the <see cref="DialerService"/> class.
     /// </summary>
     /// <param name="assignmentService">The assignment service used to reserve agents and activities.</param>
+    /// <param name="reservationService">The reservation service used to release failed attempts.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="providerResolver">The dialer provider resolver.</param>
@@ -33,6 +35,7 @@ public sealed class DialerService : IDialerService
     /// <param name="logger">The logger instance.</param>
     public DialerService(
         IActivityAssignmentService assignmentService,
+        IActivityReservationService reservationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IDialerProviderResolver providerResolver,
@@ -41,6 +44,7 @@ public sealed class DialerService : IDialerService
         ILogger<DialerService> logger)
     {
         _assignmentService = assignmentService;
+        _reservationService = reservationService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _providerResolver = providerResolver;
@@ -73,18 +77,37 @@ public sealed class DialerService : IDialerService
             return 0;
         }
 
+        if (!provider.Capabilities.HasFlag(DialerProviderCapabilities.Outbound))
+        {
+            _logger.LogWarning(
+                "Dialer provider '{Provider}' does not support outbound dialing for dialer profile '{Profile}'.",
+                provider.TechnicalName,
+                profile.Name);
+
+            return 0;
+        }
+
+        var attempted = 0;
+        var maxAttemptsThisCycle = profile.Mode == DialerMode.Power
+            ? Math.Max(profile.CallsPerAgent, 1)
+            : 1;
         var started = 0;
 
         var reservation = await _assignmentService.AssignNextAsync(profile.QueueId, cancellationToken);
 
-        while (reservation is not null)
+        while (reservation is not null && attempted < maxAttemptsThisCycle)
         {
+            attempted++;
+
             if (await TryDialAsync(profile, reservation, provider, cancellationToken))
             {
                 started++;
             }
 
-            reservation = await _assignmentService.AssignNextAsync(profile.QueueId, cancellationToken);
+            if (attempted < maxAttemptsThisCycle)
+            {
+                reservation = await _assignmentService.AssignNextAsync(profile.QueueId, cancellationToken);
+            }
         }
 
         return started;
@@ -94,8 +117,19 @@ public sealed class DialerService : IDialerService
     {
         var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
-        if (activity is null || activity.Attempts > profile.MaxAttempts)
+        if (activity is null)
         {
+            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
+            return false;
+        }
+
+        if (activity.Attempts >= profile.MaxAttempts || string.IsNullOrEmpty(activity.PreferredDestination))
+        {
+            activity.Status = ActivityStatus.Failed;
+            await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
             return false;
         }
 
@@ -110,16 +144,37 @@ public sealed class DialerService : IDialerService
         interaction.CustomerAddress = activity.PreferredDestination;
         await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
 
-        var result = await provider.PlaceCallAsync(new DialerDialRequest
+        DialerDialResult result;
+
+        try
         {
-            ActivityId = activity.ItemId,
-            InteractionId = interaction.ItemId,
-            AgentId = reservation.AgentId,
-            QueueId = profile.QueueId,
-            CampaignId = profile.CampaignId,
-            Destination = activity.PreferredDestination,
-            CallerId = profile.CallerId,
-        }, cancellationToken);
+            result = await provider.PlaceCallAsync(new DialerDialRequest
+            {
+                ActivityId = activity.ItemId,
+                InteractionId = interaction.ItemId,
+                AgentId = reservation.AgentId,
+                QueueId = profile.QueueId,
+                CampaignId = profile.CampaignId,
+                Destination = activity.PreferredDestination,
+                CallerId = profile.CallerId,
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Dialer provider '{Provider}' failed while dialing activity '{ActivityItemId}' for profile '{Profile}'.",
+                provider.TechnicalName,
+                activity.ItemId,
+                profile.Name);
+
+            result = DialerDialResult.Failure("provider_exception", ex.Message);
+        }
+
+        if (result.Succeeded && string.IsNullOrEmpty(result.ProviderCallId))
+        {
+            result = DialerDialResult.Failure("missing_provider_call_id", "The dialer provider did not return a call identifier.");
+        }
 
         activity.Attempts++;
         activity.Status = result.Succeeded ? ActivityStatus.Dialing : ActivityStatus.Failed;
@@ -131,6 +186,15 @@ public sealed class DialerService : IDialerService
             interaction.ProviderInteractionId = result.ProviderCallId;
             interaction.StartedUtc = _clock.UtcNow;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            interaction.Status = InteractionStatus.Failed;
+            interaction.EndedUtc = _clock.UtcNow;
+            interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
         }
 
         await _publisher.PublishAsync(new InteractionEvent

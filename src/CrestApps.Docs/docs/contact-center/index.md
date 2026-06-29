@@ -106,6 +106,11 @@ Managers configure queue membership, campaign assignment, dialer mode, priority,
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
 campaigns, and future channels all offer Activities through the same real-time workspace model.
 
+The current workspace lets agents choose queues, campaigns, skills, and presence using the standard
+Orchard admin layout. Queue and dialer admin screens expose routing skills, inbound endpoint mapping,
+provider names, pacing limits, retry settings, and do-not-call preference flags so providers and
+future desktop panels can extend the model without replacing the base UI.
+
 ## Voice provider integration
 
 The Telephony module continues to own soft-phone call control and media execution. Contact Center
@@ -119,6 +124,9 @@ orchestration beyond basic call control:
 
 Contact Center remains the brain: it selects the Activity, queue, agent, campaign, dialer mode, and
 compliance gates, then sends provider-neutral intents to the provider adapter.
+
+Providers register `IContactCenterVoiceProvider` implementations and are resolved through
+`IContactCenterVoiceProviderResolver`, mirroring the dialer provider resolver pattern.
 
 ## Inbound voice
 
