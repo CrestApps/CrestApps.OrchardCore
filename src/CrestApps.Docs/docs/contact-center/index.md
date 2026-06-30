@@ -99,8 +99,9 @@ projected into the interaction.
 Agents receive Contact Center work inside CRM-integrated surfaces while the Telephony soft phone
 stays the home for availability and call-adjacent actions. When Contact Center is enabled, it adds a
 **Work** tab to the floating soft phone where agents sign in to allowed queues and outbound campaigns,
-sign out, and set presence/reason codes. This avoids a separate sign-in navigation page and keeps
-availability changes next to call handling.
+sign out, and set presence/reason codes such as available, break, away, meeting, training, do not
+disturb, and offline. This avoids a separate sign-in navigation page and keeps availability changes
+next to call handling.
 
 Future agent desktop surfaces handle activity offers, accept/reject actions, active CRM activity
 context, injected Telephony call controls, interaction history, wrap-up, and required disposition.
@@ -109,11 +110,12 @@ Managers configure queue membership, campaign assignment, dialer mode, priority,
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
 campaigns, and future channels all offer Activities through the same real-time agent-offer model.
 
-The current soft-phone **Work** tab lets agents choose queues, campaigns, and skills. Campaigns come
-from the Omnichannel Management **Interaction Center** campaign catalog, and skills come from
-**Interaction Center → Skills**. Skill, queue, and dialer profile admin screens use display drivers
-and extensible summary/editor shapes so providers and future desktop panels can extend the model
-without replacing the base UI.
+The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the
+Omnichannel Management **Interaction Center** campaign catalog. Routing skills come from
+**Interaction Center → Skills**, but they are assigned by administrators/supervisors rather than
+self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and
+extensible summary/editor shapes so providers and future desktop panels can extend the model without
+replacing the base UI.
 
 ## Voice provider integration
 

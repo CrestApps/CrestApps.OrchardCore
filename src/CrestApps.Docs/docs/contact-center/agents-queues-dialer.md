@@ -22,25 +22,27 @@ module so tenants enable only what they need.
 ## Agents and presence
 
 An **agent profile** links an Orchard user to Contact Center configuration: display name, capacity,
-skills, queue membership, campaign membership, and live presence. Presence states are `Offline`,
-`Available`, `Reserved`, `Busy`, `WrapUp`, and `Break`.
+administrator-assigned skills, queue membership, campaign membership, and live presence. Presence
+states include `Offline`, `Available`, `Break`, `Away`, `DoNotDisturb`, `Meeting`, `Training`,
+`AfterHoursUnavailable`, and system-managed states such as `Reserved`, `Busy`, and `WrapUp`.
 
 Agents sign in from the floating Telephony soft phone. When the Contact Center queues feature is
 enabled, Contact Center contributes a **Work** tab where agents select the queues and campaigns they
-want to receive work from, choose routing skills, sign out, and change presence/reason codes. Signing
-in sets presence to `Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission
-grants self-service sign-in.
+want to receive work from, sign out, and change presence/reason codes. Signing in sets presence to
+`Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission grants self-service
+sign-in.
 
 ## Skills
 
 Administrators manage routeable capabilities from **Interaction Center → Skills**. A skill has a
-unique name, description, and enabled state. Enabled skills appear in the soft-phone **Work** tab and
+unique name, description, and enabled state. Enabled skills appear in admin assignment surfaces and
 queue editor selectors; disabled skills remain on existing agents and queues but are hidden from new
-selections.
+selections. Agents do not self-select skills from the soft phone because skills are routing
+eligibility data owned by supervisors/administrators.
 
-Queues can require one or more skills. Agents must select every required skill to be eligible for
-that queue, and the default routing strategy filters out agents missing any required skill before
-longest-idle scoring runs.
+Queues can require one or more skills. Agents must have every required skill assigned on their agent
+profile to be eligible for that queue, and the default routing strategy filters out agents missing any
+required skill before longest-idle scoring runs.
 
 ## Queues, reservations, and assignment
 
@@ -62,12 +64,15 @@ background task expires stale reservations and assigns waiting work every minute
 
 ## Dialer
 
-A **dialer profile** ties an Interaction Center campaign and queue to a dialing mode (`Manual`,
-`Preview`, `Power`, `Progressive`, `Predictive`), a Contact Center voice provider, calls-per-agent
-pacing, and attempt limits. Power and progressive profiles run automatically each minute: the Contact
-Center reserves an available agent, creates an outbound interaction, and asks the Voice Contact Center
-Call Router to place the call. Manual and preview profiles wait for agent action. Dialer activity
-batches load **unassigned** inventory the dialer reserves later.
+A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns,
+subjects, batches, dispositions, and contact context still come from Omnichannel. The profile tells
+the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents,
+which dialing mode (`Manual`, `Preview`, `Power`, `Progressive`, `Predictive`) is used, which Contact
+Center voice provider places calls, how pacing works, and how attempts/retries are bounded. Power and
+progressive profiles run automatically each minute: the Contact Center reserves an available agent,
+creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call.
+Manual and preview profiles wait for agent action. Dialer activity batches load **unassigned**
+inventory the dialer reserves later.
 
 ## Voice Contact Center Call Router
 
@@ -90,6 +95,11 @@ and create/edit screens render display-driver editor shapes with the required ro
 templates. Agent sign-in and presence are injected into the Telephony soft phone through
 `DisplayDriver<SoftPhoneWidget>`, so the operational controls stay with the phone while management
 screens remain catalog-focused.
+
+Agent state/reason-code management is planned as a catalog-backed admin surface, not as a
+provider-specific dialer setting. When added, it should include recipe and deployment steps so
+presence states/reason codes can move between tenants, and its migration should seed standard values
+by executing the module recipe during tenant setup.
 
 ## Enable via recipe
 

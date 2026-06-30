@@ -61,7 +61,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
 
         var profile = await _agentProfileManager.FindByUserIdAsync(userId);
         var selectedCampaignIds = profile?.CampaignIds ?? [];
-        var selectedSkills = profile?.Skills ?? [];
         var queues = await _queueManager.ListEnabledAsync();
         var viewModel = new AgentSoftPhoneViewModel
         {
@@ -70,8 +69,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
             SelectedQueueIds = profile?.QueueIds ?? [],
             CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds),
             SelectedCampaignIds = selectedCampaignIds,
-            SkillOptions = await _optionsProvider.GetSkillOptionsAsync(selectedSkills),
-            SelectedSkills = selectedSkills,
         };
 
         return Combine(

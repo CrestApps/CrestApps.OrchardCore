@@ -18,22 +18,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 public sealed class AgentSoftPhoneController : Controller
 {
     private readonly IAgentPresenceManager _presenceManager;
-    private readonly IAgentProfileManager _agentManager;
     private readonly IAuthorizationService _authorizationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentSoftPhoneController"/> class.
     /// </summary>
     /// <param name="presenceManager">The agent presence manager.</param>
-    /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
     public AgentSoftPhoneController(
         IAgentPresenceManager presenceManager,
-        IAgentProfileManager agentManager,
         IAuthorizationService authorizationService)
     {
         _presenceManager = presenceManager;
-        _agentManager = agentManager;
         _authorizationService = authorizationService;
     }
 
@@ -42,7 +38,6 @@ public sealed class AgentSoftPhoneController : Controller
     /// </summary>
     /// <param name="selectedQueueIds">The queues to sign in to.</param>
     /// <param name="selectedCampaignIds">The campaigns to sign in to.</param>
-    /// <param name="selectedSkills">The skills to keep on the agent profile.</param>
     /// <param name="returnUrl">The local URL to return to after sign-in.</param>
     /// <returns>A redirect to the current page.</returns>
     [HttpPost]
@@ -50,7 +45,6 @@ public sealed class AgentSoftPhoneController : Controller
     public async Task<IActionResult> SignIn(
         IEnumerable<string> selectedQueueIds,
         IEnumerable<string> selectedCampaignIds,
-        IEnumerable<string> selectedSkills,
         string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
@@ -59,9 +53,7 @@ public sealed class AgentSoftPhoneController : Controller
         }
 
         var campaigns = ContactCenterFormHelpers.NormalizeList(selectedCampaignIds);
-        var profile = await _presenceManager.SignInAsync(GetUserId(), selectedQueueIds ?? [], campaigns);
-        profile.Skills = ContactCenterFormHelpers.NormalizeList(selectedSkills);
-        await _agentManager.UpdateAsync(profile);
+        await _presenceManager.SignInAsync(GetUserId(), selectedQueueIds ?? [], campaigns);
 
         return RedirectToReturnLocation(returnUrl);
     }

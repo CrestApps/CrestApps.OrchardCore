@@ -36,16 +36,6 @@ public class AgentSoftPhoneViewModel
     public IList<string> SelectedCampaignIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the skills the agent can select for routing.
-    /// </summary>
-    public IList<SelectListItem> SkillOptions { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the selected skill names.
-    /// </summary>
-    public IList<string> SelectedSkills { get; set; } = [];
-
-    /// <summary>
     /// Gets a value indicating whether the agent is currently signed in.
     /// </summary>
     public bool IsSignedIn => Profile is not null && Profile.PresenceStatus != AgentPresenceStatus.Offline;

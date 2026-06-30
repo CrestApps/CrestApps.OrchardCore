@@ -34,4 +34,29 @@ public enum AgentPresenceStatus
     /// The agent is signed in but temporarily not ready for work.
     /// </summary>
     Break,
+
+    /// <summary>
+    /// The agent is signed in but away from the desk.
+    /// </summary>
+    Away,
+
+    /// <summary>
+    /// The agent is signed in but should not receive work.
+    /// </summary>
+    DoNotDisturb,
+
+    /// <summary>
+    /// The agent is unavailable because they are in a meeting.
+    /// </summary>
+    Meeting,
+
+    /// <summary>
+    /// The agent is unavailable because they are in training.
+    /// </summary>
+    Training,
+
+    /// <summary>
+    /// The agent is unavailable outside staffed hours.
+    /// </summary>
+    AfterHoursUnavailable,
 }

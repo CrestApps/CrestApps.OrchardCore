@@ -106,14 +106,16 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         if (profile is null)
         {
-            return null;
+            profile = await _agentManager.NewAsync(cancellationToken: cancellationToken);
+            profile.UserId = userId;
+            profile.Name = userId;
         }
 
         profile.PresenceStatus = status;
         profile.PresenceReason = reason;
         profile.PresenceChangedUtc = _clock.UtcNow;
 
-        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+        await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
 
         return profile;
