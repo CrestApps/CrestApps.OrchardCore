@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.Telephony
 @using CrestApps.OrchardCore.Telephony.Hubs
+@using CrestApps.OrchardCore.Telephony.Models
 @using CrestApps.Core.SignalR.Services
 @using System.Text.Json
 @inject HubRouteManager HubRouteManager
@@ -7,8 +8,17 @@
 @{
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
-    var capabilities = Model.Capabilities is int caps ? caps : 0;
-    var extensions = Model.Extensions as IEnumerable<object> ?? [];
+    var capabilities = 0;
+
+    if (Model.Capabilities is TelephonyCapabilities caps)
+    {
+        capabilities = (int)caps;
+    }
+    else if (Model.Capabilities is int intCaps)
+    {
+        capabilities = intCaps;
+    }
+
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
@@ -85,11 +95,6 @@
             </button>
         </div>
 
-        @foreach (var extension in extensions)
-        {
-            @await DisplayAsync(extension)
-        }
-
         <div class="telephony-soft-phone__body" data-telephony-body>
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">
                 <div class="telephony-soft-phone__display">
@@ -141,6 +146,11 @@
             <div class="telephony-soft-phone__view telephony-soft-phone__history" data-telephony-view="history" data-telephony-history hidden>
                 <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
             </div>
+
+            @if (Model.Views != null)
+            {
+                @await DisplayAsync(Model.Views)
+            }
         </div>
 
         <div class="telephony-soft-phone__footer" data-telephony-footer hidden>
@@ -152,6 +162,10 @@
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
             </button>
+            @if (Model.Tabs != null)
+            {
+                @await DisplayAsync(Model.Tabs)
+            }
         </div>
     </div>
 

@@ -123,6 +123,25 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.True(await page.Locator("[data-telephony-view=\"history\"]").IsHiddenAsync());
     }
 
+    [Fact]
+    public async Task ExtensionTab_ShowsExtensionView_AndHidesBuiltInViews()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+
+        await page.ClickAsync("[data-telephony-toggle]");
+
+        // Act
+        await page.ClickAsync("[data-telephony-tab=\"contact-center\"]");
+
+        // Assert
+        await page.Locator("[data-telephony-view=\"contact-center\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.True(await page.Locator("[data-telephony-view=\"keypad\"]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-view=\"history\"]").IsHiddenAsync());
+    }
+
     private static async Task WaitForConnectedAsync(IPage page)
     {
         await page.WaitForFunctionAsync(

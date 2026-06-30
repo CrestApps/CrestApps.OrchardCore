@@ -94,25 +94,26 @@ supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-
 routing, queue, or supervisor data; voice call state continues to flow through Telephony and is
 projected into the interaction.
 
-## Agent workspace
+## Agent soft-phone work controls
 
-Agents receive Contact Center work in the **Interaction Center → Agent Workspace** screen inside the
-CRM admin experience. The workspace is the place where agents sign in to allowed queues and outbound
-campaigns, set presence and reason codes, receive activity offers, accept or reject reservations,
-work the active CRM activity, use injected Telephony call controls, review interaction history, and
-complete wrap-up/disposition.
+Agents receive Contact Center work inside CRM-integrated surfaces while the Telephony soft phone
+stays the home for availability and call-adjacent actions. When Contact Center is enabled, it adds a
+**Work** tab to the floating soft phone where agents sign in to allowed queues and outbound campaigns,
+sign out, and set presence/reason codes. This avoids a separate sign-in navigation page and keeps
+availability changes next to call handling.
+
+Future agent desktop surfaces handle activity offers, accept/reject actions, active CRM activity
+context, injected Telephony call controls, interaction history, wrap-up, and required disposition.
 
 Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
-campaigns, and future channels all offer Activities through the same real-time workspace model.
+campaigns, and future channels all offer Activities through the same real-time agent-offer model.
 
-The current workspace lets agents choose queues, campaigns, and skills using the standard Orchard
-admin layout. Campaign and skill selection use searchable multi-select lists instead of raw
-identifier fields; campaigns come from the Omnichannel Management **Interaction Center** campaign
-catalog, and skills come from **Interaction Center → Skills**. Presence changes are exposed in the
-floating soft phone widget so availability stays near call handling. Skill, queue, and dialer profile
-admin screens use display drivers and extensible summary/editor shapes so providers and future
-desktop panels can extend the model without replacing the base UI.
+The current soft-phone **Work** tab lets agents choose queues, campaigns, and skills. Campaigns come
+from the Omnichannel Management **Interaction Center** campaign catalog, and skills come from
+**Interaction Center → Skills**. Skill, queue, and dialer profile admin screens use display drivers
+and extensible summary/editor shapes so providers and future desktop panels can extend the model
+without replacing the base UI.
 
 ## Voice provider integration
 

@@ -25,21 +25,17 @@ An **agent profile** links an Orchard user to Contact Center configuration: disp
 skills, queue membership, campaign membership, and live presence. Presence states are `Offline`,
 `Available`, `Reserved`, `Busy`, `WrapUp`, and `Break`.
 
-Agents sign in from **Interaction Center → Agent Workspace**, selecting the queues and campaigns they
-want to receive work from. Campaigns come from Omnichannel Management and are shown in a searchable
-multi-select list; skills are selected from the managed Contact Center skill catalog. Signing in sets
-presence to `Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission grants
-self-service sign-in.
-
-Agents change presence from the floating soft phone widget. When the Contact Center queues feature is
-enabled and an agent has a profile, the soft phone shows a **Contact Center presence** selector so
-availability changes stay close to call handling instead of the queue/campaign sign-in screen.
+Agents sign in from the floating Telephony soft phone. When the Contact Center queues feature is
+enabled, Contact Center contributes a **Work** tab where agents select the queues and campaigns they
+want to receive work from, choose routing skills, sign out, and change presence/reason codes. Signing
+in sets presence to `Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission
+grants self-service sign-in.
 
 ## Skills
 
 Administrators manage routeable capabilities from **Interaction Center → Skills**. A skill has a
-unique name, description, and enabled state. Enabled skills appear in the Agent Workspace and queue
-editor selectors; disabled skills remain on existing agents and queues but are hidden from new
+unique name, description, and enabled state. Enabled skills appear in the soft-phone **Work** tab and
+queue editor selectors; disabled skills remain on existing agents and queues but are hidden from new
 selections.
 
 Queues can require one or more skills. Agents must select every required skill to be eligible for
@@ -88,11 +84,12 @@ call assignment, and voice-specific orchestration without coupling Contact Cente
 
 ## Admin UX and extensibility
 
-Contact Center admin entries live under **Interaction Center**. Skills, queues, and dialer profile
-CRUD screens match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and
-create/edit screens render display-driver editor shapes with the required root edit wrapper templates.
-This keeps the UI extensible for provider panels, compliance fields, routing strategies, and future
-supervisor controls.
+Contact Center management entries live under **Interaction Center**. Skills, queues, and dialer
+profile CRUD screens match the Omnichannel Campaigns UI: searchable list pages render summary shapes,
+and create/edit screens render display-driver editor shapes with the required root edit wrapper
+templates. Agent sign-in and presence are injected into the Telephony soft phone through
+`DisplayDriver<SoftPhoneWidget>`, so the operational controls stay with the phone while management
+screens remain catalog-focused.
 
 ## Enable via recipe
 

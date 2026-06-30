@@ -10,7 +10,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
@@ -93,12 +93,12 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
-            .AddScoped<ContactCenterAdminFormOptionsProvider>()
-            .AddScoped<ISoftPhoneWidgetExtensionProvider, ContactCenterSoftPhoneWidgetExtensionProvider>();
+            .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
             .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
+            .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
             .AddIndexProvider<ActivityQueueIndexProvider>()

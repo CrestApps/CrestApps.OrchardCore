@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 /// <summary>
-/// Represents the agent workspace sign-in view model.
+/// Represents the agent soft phone sign-in view model.
 /// </summary>
-public class AgentWorkspaceViewModel
+public class AgentSoftPhoneViewModel
 {
     /// <summary>
     /// Gets or sets the agent profile, when the agent has signed in before.

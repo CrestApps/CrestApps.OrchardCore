@@ -108,8 +108,10 @@ You can enable the soft phone on the admin, the front end, or both. The widget i
 surface is enabled and the current user has the `Use the telephony soft phone` permission, so the
 soft phone only appears for authorized users.
 
-Modules can contribute extension shapes to the widget. Contact Center uses this extension point to
-show agent presence controls in the soft phone when the current user has an agent profile.
+Modules can contribute display-driver tabs and views to the widget by registering a
+`DisplayDriver<SoftPhoneWidget>`. Contact Center uses this extension point to add a **Work** tab for
+agent queue/campaign sign-in, sign-out, and presence controls when the current user can sign in to
+Contact Center work.
 
 ### Moving and persisting the widget
 
@@ -133,17 +135,19 @@ call controls when the provider is **available, connected, and authenticated**:
 - During an active call the main toggle button turns red and switches to a hang-up icon, and the
   widget exposes mute, hold, transfer, and merge controls based on the provider's capabilities.
 
-### Keypad and recent calls tabs
+### Keypad, recent calls, and extension tabs
 
-The widget's footer is a tab bar that switches the panel between two views:
+The widget's footer is a tab bar that switches the panel between built-in and contributed views:
 
 - **Keypad** – the number field, dial pad, and call controls.
 - **Recent** – the call history, listing active calls, recent inbound and outbound interactions, and
   missed calls (highlighted in red with a direction icon). Selecting a recent call dials it again.
+- **Contributed tabs** – modules can add their own views through Display Management. For example,
+  Contact Center adds a **Work** tab for queue/campaign sign-in and presence.
 
-The footer is designed to be extensible, so additional tabs can be added in the future. The history
-is read from the hub's `GetInteractions` method and is backed by the persisted interaction store
-described below, so it survives page reloads and is available independently of the provider.
+The history is read from the hub's `GetInteractions` method and is backed by the persisted
+interaction store described below, so it survives page reloads and is available independently of the
+provider.
 
 ## Incoming calls
 
@@ -210,8 +214,9 @@ There are two ways to add the soft phone to your site:
 - **Automatically** – turn on **Show the soft phone on the front end** (and/or the admin) on the
   telephony settings. The widget is injected into the layout's `Footer` zone for authorized users.
 - **Manually** – render the `SoftPhoneWidget` shape wherever you want it (for example in a theme
-  layout or a template) and register its resources. This is useful when your theme has no `Footer`
-  zone or you want precise placement:
+  layout or a template) and register its resources. This shows the base phone controls. If you need
+  contributed Display Management tabs, build the widget through `IDisplayManager<SoftPhoneWidget>` the
+  same way the automatic filter does.
 
   ```html
   <style asp-name="telephony-soft-phone" at="Head"></style>

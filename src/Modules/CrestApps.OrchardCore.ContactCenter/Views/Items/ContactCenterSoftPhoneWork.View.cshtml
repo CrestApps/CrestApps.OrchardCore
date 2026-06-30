@@ -1,0 +1,82 @@
+@model AgentSoftPhoneViewModel
+
+@{
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<div class="telephony-soft-phone__view telephony-soft-phone__extension-view contact-center-soft-phone" data-telephony-view="contact-center" hidden>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <strong>@T["Contact Center"]</strong>
+        @if (Model.IsSignedIn)
+        {
+            <span class="badge text-bg-success">@T["Signed in"]</span>
+        }
+        else
+        {
+            <span class="badge text-bg-secondary">@T["Offline"]</span>
+        }
+    </div>
+
+    @if (Model.IsSignedIn)
+    {
+        <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" class="mb-3">
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <div class="mb-2">
+                <label for="contact-center-presence-status" class="form-label small mb-1">@T["Presence"]</label>
+                <select id="contact-center-presence-status" name="status" class="form-select form-select-sm">
+                    <option value="@AgentPresenceStatus.Available" selected="@(Model.Profile.PresenceStatus == AgentPresenceStatus.Available)">@T["Available"]</option>
+                    <option value="@AgentPresenceStatus.Break" selected="@(Model.Profile.PresenceStatus == AgentPresenceStatus.Break)">@T["Break"]</option>
+                    <option value="@AgentPresenceStatus.WrapUp" selected="@(Model.Profile.PresenceStatus == AgentPresenceStatus.WrapUp)">@T["Wrap-up"]</option>
+                    <option value="@AgentPresenceStatus.Offline" selected="@(Model.Profile.PresenceStatus == AgentPresenceStatus.Offline)">@T["Offline"]</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <input name="presenceReason" value="@Model.Profile.PresenceReason" class="form-control form-control-sm" placeholder="@T["Reason"]" />
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">@T["Update presence"]</button>
+        </form>
+
+        <form asp-action="SignOutAgent" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post">
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <button type="submit" class="btn btn-sm btn-secondary w-100">@T["Sign out"]</button>
+        </form>
+    }
+    else
+    {
+        <form asp-action="SignIn" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post">
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+            <div class="mb-2">
+                <label class="form-label small mb-1">@T["Queues"]</label>
+                @if (Model.AvailableQueues.Count > 0)
+                {
+                    @foreach (var queue in Model.AvailableQueues)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="selectedQueueIds" value="@queue.ItemId" id="cc_q_@queue.ItemId" checked="@Model.SelectedQueueIds.Contains(queue.ItemId)" />
+                            <label class="form-check-label" for="cc_q_@queue.ItemId">@queue.Name</label>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted small">@T["No enabled queues are available."]</div>
+                }
+            </div>
+
+            <div class="mb-2" asp-validation-class-for="SelectedCampaignIds">
+                <label asp-for="SelectedCampaignIds" class="form-label small mb-1">@T["Campaigns"]</label>
+                <select asp-for="SelectedCampaignIds" asp-items="Model.CampaignOptions" class="form-select form-select-sm" multiple></select>
+                <span asp-validation-for="SelectedCampaignIds"></span>
+            </div>
+
+            <div class="mb-3" asp-validation-class-for="SelectedSkills">
+                <label asp-for="SelectedSkills" class="form-label small mb-1">@T["Skills"]</label>
+                <select asp-for="SelectedSkills" asp-items="Model.SkillOptions" class="form-select form-select-sm" multiple></select>
+                <span asp-validation-for="SelectedSkills"></span>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-success w-100">@T["Sign in"]</button>
+        </form>
+    }
+</div>

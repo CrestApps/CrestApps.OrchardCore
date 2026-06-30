@@ -104,6 +104,7 @@
             historyList: rootElement.querySelector('[data-telephony-history-list]'),
             footer: rootElement.querySelector('[data-telephony-footer]'),
             tabs: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-tab]')),
+            views: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-view]')),
             incoming: rootElement.querySelector('[data-telephony-incoming]'),
             incomingCaller: rootElement.querySelector('[data-telephony-incoming-caller]'),
             incomingQueue: rootElement.querySelector('[data-telephony-incoming-queue]'),
@@ -151,6 +152,36 @@
                 dom.error.textContent = '';
                 dom.error.hidden = true;
             }
+        }
+
+        function showView(name) {
+            dom.views.forEach(function (view) {
+                show(view, view.getAttribute('data-telephony-view') === name);
+            });
+        }
+
+        function activeTabExists() {
+            return dom.tabs.some(function (tab) {
+                return tab.getAttribute('data-telephony-tab') === activeTab;
+            });
+        }
+
+        function ensureActiveTab() {
+            if (activeTabExists()) {
+                return;
+            }
+
+            activeTab = dom.tabs.length ? dom.tabs[0].getAttribute('data-telephony-tab') : 'keypad';
+        }
+
+        function isTelephonyTab(tab) {
+            return tab === 'keypad' || tab === 'history';
+        }
+
+        function hasExtensionTabs() {
+            return dom.tabs.some(function (tab) {
+                return !isTelephonyTab(tab.getAttribute('data-telephony-tab'));
+            });
         }
 
         function statusTextForState(stateName) {
@@ -376,6 +407,7 @@
 
         function render() {
             renderIncoming();
+            ensureActiveTab();
 
             var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
             var active = isActive(stateName);
@@ -389,17 +421,19 @@
             var notAvailable = !isAvailable;
             var needsConnect = isAvailable && requiresAuthentication && !isConnected;
 
-            // Unavailable: no provider configured. Hide the body and the tab footer.
+            // Unavailable: no provider configured. Keep contributed tabs reachable.
             if (notAvailable && !active) {
+                var showUnavailable = isTelephonyTab(activeTab);
+
                 if (dom.unavailableText) {
                     dom.unavailableText.textContent = strings.notConfigured || 'No telephony provider is configured.';
                 }
 
-                show(dom.unavailable, true);
+                show(dom.unavailable, showUnavailable);
                 show(dom.connectPanel, false);
-                show(dom.keypadView, false);
-                show(dom.history, false);
-                show(dom.footer, false);
+                showView(showUnavailable ? null : activeTab);
+                show(dom.footer, hasExtensionTabs());
+                updateTabs();
                 setStatus(strings.notReady || 'Not Ready');
 
                 return;
@@ -407,12 +441,14 @@
 
             show(dom.unavailable, false);
 
-            // Needs a per-user connection (for example OAuth). Hide the body and the tab footer.
+            // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable.
             if (needsConnect && !active) {
-                show(dom.connectPanel, true);
-                show(dom.keypadView, false);
-                show(dom.history, false);
-                show(dom.footer, false);
+                var showConnect = isTelephonyTab(activeTab);
+
+                show(dom.connectPanel, showConnect);
+                showView(showConnect ? null : activeTab);
+                show(dom.footer, hasExtensionTabs());
+                updateTabs();
                 setStatus(strings.notConnected || 'Not connected');
 
                 return;
@@ -423,10 +459,7 @@
             // Operating state: show the footer tabs and the selected view (keypad or recent calls).
             show(dom.footer, true);
             updateTabs();
-
-            var showHistory = activeTab === 'history';
-            show(dom.history, showHistory);
-            show(dom.keypadView, !showHistory);
+            showView(activeTab);
 
             setStatus(currentCall ? statusTextForState(stateName) : (strings.idle || 'Ready'));
 
