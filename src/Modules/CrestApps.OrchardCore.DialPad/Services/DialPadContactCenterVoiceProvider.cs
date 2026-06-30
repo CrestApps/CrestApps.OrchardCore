@@ -37,6 +37,9 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
 
     /// <inheritdoc/>
+    public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
+
+    /// <inheritdoc/>
     LocalizedString IDialerProvider.DisplayName => Name;
 
     /// <inheritdoc/>
@@ -66,6 +69,21 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public Task<ContactCenterVoiceProviderResult> AssignCallAsync(ContactCenterCallAssignmentRequest request, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Failure("not_supported", "DialPad does not support provider-side Contact Center call assignment."));
+    }
+
+    /// <inheritdoc/>
+    public Task<ContactCenterVoiceProviderResult> ConnectToAgentAsync(ContactCenterConnectRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // DialPad uses the agent-device-native delivery model: the live call already rings the agent's
+        // registered device, so the Contact Center does not bridge media. The agent answers on the soft
+        // phone and the connect operation succeeds as a no-op.
+        return Task.FromResult(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = request.ProviderCallId,
+        });
     }
 
     /// <inheritdoc/>

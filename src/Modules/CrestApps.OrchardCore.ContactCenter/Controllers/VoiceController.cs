@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
@@ -10,46 +9,36 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
 /// <summary>
 /// Handles the agent-facing offer lifecycle for inbound voice calls. The soft-phone incoming-call
-/// modal posts to these actions when the agent answers or ignores a ringing inbound call.
+/// modal posts to these actions when the agent answers or ignores a ringing inbound call. Each action
+/// delegates to <see cref="IContactCenterCallCommandService"/> so the reservation, media connection,
+/// and interaction/call-session state are advanced together as one authoritative server-side command.
 /// </summary>
 [Admin]
 [Feature(ContactCenterConstants.Feature.Voice)]
 public sealed class VoiceController : Controller
 {
-    private readonly IActivityReservationService _reservationService;
-    private readonly IInboundVoiceService _inboundVoiceService;
-    private readonly IInteractionManager _interactionManager;
+    private readonly IContactCenterCallCommandService _callCommandService;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceController"/> class.
     /// </summary>
-    /// <param name="reservationService">The reservation service used to accept or reject the offer.</param>
-    /// <param name="inboundVoiceService">The inbound voice service used to re-offer a declined call.</param>
-    /// <param name="interactionManager">The interaction manager used to update the interaction state.</param>
+    /// <param name="callCommandService">The call command service that coordinates the offer lifecycle.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="clock">The clock used to stamp answer times.</param>
     public VoiceController(
-        IActivityReservationService reservationService,
-        IInboundVoiceService inboundVoiceService,
-        IInteractionManager interactionManager,
-        IAuthorizationService authorizationService,
-        IClock clock)
+        IContactCenterCallCommandService callCommandService,
+        IAuthorizationService authorizationService)
     {
-        _reservationService = reservationService;
-        _inboundVoiceService = inboundVoiceService;
-        _interactionManager = interactionManager;
+        _callCommandService = callCommandService;
         _authorizationService = authorizationService;
-        _clock = clock;
     }
 
     /// <summary>
-    /// Accepts the offered inbound call: converts the reservation into an assignment and marks the
-    /// interaction connected.
+    /// Accepts the offered inbound call: accepts the reservation, connects the media to the agent, and
+    /// marks the interaction connected as one server-side command.
     /// </summary>
     /// <param name="reservationId">The reservation identifier of the offered call.</param>
-    /// <returns>An empty success result, or a problem result when the offer is no longer valid.</returns>
+    /// <returns>The command result, or a problem result when the offer is no longer valid.</returns>
     [HttpPost]
     [Admin("contact-center/voice/offer/accept", "ContactCenterVoiceAcceptOffer")]
     [ValidateAntiForgeryToken]
@@ -65,29 +54,25 @@ public sealed class VoiceController : Controller
             return BadRequest();
         }
 
-        var reservation = await _reservationService.AcceptAsync(reservationId);
+        var result = await _callCommandService.AcceptInboundOfferAsync(reservationId);
 
-        if (reservation is null)
+        if (!result.Succeeded)
         {
             return NotFound();
         }
 
-        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId);
-
-        if (interaction is not null)
+        return Ok(new
         {
-            interaction.Status = InteractionStatus.Connected;
-            interaction.StartedUtc ??= _clock.UtcNow;
-            interaction.AnsweredUtc = _clock.UtcNow;
-            await _interactionManager.UpdateAsync(interaction);
-        }
-
-        return Ok();
+            result.Succeeded,
+            result.RequiresDeviceAnswer,
+            result.InteractionId,
+            result.CallSessionId,
+        });
     }
 
     /// <summary>
-    /// Declines the offered inbound call: returns the call to its queue and re-offers it to the next
-    /// available agent.
+    /// Declines the offered inbound call: rejects the reservation, returns the call to its queue, and
+    /// re-offers it to the next available agent.
     /// </summary>
     /// <param name="reservationId">The reservation identifier of the offered call.</param>
     /// <returns>An empty success result, or a problem result when the offer is no longer valid.</returns>
@@ -106,16 +91,11 @@ public sealed class VoiceController : Controller
             return BadRequest();
         }
 
-        var reservation = await _reservationService.RejectAsync(reservationId);
+        var result = await _callCommandService.DeclineInboundOfferAsync(reservationId);
 
-        if (reservation is null)
+        if (!result.Succeeded)
         {
             return NotFound();
-        }
-
-        if (!string.IsNullOrEmpty(reservation.QueueId))
-        {
-            await _inboundVoiceService.OfferNextAsync(reservation.QueueId);
         }
 
         return Ok();

@@ -40,12 +40,20 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
         services
+            .AddScoped<ICallSessionStore, CallSessionStore>()
+            .AddScoped<ICallSessionManager, CallSessionManager>();
+
+        services
             .AddIndexProvider<InteractionIndexProvider>()
             .AddDataMigration<InteractionIndexMigrations>();
 
         services
             .AddIndexProvider<InteractionEventIndexProvider>()
             .AddDataMigration<InteractionEventIndexMigrations>();
+
+        services
+            .AddIndexProvider<CallSessionIndexProvider>()
+            .AddDataMigration<CallSessionIndexMigrations>();
 
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
@@ -176,6 +184,8 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
+            .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
+            .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())

@@ -143,6 +143,48 @@ Providers register `IContactCenterVoiceProvider` implementations and are resolve
 `IContactCenterVoiceProviderResolver`. The router uses those providers for outbound dialing and
 keeps provider-side queue placement and call assignment behind the same voice boundary.
 
+### Call delivery models
+
+Every voice provider declares a **delivery model** so the orchestration layer knows whether it must
+bridge media to the agent itself:
+
+- `AgentDeviceNative` - the provider rings the agent's own registered device or soft-phone client (for
+  example WebRTC). The live call already reaches the agent, so the Contact Center reserves, offers, and
+  tracks the work, and the agent answers the media on their device. The DialPad provider uses this
+  model.
+- `ServerSideAcd` - the provider parks or queues the live call server-side. The Contact Center
+  explicitly asks the provider to connect (bridge) the call to the selected agent through
+  `ConnectToAgentAsync` once the offer is accepted (inbound) or the dialed call is answered (outbound).
+
+Providers advertise `ContactCenterVoiceProviderCapabilities.AgentConnect` when they can bridge calls.
+The agent desktop and supervisor UI hide or disable actions the active provider cannot perform, the
+same way the Telephony soft phone gates controls on `TelephonyCapabilities`.
+
+### Unified call commands
+
+Accepting or declining an offered call is a single, authoritative server-side command rather than
+several uncoordinated client actions. `IContactCenterCallCommandService` accepts the reservation,
+connects the media to the agent (for `ServerSideAcd` providers), and advances the interaction and call
+session together, so the orchestration state and the provider media state can never diverge. The
+result tells the soft phone whether the agent's device still has to answer the media
+(`RequiresDeviceAnswer` is `true` only for `AgentDeviceNative` providers). Declining rejects the
+reservation, returns the work to its queue, and re-offers it to the next available agent.
+
+### Call sessions and normalized provider events
+
+A **call session** (`CallSession`) is the Contact Center's business-oriented projection of a voice
+call. It maps a provider call to an interaction, agent, and queue and tracks the normalized call
+lifecycle (`Planned`, `Dialing`, `Ringing`, `Connected`, `OnHold`, `Ending`, `Ended`, `Failed`,
+`NoAnswer`, `Rejected`, `Canceled`, `Transferred`) plus talk and hold durations, without owning media
+execution.
+
+Providers and PBX webhooks feed call-state changes in as normalized `ProviderVoiceEvent` instances
+through `IProviderVoiceEventService`. The service matches the event to the interaction and call session
+by provider call identifier, advances their state and timestamps, bridges the agent for answered
+outbound calls on `ServerSideAcd` providers, and publishes the corresponding Contact Center domain
+events. Events that carry an already-seen idempotency key are ignored, so duplicate or out-of-order
+webhook deliveries are safe.
+
 ## Inbound voice
 
 > **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`
@@ -164,6 +206,11 @@ When a normalized inbound call arrives, the feature:
    is signed in to that queue.
 5. Offers the ringing call to that agent through `IIncomingCallDispatcher`, which raises the
    soft-phone modal.
+
+When the agent accepts the offer, the [unified call command](#unified-call-commands) accepts the
+reservation, connects the media to the agent for `ServerSideAcd` providers, and creates the
+[call session](#call-sessions-and-normalized-provider-events) and marks the interaction connected in
+one server-side step.
 
 ### Routing the dialed number to a queue
 

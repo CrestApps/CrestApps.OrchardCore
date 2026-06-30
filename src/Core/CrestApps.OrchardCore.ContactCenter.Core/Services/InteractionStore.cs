@@ -47,6 +47,18 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
+    public async Task<Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerInteractionId);
+
+        return await Session.Query<Interaction, InteractionIndex>(
+            index => index.ProviderInteractionId == providerInteractionId,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
         var query = Session.Query<Interaction, InteractionIndex>(

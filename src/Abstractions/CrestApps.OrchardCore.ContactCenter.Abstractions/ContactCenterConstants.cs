@@ -90,6 +90,11 @@ public static class ContactCenterConstants
         /// The wrap-up and disposition component.
         /// </summary>
         public const string WrapUp = "WrapUp";
+
+        /// <summary>
+        /// The call session management component.
+        /// </summary>
+        public const string CallSessions = "CallSessions";
     }
 
     /// <summary>
@@ -222,5 +227,35 @@ public static class ContactCenterConstants
         /// Raised when a callback is scheduled.
         /// </summary>
         public const string CallbackScheduled = "CallbackScheduled";
+
+        /// <summary>
+        /// Raised when a call session is created for an interaction.
+        /// </summary>
+        public const string CallSessionCreated = "CallSessionCreated";
+
+        /// <summary>
+        /// Raised when a call session state changes.
+        /// </summary>
+        public const string CallSessionUpdated = "CallSessionUpdated";
+
+        /// <summary>
+        /// Raised when a live call is connected (bridged) to an agent.
+        /// </summary>
+        public const string CallConnected = "CallConnected";
+
+        /// <summary>
+        /// Raised when a call session ends.
+        /// </summary>
+        public const string CallEnded = "CallEnded";
+
+        /// <summary>
+        /// Raised when an agent accepts an offered interaction.
+        /// </summary>
+        public const string OfferAccepted = "OfferAccepted";
+
+        /// <summary>
+        /// Raised when an agent declines an offered interaction.
+        /// </summary>
+        public const string OfferDeclined = "OfferDeclined";
     }
 }

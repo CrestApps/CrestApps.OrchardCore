@@ -35,4 +35,10 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can synchronize agent availability or PBX presence with Contact Center.
     /// </summary>
     AgentPresenceSync = 1 << 4,
+
+    /// <summary>
+    /// The provider can connect (bridge) a live call to a selected agent. Required for providers whose
+    /// delivery model is <see cref="VoiceProviderDeliveryModel.ServerSideAcd"/>.
+    /// </summary>
+    AgentConnect = 1 << 5,
 }

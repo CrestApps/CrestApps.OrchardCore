@@ -56,6 +56,19 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
+    public async Task<Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, CancellationToken cancellationToken = default)
+    {
+        var interaction = await _store.FindByProviderInteractionIdAsync(providerInteractionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interaction;
+    }
+
+    /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
         var result = await _store.PageByStatusAsync(page, pageSize, status, cancellationToken);

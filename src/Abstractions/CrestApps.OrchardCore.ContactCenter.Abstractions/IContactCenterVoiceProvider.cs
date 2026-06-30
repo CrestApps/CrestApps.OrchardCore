@@ -24,12 +24,28 @@ public interface IContactCenterVoiceProvider
     ContactCenterVoiceProviderCapabilities Capabilities { get; }
 
     /// <summary>
+    /// Gets the delivery model that describes how the provider delivers a live call to an agent.
+    /// </summary>
+    VoiceProviderDeliveryModel DeliveryModel { get; }
+
+    /// <summary>
     /// Places an outbound dialer call for a reserved activity and agent.
     /// </summary>
     /// <param name="request">The dial request.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The provider operation result.</returns>
     Task<ContactCenterVoiceProviderResult> DialAsync(ContactCenterDialRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Connects (bridges) a live provider call to the selected agent. Providers whose delivery model is
+    /// <see cref="VoiceProviderDeliveryModel.AgentDeviceNative"/> may treat this as a successful no-op
+    /// because the call already rings the agent's device; providers whose delivery model is
+    /// <see cref="VoiceProviderDeliveryModel.ServerSideAcd"/> must bridge the parked call to the agent.
+    /// </summary>
+    /// <param name="request">The connect request.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The provider operation result.</returns>
+    Task<ContactCenterVoiceProviderResult> ConnectToAgentAsync(ContactCenterConnectRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Assigns an existing provider call to an agent for a Contact Center activity.
