@@ -1,0 +1,46 @@
+@model ShapeViewModel<AgentSoftPhoneViewModel>
+
+@{
+    var viewModel = Model.Value;
+    var presenceStatus = viewModel.Profile?.PresenceStatus ?? AgentPresenceStatus.Offline;
+    var pendingBreak = viewModel.Profile?.RequestedPresenceStatus == AgentPresenceStatus.Break;
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+
+    var presenceText = presenceStatus switch
+    {
+        AgentPresenceStatus.Available => T["Available"],
+        AgentPresenceStatus.Reserved => T["Reserved"],
+        AgentPresenceStatus.Busy => T["Busy"],
+        AgentPresenceStatus.WrapUp => T["Wrap-up"],
+        AgentPresenceStatus.Break => T["Break"],
+        AgentPresenceStatus.RequestBreak => T["Break pending"],
+        AgentPresenceStatus.Away => T["Away"],
+        AgentPresenceStatus.DoNotDisturb => T["Do not disturb"],
+        AgentPresenceStatus.Meeting => T["Meeting"],
+        AgentPresenceStatus.Training => T["Training"],
+        AgentPresenceStatus.AfterHoursUnavailable => T["After-hours unavailable"],
+        _ => T["Offline"],
+    };
+}
+
+<div class="telephony-soft-phone__header-actions dropdown">
+    <button type="button" class="telephony-soft-phone__icon-btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="@T["Contact Center presence"]">
+        <i class="fa-solid fa-circle-user"></i>
+        <span>@presenceText</span>
+        @if (pendingBreak && presenceStatus != AgentPresenceStatus.RequestBreak)
+        {
+            <span class="badge text-bg-warning">@T["Break pending"]</span>
+        }
+    </button>
+    <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" class="dropdown-menu dropdown-menu-end p-2">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <button type="submit" name="status" value="@AgentPresenceStatus.Available" class="dropdown-item">@T["Available"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.RequestBreak" class="dropdown-item">@T["Request break"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.Away" class="dropdown-item">@T["Away"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.DoNotDisturb" class="dropdown-item">@T["Do not disturb"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.Meeting" class="dropdown-item">@T["Meeting"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.Training" class="dropdown-item">@T["Training"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.AfterHoursUnavailable" class="dropdown-item">@T["After-hours unavailable"]</button>
+        <button type="submit" name="status" value="@AgentPresenceStatus.Offline" class="dropdown-item">@T["Offline"]</button>
+    </form>
+</div>

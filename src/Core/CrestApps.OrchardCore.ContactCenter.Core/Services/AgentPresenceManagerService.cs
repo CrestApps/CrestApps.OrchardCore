@@ -67,6 +67,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
         profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
         profile.PresenceStatus = AgentPresenceStatus.Available;
+        profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
         profile.ActiveReservationId = null;
 
@@ -89,6 +90,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         }
 
         profile.PresenceStatus = AgentPresenceStatus.Offline;
+        profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
@@ -111,7 +113,26 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
-        profile.PresenceStatus = status;
+        if (status == AgentPresenceStatus.RequestBreak)
+        {
+            profile.RequestedPresenceStatus = AgentPresenceStatus.Break;
+
+            if (CanApplyPresenceNow(profile))
+            {
+                profile.PresenceStatus = AgentPresenceStatus.Break;
+                profile.RequestedPresenceStatus = null;
+            }
+        }
+        else if (CanApplyPresenceNow(profile))
+        {
+            profile.PresenceStatus = status;
+            profile.RequestedPresenceStatus = null;
+        }
+        else
+        {
+            profile.RequestedPresenceStatus = status;
+        }
+
         profile.PresenceReason = reason;
         profile.PresenceChangedUtc = _clock.UtcNow;
 
@@ -119,6 +140,12 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
 
         return profile;
+    }
+
+    private static bool CanApplyPresenceNow(AgentProfile profile)
+    {
+        return string.IsNullOrEmpty(profile.ActiveReservationId) &&
+            profile.PresenceStatus is not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp;
     }
 
     private async Task SaveAsync(AgentProfile profile, CancellationToken cancellationToken)

@@ -28,9 +28,14 @@ states include `Offline`, `Available`, `Break`, `Away`, `DoNotDisturb`, `Meeting
 
 Agents sign in from the floating Telephony soft phone. When the Contact Center queues feature is
 enabled, Contact Center contributes a **Work** tab where agents select the queues and campaigns they
-want to receive work from, sign out, and change presence/reason codes. Signing in sets presence to
-`Available`; signing out sets it to `Offline`. The `SignIntoQueues` permission grants self-service
-sign-in.
+want to receive work from and sign out. Signing in sets presence to `Available`; signing out sets it
+to `Offline`. The `SignIntoQueues` permission grants self-service sign-in.
+
+Presence is a dropdown in the soft-phone header so agents can change availability without switching
+tabs. **Request break** is system-approved: if no assignment is in progress, the request is granted
+immediately and the agent enters `Break`; if a route/reservation is already in progress, the request is
+kept pending while the call continues, and the system grants `Break` automatically when that in-flight
+work is released. Agents in `RequestBreak` or `Break` are not eligible for new routing decisions.
 
 ## Skills
 

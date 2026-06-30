@@ -38,5 +38,7 @@ public class AgentSoftPhoneViewModel
     /// <summary>
     /// Gets a value indicating whether the agent is currently signed in.
     /// </summary>
-    public bool IsSignedIn => Profile is not null && Profile.PresenceStatus != AgentPresenceStatus.Offline;
+    public bool IsSignedIn => Profile is not null &&
+        Profile.PresenceStatus != AgentPresenceStatus.Offline &&
+        (Profile.QueueIds.Count > 0 || Profile.CampaignIds.Count > 0);
 }

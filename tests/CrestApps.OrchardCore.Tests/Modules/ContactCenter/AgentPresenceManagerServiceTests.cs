@@ -74,6 +74,52 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Verify(m => m.CreateAsync(It.IsAny<AgentProfile>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task SetPresenceAsync_RequestBreakWhenAvailable_GrantsBreakImmediately()
+    {
+        // Arrange
+        var existing = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object);
+
+        // Act
+        var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.RequestBreak, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Break, profile.PresenceStatus);
+        Assert.Null(profile.RequestedPresenceStatus);
+    }
+
+    [Fact]
+    public async Task SetPresenceAsync_RequestBreakWhenReserved_KeepsReservationAndStoresPendingBreak()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            ActiveReservationId = "r1",
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object);
+
+        // Act
+        var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.RequestBreak, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Reserved, profile.PresenceStatus);
+        Assert.Equal(AgentPresenceStatus.Break, profile.RequestedPresenceStatus);
+        Assert.Equal("r1", profile.ActiveReservationId);
+    }
+
     private static Mock<IDistributedLock> CreateDistributedLock()
     {
         var distributedLock = new Mock<IDistributedLock>();

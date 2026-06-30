@@ -53,8 +53,14 @@
         font-weight: 600;
     }
 
-    &__status {
+    &__header-actions {
         margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    &__status {
         font-size: 0.78rem;
         opacity: 0.9;
     }

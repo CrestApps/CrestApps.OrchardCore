@@ -5,8 +5,6 @@
 
 @{
     var viewModel = Model.Value;
-    var presenceStatus = viewModel.Profile?.PresenceStatus ?? AgentPresenceStatus.Offline;
-    var presenceReason = viewModel.Profile?.PresenceReason;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
 }
 
@@ -22,27 +20,6 @@
             <span class="badge text-bg-secondary">@T["Offline"]</span>
         }
     </div>
-
-    <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" class="mb-3">
-        <input type="hidden" name="returnUrl" value="@returnUrl" />
-        <div class="mb-2">
-            <label for="contact-center-presence-status" class="form-label small mb-1">@T["Presence"]</label>
-            <select id="contact-center-presence-status" name="status" class="selectpicker show-tick" data-width="100%" data-style="btn-outline-secondary">
-                <option value="@AgentPresenceStatus.Available" selected="@(presenceStatus == AgentPresenceStatus.Available)">@T["Available"]</option>
-                <option value="@AgentPresenceStatus.Break" selected="@(presenceStatus == AgentPresenceStatus.Break)">@T["Break"]</option>
-                <option value="@AgentPresenceStatus.Away" selected="@(presenceStatus == AgentPresenceStatus.Away)">@T["Away"]</option>
-                <option value="@AgentPresenceStatus.DoNotDisturb" selected="@(presenceStatus == AgentPresenceStatus.DoNotDisturb)">@T["Do not disturb"]</option>
-                <option value="@AgentPresenceStatus.Meeting" selected="@(presenceStatus == AgentPresenceStatus.Meeting)">@T["Meeting"]</option>
-                <option value="@AgentPresenceStatus.Training" selected="@(presenceStatus == AgentPresenceStatus.Training)">@T["Training"]</option>
-                <option value="@AgentPresenceStatus.AfterHoursUnavailable" selected="@(presenceStatus == AgentPresenceStatus.AfterHoursUnavailable)">@T["After-hours unavailable"]</option>
-                <option value="@AgentPresenceStatus.Offline" selected="@(presenceStatus == AgentPresenceStatus.Offline)">@T["Offline"]</option>
-            </select>
-        </div>
-        <div class="mb-2">
-            <input name="presenceReason" value="@presenceReason" class="form-control form-control-sm" placeholder="@T["Reason"]" />
-        </div>
-        <button type="submit" class="btn btn-sm btn-outline-primary w-100">@T["Update presence"]</button>
-    </form>
 
     @if (viewModel.IsSignedIn)
     {

@@ -72,6 +72,8 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         };
 
         return Combine(
+            View("ContactCenterSoftPhonePresence_Header", viewModel)
+                .Location("Detail", "HeaderActions:5"),
             View("ContactCenterSoftPhoneWork_Tab", viewModel)
                 .Location("Detail", "Tabs:10"),
             View("ContactCenterSoftPhoneWork_View", viewModel)

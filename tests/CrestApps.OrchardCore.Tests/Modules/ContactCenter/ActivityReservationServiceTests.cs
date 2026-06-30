@@ -39,6 +39,31 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task ReserveAsync_WhenBreakWasGrantedAfterRoutingDecision_PreservesPendingBreak()
+    {
+        // Arrange
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityReservation());
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var currentAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Break };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(currentAgent);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+        var service = CreateService(reservationManager, queueItemManager, agentManager, activityManager, new Mock<IContactCenterEventPublisher>());
+
+        var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
+        var selectedAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available };
+
+        // Act
+        await service.ReserveAsync(item, selectedAgent, 30, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Reserved, currentAgent.PresenceStatus);
+        Assert.Equal(AgentPresenceStatus.Break, currentAgent.RequestedPresenceStatus);
+    }
+
+    [Fact]
     public async Task ExpireDueAsync_ReleasesPendingReservationsAndReturnsItemToQueue()
     {
         // Arrange
@@ -61,6 +86,30 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(1, count);
         Assert.Equal(ReservationStatus.Expired, reservation.Status);
         Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
+    }
+
+    [Fact]
+    public async Task ExpireDueAsync_WhenBreakIsPending_GrantsBreak()
+    {
+        // Arrange
+        var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem { ItemId = "qi-1", Status = QueueItemStatus.Reserved });
+        var agent = new AgentProfile { ItemId = "a1", RequestedPresenceStatus = AgentPresenceStatus.Break };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+        var service = CreateService(reservationManager, queueItemManager, agentManager, activityManager, new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Break, agent.PresenceStatus);
+        Assert.Null(agent.RequestedPresenceStatus);
     }
 
     [Fact]

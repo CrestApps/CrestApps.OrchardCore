@@ -98,10 +98,17 @@ projected into the interaction.
 
 Agents receive Contact Center work inside CRM-integrated surfaces while the Telephony soft phone
 stays the home for availability and call-adjacent actions. When Contact Center is enabled, it adds a
-**Work** tab to the floating soft phone where agents sign in to allowed queues and outbound campaigns,
-sign out, and set presence/reason codes such as available, break, away, meeting, training, do not
-disturb, and offline. This avoids a separate sign-in navigation page and keeps availability changes
-next to call handling.
+**Work** tab to the floating soft phone where agents sign in to allowed queues and outbound campaigns
+and sign out. Presence lives in a dropdown button on the soft-phone header so agents can change
+availability without switching tabs. It supports available, request break, away, meeting, training, do
+not disturb, after-hours unavailable, and offline states. This avoids a separate sign-in navigation
+page and keeps availability changes next to call handling.
+
+Break requests are approved by the routing system, not by another user. If nothing is currently being
+routed to the agent, **Request break** is granted immediately as `Break`. If a reservation or route is
+already in progress, the request stays pending, the in-flight assignment continues, and `Break` is
+granted automatically when that work is released. Agents in request-break or break states are
+ineligible for new routing decisions.
 
 Future agent desktop surfaces handle activity offers, accept/reject actions, active CRM activity
 context, injected Telephony call controls, interaction history, wrap-up, and required disposition.

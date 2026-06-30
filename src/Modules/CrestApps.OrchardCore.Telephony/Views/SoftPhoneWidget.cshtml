@@ -77,6 +77,10 @@
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
             <span class="telephony-soft-phone__title">@T["Soft Phone"]</span>
+            @if (Model.HeaderActions != null)
+            {
+                @await DisplayAsync(Model.HeaderActions)
+            }
             <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>

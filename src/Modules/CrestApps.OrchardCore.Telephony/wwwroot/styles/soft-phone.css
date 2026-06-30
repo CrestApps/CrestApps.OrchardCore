@@ -48,8 +48,13 @@
 .telephony-soft-phone__title {
   font-weight: 600;
 }
-.telephony-soft-phone__status {
+.telephony-soft-phone__header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.telephony-soft-phone__status {
   font-size: 0.78rem;
   opacity: 0.9;
 }

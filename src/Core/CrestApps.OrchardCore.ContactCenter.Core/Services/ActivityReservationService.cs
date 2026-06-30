@@ -67,6 +67,16 @@ public sealed class ActivityReservationService : IActivityReservationService
         queueItem.AgentId = agent.ItemId;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
+        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
+
+        if (!agent.RequestedPresenceStatus.HasValue &&
+            agent.PresenceStatus is not AgentPresenceStatus.Available and not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp)
+        {
+            agent.RequestedPresenceStatus = agent.PresenceStatus == AgentPresenceStatus.RequestBreak
+                ? AgentPresenceStatus.Break
+                : agent.PresenceStatus;
+        }
+
         agent.PresenceStatus = AgentPresenceStatus.Reserved;
         agent.ActiveReservationId = reservation.ItemId;
         agent.PresenceChangedUtc = now;
@@ -202,7 +212,8 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         if (agent is not null)
         {
-            agent.PresenceStatus = AgentPresenceStatus.Available;
+            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceStatus.Available;
+            agent.RequestedPresenceStatus = null;
             agent.ActiveReservationId = null;
             agent.PresenceChangedUtc = _clock.UtcNow;
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);

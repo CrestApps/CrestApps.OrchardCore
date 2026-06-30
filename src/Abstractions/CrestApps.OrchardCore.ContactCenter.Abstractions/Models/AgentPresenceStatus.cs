@@ -36,6 +36,11 @@ public enum AgentPresenceStatus
     Break,
 
     /// <summary>
+    /// The agent requested a break that will be granted when no assignment is in progress.
+    /// </summary>
+    RequestBreak,
+
+    /// <summary>
     /// The agent is signed in but away from the desk.
     /// </summary>
     Away,

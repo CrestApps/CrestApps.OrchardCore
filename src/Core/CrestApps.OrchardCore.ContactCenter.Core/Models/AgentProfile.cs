@@ -45,6 +45,11 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string PresenceReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the pending presence state that the system grants after in-flight routing completes.
+    /// </summary>
+    public AgentPresenceStatus? RequestedPresenceStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the presence state last changed.
     /// </summary>
     public DateTime? PresenceChangedUtc { get; set; }
