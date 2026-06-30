@@ -534,7 +534,7 @@ public sealed class ActivitiesController : Controller
             // Disposition the activity through the source-neutral path so the configured subject flow runs.
             activity.Subject = subject;
 
-            await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
+            var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
             {
                 Activity = activity,
                 DispositionId = activity.DispositionId,
@@ -543,9 +543,14 @@ public sealed class ActivitiesController : Controller
                 ActorDisplayName = User.Identity?.Name,
             });
 
-            await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
+            if (result.Succeeded)
+            {
+                await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 
-            return RedirectToAction(nameof(Activities));
+                return RedirectToAction(nameof(Activities));
+            }
+
+            await _notifier.ErrorAsync(H["A disposition is required to complete this activity."]);
         }
 
         return View(model);

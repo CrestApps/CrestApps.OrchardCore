@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Moq;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -140,6 +141,36 @@ public sealed class ActivityAssignmentServiceTests
         reservationService.Verify(s => s.ReserveAsync(topItem, skilledAgent, 45, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task AssignNextAsync_WhenLockNotAcquired_ReturnsNullWithoutReserving()
+    {
+        // Arrange
+        var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([topItem]);
+
+        var reservationService = new Mock<IActivityReservationService>();
+
+        var service = CreateService(
+            queueItemManager,
+            new Mock<IAgentProfileManager>(),
+            new Mock<IActivityQueueManager>(),
+            reservationService,
+            CreateDistributedLock(locked: false));
+
+        // Act
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        queueItemManager.Verify(m => m.ListWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        reservationService.Verify(
+            s => s.ReserveAsync(It.IsAny<QueueItem>(), It.IsAny<AgentProfile>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static ActivityAssignmentService CreateService(
         Mock<IQueueItemManager> queueItemManager,
         Mock<IAgentProfileManager> agentManager,
@@ -156,13 +187,34 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IActivityQueueManager> queueManager,
         Mock<IActivityReservationService> reservationService)
     {
+        return CreateService(queueItemManager, agentManager, queueManager, reservationService, CreateDistributedLock(locked: true));
+    }
+
+    private static ActivityAssignmentService CreateService(
+        Mock<IQueueItemManager> queueItemManager,
+        Mock<IAgentProfileManager> agentManager,
+        Mock<IActivityQueueManager> queueManager,
+        Mock<IActivityReservationService> reservationService,
+        Mock<IDistributedLock> distributedLock)
+    {
         return new ActivityAssignmentService(
             queueItemManager.Object,
             agentManager.Object,
             queueManager.Object,
             CreateRoutingService(),
             reservationService.Object,
-            new Mock<IContactCenterEventPublisher>().Object);
+            new Mock<IContactCenterEventPublisher>().Object,
+            distributedLock.Object);
+    }
+
+    private static Mock<IDistributedLock> CreateDistributedLock(bool locked)
+    {
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, locked));
+
+        return distributedLock;
     }
 
     private static ActivityRoutingService CreateRoutingService()

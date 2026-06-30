@@ -99,6 +99,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityReservationService, ActivityReservationService>()
             .AddScoped<IActivityRoutingService, ActivityRoutingService>()
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
@@ -142,6 +143,11 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerProfileStore, DialerProfileStore>()
             .AddScoped<IDialerProfileManager, DialerProfileManager>()
             .AddScoped<IDialerService, DialerService>()
+            .AddScoped<IDialerAttemptService, DialerAttemptService>()
+            .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
+            .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
+            .AddScoped<IDialerStrategy, PowerDialerStrategy>()
+            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
             .AddScoped<IDialerProviderResolver, DialerProviderResolver>();
 
         services

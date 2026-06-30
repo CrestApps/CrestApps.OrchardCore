@@ -224,6 +224,11 @@ public static class ContactCenterConstants
         public const string DialerAttemptCompleted = "DialerAttemptCompleted";
 
         /// <summary>
+        /// Raised when the outbound compliance gate suppresses a dialing attempt.
+        /// </summary>
+        public const string DialSuppressed = "DialSuppressed";
+
+        /// <summary>
         /// Raised when a callback is scheduled.
         /// </summary>
         public const string CallbackScheduled = "CallbackScheduled";

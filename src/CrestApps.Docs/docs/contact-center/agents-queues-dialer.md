@@ -57,27 +57,70 @@ queue as **queue items**; the system pairs the highest-priority, oldest waiting 
 available agent signed in to that queue and creates a short-lived **reservation**.
 
 Routing is strategy-based. The default strategy chain first rejects agents that do not have every
-required queue skill, then scores the remaining candidates by longest idle time. Each assignment
+required queue skill, then rejects agents that are already handling their maximum number of concurrent
+interactions, then scores the remaining candidates by longest idle time. Each assignment
 publishes an auditable routing-decision event that records the queue item, selected agent, candidate
 scores, and reasons, so later supervisor and analytics features can explain why work was offered to
 an agent.
+
+Agent capacity is enforced during candidate selection. Each agent profile defines
+`MaxConcurrentInteractions` (default `1`), and the capacity routing strategy counts the agent's active
+(not ended and not failed) interactions before they can be offered new work, so an agent is never
+offered more concurrent interactions than they are configured to handle.
 
 A reservation locks the activity for one agent and can be accepted, rejected, canceled, or expired.
 The CRM activity moves through `Available → Reserved → Assigned`, mirrored on the queue item and
 agent presence. Expired or canceled reservations return the item to the queue automatically. A
 background task expires stale reservations and assigns waiting work every minute.
 
+Assignment is concurrency-safe. Each queue's assignment runs under a per-queue distributed lock, so
+two nodes — or the reservation-expiry background task running alongside an inbound call — cannot
+double-assign the same item or reserve the same agent twice.
+
 ## Dialer
 
 A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns,
 subjects, batches, dispositions, and contact context still come from Omnichannel. The profile tells
 the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents,
-which dialing mode (`Manual`, `Preview`, `Power`, `Progressive`, `Predictive`) is used, which Contact
-Center voice provider places calls, how pacing works, and how attempts/retries are bounded. Power and
-progressive profiles run automatically each minute: the Contact Center reserves an available agent,
-creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call.
-Manual and preview profiles wait for agent action. Dialer activity batches load **unassigned**
-inventory the dialer reserves later.
+which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and
+how attempts/retries and compliance are bounded. Power and progressive profiles run automatically
+each minute: the Contact Center reserves an available agent, evaluates the compliance gate, creates
+an outbound interaction, and asks the Voice Contact Center Call Router to place the call. Manual and
+preview profiles wait for agent action. Dialer activity batches load **unassigned** inventory the
+dialer reserves later.
+
+### Dialing modes and safety
+
+Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsupported modes are
+withheld rather than falling through to an unsafe default:
+
+| Mode | Behavior |
+| --- | --- |
+| `Manual` | The agent chooses and places the call. No automated cycle runs. |
+| `Preview` | The agent reviews the activity, then accepts or skips. No automated cycle runs. |
+| `Power` | Reserves agents and places a capped number of calls per cycle. **Calls per agent is hard-capped** (`PowerDialerStrategy.MaxCallsPerAgent`) until predictive pacing exists. |
+| `Progressive` | Places one call per available agent as agents become available. |
+| `Predictive` | **Disabled.** The editor hides it, saving it is rejected, and the dialer refuses to run it until answer-rate forecasting and abandonment controls exist. |
+
+### Outbound compliance gate
+
+Before every attempt, `IDialerEligibilityService` runs and records an auditable `DialSuppressed`
+event when an attempt must be blocked. The default gate enforces, in order:
+
+- **Destination present** and the **maximum attempt count** has not been reached.
+- **Retry cool-down** - a previous attempt must be older than `RetryDelayMinutes`.
+- **Do-not-call / communication preferences** - the contact's `DoNotCall` opt-out (when
+  *Respect do-not-call and communication preferences* is enabled).
+- **Calling window** - when *Enforce a calling window* is enabled, the contact is only dialed while
+  their local time (from the contact's time zone, or the profile's default time zone) is within the
+  configured start/end hours.
+- **National do-not-call registries** - any registered `INationalDoNotCallRegistry` (for example the
+  USA FTC or Canada DNCL registries) is scrubbed when *Respect do-not-call* is enabled.
+
+Do-not-call and registry suppressions cancel the activity; calling-window and cool-down suppressions
+release the reservation and leave the activity available for a later cycle. Full calling-window
+calendars, abandonment caps, and answering-machine detection are hardened in a later compliance
+phase.
 
 ## Voice Contact Center Call Router
 

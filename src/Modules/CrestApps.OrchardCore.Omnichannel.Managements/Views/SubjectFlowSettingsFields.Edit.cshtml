@@ -43,6 +43,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RequireDisposition" class="form-check-input" />
+            <label asp-for="RequireDisposition" class="form-check-label">@T["Require a disposition"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, an activity using this subject cannot be completed until a disposition is selected. Applies to both inbound and outbound activities."]</span>
+    </div>
+</div>
+
 <script at="Foot">
 (() => {
     const interactionTypeSelect = document.getElementById('@Html.IdFor(m => m.InteractionType)');

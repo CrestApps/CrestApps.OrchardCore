@@ -65,6 +65,26 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool RespectDoNotCall { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether calls are restricted to the configured calling window.
+    /// </summary>
+    public bool EnforceCallingWindow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first local hour (0-23) at which the contact may be dialed.
+    /// </summary>
+    public int CallingWindowStartHour { get; set; } = 8;
+
+    /// <summary>
+    /// Gets or sets the local hour (1-24), exclusive, after which the contact may no longer be dialed.
+    /// </summary>
+    public int CallingWindowEndHour { get; set; } = 21;
+
+    /// <summary>
+    /// Gets or sets the time zone used to evaluate the calling window when the contact has no time zone of its own.
+    /// </summary>
+    public string CallingTimeZoneId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;

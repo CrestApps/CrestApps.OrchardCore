@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -63,8 +64,13 @@ public class DialerProfileViewModel
     /// <summary>
     /// Gets or sets the number of calls per available agent.
     /// </summary>
-    [Range(1, int.MaxValue)]
+    [Range(1, PowerDialerStrategy.MaxCallsPerAgent)]
     public int CallsPerAgent { get; set; } = 1;
+
+    /// <summary>
+    /// Gets the maximum number of calls per agent allowed for Power dialing.
+    /// </summary>
+    public int MaxCallsPerAgent { get; } = PowerDialerStrategy.MaxCallsPerAgent;
 
     /// <summary>
     /// Gets or sets the maximum number of attempts per activity.
@@ -87,6 +93,28 @@ public class DialerProfileViewModel
     /// Gets or sets a value indicating whether do-not-call and communication preferences are honored.
     /// </summary>
     public bool RespectDoNotCall { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether calls are restricted to the configured calling window.
+    /// </summary>
+    public bool EnforceCallingWindow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first local hour (0-23) at which the contact may be dialed.
+    /// </summary>
+    [Range(0, 23)]
+    public int CallingWindowStartHour { get; set; } = 8;
+
+    /// <summary>
+    /// Gets or sets the local hour (1-24), exclusive, after which the contact may no longer be dialed.
+    /// </summary>
+    [Range(1, 24)]
+    public int CallingWindowEndHour { get; set; } = 21;
+
+    /// <summary>
+    /// Gets or sets the time zone used to evaluate the calling window when the contact has no time zone.
+    /// </summary>
+    public string CallingTimeZoneId { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.

@@ -18,6 +18,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContentManager _contentManager;
     private readonly ISubjectActionExecutor _subjectActionExecutor;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IClock _clock;
 
     /// <summary>
@@ -27,18 +28,21 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     /// <param name="dispositionsCatalog">The dispositions catalog used to resolve the selected disposition.</param>
     /// <param name="contentManager">The content manager used to load the contact for subject actions.</param>
     /// <param name="subjectActionExecutor">The subject action executor that runs the subject flow.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service used to resolve the required-disposition policy.</param>
     /// <param name="clock">The clock used to stamp completion times.</param>
     public DefaultActivityDispositionService(
         IOmnichannelActivityManager activityManager,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IContentManager contentManager,
         ISubjectActionExecutor subjectActionExecutor,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IClock clock)
     {
         _activityManager = activityManager;
         _dispositionsCatalog = dispositionsCatalog;
         _contentManager = contentManager;
         _subjectActionExecutor = subjectActionExecutor;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _clock = clock;
     }
 
@@ -52,6 +56,16 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         if (activity is null)
         {
             return ActivityDispositionResult.Failure("An activity is required to apply a disposition.");
+        }
+
+        var effectiveDispositionId = !string.IsNullOrEmpty(request.DispositionId)
+            ? request.DispositionId
+            : activity.DispositionId;
+
+        if (string.IsNullOrEmpty(effectiveDispositionId) &&
+            await RequiresDispositionAsync(activity, cancellationToken))
+        {
+            return ActivityDispositionResult.Failure("A disposition is required to complete this activity.");
         }
 
         if (!string.IsNullOrEmpty(request.DispositionId))
@@ -77,23 +91,38 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
             ? null
             : await _dispositionsCatalog.FindByIdAsync(activity.DispositionId, cancellationToken);
 
-        ContentItem contact = null;
-
-        if (!string.IsNullOrEmpty(activity.ContactContentItemId))
+        if (disposition is not null)
         {
-            contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+            ContentItem contact = null;
+
+            if (!string.IsNullOrEmpty(activity.ContactContentItemId))
+            {
+                contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+            }
+
+            var executionContext = new SubjectActionExecutionContext
+            {
+                Activity = activity,
+                Contact = contact,
+                Subject = activity.Subject,
+                Disposition = disposition,
+            };
+
+            await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);
         }
 
-        var executionContext = new SubjectActionExecutionContext
-        {
-            Activity = activity,
-            Contact = contact,
-            Subject = activity.Subject,
-            Disposition = disposition,
-        };
-
-        await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);
-
         return ActivityDispositionResult.Success(activity);
+    }
+
+    private async Task<bool> RequiresDispositionAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            return false;
+        }
+
+        var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType, cancellationToken);
+
+        return flowSettings?.RequireDisposition == true;
     }
 }

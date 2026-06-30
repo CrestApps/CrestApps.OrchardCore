@@ -41,6 +41,13 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using
+    /// this subject can be completed. This is the single decision-control policy that applies to both
+    /// inbound and outbound activities, enforced by the activity disposition service.
+    /// </summary>
+    public bool RequireDisposition { get; set; }
+
+    /// <summary>
     /// When the interaction is automated, this will be the initial message to start the conversation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
@@ -100,6 +107,7 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
             InteractionType = InteractionType,
             Channel = Channel,
             ChannelEndpointId = ChannelEndpointId,
+            RequireDisposition = RequireDisposition,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             SubjectGoal = SubjectGoal,
             ProfileId = ProfileId,

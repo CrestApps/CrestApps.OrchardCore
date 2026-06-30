@@ -74,4 +74,17 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray(),
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<int> CountActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        return await Session.Query<Interaction, InteractionIndex>(
+            index => index.AgentId == agentId &&
+                index.Status != InteractionStatus.Ended &&
+                index.Status != InteractionStatus.Failed,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
 }

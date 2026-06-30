@@ -247,6 +247,29 @@ through the single, source-neutral `IActivityDispositionService`. Completing an 
 disposition and completion metadata and then runs the configured Subject Actions, so inbound and
 outbound calls are wrapped up through the same subject workflow.
 
+## Subject Flow is the single decision controller
+
+The decision of "what happens when this work completes" is owned by the **Subject Flow**, and it is the
+same for CRM, inbound, and outbound work — there is no separate wrap-up concept:
+
+- The **Subject** (any content type with the `OmnichannelSubject` stereotype) and its **Subject Flow
+  settings** define what the work is (channel, endpoint, interaction type, campaign, AI configuration).
+- The **Manage Flow** screen defines disposition-driven **Subject Actions** (`(Subject, Disposition) →
+  Finish / Try again / New activity` plus communication-preference updates). This is the decision logic.
+- A **Disposition** is the outcome that selects which Subject Action branch runs.
+- **`IActivityDispositionService.ApplyAsync`** is the one completion path. It applies the disposition,
+  marks the activity `Completed`, and runs the Subject Flow. The disposition can be applied by an agent,
+  AI, or the system — the path is identical, so inbound and outbound complete the same way.
+
+### Require a disposition
+
+A Subject Flow can mark a subject as **requiring a disposition**. When set, an activity using that
+subject cannot be completed until a disposition is selected — enforced centrally in
+`IActivityDispositionService` so the rule holds for every completion path (CRM screen, agent desktop,
+dialer, or automation) for both inbound and outbound work. This replaces the need for a separate
+wrap-up entity: "must disposition" is a property of the subject's decision flow, and after-call agent
+timing/capacity release is handled by the agent desktop and agent presence (see the agent desktop phase).
+
 ## UI extensibility
 
 All Contact Center UI is built with Orchard Core display management: shapes, display drivers,

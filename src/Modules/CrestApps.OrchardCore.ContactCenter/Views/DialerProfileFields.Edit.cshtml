@@ -49,9 +49,9 @@
             <option value="@DialerMode.Preview">@T["Preview"]</option>
             <option value="@DialerMode.Power">@T["Power"]</option>
             <option value="@DialerMode.Progressive">@T["Progressive"]</option>
-            <option value="@DialerMode.Predictive">@T["Predictive"]</option>
         </select>
         <span asp-validation-for="Mode" class="text-danger"></span>
+        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting and abandonment controls are available."]</span>
     </div>
 </div>
 
@@ -71,6 +71,7 @@
     <div class="ocat-limited">
         <input asp-for="CallsPerAgent" class="form-control" />
         <span asp-validation-for="CallsPerAgent" class="text-danger"></span>
+        <span class="hint">@T["Power dialing is capped at {0} calls per agent until predictive pacing is available.", Model.MaxCallsPerAgent]</span>
     </div>
 </div>
 
@@ -104,7 +105,44 @@
             <input asp-for="RespectDoNotCall" class="form-check-input" />
             <label asp-for="RespectDoNotCall" class="form-check-label">@T["Respect do-not-call and communication preferences"]</label>
         </div>
-        <span class="hint dashed">@T["Suppression enforcement is shared with the outbound compliance phase."]</span>
+        <span class="hint dashed">@T["When enabled, contacts that opted out of phone calls and destinations listed on a national do-not-call registry are suppressed before dialing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceCallingWindow">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceCallingWindow" class="form-check-input" />
+            <label asp-for="EnforceCallingWindow" class="form-check-label">@T["Enforce a calling window"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, the contact is only dialed while their local time is within the window below."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="CallingWindowStartHour">
+    <label asp-for="CallingWindowStartHour" class="ocat-label">@T["Calling window start hour"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CallingWindowStartHour" type="number" min="0" max="23" class="form-control" />
+        <span asp-validation-for="CallingWindowStartHour" class="text-danger"></span>
+        <span class="hint">@T["The first local hour (0-23) at which the contact may be dialed."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="CallingWindowEndHour">
+    <label asp-for="CallingWindowEndHour" class="ocat-label">@T["Calling window end hour"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CallingWindowEndHour" type="number" min="1" max="24" class="form-control" />
+        <span asp-validation-for="CallingWindowEndHour" class="text-danger"></span>
+        <span class="hint">@T["The local hour (1-24), exclusive, after which the contact may no longer be dialed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CallingTimeZoneId">
+    <label asp-for="CallingTimeZoneId" class="ocat-label">@T["Default time zone"]</label>
+    <div class="ocat-end">
+        <input asp-for="CallingTimeZoneId" class="form-control" placeholder="UTC" />
+        <span asp-validation-for="CallingTimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["The time zone used to evaluate the calling window when the contact has no time zone of its own."]</span>
     </div>
 </div>
 

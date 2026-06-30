@@ -1,19 +1,27 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IActivityAssignmentService"/>. It pairs the
 /// highest-priority waiting item with the agent who has been available the longest (round robin by idle time).
+/// Assignment for a queue is serialized with a per-queue distributed lock so that two nodes, or the
+/// reservation-expiry background task running alongside an inbound call, cannot double-assign the same
+/// item or agent.
 /// </summary>
 public sealed class ActivityAssignmentService : IActivityAssignmentService
 {
+    private static readonly TimeSpan _assignmentLockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _assignmentLockExpiration = TimeSpan.FromSeconds(30);
+
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityRoutingService _routingService;
     private readonly IActivityReservationService _reservationService;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IDistributedLock _distributedLock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityAssignmentService"/> class.
@@ -24,13 +32,15 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="routingService">The routing service.</param>
     /// <param name="reservationService">The reservation service.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize assignment per queue.</param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         IActivityQueueManager queueManager,
         IActivityRoutingService routingService,
         IActivityReservationService reservationService,
-        IContactCenterEventPublisher publisher)
+        IContactCenterEventPublisher publisher,
+        IDistributedLock distributedLock)
     {
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
@@ -38,6 +48,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _routingService = routingService;
         _reservationService = reservationService;
         _publisher = publisher;
+        _distributedLock = distributedLock;
     }
 
     /// <inheritdoc/>
@@ -45,6 +56,50 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetQueueLockKey(queueId),
+            _assignmentLockTimeout,
+            _assignmentLockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        return await AssignNextCoreAsync(queueId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> AssignQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetQueueLockKey(queueId),
+            _assignmentLockTimeout,
+            _assignmentLockExpiration);
+
+        if (!locked)
+        {
+            return 0;
+        }
+
+        await using var acquiredLock = locker;
+
+        var count = 0;
+
+        while (await AssignNextCoreAsync(queueId, cancellationToken) is not null)
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private async Task<ActivityReservation> AssignNextCoreAsync(string queueId, CancellationToken cancellationToken)
+    {
         var waiting = await _queueItemManager.ListWaitingAsync(queueId, cancellationToken);
         var topItem = waiting.FirstOrDefault();
 
@@ -74,19 +129,6 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             : 30;
 
         return await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<int> AssignQueueAsync(string queueId, CancellationToken cancellationToken = default)
-    {
-        var count = 0;
-
-        while (await AssignNextAsync(queueId, cancellationToken) is not null)
-        {
-            count++;
-        }
-
-        return count;
     }
 
     private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
@@ -123,5 +165,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         interactionEvent.SetData(data);
 
         return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+
+    private static string GetQueueLockKey(string queueId)
+    {
+        return $"ContactCenterQueueAssignment:{queueId}";
     }
 }

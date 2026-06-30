@@ -30,6 +30,11 @@ public class SubjectFlowSettingsViewModel
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using this subject can be completed.
+    /// </summary>
+    public bool RequireDisposition { get; set; }
+
+    /// <summary>
     /// Gets or sets the initial outbound prompt pattern.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }

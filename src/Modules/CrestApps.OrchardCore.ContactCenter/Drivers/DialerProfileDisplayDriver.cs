@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -58,6 +60,10 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             RetryDelayMinutes = profile.RetryDelayMinutes,
             CallerId = profile.CallerId,
             RespectDoNotCall = profile.RespectDoNotCall,
+            EnforceCallingWindow = profile.EnforceCallingWindow,
+            CallingWindowStartHour = profile.CallingWindowStartHour,
+            CallingWindowEndHour = profile.CallingWindowEndHour,
+            CallingTimeZoneId = profile.CallingTimeZoneId,
             Enabled = profile.Enabled,
         };
 
@@ -80,6 +86,10 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
             model.CallerId = viewModel.CallerId;
             model.RespectDoNotCall = viewModel.RespectDoNotCall;
+            model.EnforceCallingWindow = viewModel.EnforceCallingWindow;
+            model.CallingWindowStartHour = viewModel.CallingWindowStartHour;
+            model.CallingWindowEndHour = viewModel.CallingWindowEndHour;
+            model.CallingTimeZoneId = viewModel.CallingTimeZoneId;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -96,6 +106,16 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
         }
 
+        if (model.Mode == DialerMode.Predictive)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."]);
+        }
+
+        if (model.EnforceCallingWindow && model.CallingWindowStartHour == model.CallingWindowEndHour)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CallingWindowEndHour), S["The calling window start and end hours must differ."]);
+        }
+
         profile.Name = model.Name?.Trim();
         profile.Description = model.Description?.Trim();
         profile.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId)
@@ -108,11 +128,17 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.ProviderName = string.IsNullOrWhiteSpace(model.ProviderName)
             ? null
             : model.ProviderName.Trim();
-        profile.CallsPerAgent = model.CallsPerAgent;
+        profile.CallsPerAgent = Math.Clamp(model.CallsPerAgent, 1, PowerDialerStrategy.MaxCallsPerAgent);
         profile.MaxAttempts = model.MaxAttempts;
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.CallerId = model.CallerId?.Trim();
         profile.RespectDoNotCall = model.RespectDoNotCall;
+        profile.EnforceCallingWindow = model.EnforceCallingWindow;
+        profile.CallingWindowStartHour = Math.Clamp(model.CallingWindowStartHour, 0, 23);
+        profile.CallingWindowEndHour = Math.Clamp(model.CallingWindowEndHour, 1, 24);
+        profile.CallingTimeZoneId = string.IsNullOrWhiteSpace(model.CallingTimeZoneId)
+            ? null
+            : model.CallingTimeZoneId.Trim();
         profile.Enabled = model.Enabled;
 
         return await EditAsync(profile, context);

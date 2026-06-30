@@ -43,4 +43,12 @@ public interface IInteractionManager : ICatalogManager<Interaction>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The page of matching interactions.</returns>
     Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the active (not ended and not failed) interactions currently connected to the specified agent.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of active interactions for the agent.</returns>
+    Task<int> CountActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
 }

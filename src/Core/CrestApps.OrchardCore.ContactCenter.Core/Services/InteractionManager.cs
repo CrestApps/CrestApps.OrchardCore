@@ -80,4 +80,10 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
 
         return result;
     }
+
+    /// <inheritdoc/>
+    public Task<int> CountActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        return _store.CountActiveByAgentAsync(agentId, cancellationToken);
+    }
 }
