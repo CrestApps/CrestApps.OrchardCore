@@ -45,7 +45,14 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
             .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
+            .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
+            .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
+
+        services
+            .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
+            .AddDataMigration<ContactCenterEventMetricIndexMigrations>();
 
         services
             .AddScoped<ICallSessionStore, CallSessionStore>()
