@@ -41,4 +41,14 @@ public enum ContactCenterVoiceProviderCapabilities
     /// delivery model is <see cref="VoiceProviderDeliveryModel.ServerSideAcd"/>.
     /// </summary>
     AgentConnect = 1 << 5,
+
+    /// <summary>
+    /// The provider can transfer a live call to another agent, queue, or external destination.
+    /// </summary>
+    CallTransfer = 1 << 6,
+
+    /// <summary>
+    /// The provider can add participants to a live call (conference).
+    /// </summary>
+    Conference = 1 << 7,
 }
