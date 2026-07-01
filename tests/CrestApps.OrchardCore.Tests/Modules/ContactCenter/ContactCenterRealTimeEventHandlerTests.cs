@@ -5,8 +5,11 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -188,6 +191,34 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             (agentManager ?? new Mock<IAgentProfileManager>()).Object,
             (reservationManager ?? new Mock<IActivityReservationManager>()).Object,
             (queueItemStore ?? new Mock<IQueueItemStore>()).Object,
+            MockUserManager().Object,
+            MockDisplayNameProvider().Object,
             clock.Object);
+    }
+
+    private static Mock<IDisplayNameProvider> MockDisplayNameProvider()
+    {
+        var displayNameProvider = new Mock<IDisplayNameProvider>();
+        displayNameProvider
+            .Setup(provider => provider.GetAsync(It.IsAny<IUser>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IUser user, CancellationToken _) => user?.UserName);
+
+        return displayNameProvider;
+    }
+
+    private static Mock<UserManager<IUser>> MockUserManager()
+    {
+        var store = new Mock<IUserStore<IUser>>();
+
+        return new Mock<UserManager<IUser>>(
+            store.Object,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     }
 }

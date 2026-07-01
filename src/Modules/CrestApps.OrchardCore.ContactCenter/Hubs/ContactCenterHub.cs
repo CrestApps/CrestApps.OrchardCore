@@ -1,12 +1,15 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 
@@ -70,8 +73,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 {
                     var sessionService = services.GetRequiredService<IAgentSessionService>();
                     var userName = Context.User?.Identity?.Name;
+                    var displayName = await GetDisplayNameAsync(services, userName);
 
-                    var session = await sessionService.ConnectAsync(userId, Context.ConnectionId, userName, userName, Context.ConnectionAborted);
+                    var session = await sessionService.ConnectAsync(userId, Context.ConnectionId, userName, displayName, Context.ConnectionAborted);
 
                     foreach (var queueId in session.QueueIds)
                     {
@@ -216,5 +220,24 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var authorizationService = services.GetRequiredService<IAuthorizationService>();
 
         return await authorizationService.AuthorizeAsync(httpContext.User, permission);
+    }
+
+    private async Task<string> GetDisplayNameAsync(IServiceProvider services, string fallback)
+    {
+        var userManager = services.GetRequiredService<UserManager<IUser>>();
+        var displayNameProvider = services.GetRequiredService<IDisplayNameProvider>();
+        var user = await userManager.GetUserAsync(Context.User);
+
+        if (user is not null)
+        {
+            var displayName = await displayNameProvider.GetAsync(user, Context.ConnectionAborted);
+
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                return displayName;
+            }
+        }
+
+        return fallback;
     }
 }

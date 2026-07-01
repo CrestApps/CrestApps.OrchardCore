@@ -87,7 +87,6 @@
         var serverOffsetMs = 0;
         var activeSignature = null;
         var offerSignature = null;
-        var activeDrafts = {};
 
         var refs = {
             presence: root.querySelector('[data-cc-presence]'),
@@ -124,12 +123,7 @@
                         render(data);
                     }
                 })
-                .catch(function () {
-                    if (error) {
-                        error.textContent = label('completeFailed', 'The work could not be completed.');
-                        error.hidden = false;
-                    }
-                });
+                .catch(function () { });
         }
 
         function render(data) {
@@ -236,8 +230,6 @@
                 return;
             }
 
-            saveActiveDraft();
-
             activeSignature = signature;
 
             if (!active) {
@@ -251,10 +243,6 @@
             }
 
             var inbound = active.direction === 'Inbound';
-            var dispositions = (state.dispositions || []).map(function (item) {
-                return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</option>';
-            }).join('');
-
             refs.active.innerHTML =
                 '<div class="cc-active">' +
                     '<div class="cc-active__headline">' +
@@ -272,63 +260,11 @@
                         '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' +
                         '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time>0:00</div></div>' +
                     '</div>' +
-                    (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary align-self-start" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') +
-                    '<div class="cc-wrapup">' +
-                        '<label class="form-label">' + escapeHtml(label('disposition', 'Disposition')) + '</label>' +
-                        '<select class="form-select mb-2" data-cc-disposition>' +
-                            '<option value="">' + escapeHtml(label('selectDisposition', 'Select a disposition...')) + '</option>' +
-                            dispositions +
-                        '</select>' +
-                        '<textarea class="form-control mb-2" rows="2" placeholder="' + escapeHtml(label('notes', 'Wrap-up notes (optional)')) + '" data-cc-notes></textarea>' +
-                        '<div class="cc-active__error text-danger small mb-2" data-cc-error hidden></div>' +
-                        '<button type="button" class="btn btn-primary w-100" data-cc-complete><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete & wrap up')) + '</button>' +
+                    '<div class="cc-active__actions">' +
+                        (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') +
+                        (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') +
                     '</div>' +
                 '</div>';
-
-            var completeButton = refs.active.querySelector('[data-cc-complete]');
-
-            if (completeButton) {
-                completeButton.addEventListener('click', function () { complete(active.activityItemId); });
-            }
-
-            restoreActiveDraft(active.interactionId);
-        }
-
-        function saveActiveDraft() {
-            if (!state || !state.activeInteraction || !refs.active) {
-                return;
-            }
-
-            var select = refs.active.querySelector('[data-cc-disposition]');
-            var notes = refs.active.querySelector('[data-cc-notes]');
-
-            if (!select && !notes) {
-                return;
-            }
-
-            activeDrafts[state.activeInteraction.interactionId] = {
-                dispositionId: select ? select.value : '',
-                notes: notes ? notes.value : ''
-            };
-        }
-
-        function restoreActiveDraft(interactionId) {
-            var draft = activeDrafts[interactionId];
-
-            if (!draft || !refs.active) {
-                return;
-            }
-
-            var select = refs.active.querySelector('[data-cc-disposition]');
-            var notes = refs.active.querySelector('[data-cc-notes]');
-
-            if (select) {
-                select.value = draft.dispositionId || '';
-            }
-
-            if (notes) {
-                notes.value = draft.notes || '';
-            }
         }
 
         function renderHistory() {
@@ -440,36 +376,6 @@
             refs.offer.querySelectorAll('button').forEach(function (button) {
                 button.disabled = disabled;
             });
-        }
-
-        function complete(activityId) {
-            var select = refs.active.querySelector('[data-cc-disposition]');
-            var notes = refs.active.querySelector('[data-cc-notes]');
-            var error = refs.active.querySelector('[data-cc-error]');
-
-            post(config.completeUrl, config.antiForgeryToken, {
-                activityId: activityId,
-                dispositionId: select ? select.value : '',
-                notes: notes ? notes.value : ''
-            })
-                .then(function (response) { return response.ok ? response.json() : { succeeded: false }; })
-                .then(function (result) {
-                    if (result && result.succeeded) {
-                        if (state && state.activeInteraction) {
-                            delete activeDrafts[state.activeInteraction.interactionId];
-                        }
-
-                        activeSignature = null;
-
-                        return refresh();
-                    }
-
-                    if (error) {
-                        error.textContent = (result && result.errorMessage) || label('completeFailed', 'The work could not be completed.');
-                        error.hidden = false;
-                    }
-                })
-                .catch(function () { });
         }
 
         function setPresence(status, reason) {

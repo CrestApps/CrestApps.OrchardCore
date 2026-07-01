@@ -52,12 +52,6 @@ public sealed class AgentWorkspaceStateViewModel
     /// </summary>
     public WorkspaceActiveInteractionViewModel ActiveInteraction { get; set; }
 
-    /// <summary>
-    /// Gets or sets the dispositions the agent can apply to complete the active work.
-    /// </summary>
-    public IList<WorkspaceLookupViewModel> Dispositions { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the agent's most recent interactions.
     /// </summary>
     public IList<WorkspaceHistoryEntryViewModel> RecentHistory { get; set; } = [];

@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
@@ -8,13 +7,17 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
@@ -37,10 +40,11 @@ public sealed class AgentWorkspaceController : Controller
     private readonly IQueueItemManager _queueItemManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
-    private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly IContentManager _contentManager;
     private readonly IActivityDispositionService _dispositionService;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
     private readonly HubRouteManager _hubRouteManager;
     private readonly IClock _clock;
 
@@ -55,10 +59,11 @@ public sealed class AgentWorkspaceController : Controller
     /// <param name="queueItemManager">The queue item manager used to compute live queue depth.</param>
     /// <param name="interactionManager">The interaction manager used to resolve active and recent work.</param>
     /// <param name="activityManager">The CRM activity manager used to resolve activity context.</param>
-    /// <param name="dispositionManager">The disposition catalog used to populate the wrap-up choices.</param>
     /// <param name="contentManager">The content manager used to resolve contact display names.</param>
     /// <param name="dispositionService">The source-neutral activity disposition service used to complete work.</param>
     /// <param name="reasonCodeManager">The agent state reason code manager used to build presence options.</param>
+    /// <param name="userManager">The user manager used to resolve the current Orchard user.</param>
+    /// <param name="displayNameProvider">The display name provider used to render the agent's full name.</param>
     /// <param name="hubRouteManager">The hub route manager used to resolve the real-time hub URL.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public AgentWorkspaceController(
@@ -70,10 +75,11 @@ public sealed class AgentWorkspaceController : Controller
         IQueueItemManager queueItemManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
-        INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IContentManager contentManager,
         IActivityDispositionService dispositionService,
         IAgentStateReasonCodeManager reasonCodeManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         HubRouteManager hubRouteManager,
         IClock clock)
     {
@@ -85,10 +91,11 @@ public sealed class AgentWorkspaceController : Controller
         _queueItemManager = queueItemManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
-        _dispositionManager = dispositionManager;
         _contentManager = contentManager;
         _dispositionService = dispositionService;
         _reasonCodeManager = reasonCodeManager;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         _hubRouteManager = hubRouteManager;
         _clock = clock;
     }
@@ -106,15 +113,15 @@ public sealed class AgentWorkspaceController : Controller
         }
 
         var reasonCodes = await _reasonCodeManager.ListEnabledAsync();
+        var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
 
         var viewModel = new AgentWorkspaceIndexViewModel
         {
-            DisplayName = User.Identity?.Name,
+            DisplayName = displayName,
             CanMonitor = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.MonitorContactCenter),
             HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
             StateUrl = Url.Action(nameof(State)),
             SetPresenceUrl = Url.Action(nameof(SetPresence)),
-            CompleteUrl = Url.Action(nameof(Complete)),
             AcceptOfferUrl = Url.RouteUrl("ContactCenterVoiceAcceptOffer"),
             DeclineOfferUrl = Url.RouteUrl("ContactCenterVoiceDeclineOffer"),
             SupervisorDashboardUrl = Url.Action(nameof(SupervisorDashboardController.Index), "SupervisorDashboard"),
@@ -143,11 +150,12 @@ public sealed class AgentWorkspaceController : Controller
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var now = _clock.UtcNow;
+        var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
 
         var model = new AgentWorkspaceStateViewModel
         {
             UserId = userId,
-            DisplayName = User.Identity?.Name,
+            DisplayName = displayName,
             ServerTimeUtc = now,
         };
 
@@ -160,7 +168,7 @@ public sealed class AgentWorkspaceController : Controller
 
         model.AgentId = profile.ItemId;
         model.HasProfile = true;
-        model.DisplayName = string.IsNullOrEmpty(profile.DisplayName) ? model.DisplayName : profile.DisplayName;
+        model.DisplayName = await GetUserDisplayNameAsync(profile.UserId, profile.DisplayName ?? model.DisplayName, HttpContext.RequestAborted);
         model.IsSignedIn = profile.QueueIds.Count > 0 || profile.CampaignIds.Count > 0;
         model.Presence = new WorkspacePresenceViewModel
         {
@@ -190,7 +198,6 @@ public sealed class AgentWorkspaceController : Controller
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, HttpContext.RequestAborted);
         model.ActiveInteraction = await BuildActiveInteractionAsync(profile, HttpContext.RequestAborted);
-        model.Dispositions = await BuildDispositionsAsync(HttpContext.RequestAborted);
         model.RecentHistory = await BuildRecentHistoryAsync(profile.ItemId, HttpContext.RequestAborted);
 
         return Json(model);
@@ -271,7 +278,7 @@ public sealed class AgentWorkspaceController : Controller
             Notes = notes,
             Source = ActivityDispositionSource.Agent,
             ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorDisplayName = User.Identity?.Name,
+            ActorDisplayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted),
         }, HttpContext.RequestAborted);
 
         if (result.Succeeded)
@@ -345,6 +352,7 @@ public sealed class AgentWorkspaceController : Controller
             CustomerAddress = interaction.CustomerAddress,
             QueueName = queue?.Name,
             ContactUrl = BuildContactUrl(activity),
+            CompleteUrl = await BuildCompleteActivityUrlAsync(activity),
             StartedUtc = interaction.StartedUtc,
             AnsweredUtc = interaction.AnsweredUtc,
         };
@@ -398,17 +406,6 @@ public sealed class AgentWorkspaceController : Controller
         return null;
     }
 
-    private async Task<IList<WorkspaceLookupViewModel>> BuildDispositionsAsync(CancellationToken cancellationToken)
-    {
-        var page = await _dispositionManager.PageAsync(1, 200, new QueryContext(), cancellationToken);
-
-        return [.. page.Entries.Select(disposition => new WorkspaceLookupViewModel
-        {
-            Id = disposition.ItemId,
-            Name = disposition.Name,
-        })];
-    }
-
     private async Task<IList<WorkspaceHistoryEntryViewModel>> BuildRecentHistoryAsync(string agentId, CancellationToken cancellationToken)
     {
         var interactions = await _interactionManager.ListRecentByAgentAsync(agentId, _recentHistoryCount, cancellationToken);
@@ -447,5 +444,63 @@ public sealed class AgentWorkspaceController : Controller
         }
 
         return Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = activity.ContactContentItemId });
+    }
+
+    private async Task<string> BuildCompleteActivityUrlAsync(OmnichannelActivity activity)
+    {
+        if (activity is null ||
+            string.IsNullOrEmpty(activity.ItemId) ||
+            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged ||
+            !await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
+        {
+            return null;
+        }
+
+        return Url.Action("Complete", "Activities", new { area = OmnichannelConstants.Features.Managements, id = activity.ItemId });
+    }
+
+    private async Task<string> GetCurrentUserDisplayNameAsync(CancellationToken cancellationToken)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user is not null)
+        {
+            return await GetUserDisplayNameAsync(user, User.Identity?.Name, cancellationToken);
+        }
+
+        return User.Identity?.Name;
+    }
+
+    private async Task<string> GetUserDisplayNameAsync(
+        string userId,
+        string fallback,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return fallback;
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+
+        return await GetUserDisplayNameAsync(user, fallback, cancellationToken);
+    }
+
+    private async Task<string> GetUserDisplayNameAsync(
+        IUser user,
+        string fallback,
+        CancellationToken cancellationToken)
+    {
+        if (user is not null)
+        {
+            var displayName = await _displayNameProvider.GetAsync(user, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                return displayName;
+            }
+        }
+
+        return fallback;
     }
 }

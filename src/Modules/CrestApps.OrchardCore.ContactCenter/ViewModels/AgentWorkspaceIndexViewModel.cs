@@ -42,12 +42,6 @@ public sealed class AgentWorkspaceIndexViewModel
     /// </summary>
     public string DeclineOfferUrl { get; set; }
 
-    /// <summary>
-    /// Gets or sets the URL that completes the active activity with a disposition.
-    /// </summary>
-    public string CompleteUrl { get; set; }
-
-    /// <summary>
     /// Gets or sets the URL of the supervisor dashboard, when the current user may open it.
     /// </summary>
     public string SupervisorDashboardUrl { get; set; }

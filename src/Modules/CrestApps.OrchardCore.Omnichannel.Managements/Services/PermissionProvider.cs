@@ -10,6 +10,7 @@ internal sealed class PermissionProvider : IPermissionProvider
     [
         OmnichannelConstants.Permissions.ListActivities,
         OmnichannelConstants.Permissions.ListContactActivities,
+        OmnichannelConstants.Permissions.CompleteOwnActivity,
     ];
 
     private readonly IEnumerable<Permission> _allPermissions =
@@ -17,6 +18,7 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ListActivities,
         OmnichannelConstants.Permissions.ListContactActivities,
         OmnichannelConstants.Permissions.CompleteActivity,
+        OmnichannelConstants.Permissions.CompleteOwnActivity,
         OmnichannelConstants.Permissions.ManageActivities,
         OmnichannelConstants.Permissions.ManageDispositions,
         OmnichannelConstants.Permissions.ManageCampaigns,

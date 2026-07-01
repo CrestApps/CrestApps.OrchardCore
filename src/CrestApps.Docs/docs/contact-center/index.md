@@ -177,10 +177,10 @@ ineligible for new routing decisions.
 
 The [Agent Workspace](agent-desktop.md) is the full-screen desktop where agents spend the shift: it
 handles activity offers, accept/reject actions, active CRM activity context, interaction history, and
-wrap-up disposition. When an agent accepts a ringing offer, the workspace (and the soft-phone incoming
-modal) drive a single server-side command that accepts the reservation and connects the media before
-the agent's device answers, so the same live call is never answered while it is being re-offered to
-another agent.
+completion handoff to the shared Omnichannel activity completion page. When an agent accepts a ringing
+offer, the workspace (and the soft-phone incoming modal) drive a single server-side command that accepts
+the reservation and connects the media before the agent's device answers, so the same live call is never
+answered while it is being re-offered to another agent.
 
 Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive

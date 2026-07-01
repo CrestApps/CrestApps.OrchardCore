@@ -3,7 +3,10 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
@@ -18,6 +21,8 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemStore _queueItemStore;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
 
     /// <summary>
@@ -27,18 +32,24 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     /// <param name="agentManager">The agent profile manager used to resolve agents.</param>
     /// <param name="reservationManager">The reservation manager used to resolve offers.</param>
     /// <param name="queueItemStore">The queue item store used to compute queue depth.</param>
+    /// <param name="userManager">The user manager used to resolve Orchard users.</param>
+    /// <param name="displayNameProvider">The display name provider used to render agent full names.</param>
     /// <param name="clock">The clock used to stamp notifications.</param>
     public ContactCenterRealTimeEventHandler(
         IContactCenterRealTimeNotifier notifier,
         IAgentProfileManager agentManager,
         IActivityReservationManager reservationManager,
         IQueueItemStore queueItemStore,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         IClock clock)
     {
         _notifier = notifier;
         _agentManager = agentManager;
         _reservationManager = reservationManager;
         _queueItemStore = queueItemStore;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         _clock = clock;
     }
 
@@ -92,7 +103,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         {
             UserId = profile.UserId,
             AgentId = profile.ItemId,
-            DisplayName = profile.DisplayName ?? profile.UserName,
+            DisplayName = await GetAgentDisplayNameAsync(profile, cancellationToken),
             Status = profile.PresenceStatus.ToString(),
             Reason = profile.PresenceReason,
             QueueIds = [.. profile.QueueIds],
@@ -124,6 +135,26 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         }, cancellationToken);
 
         await BroadcastQueueStatsAsync(reservation.QueueId, cancellationToken);
+    }
+
+    private async Task<string> GetAgentDisplayNameAsync(AgentProfile agent, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(agent.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user, cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
+        }
+
+        return string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName;
     }
 
     private async Task BroadcastOfferRevokedAsync(InteractionEvent interactionEvent, AgentOfferRevokedReason reason, CancellationToken cancellationToken)

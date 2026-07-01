@@ -17,6 +17,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -163,6 +164,7 @@ public sealed class Startup : StartupBase
         });
 
         services.AddPermissionProvider<PermissionProvider>();
+        services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
         services.AddNavigationProvider<AdminMenu>();
 
         services

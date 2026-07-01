@@ -2,14 +2,18 @@ using System.Security.Claims;
 using CrestApps.Core.Models;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
@@ -29,6 +33,8 @@ public sealed class SupervisorDashboardController : Controller
     private readonly IAgentProfileManager _agentManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterMonitoringService _monitoringService;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
     private readonly HubRouteManager _hubRouteManager;
     private readonly IClock _clock;
 
@@ -41,6 +47,8 @@ public sealed class SupervisorDashboardController : Controller
     /// <param name="agentManager">The agent profile manager used to build the agent board.</param>
     /// <param name="interactionManager">The interaction manager used to count active work per agent.</param>
     /// <param name="monitoringServices">The optional services used to start audited supervisor live-monitoring engagements.</param>
+    /// <param name="userManager">The user manager used to resolve Orchard users.</param>
+    /// <param name="displayNameProvider">The display name provider used to render agent full names.</param>
     /// <param name="hubRouteManager">The hub route manager used to resolve the real-time hub URL.</param>
     /// <param name="clock">The clock used to compute wait times.</param>
     public SupervisorDashboardController(
@@ -50,6 +58,8 @@ public sealed class SupervisorDashboardController : Controller
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         HubRouteManager hubRouteManager,
         IClock clock)
     {
@@ -59,6 +69,8 @@ public sealed class SupervisorDashboardController : Controller
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _monitoringService = monitoringServices.FirstOrDefault();
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         _hubRouteManager = hubRouteManager;
         _clock = clock;
     }
@@ -147,7 +159,7 @@ public sealed class SupervisorDashboardController : Controller
             {
                 AgentId = agent.ItemId,
                 UserId = agent.UserId,
-                DisplayName = string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName,
+                DisplayName = await GetAgentDisplayNameAsync(agent),
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
@@ -204,5 +216,25 @@ public sealed class SupervisorDashboardController : Controller
             result.Succeeded,
             ErrorMessage = result.Reason,
         });
+    }
+
+    private async Task<string> GetAgentDisplayNameAsync(AgentProfile agent)
+    {
+        if (!string.IsNullOrEmpty(agent.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user, HttpContext.RequestAborted);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
+        }
+
+        return string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName;
     }
 }

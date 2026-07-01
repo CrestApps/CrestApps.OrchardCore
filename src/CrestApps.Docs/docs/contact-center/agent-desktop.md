@@ -151,7 +151,7 @@ device controls live.
 2. Sign in to the queues and campaigns you are staffed for.
 3. Set presence to **Available** when ready, or choose a reason code when not ready.
 4. Accept or decline offers from the ringing card; use the soft phone for media controls.
-5. End the conversation, choose the disposition, add notes when needed, and click **Complete & wrap up**.
+5. End the conversation, open **Complete activity**, review/update the CRM context, choose the disposition, add notes when needed, and submit.
 6. Use **Recent activity** to verify your last outcomes before taking the next offer.
 
 ### 1. Sign in and set your presence
@@ -187,24 +187,28 @@ Once you accept, the **active interaction** panel shows:
 - The **customer**, with a link to open the full CRM contact record (customer 360).
 - The **direction** (inbound or outbound), the current **call status**, and a **live talk timer**.
 - The **queue** the work came from.
+- A **Complete activity** link that opens the same Omnichannel CRM completion page used by manual
+  activities.
 
 Use the soft phone for hold, mute, transfer, and hang-up. The workspace reflects the call state in real
 time.
 
-### 4. Wrap up with a disposition
+### 4. Complete the activity in the CRM
 
-When the conversation ends, capture the outcome in the **wrap-up** section of the active panel:
+When the conversation ends, click **Complete activity** in the active panel. This opens the shared
+Omnichannel completion page for the assigned activity, so contact-center work follows the same CRM
+experience as manual activities:
 
-1. Choose a **disposition** from the list defined by the activity's subject flow.
-2. Optionally add **notes**.
-3. Click **Complete & wrap up**.
+1. Review the customer/contact context and open the customer record when details need correction.
+2. Review activity details such as campaign, channel, urgency, schedule, instructions, and assignee.
+3. Update the subject details captured by the activity's subject content type.
+4. Choose a **disposition** from the list defined by the activity's subject flow.
+5. Add notes when needed and submit the completion form.
 
 Completing routes through the shared disposition path, which applies the disposition, marks the activity
 completed, and runs the subject flow's follow-up actions - the same path used everywhere in the CRM, so
 inbound, outbound, and manual work all behave consistently. If the subject flow **requires** a
-disposition, completion is blocked until you pick one and the workspace shows why.
-
-Your in-progress disposition and notes are never lost when the screen refreshes for a live update.
+disposition, completion is blocked until you pick one and the completion page shows why.
 
 ### 5. Review recent activity
 

@@ -47,6 +47,12 @@ public sealed class WorkspaceActiveInteractionViewModel
     public string ContactUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the admin URL used to complete the linked CRM activity through the shared
+    /// Omnichannel completion experience.
+    /// </summary>
+    public string CompleteUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time work on the interaction started.
     /// </summary>
     public DateTime? StartedUtc { get; set; }

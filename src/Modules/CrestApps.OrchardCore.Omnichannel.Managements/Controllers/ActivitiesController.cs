@@ -510,7 +510,8 @@ public sealed class ActivitiesController : Controller
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
-        if (activity is null || activity.Status != ActivityStatus.NotStated)
+        if (activity is null ||
+            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
         {
             return NotFound();
         }
