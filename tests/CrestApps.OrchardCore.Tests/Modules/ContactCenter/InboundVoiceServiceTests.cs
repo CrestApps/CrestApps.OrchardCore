@@ -215,6 +215,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
 
+        public Mock<IEntryPointResolver> EntryPointResolver { get; } = new();
+
         public void SetupNoContext()
         {
             ChannelEndpointManager
@@ -257,6 +259,7 @@ public sealed class InboundVoiceServiceTests
                 ContactLookup.Object,
                 IncomingCallDispatcher.Object,
                 VoiceProviderResolver.Object,
+                EntryPointResolver.Object,
                 clock.Object);
         }
     }

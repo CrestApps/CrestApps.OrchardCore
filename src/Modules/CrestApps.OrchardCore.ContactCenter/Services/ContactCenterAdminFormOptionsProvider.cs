@@ -166,6 +166,13 @@ public sealed class ContactCenterAdminFormOptionsProvider
         model.ProviderOptions = GetVoiceProviderOptions(model.ProviderName);
     }
 
+    internal async Task PopulateEntryPointEditorAsync(EntryPointViewModel model)
+    {
+        model.TargetQueueOptions = await GetQueueOptionsAsync(model.TargetQueueId);
+        model.OverflowQueueOptions = await GetQueueOptionsAsync(model.OverflowQueueId);
+        model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);
+    }
+
     private static HashSet<string> CreateSelectedSet(IEnumerable<string> values, StringComparer comparer)
     {
         return values is null

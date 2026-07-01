@@ -34,6 +34,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IInboundContactLookup _contactLookup;
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly IEntryPointResolver _entryPointResolver;
     private readonly IClock _clock;
 
     /// <summary>
@@ -52,6 +53,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
+    /// <param name="entryPointResolver">The entry point resolver used to route inbound calls by dialed number.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -67,6 +69,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IInboundContactLookup contactLookup,
         IIncomingCallDispatcher incomingCallDispatcher,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        IEntryPointResolver entryPointResolver,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -82,6 +85,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _contactLookup = contactLookup;
         _incomingCallDispatcher = incomingCallDispatcher;
         _voiceProviderResolver = voiceProviderResolver;
+        _entryPointResolver = entryPointResolver;
         _clock = clock;
     }
 
@@ -156,10 +160,23 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemId, now);
         result.ActivityItemId = activity.ItemId;
 
-        var queue = await ResolveQueueAsync(endpoint, cancellationToken);
+        var plan = await _entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
+
+        var queue = plan is not null && !string.IsNullOrEmpty(plan.TargetQueueId)
+            ? await _queueManager.FindByIdAsync(plan.TargetQueueId, cancellationToken)
+            : await ResolveQueueAsync(endpoint, cancellationToken);
 
         var interaction = await CreateInteractionAsync(inboundEvent, activity, queue, fromAddress, serviceAddress);
         result.InteractionId = interaction.ItemId;
+
+        if (plan is not null && !plan.ShouldQueue)
+        {
+            result.Reason = plan.ClosedAction == EntryPointClosedAction.Voicemail
+                ? "The entry point is closed; the caller was routed to voicemail."
+                : "The entry point is closed; the call was rejected.";
+
+            return result;
+        }
 
         if (queue is null)
         {
@@ -170,7 +187,9 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         result.QueueId = queue.ItemId;
 
-        await _queueService.EnqueueAsync(activity.ItemId, queue.ItemId, priority: null, cancellationToken);
+        var priority = plan is not null ? plan.Priority : (InteractionPriority?)null;
+
+        await _queueService.EnqueueAsync(activity.ItemId, queue.ItemId, priority, cancellationToken);
 
         var agentUserId = await OfferNextAsync(queue.ItemId, cancellationToken);
 

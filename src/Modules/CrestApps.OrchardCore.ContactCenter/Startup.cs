@@ -240,10 +240,21 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
+            .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
+            .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
+
+        services
+            .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
+            .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
+            .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
     }
 }
 
