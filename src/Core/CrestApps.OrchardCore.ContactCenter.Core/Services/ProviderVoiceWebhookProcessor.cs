@@ -43,7 +43,7 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
 
         if (!adapter.ValidateSignature(request))
         {
-            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because the signature failed validation.", request.Provider);
+            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because the signature failed validation.", adapter.TechnicalName);
 
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.InvalidSignature };
         }
@@ -52,7 +52,7 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
 
         if (events.Any(providerEvent => string.IsNullOrEmpty(providerEvent.IdempotencyKey)))
         {
-            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because a parsed event was missing an idempotency key.", request.Provider);
+            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because a parsed event was missing an idempotency key.", adapter.TechnicalName);
 
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.MissingIdempotencyKey };
         }
