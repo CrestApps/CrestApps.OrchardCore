@@ -473,6 +473,10 @@
 }
 
 .cc-agent__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
     min-width: 0;
     flex: 1 1 auto;
 }
@@ -485,8 +489,11 @@
 }
 
 .cc-agent__state {
+    display: inline-flex;
+    max-width: 100%;
     font-size: 0.78rem;
-    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1.2;
+    white-space: normal;
 }
 
 .cc-badge-count {

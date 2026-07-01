@@ -160,7 +160,7 @@
                     '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' +
                     '<span class="cc-agent__body">' +
                         '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' +
-                        '<span class="cc-agent__state">' + escapeHtml(detail) + '</span>' +
+                        '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
                     actions +
