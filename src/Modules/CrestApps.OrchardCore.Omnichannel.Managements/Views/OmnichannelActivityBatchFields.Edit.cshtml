@@ -243,7 +243,7 @@
         <div class="ocat-wrapper">
             <label asp-for="TimeZoneIds" class="ocat-label">@T["Time zones"]</label>
             <div class="ocat-end">
-                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-outline-secondary" title="@T["Any time zone"]">
+                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" title="@T["Any time zone"]">
                 </select>
                 <span class="hint">@T["Optionally, only include contacts in the selected time zones."]</span>
             </div>

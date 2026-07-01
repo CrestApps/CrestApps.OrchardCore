@@ -31,7 +31,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="TargetQueueId">
     <label asp-for="TargetQueueId" class="ocat-label">@T["Target queue"]</label>
     <div class="ocat-end">
-        <select asp-for="TargetQueueId" asp-items="Model.TargetQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" data-style="btn-outline-secondary" title="@T["No queue"]">
+        <select asp-for="TargetQueueId" asp-items="Model.TargetQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No queue"]">
             <option value="">@T["No queue"]</option>
         </select>
         <span asp-validation-for="TargetQueueId" class="text-danger"></span>
@@ -55,7 +55,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
     <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
     <div class="ocat-end">
-        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Always open"]">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" title="@T["Always open"]">
             <option value="">@T["Always open"]</option>
         </select>
         <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
@@ -80,7 +80,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
     <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
     <div class="ocat-end">
-        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" data-style="btn-outline-secondary" title="@T["No overflow"]">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No overflow"]">
             <option value="">@T["No overflow"]</option>
         </select>
         <span asp-validation-for="OverflowQueueId" class="text-danger"></span>

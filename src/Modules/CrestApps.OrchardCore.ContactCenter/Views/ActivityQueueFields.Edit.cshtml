@@ -85,7 +85,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
     <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
     <div class="ocat-end">
-        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" data-style="btn-outline-secondary" title="@T["No required skills"]"></select>
+        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
         <span asp-validation-for="RequiredSkills" class="text-danger"></span>
         <span class="hint">@T["Agents must have every selected skill to receive work from this queue."]</span>
     </div>
@@ -94,7 +94,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
     <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound channel endpoint"]</label>
     <div class="ocat-end">
-        <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Default inbound queue"]">
+        <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" data-width="100%" title="@T["Default inbound queue"]">
             <option value="">@T["Default inbound queue"]</option>
         </select>
         <span asp-validation-for="InboundChannelEndpointId" class="text-danger"></span>
@@ -105,7 +105,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
     <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
     <div class="ocat-end">
-        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Always open"]">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" title="@T["Always open"]">
             <option value="">@T["Always open"]</option>
         </select>
         <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
@@ -128,7 +128,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
     <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
     <div class="ocat-end">
-        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" data-style="btn-outline-secondary" title="@T["No overflow"]">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No overflow"]">
             <option value="">@T["No overflow"]</option>
         </select>
         <span asp-validation-for="OverflowQueueId" class="text-danger"></span>

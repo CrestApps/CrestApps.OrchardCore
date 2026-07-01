@@ -22,7 +22,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="CampaignId">
     <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
     <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.CampaignOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a campaign"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Select a campaign"]">
+        <select asp-for="CampaignId" asp-items="Model.CampaignOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a campaign"]" data-width="100%" title="@T["Select a campaign"]">
             <option value="">@T["Select a campaign"]</option>
         </select>
         <span asp-validation-for="CampaignId" class="text-danger"></span>
@@ -33,7 +33,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="QueueId">
     <label asp-for="QueueId" class="ocat-label">@T["Queue"]</label>
     <div class="ocat-end">
-        <select asp-for="QueueId" asp-items="Model.QueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Select a queue"]">
+        <select asp-for="QueueId" asp-items="Model.QueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["Select a queue"]">
             <option value="">@T["Select a queue"]</option>
         </select>
         <span asp-validation-for="QueueId" class="text-danger"></span>
@@ -58,7 +58,7 @@
 <div class="ocat-wrapper" asp-validation-class-for="ProviderName">
     <label asp-for="ProviderName" class="ocat-label">@T["Voice call provider"]</label>
     <div class="ocat-end">
-        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a voice call provider"]" data-width="100%" data-style="btn-outline-secondary" title="@T["Default provider"]">
+        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a voice call provider"]" data-width="100%" title="@T["Default provider"]">
             <option value="">@T["Default provider"]</option>
         </select>
         <span asp-validation-for="ProviderName" class="text-danger"></span>

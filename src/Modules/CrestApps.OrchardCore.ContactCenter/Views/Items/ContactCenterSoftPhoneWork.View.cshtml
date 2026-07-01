@@ -35,7 +35,7 @@
 
             <div class="mb-2">
                 <label class="form-label small mb-1">@T["Queues"]</label>
-                <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" data-style="btn-outline-secondary" title="@T["Select queues"]">
+                <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" title="@T["Select queues"]">
                     @foreach (var queue in viewModel.AvailableQueues)
                     {
                         <option value="@queue.ItemId" selected="@viewModel.SelectedQueueIds.Contains(queue.ItemId)">@queue.Name</option>
@@ -45,7 +45,7 @@
 
             <div class="mb-2">
                 <label class="form-label small mb-1">@T["Campaigns"]</label>
-                <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" data-style="btn-outline-secondary" title="@T["Any campaign"]">
+                <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Any campaign"]">
                     @foreach (var option in viewModel.CampaignOptions)
                     {
                         <option value="@option.Value" selected="@option.Selected" disabled="@option.Disabled">@option.Text</option>
