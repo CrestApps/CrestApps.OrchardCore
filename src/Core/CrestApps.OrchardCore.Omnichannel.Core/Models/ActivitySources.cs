@@ -11,6 +11,11 @@ public static class ActivitySources
     public const string Manual = "Manual";
 
     /// <summary>
+    /// The activity is driven by AI automation.
+    /// </summary>
+    public const string Automatic = "Automatic";
+
+    /// <summary>
     /// The activity was loaded for a dialer and is assigned dynamically later.
     /// </summary>
     public const string Dialer = "Dialer";

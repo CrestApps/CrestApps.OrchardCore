@@ -207,13 +207,20 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Title is required."]);
         }
 
+        SubjectFlowSettings flowSettings = null;
+
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
         }
-        else if (await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
+        else
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activity batches can load activities."]);
+            flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+
+            if (flowSettings is null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activity batches can load activities."]);
+            }
         }
 
         if (string.IsNullOrEmpty(model.ContactContentType))
@@ -224,6 +231,18 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         if ((sourceEntry?.RequiresUserAssignment ?? true) && (model.UserIds is null || model.UserIds.Length == 0))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserIds), S["At least one user is required."]);
+        }
+
+        if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
+            flowSettings?.InteractionType != ActivityInteractionType.Automated)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["The Automatic source requires a subject flow with the Automated interaction type."]);
+        }
+
+        if (flowSettings?.InteractionType == ActivityInteractionType.Automated &&
+            !string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Automated subject flows must be loaded with the Automatic source."]);
         }
 
         if (model.ScheduleAt is null)

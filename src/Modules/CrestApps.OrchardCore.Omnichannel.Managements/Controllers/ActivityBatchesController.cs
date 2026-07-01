@@ -52,7 +52,6 @@ public sealed class ActivityBatchesController : Controller
     private readonly IDisplayManager<OmnichannelActivityBatch> _batchDisplayDriver;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
-    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IHtmlLocalizer H;
@@ -67,7 +66,6 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="batchDisplayManager">The batch display manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -78,7 +76,6 @@ public sealed class ActivityBatchesController : Controller
         IDisplayManager<OmnichannelActivityBatch> batchDisplayManager,
         IClock clock,
         INotifier notifier,
-        ISubjectFlowSettingsService subjectFlowSettingsService,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer)
@@ -89,7 +86,6 @@ public sealed class ActivityBatchesController : Controller
         _batchDisplayDriver = batchDisplayManager;
         _clock = clock;
         _notifier = notifier;
-        _subjectFlowSettingsService = subjectFlowSettingsService;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -716,6 +712,13 @@ public sealed class ActivityBatchesController : Controller
                         activity.ContactContentType = batch.ContactContentType;
                         activity.SubjectContentType = batch.SubjectContentType;
                         activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, activity.Channel);
+
+                        if (activity.InteractionType == ActivityInteractionType.Automated &&
+                            string.IsNullOrWhiteSpace(activity.PreferredDestination))
+                        {
+                            continue;
+                        }
+
                         activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
                         activity.CampaignId = flowSettings.CampaignId;
                         activity.ScheduledUtc = scheduledUtc;
@@ -736,9 +739,9 @@ public sealed class ActivityBatchesController : Controller
                         activity.CreatedById = loaderId;
                         activity.CreatedByUsername = loaderUserName;
                         activity.UrgencyLevel = batch.UrgencyLevel;
-                        activity.Status = user is null
-                            ? ActivityStatus.Scheduled
-                            : ActivityStatus.NotStated;
+                        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(
+                            activity.InteractionType,
+                            user is not null);
 
                         batch.TotalLoaded++;
 

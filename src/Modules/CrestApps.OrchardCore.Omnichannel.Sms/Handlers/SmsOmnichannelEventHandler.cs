@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
@@ -18,6 +19,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
 using OrchardCore.Modules;
@@ -34,9 +36,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _aICompletionService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
+    private readonly IAIProfileManager _profileManager;
     private readonly ITemplateService _aiTemplateService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
-    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly IContentManager _contentManager;
+    private readonly IClock _clock;
     private readonly ISession _session;
 
     private readonly ISmsService _smsService;
@@ -54,9 +60,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="promptStore">The prompt store.</param>
     /// <param name="aICompletionService">The AI completion service.</param>
     /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="completionContextBuilder">The AI completion context builder.</param>
+    /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="aiTemplateService">The ai template service.</param>
     /// <param name="channelEndpointsManager">The channel endpoints manager.</param>
-    /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="session">The session.</param>
     /// <param name="smsService">The sms service.</param>
     /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
@@ -68,9 +78,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIChatSessionPromptStore promptStore,
         IAICompletionService aICompletionService,
         IAIDeploymentManager deploymentManager,
+        IAICompletionContextBuilder completionContextBuilder,
+        IAIProfileManager profileManager,
         ITemplateService aiTemplateService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
-        ICatalogManager<OmnichannelCampaign> campaignManager,
+        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        IContentManager contentManager,
+        IClock clock,
         ISession session,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
@@ -82,9 +96,13 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _promptStore = promptStore;
         _aICompletionService = aICompletionService;
         _deploymentManager = deploymentManager;
+        _completionContextBuilder = completionContextBuilder;
+        _profileManager = profileManager;
         _aiTemplateService = aiTemplateService;
         _channelEndpointsManager = channelEndpointsManager;
-        _campaignManager = campaignManager;
+        _flowSettingsCatalog = flowSettingsCatalog;
+        _contentManager = contentManager;
+        _clock = clock;
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
@@ -136,18 +154,34 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(activity.CampaignId))
+        var flowSettings = await FindFlowSettingsAsync(activity.SubjectContentType, cancellationToken);
+
+        if (OmnichannelSmsComplianceHelper.IsOptOutRequest(omnichannelEvent.Message.Content, flowSettings?.SmsOptOutKeywords))
         {
-            _logger.LogWarning("The linked Activity {ActivityId} does not have an CampaignId associated with it. Cannot process incoming SMS message.", activity.ItemId);
+            await ApplySmsOptOutAsync(activity, cancellationToken);
 
             return;
         }
 
-        var campaign = await _campaignManager.FindByIdAsync(activity.CampaignId, cancellationToken);
-
-        if (campaign == null)
+        if (flowSettings is null)
         {
-            _logger.LogWarning("The Campaign {CampaignId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.CampaignId, activity.ItemId);
+            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} were not found. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(flowSettings.ProfileId))
+        {
+            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} do not have an AI profile. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId);
+
+            return;
+        }
+
+        var profile = await _profileManager.FindByIdAsync(flowSettings.ProfileId, cancellationToken);
+
+        if (profile is null || profile.Type != AIProfileType.Chat)
+        {
+            _logger.LogWarning("The AI profile '{ProfileId}' associated with Activity {ActivityId} was not found or is not a chat profile. Cannot process incoming SMS message.", flowSettings.ProfileId, activity.ItemId);
 
             return;
         }
@@ -168,6 +202,19 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(chatSession.ProfileId) &&
+            !string.Equals(chatSession.ProfileId, profile.ItemId, StringComparison.OrdinalIgnoreCase))
+        {
+            profile = await _profileManager.FindByIdAsync(chatSession.ProfileId, cancellationToken);
+
+            if (profile is null || profile.Type != AIProfileType.Chat)
+            {
+                _logger.LogWarning("The AI profile '{ProfileId}' associated with AI Chat Session {AISessionId} was not found or is not a chat profile. Cannot process incoming SMS message.", chatSession.ProfileId, chatSession.SessionId);
+
+                return;
+            }
+        }
+
         await _promptStore.CreateAsync(new AIChatSessionPrompt
         {
             ItemId = UniqueId.GenerateId(),
@@ -175,9 +222,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             Role = ChatRole.User,
             Content = omnichannelEvent.Message.Content
         }, cancellationToken);
-
-        // TODO: add a way to extract data from the message when needed to update Subject or the Contact objects.
-        // Maybe in the campaign we can see if updating the subject or contact should be allowed and use AI to extract the data.
 
         string bestChoice = null;
 
@@ -188,21 +232,12 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             var transcript = prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            var context = new AICompletionContext
-            {
-                ChatDeploymentName = campaign.DeploymentName,
-                Temperature = campaign.Temperature,
-                TopP = campaign.TopP,
-                FrequencyPenalty = campaign.FrequencyPenalty,
-                PresencePenalty = campaign.PresencePenalty,
-                MaxTokens = campaign.MaxTokens,
-                ToolNames = campaign.ToolNames,
-            };
+            var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
 
             context.AdditionalProperties["Session"] = chatSession;
 
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
-            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
+            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
 
             var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, cancellationToken);
 
@@ -210,7 +245,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (string.IsNullOrWhiteSpace(bestChoice))
             {
-                _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI Campaign {CampaignId}.", activity.ItemId, campaign.ItemId);
+                _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId, profile.ItemId);
 
                 return;
             }
@@ -218,14 +253,22 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         catch (Exception ex)
         {
-            _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Campaign {CampaignId}.", activity.ItemId, campaign.ItemId);
+            _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId, profile.ItemId);
+
+            return;
         }
 
         try
         {
+            if (flowSettings.SmsResponseDelayInSeconds is > 0)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(flowSettings.SmsResponseDelayInSeconds.Value), cancellationToken);
+            }
+
             var result = await _smsService.SendAsync(new SmsMessage
             {
                 To = activity.PreferredDestination,
+                From = endpoint.Value,
                 Body = bestChoice,
             }, cancellationToken);
 
@@ -239,7 +282,16 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     Content = bestChoice,
                 }, cancellationToken);
 
+                chatSession.LastActivityUtc = _clock.UtcNow;
+
                 activity.Status = ActivityStatus.AwaitingCustomerAnswer;
+
+                if (OmnichannelAutomationHelper.HasNoResponseTimeout(flowSettings))
+                {
+                    activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(
+                        flowSettings,
+                        _clock.UtcNow);
+                }
 
                 await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
 
@@ -254,6 +306,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
                     var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+                    var completionContextBuilder = scope.ServiceProvider.GetRequiredService<IAICompletionContextBuilder>();
 
                     var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
                     var allActions = await actionCatalog.GetAllAsync();
@@ -265,7 +318,16 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         .ToList();
                     var dispositions = await dispositionCatalog.GetAsync(subjectDispositionIds);
 
-                    var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, campaign.DeploymentName, campaign.ProviderName);
+                    var conclusionPrompt = await _aiTemplateService.RenderAsync(SmsConclusionAnalysisPromptId);
+                    var conclusionContext = await completionContextBuilder.BuildAsync(profile, context =>
+                    {
+                        context.SystemMessage = conclusionPrompt;
+                        context.DisableTools = true;
+                    });
+
+                    var deployment = await deploymentManager.ResolveOrDefaultAsync(
+                        AIDeploymentPurpose.Chat,
+                        deploymentName: conclusionContext.ChatDeploymentName);
 
                     if (deployment == null)
                     {
@@ -284,12 +346,12 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var userPrompt = $"""
 
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
-                        Campaign Goal: {campaign.CampaignGoal}
+                        Subject Goal: {flowSettings.SubjectGoal}
                         List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, x.Name, x.Description }))}
 
                         """;
 
-                    if (campaign.AllowAIToUpdateSubject)
+                    if (flowSettings.AllowAIToUpdateSubject)
                     {
                         subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
 
@@ -299,7 +361,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             """;
                     }
 
-                    if (campaign.AllowAIToUpdateContact)
+                    if (flowSettings.AllowAIToUpdateContact)
                     {
                         contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -310,8 +372,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             Contact: {JsonSerializer.Serialize(contact, _jsonSerializerOptions.SerializerOptions)}
                             """;
                     }
-
-                    var conclusionPrompt = await _aiTemplateService.RenderAsync(SmsConclusionAnalysisPromptId);
 
                     var transcript = new List<ChatMessage>
                     {
@@ -325,7 +385,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     {
                         OmnichannelActivity omnichannelActivity = null;
 
-                        if (campaign.AllowAIToUpdateSubject && result.Result.Subject is not null)
+                        if (flowSettings.AllowAIToUpdateSubject && result.Result.Subject is not null)
                         {
                             subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
                             subject.Merge(result.Result.Subject);
@@ -335,10 +395,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             omnichannelActivity.Subject = subject;
 
                             // Update the activity with the new subject since the converation may not be concluded.
-                            await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
+                            await store.UpdateAsync(omnichannelActivity);
                         }
 
-                        if (campaign.AllowAIToUpdateContact && result.Result.Contact is not null)
+                        if (flowSettings.AllowAIToUpdateContact && result.Result.Contact is not null)
                         {
                             contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -366,7 +426,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
                             omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
 
-                            await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
+                            await store.UpdateAsync(omnichannelActivity);
 
                             subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
                             contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
@@ -394,6 +454,51 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         await _session.SaveAsync(chatSession);
+    }
+
+    private async Task<SubjectFlowSettings> FindFlowSettingsAsync(
+        string subjectContentType,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(subjectContentType))
+        {
+            return null;
+        }
+
+        var flowSettings = await _flowSettingsCatalog.GetAllAsync(cancellationToken);
+
+        return flowSettings.FirstOrDefault(settings =>
+            string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task ApplySmsOptOutAsync(
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+        if (contact is null)
+        {
+            _logger.LogWarning("Unable to update Do not SMS for Activity {ActivityId} because contact {ContactContentItemId} was not found.", activity.ItemId, activity.ContactContentItemId);
+        }
+        else
+        {
+            contact.Alter<OmnichannelContactPart>(part =>
+            {
+                part.SetDoNotSms(true, _clock.UtcNow);
+            });
+
+            await _contentManager.UpdateAsync(contact);
+        }
+
+        activity.Status = ActivityStatus.Cancelled;
+
+        if (string.IsNullOrWhiteSpace(activity.Notes))
+        {
+            activity.Notes = "The automated SMS activity was cancelled because the contact requested SMS opt-out.";
+        }
+
+        await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
     }
 
     private sealed class ConverationConclusionResult

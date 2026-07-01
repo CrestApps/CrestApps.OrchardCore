@@ -60,6 +60,21 @@ public class SubjectFlowSettingsViewModel
     public bool AllowAIToUpdateSubject { get; set; }
 
     /// <summary>
+    /// Gets or sets the no-response timeout, in minutes.
+    /// </summary>
+    public int? NoResponseTimeoutInMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMS response delay, in seconds.
+    /// </summary>
+    public int? SmsResponseDelayInSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMS opt-out keywords.
+    /// </summary>
+    public string SmsOptOutKeywords { get; set; }
+
+    /// <summary>
     /// Gets or sets the available campaigns.
     /// </summary>
     [BindNever]
