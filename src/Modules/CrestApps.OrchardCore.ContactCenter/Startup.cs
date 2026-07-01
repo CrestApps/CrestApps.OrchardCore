@@ -66,6 +66,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
             .AddScoped<IContactCenterRetentionService, ContactCenterRetentionService>()
+            .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
         services
