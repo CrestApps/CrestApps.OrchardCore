@@ -40,6 +40,7 @@ connects their own DialPad account.
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
 | **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
 | **User id** | The DialPad user id that places outbound calls when **API key** authentication is selected. |
+| **Webhook signing secret** | The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. |
 
 DialPad API calls use the environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
@@ -106,6 +107,23 @@ the DialPad REST API on the server. For example, a dial request issues an authen
 `call` endpoint with the destination number, caller id, and user id; subsequent operations target the
 `call/{id}/{action}` endpoints. Because all control happens server-side, the API key never reaches
 the browser.
+
+## Contact Center integration
+
+Enable the **DialPad Contact Center Voice** feature to use DialPad as the phone provider for the
+Contact Center. It implements the Contact Center voice provider boundary over DialPad, advertises the
+`AgentDeviceNative` delivery model (DialPad rings the agent's own soft phone), and supports outbound
+dialing and call transfer.
+
+- **Outbound / dialer** — the Contact Center dialer and manual dialing route outbound calls through the
+  Voice Contact Center Call Router to DialPad, which places the call and rings the agent's DialPad soft
+  phone.
+- **Inbound** — configure a DialPad webhook to `POST` call events to `/api/dialpad/webhook/call`. The
+  webhook is authenticated by the **Webhook signing secret** configured on the DialPad settings screen
+  (DialPad signs the payload as an HS256 JWT). New inbound calls create a CRM activity and a voice
+  interaction, are queued through the matching entry point, and are offered to an available agent; later
+  events (answered, held, ended) update the interaction and call session. When no signing secret is
+  configured, unsigned JSON webhooks are accepted, which is only recommended for local testing.
 
 ## Registering the provider in code
 

@@ -34,7 +34,7 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public LocalizedString Name { get; }
 
     /// <inheritdoc/>
-    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
+    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial | ContactCenterVoiceProviderCapabilities.CallTransfer;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
