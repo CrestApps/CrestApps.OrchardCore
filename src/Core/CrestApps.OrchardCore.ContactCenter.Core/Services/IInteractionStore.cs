@@ -51,4 +51,21 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of active interactions for the agent.</returns>
     Task<int> CountActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the most recent live interaction the specified agent is currently handling.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The active interaction, or <see langword="null"/> when the agent is not on a live interaction.</returns>
+    Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the most recent interactions handled by the specified agent, newest first.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="take">The maximum number of interactions to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent's most recent interactions.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default);
 }

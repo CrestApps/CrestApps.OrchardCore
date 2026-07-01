@@ -135,8 +135,7 @@ strongly-typed callbacks:
 </script>
 ```
 
-The agent desktop and supervisor dashboard UIs build on top of this layer and are the next deliverables
-in the agent-experience phase.
+The [agent desktop and supervisor dashboard](agent-desktop.md) build directly on this layer.
 
 ## Domain events and reliable dispatch
 
@@ -174,8 +173,12 @@ already in progress, the request stays pending, the in-flight assignment continu
 granted automatically when that work is released. Agents in request-break or break states are
 ineligible for new routing decisions.
 
-Future agent desktop surfaces handle activity offers, accept/reject actions, active CRM activity
-context, injected Telephony call controls, interaction history, wrap-up, and required disposition.
+The [Agent Workspace](agent-desktop.md) is the full-screen desktop where agents spend the shift: it
+handles activity offers, accept/reject actions, active CRM activity context, interaction history, and
+wrap-up disposition. When an agent accepts a ringing offer, the workspace (and the soft-phone incoming
+modal) drive a single server-side command that accepts the reservation and connects the media before
+the agent's device answers, so the same live call is never answered while it is being re-offered to
+another agent.
 
 Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and
 compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive
@@ -350,6 +353,8 @@ proves agents can run inbound and outbound voice work entirely inside the CRM wh
 Telephony boundary. Inbound voice routing and the soft-phone incoming-call modal now ship in the
 [Inbound voice](#inbound-voice) feature, and the [real-time SignalR layer](#real-time-experience)
 (hub, live agent sessions, heartbeat/stale cleanup, reconnect snapshots, and presence/offer/queue
-broadcasts) now ships in the **Contact Center Real-Time** feature. This documentation will expand as
+broadcasts) now ships in the **Contact Center Real-Time** feature, which also powers the
+[agent desktop and supervisor dashboard](agent-desktop.md). This documentation will expand as
 each capability ships. See [Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue,
-reservation, and dialer features.
+reservation, and dialer features, and the [Agent desktop & supervisor dashboard](agent-desktop.md)
+guide for how agents and managers use the day-to-day surfaces.

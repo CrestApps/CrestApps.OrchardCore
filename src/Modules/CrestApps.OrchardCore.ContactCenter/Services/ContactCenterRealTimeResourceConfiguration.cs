@@ -20,6 +20,23 @@ internal sealed class ContactCenterRealTimeResourceConfiguration : IConfigureOpt
             .SetUrl("~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-realtime.js")
             .SetDependencies("signalr")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("contact-center-agent-workspace")
+            .SetUrl("~/CrestApps.OrchardCore.ContactCenter/scripts/agent-workspace.js")
+            .SetDependencies("contact-center-realtime")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("contact-center-supervisor-dashboard")
+            .SetUrl("~/CrestApps.OrchardCore.ContactCenter/scripts/supervisor-dashboard.js")
+            .SetDependencies("contact-center-realtime")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("contact-center-workspace")
+            .SetUrl("~/CrestApps.OrchardCore.ContactCenter/styles/contact-center-workspace.css")
+            .SetVersion("1.0.0");
     }
 
     /// <inheritdoc/>

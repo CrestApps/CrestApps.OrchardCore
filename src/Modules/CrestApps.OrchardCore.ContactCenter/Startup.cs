@@ -223,8 +223,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
             .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
             .AddScoped<IDialerStrategy, PowerDialerStrategy>()
-            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
-            .AddScoped<IDialerProviderResolver, DialerProviderResolver>();
+            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>();
 
         services
             .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
@@ -316,6 +315,7 @@ public sealed class RealTimeStartup : StartupBase
 
         services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
         services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
+        services.AddNavigationProvider<ContactCenterRealTimeAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

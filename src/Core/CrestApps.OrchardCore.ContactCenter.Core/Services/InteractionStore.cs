@@ -87,4 +87,32 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             collection: ContactCenterConstants.CollectionName)
             .CountAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        return await Session.Query<Interaction, InteractionIndex>(
+            index => index.AgentId == agentId &&
+                index.Status != InteractionStatus.Created &&
+                index.Status != InteractionStatus.Ended &&
+                index.Status != InteractionStatus.Failed,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        return (await Session.Query<Interaction, InteractionIndex>(
+            index => index.AgentId == agentId,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
 }

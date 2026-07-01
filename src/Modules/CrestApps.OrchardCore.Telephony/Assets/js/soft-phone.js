@@ -775,13 +775,13 @@
 
         function postLifecycle(key) {
             if (!incomingContext || !incomingContext.properties) {
-                return;
+                return Promise.resolve(null);
             }
 
             var url = incomingContext.properties[key];
 
             if (!url) {
-                return;
+                return Promise.resolve(null);
             }
 
             var headers = { 'Content-Type': 'application/json' };
@@ -791,13 +791,23 @@
             }
 
             try {
-                fetch(url, {
+                return fetch(url, {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: headers,
                     body: JSON.stringify({ callId: currentCallId() })
-                }).catch(function () { });
-            } catch (e) { /* lifecycle callbacks are best-effort */ }
+                }).then(function (response) {
+                    if (!response.ok) {
+                        return { succeeded: false };
+                    }
+
+                    return response.json().catch(function () { return { succeeded: true }; });
+                }).catch(function () {
+                    return { succeeded: false };
+                });
+            } catch (e) {
+                return Promise.resolve({ succeeded: false });
+            }
         }
 
         function answerIncoming(openUrl) {
@@ -807,12 +817,40 @@
                 window.open(openUrl, '_blank', 'noopener');
             }
 
-            postLifecycle('acceptUrl');
+            var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.acceptUrl;
 
-            if (id) {
-                togglePanel(true);
-                invoke('Answer', { callId: id });
+            // A plain telephony call with no Contact Center offer: answer the device directly.
+            if (!hasOffer) {
+                if (id) {
+                    togglePanel(true);
+                    invoke('Answer', { callId: id });
+                }
+
+                return;
             }
+
+            // A Contact Center offer: the server-side accept must succeed (accept the reservation and
+            // connect the media) before the device answers, so the same live call is never answered here
+            // while it is being re-offered to another agent.
+            postLifecycle('acceptUrl').then(function (result) {
+                if (!result || result.succeeded === false) {
+                    showError(strings.offerUnavailable || 'This call is no longer available.');
+                    incomingContext = null;
+                    currentCall = null;
+                    render();
+
+                    return;
+                }
+
+                togglePanel(true);
+
+                // Only answer on the device when the provider delivers media to the agent's device
+                // (agent-device-native). For server-side ACD the provider bridges the call, so no device
+                // answer is required.
+                if (result.requiresDeviceAnswer !== false && id) {
+                    invoke('Answer', { callId: id });
+                }
+            });
         }
 
         function voicemailIncoming() {

@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// Implements the Contact Center voice provider boundary over the DialPad telephony provider so the
 /// Contact Center routes voice work while DialPad executes provider-specific call operations.
 /// </summary>
-public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvider, IDialerProvider
+public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
 
@@ -40,29 +40,11 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
 
     /// <inheritdoc/>
-    LocalizedString IDialerProvider.DisplayName => Name;
-
-    /// <inheritdoc/>
-    DialerProviderCapabilities IDialerProvider.Capabilities => DialerProviderCapabilities.Outbound | DialerProviderCapabilities.CallerId | DialerProviderCapabilities.Cancellation;
-
-    /// <inheritdoc/>
     public async Task<ContactCenterVoiceProviderResult> DialAsync(ContactCenterDialRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         return await DialCoreAsync(request.Destination, request.CallerId, request.Metadata, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<DialerDialResult> PlaceCallAsync(DialerDialRequest request, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var result = await DialCoreAsync(request.Destination, request.CallerId, request.Metadata, cancellationToken);
-
-        return result.Succeeded
-            ? DialerDialResult.Success(result.ProviderCallId)
-            : DialerDialResult.Failure(result.ErrorCode, result.ErrorMessage);
     }
 
     /// <inheritdoc/>
@@ -90,23 +72,6 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public Task<ContactCenterVoiceProviderResult> QueueCallAsync(ContactCenterQueueCallRequest request, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Failure("not_supported", "DialPad does not support provider-side Contact Center queue placement."));
-    }
-
-    /// <inheritdoc/>
-    public async Task<DialerDialResult> EndCallAsync(string providerCallId, CancellationToken cancellationToken = default)
-    {
-        var provider = await _telephonyResolver.GetAsync(DialPadConstants.ProviderTechnicalName);
-
-        if (provider is null)
-        {
-            return DialerDialResult.Failure("provider_unavailable", "The DialPad telephony provider is not configured.");
-        }
-
-        var result = await provider.HangupAsync(new CallReference { CallId = providerCallId }, cancellationToken);
-
-        return result.Succeeded
-            ? DialerDialResult.Success(providerCallId)
-            : DialerDialResult.Failure("hangup_failed", result.Error);
     }
 
     private async Task<ContactCenterVoiceProviderResult> DialCoreAsync(

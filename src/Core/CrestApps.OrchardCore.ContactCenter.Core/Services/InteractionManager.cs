@@ -86,4 +86,30 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     {
         return _store.CountActiveByAgentAsync(agentId, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        var interaction = await _store.FindActiveByAgentAsync(agentId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interaction;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListRecentByAgentAsync(agentId, take, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
+    }
 }

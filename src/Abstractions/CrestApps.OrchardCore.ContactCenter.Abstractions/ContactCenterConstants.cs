@@ -92,11 +92,6 @@ public static class ContactCenterConstants
         public const string Dialer = "Dialer";
 
         /// <summary>
-        /// The wrap-up and disposition component.
-        /// </summary>
-        public const string WrapUp = "WrapUp";
-
-        /// <summary>
         /// The call session management component.
         /// </summary>
         public const string CallSessions = "CallSessions";
