@@ -287,5 +287,30 @@ public static class ContactCenterConstants
         /// Raised when an agent declines an offered interaction.
         /// </summary>
         public const string OfferDeclined = "OfferDeclined";
+
+        /// <summary>
+        /// Raised when call recording starts.
+        /// </summary>
+        public const string RecordingStarted = "RecordingStarted";
+
+        /// <summary>
+        /// Raised when call recording pauses.
+        /// </summary>
+        public const string RecordingPaused = "RecordingPaused";
+
+        /// <summary>
+        /// Raised when call recording resumes.
+        /// </summary>
+        public const string RecordingResumed = "RecordingResumed";
+
+        /// <summary>
+        /// Raised when call recording stops.
+        /// </summary>
+        public const string RecordingStopped = "RecordingStopped";
+
+        /// <summary>
+        /// Raised when a supervisor starts monitoring, whispering, barging, or taking over a live call.
+        /// </summary>
+        public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";
     }
 }

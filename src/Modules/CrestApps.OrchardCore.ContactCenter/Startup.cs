@@ -253,6 +253,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
+            .AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()
+            .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()

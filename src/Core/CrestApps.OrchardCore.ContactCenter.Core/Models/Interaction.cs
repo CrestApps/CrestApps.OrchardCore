@@ -83,6 +83,11 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public string RecordingReference { get; set; }
 
     /// <summary>
+    /// Gets or sets the recording state of the interaction.
+    /// </summary>
+    public RecordingState RecordingState { get; set; }
+
+    /// <summary>
     /// Gets or sets the transcript reference when a transcript is available for the interaction.
     /// </summary>
     public string TranscriptReference { get; set; }

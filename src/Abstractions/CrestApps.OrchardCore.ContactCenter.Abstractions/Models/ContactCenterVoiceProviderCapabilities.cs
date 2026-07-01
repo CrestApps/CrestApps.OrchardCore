@@ -51,4 +51,29 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can add participants to a live call (conference).
     /// </summary>
     Conference = 1 << 7,
+
+    /// <summary>
+    /// The provider can record a live call (start/stop/pause/resume).
+    /// </summary>
+    Recording = 1 << 8,
+
+    /// <summary>
+    /// The provider can silently monitor a live call.
+    /// </summary>
+    Monitor = 1 << 9,
+
+    /// <summary>
+    /// The provider can whisper to the agent on a live call without the customer hearing.
+    /// </summary>
+    Whisper = 1 << 10,
+
+    /// <summary>
+    /// The provider can barge into a live call so all parties hear the supervisor.
+    /// </summary>
+    Barge = 1 << 11,
+
+    /// <summary>
+    /// The provider can take over a live call from the agent.
+    /// </summary>
+    TakeOver = 1 << 12,
 }
