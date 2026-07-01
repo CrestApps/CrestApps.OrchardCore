@@ -151,6 +151,34 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@crestapps/bootstrap-select/dist/js/bootstrap-select.js"
+    ],
+    "output": "wwwroot/vendors/bootstrap-select/js/bootstrap-select.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/bootstrap-select/dist/js/bootstrap-select.min.js"
+    ],
+    "output": "wwwroot/vendors/bootstrap-select/js/bootstrap-select.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/bootstrap-select/dist/css/bootstrap-select.css"
+    ],
+    "output": "wwwroot/vendors/bootstrap-select/css/bootstrap-select.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/bootstrap-select/dist/css/bootstrap-select.min.css"
+    ],
+    "output": "wwwroot/vendors/bootstrap-select/css/bootstrap-select.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.js"
     ],
     "output": "wwwroot/vendors/crestapps/technical-name-generator.js"

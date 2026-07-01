@@ -17,7 +17,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.js"
                 )
-            .SetVersion("1.0.0-rc.7");
+            .SetVersion("1.0.0");
 
         _manifest
             .DefineScript("item-selector")
@@ -25,7 +25,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/scripts/item-selector.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/item-selector.js"
                 )
-            .SetVersion("1.0.0-rc.7");
+            .SetVersion("1.0.0");
 
         _manifest
             .DefineStyle("item-selector")
@@ -33,7 +33,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/styles/item-selector.min.css",
                 "~/CrestApps.OrchardCore.Resources/styles/item-selector.css"
                 )
-            .SetVersion("1.0.0-rc.7");
+            .SetVersion("1.0.0");
 
         _manifest
             .DefineScript("easymde")
@@ -144,17 +144,44 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("11.11.1");
 
         _manifest
+            .DefineScript("bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/bootstrap-select/js/bootstrap-select.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/bootstrap-select/js/bootstrap-select.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/js/bootstrap-select.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/js/bootstrap-select.js")
+            .SetCdnIntegrity(
+                "sha384-R7aQ+h/YwfYWxwVbXnRupt5dDCEB+GFE5kGRXdMRqqTb8a44gKz4FhiTVCIl1utj",
+                "sha384-OoRqHGsY2f8cxSKpRli5U/ioHYo5CO4Nqz9+jMhs/Ah3slKOn36MzgaO3Dixk2D0")
+            .SetDependencies("bootstrap")
+            .SetVersion("1.2.1");
+
+        _manifest
+            .DefineStyle("bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/bootstrap-select/css/bootstrap-select.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/bootstrap-select/css/bootstrap-select.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/css/bootstrap-select.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/css/bootstrap-select.css")
+            .SetCdnIntegrity(
+                "sha384-7yj05Iamc4rfesLo160W11ywhuIME+BcB43waDx0Y1rI1LEyCK368ml0MI9Lwzr7",
+                "sha384-jN5x01dkUiVJwxGy3x+e/53AB0jN9D9bBomsrbCJehtMMCIK5vOzd7aTNXV3/bze")
+            .SetVersion("1.2.1");
+
+        _manifest
             .DefineScript("technical-name-generator")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/technical-name-generator.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/technical-name-generator.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/technical-name-generator.js")
             .SetCdnIntegrity(
                 "sha384-vk5MiCC6biz7ygKi3CY+whjnNoLe2Ol+ZWoxUr/aoifSyfm9c2WFazGMhNLi8g7I",
                 "sha384-9cJ5WEY0z1tJkCLND8ZMhN+rT6IySJKbK/R1yJcaSqmWgiCMuOyZJ+UUobxuScNs")
-             .SetVersion("1.0.0");
+             .SetVersion("1.0.0-preview.90");
 
         _manifest
             .DefineScript("document-drop-zone")
@@ -162,12 +189,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/document-drop-zone.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/document-drop-zone.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/document-drop-zone.js")
             .SetCdnIntegrity(
                 "sha384-KFkL+SiquJoYpKSCo7vyhEATgbpE+FKizywY9qfjbI5QLNFnZxIz9sFQjqh3yMfa",
                 "sha384-h8+pletFGnYtxUtoPyQVEfBY0O3gz/DwxtjsDGQq7xX93GOpcx0LZlDwdguQkV1B")
-             .SetVersion("1.0.0");
+             .SetVersion("1.0.0-preview.90");
 
         _manifest
             .DefineStyle("document-drop-zone")
@@ -175,12 +202,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/document-drop-zone.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-rc.7/dist/document-drop-zone.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/document-drop-zone.css")
             .SetCdnIntegrity(
-                "sha384-rQeaRUVX3mFuO9odBEzwKV4akVEHz3MLSl5+e0h43rKLtxKQnRwh0ARsiJMXBlnZ",
-                "sha384-Nej+SC8Gi+UVsc5GZ9b4NlJ7tGxoqyyAuoB3lMOur7MN0vjxNxpEa3N4qNh7peOO")
-            .SetVersion("1.0.0");
+                "sha384-cTjcD1YHMzaJ5FIvmpJhm3VZDBheTcbiNfGCQfFvBTDg1pZi7PWE5lO6VHRYX9zq",
+                "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
+            .SetVersion("1.0.0-preview.90");
 
         _manifest
             .DefineStyle("intl-tel-input")

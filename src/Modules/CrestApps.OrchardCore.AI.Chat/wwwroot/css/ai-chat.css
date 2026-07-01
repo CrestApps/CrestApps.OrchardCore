@@ -11,7 +11,7 @@
 }
 
 .ai-chat-msg-role-assistant {
-    color: var(--ai-chat-primary, #198754);
+    color: var(--ai-chat-primary, var(--bs-success, #198754));
 }
 
 .ai-chat-messages .ai-chat-message-item {
@@ -74,10 +74,10 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease-in-out;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.96);
     padding: 0.2rem 0.35rem;
     border-radius: 999px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.08);
     margin-bottom: 1rem;
     transform: translateY(50%);
     z-index: 1;
@@ -120,7 +120,7 @@
 }
 
 .ai-chat-messages .message-buttons-container .tts-playing {
-    color: var(--ai-chat-primary, #198754);
+    color: var(--ai-chat-primary, var(--bs-success, #198754));
 }
 
 @keyframes spark-burst {
@@ -249,7 +249,7 @@
 .ai-chat-drag-over {
     outline: 2px dashed var(--bs-primary, #0d6efd) !important;
     outline-offset: -2px;
-    background-color: rgba(13, 110, 253, 0.05) !important;
+    background-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.05) !important;
 }
 
 .ai-chat-notification {
@@ -257,7 +257,7 @@
     padding: 0.625rem 0.875rem;
     border-radius: 0.5rem;
     border: 1px solid var(--bs-border-color, #dee2e6);
-    background-color: var(--bs-light, #f8f9fa);
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
     font-size: 0.875rem;
     line-height: 1.4;
 }
@@ -302,12 +302,12 @@
 }
 
 .ai-chat-notification-typing {
-    border-color: var(--ai-chat-primary, #198754);
-    background-color: rgba(25, 135, 84, 0.05);
+    border-color: var(--ai-chat-primary, var(--bs-success, #198754));
+    background-color: rgba(var(--ai-chat-primary-rgb, var(--bs-success-rgb, 25, 135, 84)), 0.05);
 }
 
 .ai-chat-notification-typing .ai-chat-notification-icon {
-    color: var(--ai-chat-primary, #198754);
+    color: var(--ai-chat-primary, var(--bs-success, #198754));
     animation: ai-chat-typing-pulse 1.5s ease-in-out infinite;
 }
 
@@ -318,7 +318,7 @@
 
 .ai-chat-notification-transfer {
     border-color: var(--bs-warning, #ffc107);
-    background-color: rgba(255, 193, 7, 0.06);
+    background-color: rgba(var(--bs-warning-rgb, 255, 193, 7), 0.06);
 }
 
 .ai-chat-notification-transfer .ai-chat-notification-icon {
@@ -335,7 +335,7 @@
 .ai-chat-notification-session-ended,
 .ai-chat-notification-conversation-ended {
     border-color: var(--bs-secondary, #6c757d);
-    background-color: rgba(108, 117, 125, 0.05);
+    background-color: rgba(var(--bs-secondary-rgb, 108, 117, 125), 0.05);
 }
 
 .ai-chat-notification-ended .ai-chat-notification-icon,
@@ -347,7 +347,7 @@
 .ai-chat-notification-info,
 .ai-chat-notification-agent-connected {
     border-color: var(--bs-info, #0dcaf0);
-    background-color: rgba(13, 202, 240, 0.05);
+    background-color: rgba(var(--bs-info-rgb, 13, 202, 240), 0.05);
 }
 
 .ai-chat-notification-info .ai-chat-notification-icon,
@@ -358,7 +358,7 @@
 .ai-chat-notification-warning,
 .ai-chat-notification-agent-reconnecting {
     border-color: var(--bs-warning, #ffc107);
-    background-color: rgba(255, 193, 7, 0.06);
+    background-color: rgba(var(--bs-warning-rgb, 255, 193, 7), 0.06);
 }
 
 .ai-chat-notification-warning .ai-chat-notification-icon,
@@ -369,7 +369,7 @@
 .ai-chat-notification-error,
 .ai-chat-notification-connection-lost {
     border-color: var(--bs-danger, #dc3545);
-    background-color: rgba(220, 53, 69, 0.05);
+    background-color: rgba(var(--bs-danger-rgb, 220, 53, 69), 0.05);
 }
 
 .ai-chat-notification-error .ai-chat-notification-icon,

@@ -120,7 +120,6 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         _resourceManager.RegisterResource("stylesheet", "AIChatWidget").AtHead();
         _resourceManager.RegisterResource("stylesheet", "highlightjs").AtHead();
         _resourceManager.RegisterResource("stylesheet", "AIChatApp").AtHead();
-        _resourceManager.RegisterResource("stylesheet", "AIChatTheme").AtHead();
 
         if (speechToTextEnabled)
         {

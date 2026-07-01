@@ -84,8 +84,6 @@ Once configured, the selected chat mode applies to all chat UIs associated with 
 - Frontend widget
 - Admin widget
 
-Chat session inputs and AI chat widgets use Bootstrap theme variables for their input, message, history, and widget body surfaces. When the admin or site theme switches between light and dark mode, these chat surfaces follow the selected Bootstrap color mode instead of keeping hardcoded light backgrounds.
-
 #### How Audio Input Works
 
 1. Click the microphone button to start recording.
