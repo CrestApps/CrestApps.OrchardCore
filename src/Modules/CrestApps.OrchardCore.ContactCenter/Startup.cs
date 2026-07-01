@@ -238,6 +238,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
+            .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
