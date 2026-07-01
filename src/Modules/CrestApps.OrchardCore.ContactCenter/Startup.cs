@@ -188,6 +188,9 @@ public sealed class DialerStartup : StartupBase
         services
             .AddScoped<IDialerProfileStore, DialerProfileStore>()
             .AddScoped<IDialerProfileManager, DialerProfileManager>()
+            .AddScoped<ICallbackRequestStore, CallbackRequestStore>()
+            .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
+            .AddScoped<ICallbackService, CallbackService>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IDialerAttemptService, DialerAttemptService>()
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
@@ -200,9 +203,12 @@ public sealed class DialerStartup : StartupBase
             .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
             .AddIndexProvider<DialerProfileIndexProvider>()
-            .AddDataMigration<DialerProfileIndexMigrations>();
+            .AddDataMigration<DialerProfileIndexMigrations>()
+            .AddIndexProvider<CallbackRequestIndexProvider>()
+            .AddDataMigration<CallbackRequestIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, CallbackDispatchBackgroundTask>();
         services.AddNavigationProvider<ContactCenterDialerAdminMenu>();
 
         services.Configure<ActivityBatchSourceOptions>(options =>

@@ -249,6 +249,16 @@ public static class ContactCenterConstants
         public const string CallbackScheduled = "CallbackScheduled";
 
         /// <summary>
+        /// Raised when a due callback is promoted into outbound work.
+        /// </summary>
+        public const string CallbackPromoted = "CallbackPromoted";
+
+        /// <summary>
+        /// Raised when a callback is completed or canceled.
+        /// </summary>
+        public const string CallbackCompleted = "CallbackCompleted";
+
+        /// <summary>
         /// Raised when a call session is created for an interaction.
         /// </summary>
         public const string CallSessionCreated = "CallSessionCreated";
