@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 public sealed class SupervisorAgentViewModel
 {
     /// <summary>
+    /// Gets or sets the Contact Center agent profile identifier.
+    /// </summary>
+    public string AgentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the Orchard user the agent represents.
     /// </summary>
     public string UserId { get; set; }
@@ -34,4 +39,9 @@ public sealed class SupervisorAgentViewModel
     /// Gets or sets the number of interactions the agent is currently handling.
     /// </summary>
     public int ActiveInteractions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currently live interaction identifier, when supervisor engagement is possible.
+    /// </summary>
+    public string ActiveInteractionId { get; set; }
 }

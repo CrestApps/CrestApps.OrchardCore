@@ -59,7 +59,10 @@ Agents can only receive work once the routing environment exists. Configure thes
 7. **Dialer profiles** (*Interaction Center → Dialer Profiles*, Dialer feature) - for outbound work,
    tie a campaign's activities to a queue, a dialing mode (manual, preview, power, or progressive),
    pacing, and compliance rules. See [Dialer](agents-queues-dialer.md#dialer).
-8. **Assign agents** (*Interaction Center → Agents*) - create an agent profile per user, set the
+8. **Callbacks** - use the callback service or workflow bridge to schedule callback requests against a
+   contact, destination, due window, and optional queue. Due callbacks are promoted into outbound
+   callback activities and, when a queue is set, enter the same routing path as other work.
+9. **Assign agents** (*Interaction Center → Agents*) - create an agent profile per user, set the
    maximum concurrent interactions (capacity), and grant the routing skills. Skills are
    administrator-owned; agents choose only which of their allowed queues and campaigns to sign in to.
 
@@ -85,17 +88,71 @@ It shows three sections:
 Use it to spot a backing-up queue, an SLA breach, or too few available agents, and then rebalance
 staffing, adjust queue priorities, or open a campaign.
 
-:::note
-Live call-control intents for supervisors (silent monitor, whisper, barge, and take-over) are backed by
-the `IContactCenterMonitoringService` orchestration and provider capability flags today; the supervisor
-UI buttons that trigger them are on the roadmap.
-:::
+When an agent has a live interaction and the voice provider advertises the matching capability, the
+agent card shows **Monitor**, **Whisper**, **Barge**, and **Take over** actions. Each action posts to the
+audited monitoring service, which refuses unsupported modes and records the engagement as a Contact
+Center domain event. Providers still own the media execution, so buttons are effective only when the
+active provider implements the requested capability.
+
+## For contact center managers: inbound routing runbook
+
+Use this checklist before publishing a new inbound line:
+
+1. Create or confirm the Omnichannel **channel endpoint** for the dialed number.
+2. Configure the Subject Flow for that endpoint so inbound activities get the right subject, campaign,
+   disposition list, required-disposition policy, and follow-up subject actions.
+3. Create the target queue, set its SLA, reservation timeout, routing strategy, required skills, and
+   overflow queue.
+4. Attach a business-hours calendar when the queue should pause or overflow outside staffed hours.
+5. Create an **Entry point** for the DID. Set the target queue, priority, optional welcome/closed
+   messages, and the closed action: hold, voicemail, overflow, or reject.
+6. Sign at least one skilled agent in to the queue, then place a test call. The expected path is
+   **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**.
+7. Watch **Live dashboard** while testing. The queue waiting count should increase before assignment,
+   then the selected agent should move from available to reserved/busy/wrap-up as the call progresses.
+
+## For contact center managers: outbound and callback runbook
+
+Use CRM campaigns and activities as the source of outbound work; the dialer profile only controls
+execution.
+
+1. Create the campaign and Subject Flow in Omnichannel. Configure dispositions and subject actions first
+   so every outcome has a business result.
+2. Load activities through an Activity Batch. Choose a dialer source for dialer inventory so activities
+   are loaded unassigned and available for reservation.
+3. Create a dialer profile that points to the campaign, queue, voice provider, dialing mode, pacing, and
+   compliance settings.
+4. Confirm do-not-call, retry delay, calling window, and national registry settings before enabling an
+   automated mode.
+5. For callbacks, schedule a callback request with the destination, due time, queue, and notes. The
+   callback dispatcher promotes due callbacks into outbound callback activities and enqueues them when a
+   queue is set.
+6. Agents receive preview/manual work from their signed-in campaign or automated power/progressive work
+   from the queue, then complete it with the same disposition flow used for inbound work.
+
+## For contact center managers: workflow automation
+
+The Subject Flow is the primary business workflow for work completion. Use it for required
+dispositions and disposition-driven actions such as finish, retry, new activity, or communication-
+preference updates. Enable the optional **OrchardCore.Workflows** bridge only when you need automation
+from Contact Center domain events such as routing decisions, offer acceptance, call connected/ended,
+callback scheduled/promoted, or SLA/analytics events. Workflow automation should enrich or react to
+activity state; it should not bypass queues, reservations, or the source-neutral disposition service.
 
 ## For contact center agents: the Agent Workspace
 
 Open **Interaction Center → My workspace**. This is the screen an agent keeps open for the whole shift.
 Keep the [Telephony soft phone](../telephony/index.md) available too - it is where the call audio and
 device controls live.
+
+### Shift checklist
+
+1. Open **My workspace** and the Telephony soft phone.
+2. Sign in to the queues and campaigns you are staffed for.
+3. Set presence to **Available** when ready, or choose a reason code when not ready.
+4. Accept or decline offers from the ringing card; use the soft phone for media controls.
+5. End the conversation, choose the disposition, add notes when needed, and click **Complete & wrap up**.
+6. Use **Recent activity** to verify your last outcomes before taking the next offer.
 
 ### 1. Sign in and set your presence
 

@@ -142,10 +142,62 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         return profile;
     }
 
+    /// <inheritdoc/>
+    public async Task<AgentProfile> StartWrapUpAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        profile.PresenceStatus = AgentPresenceStatus.WrapUp;
+        profile.ActiveReservationId = null;
+        profile.PresenceChangedUtc = _clock.UtcNow;
+
+        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
+
+        return profile;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentProfile> CompleteWorkAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        profile.PresenceStatus = profile.RequestedPresenceStatus ?? ResolveDefaultReadyState(profile);
+        profile.RequestedPresenceStatus = null;
+        profile.ActiveReservationId = null;
+        profile.PresenceChangedUtc = _clock.UtcNow;
+
+        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
+
+        return profile;
+    }
+
     private static bool CanApplyPresenceNow(AgentProfile profile)
     {
         return string.IsNullOrEmpty(profile.ActiveReservationId) &&
             profile.PresenceStatus is not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp;
+    }
+
+    private static AgentPresenceStatus ResolveDefaultReadyState(AgentProfile profile)
+    {
+        return profile.QueueIds.Count > 0 || profile.CampaignIds.Count > 0
+            ? AgentPresenceStatus.Available
+            : AgentPresenceStatus.Offline;
     }
 
     private async Task SaveAsync(AgentProfile profile, CancellationToken cancellationToken)

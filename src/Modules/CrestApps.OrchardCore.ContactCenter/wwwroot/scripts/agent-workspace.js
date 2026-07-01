@@ -87,6 +87,7 @@
         var serverOffsetMs = 0;
         var activeSignature = null;
         var offerSignature = null;
+        var activeDrafts = {};
 
         var refs = {
             presence: root.querySelector('[data-cc-presence]'),
@@ -123,7 +124,12 @@
                         render(data);
                     }
                 })
-                .catch(function () { });
+                .catch(function () {
+                    if (error) {
+                        error.textContent = label('completeFailed', 'The work could not be completed.');
+                        error.hidden = false;
+                    }
+                });
         }
 
         function render(data) {
@@ -230,6 +236,8 @@
                 return;
             }
 
+            saveActiveDraft();
+
             activeSignature = signature;
 
             if (!active) {
@@ -281,6 +289,45 @@
 
             if (completeButton) {
                 completeButton.addEventListener('click', function () { complete(active.activityItemId); });
+            }
+
+            restoreActiveDraft(active.interactionId);
+        }
+
+        function saveActiveDraft() {
+            if (!state || !state.activeInteraction || !refs.active) {
+                return;
+            }
+
+            var select = refs.active.querySelector('[data-cc-disposition]');
+            var notes = refs.active.querySelector('[data-cc-notes]');
+
+            if (!select && !notes) {
+                return;
+            }
+
+            activeDrafts[state.activeInteraction.interactionId] = {
+                dispositionId: select ? select.value : '',
+                notes: notes ? notes.value : ''
+            };
+        }
+
+        function restoreActiveDraft(interactionId) {
+            var draft = activeDrafts[interactionId];
+
+            if (!draft || !refs.active) {
+                return;
+            }
+
+            var select = refs.active.querySelector('[data-cc-disposition]');
+            var notes = refs.active.querySelector('[data-cc-notes]');
+
+            if (select) {
+                select.value = draft.dispositionId || '';
+            }
+
+            if (notes) {
+                notes.value = draft.notes || '';
             }
         }
 
@@ -344,9 +391,22 @@
                 return;
             }
 
+            setOfferButtonsDisabled(true);
+
             post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
-                .then(function () { return refresh(); })
-                .catch(function () { });
+                .then(function (response) {
+                    if (!response.ok) {
+                        window.alert(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                    }
+
+                    return refresh();
+                })
+                .catch(function () {
+                    window.alert(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                })
+                .finally(function () {
+                    setOfferButtonsDisabled(false);
+                });
         }
 
         function decline(reservationId) {
@@ -354,9 +414,32 @@
                 return;
             }
 
+            setOfferButtonsDisabled(true);
+
             post(config.declineOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
-                .then(function () { return refresh(); })
-                .catch(function () { });
+                .then(function (response) {
+                    if (!response.ok) {
+                        window.alert(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
+                    }
+
+                    return refresh();
+                })
+                .catch(function () {
+                    window.alert(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
+                })
+                .finally(function () {
+                    setOfferButtonsDisabled(false);
+                });
+        }
+
+        function setOfferButtonsDisabled(disabled) {
+            if (!refs.offer) {
+                return;
+            }
+
+            refs.offer.querySelectorAll('button').forEach(function (button) {
+                button.disabled = disabled;
+            });
         }
 
         function complete(activityId) {
@@ -372,6 +455,10 @@
                 .then(function (response) { return response.ok ? response.json() : { succeeded: false }; })
                 .then(function (result) {
                     if (result && result.succeeded) {
+                        if (state && state.activeInteraction) {
+                            delete activeDrafts[state.activeInteraction.interactionId];
+                        }
+
                         activeSignature = null;
 
                         return refresh();

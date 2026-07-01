@@ -176,6 +176,21 @@ release the reservation and leave the activity available for a later cycle. Full
 calendars, abandonment caps, and answering-machine detection are hardened in a later compliance
 phase.
 
+### Callback operations
+
+Callbacks use the same Activity, queue, routing, and disposition path as outbound campaign calls. A
+`CallbackRequest` records the contact, destination, optional campaign and queue, requested/due window,
+attempt count, status, and notes. The callback dispatcher runs every minute and promotes each due
+pending callback into an outbound `Callback` activity. When the request has a queue, that activity is
+enqueued so the next eligible signed-in agent receives it through the Agent Workspace.
+
+Use callbacks when an agent schedules a later follow-up, an inbound entry point offers a callback
+instead of waiting in queue, or workflow automation decides the next best action is a phone callback.
+Managers should configure a dedicated callback queue when callbacks need different SLA, skills, or
+priority from live inbound calls. Agents handle the promoted callback like any other outbound call:
+answer the offer, complete the conversation, select a disposition, and finish wrap-up through the
+Subject Flow.
+
 ## Voice Contact Center Call Router
 
 The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`,

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -54,7 +55,14 @@ public sealed class VoiceController : Controller
             return BadRequest();
         }
 
-        var result = await _callCommandService.AcceptInboundOfferAsync(reservationId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Forbid();
+        }
+
+        var result = await _callCommandService.AcceptInboundOfferAsync(reservationId, userId, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
@@ -91,7 +99,14 @@ public sealed class VoiceController : Controller
             return BadRequest();
         }
 
-        var result = await _callCommandService.DeclineInboundOfferAsync(reservationId);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Forbid();
+        }
+
+        var result = await _callCommandService.DeclineInboundOfferAsync(reservationId, userId, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {

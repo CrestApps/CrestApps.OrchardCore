@@ -47,10 +47,14 @@ public sealed class DialerAttemptServiceTests
         var reservation = Reservation();
         var interaction = new Interaction { ItemId = "int1" };
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
         var voiceCallRouter = CreateVoiceCallRouter(Success("call1"));
         var service = CreateService(
             EligibleGate(),
-            new Mock<IActivityReservationService>(),
+            reservationService,
             CreateInteractionManager(interaction),
             CreateActivityManager(activity),
             voiceCallRouter);
@@ -62,6 +66,7 @@ public sealed class DialerAttemptServiceTests
         Assert.True(started);
         Assert.Equal(InteractionStatus.Ringing, interaction.Status);
         Assert.Equal(ActivityStatus.Dialing, activity.Status);
+        reservationService.Verify(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

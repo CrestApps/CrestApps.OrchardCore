@@ -17,16 +17,18 @@ public interface IContactCenterCallCommandService
     /// agent's device must answer the media.
     /// </summary>
     /// <param name="reservationId">The reservation identifier of the offered interaction.</param>
+    /// <param name="agentUserId">The Orchard user identifier of the agent accepting the offer.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The command result describing the outcome.</returns>
-    Task<CallCommandResult> AcceptInboundOfferAsync(string reservationId, CancellationToken cancellationToken = default);
+    Task<CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Declines an offered inbound interaction: rejects the reservation, returns the work to its queue,
     /// and re-offers it to the next available agent.
     /// </summary>
     /// <param name="reservationId">The reservation identifier of the offered interaction.</param>
+    /// <param name="agentUserId">The Orchard user identifier of the agent declining the offer.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The command result describing the outcome.</returns>
-    Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, CancellationToken cancellationToken = default);
+    Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default);
 }

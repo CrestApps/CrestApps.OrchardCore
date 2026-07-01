@@ -46,6 +46,26 @@
         return minutes > 0 ? minutes + 'm ' + seconds + 's' : seconds + 's';
     }
 
+    function post(url, token, payload) {
+        var body = new URLSearchParams();
+
+        Object.keys(payload || {}).forEach(function (key) {
+            if (payload[key] !== undefined && payload[key] !== null) {
+                body.append(key, payload[key]);
+            }
+        });
+
+        return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token || ''
+            },
+            body: body.toString()
+        });
+    }
+
     function init(root) {
         var config = parseConfig(root);
         var strings = config.strings;
@@ -127,6 +147,15 @@
                 var status = agent.presenceStatus || 'Offline';
                 var detail = agent.presenceReason || status;
 
+                var actions = agent.activeInteractionId
+                    ? '<span class="cc-agent__actions">' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Monitor">' + escapeHtml(label('monitor', 'Monitor')) + '</button>' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Whisper">' + escapeHtml(label('whisper', 'Whisper')) + '</button>' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Barge">' + escapeHtml(label('barge', 'Barge')) + '</button>' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="TakeOver">' + escapeHtml(label('takeOver', 'Take over')) + '</button>' +
+                    '</span>'
+                    : '';
+
                 return '<div class="cc-agent">' +
                     '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' +
                     '<span class="cc-agent__body">' +
@@ -134,8 +163,15 @@
                         '<span class="cc-agent__state">' + escapeHtml(detail) + '</span>' +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
+                    actions +
                 '</div>';
             }).join('');
+
+            refs.board.querySelectorAll('[data-cc-engage]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    engage(button.getAttribute('data-cc-engage'), button.getAttribute('data-cc-mode'), button);
+                });
+            });
         }
 
         function watchQueues(state) {
@@ -167,6 +203,28 @@
                     }
                 })
                 .catch(function () { });
+        }
+
+        function engage(interactionId, mode, button) {
+            if (!config.engageUrl || !interactionId || !mode) {
+                return;
+            }
+
+            button.disabled = true;
+
+            post(config.engageUrl, config.antiForgeryToken, {
+                interactionId: interactionId,
+                mode: mode
+            })
+                .then(function (response) { return response.ok ? response.json() : { succeeded: false }; })
+                .then(function (result) {
+                    if (!result || !result.succeeded) {
+                        window.alert((result && result.errorMessage) || label('engagementFailed', 'The supervisor action could not be started.'));
+                    }
+                })
+                .finally(function () {
+                    button.disabled = false;
+                });
         }
 
         if (window.contactCenterRealTime && config.hubUrl) {

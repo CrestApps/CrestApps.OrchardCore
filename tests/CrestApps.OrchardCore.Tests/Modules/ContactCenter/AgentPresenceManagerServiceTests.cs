@@ -120,6 +120,52 @@ public sealed class AgentPresenceManagerServiceTests
         Assert.Equal("r1", profile.ActiveReservationId);
     }
 
+    [Fact]
+    public async Task StartWrapUpAsync_MovesBusyAgentIntoWrapUp()
+    {
+        // Arrange
+        var existing = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Busy, ActiveReservationId = "r1" };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object);
+
+        // Act
+        var profile = await service.StartWrapUpAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.WrapUp, profile.PresenceStatus);
+        Assert.Null(profile.ActiveReservationId);
+    }
+
+    [Fact]
+    public async Task CompleteWorkAsync_WhenBreakRequested_AppliesBreak()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.WrapUp,
+            RequestedPresenceStatus = AgentPresenceStatus.Break,
+            QueueIds = ["q1"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object);
+
+        // Act
+        var profile = await service.CompleteWorkAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Break, profile.PresenceStatus);
+        Assert.Null(profile.RequestedPresenceStatus);
+    }
+
     private static Mock<IDistributedLock> CreateDistributedLock()
     {
         var distributedLock = new Mock<IDistributedLock>();

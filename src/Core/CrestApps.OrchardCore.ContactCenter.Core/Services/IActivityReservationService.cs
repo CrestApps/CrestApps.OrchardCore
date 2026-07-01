@@ -34,11 +34,11 @@ public interface IActivityReservationService
     Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Cancels a pending reservation and returns the item to its queue.
+    /// Cancels a pending or accepted reservation and returns the item to its queue.
     /// </summary>
     /// <param name="reservationId">The reservation identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The canceled reservation, or <see langword="null"/> when not found or no longer pending.</returns>
+    /// <returns>The canceled reservation, or <see langword="null"/> when not found or no longer active.</returns>
     Task<ActivityReservation> CancelAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>

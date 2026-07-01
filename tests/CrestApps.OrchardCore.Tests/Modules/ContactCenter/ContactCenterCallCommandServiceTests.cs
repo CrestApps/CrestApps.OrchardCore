@@ -25,7 +25,7 @@ public sealed class ContactCenterCallCommandServiceTests
         var service = harness.CreateService();
 
         // Act
-        var result = await service.AcceptInboundOfferAsync("r1", TestContext.Current.CancellationToken);
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -62,7 +62,7 @@ public sealed class ContactCenterCallCommandServiceTests
         var service = harness.CreateService();
 
         // Act
-        var result = await service.AcceptInboundOfferAsync("r1", TestContext.Current.CancellationToken);
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -92,7 +92,7 @@ public sealed class ContactCenterCallCommandServiceTests
         var service = harness.CreateService();
 
         // Act
-        var result = await service.AcceptInboundOfferAsync("r1", TestContext.Current.CancellationToken);
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
@@ -104,6 +104,9 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.CallSessionManager.Verify(
             m => m.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        harness.ReservationService.Verify(
+            s => s.CancelAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -111,17 +114,44 @@ public sealed class ContactCenterCallCommandServiceTests
     {
         // Arrange
         var harness = new Harness();
-        harness.ReservationService
-            .Setup(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+        harness.AgentManager
+            .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
+        harness.ReservationManager
+            .Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ActivityReservation)null);
 
         var service = harness.CreateService();
 
         // Act
-        var result = await service.AcceptInboundOfferAsync("r1", TestContext.Current.CancellationToken);
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenReservationBelongsToAnotherAgent_ReturnsFailure()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AgentManager
+            .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
+        harness.ReservationManager
+            .Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a2", Status = ReservationStatus.Pending });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        harness.ReservationService.Verify(
+            s => s.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -129,6 +159,7 @@ public sealed class ContactCenterCallCommandServiceTests
     {
         // Arrange
         var harness = new Harness();
+        harness.SetupPendingReservation();
         harness.ReservationService
             .Setup(s => s.RejectAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", QueueId = "q1" });
@@ -136,7 +167,7 @@ public sealed class ContactCenterCallCommandServiceTests
         var service = harness.CreateService();
 
         // Act
-        var result = await service.DeclineInboundOfferAsync("r1", TestContext.Current.CancellationToken);
+        var result = await service.DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -146,6 +177,8 @@ public sealed class ContactCenterCallCommandServiceTests
     private sealed class Harness
     {
         public Mock<IActivityReservationService> ReservationService { get; } = new();
+
+        public Mock<IActivityReservationManager> ReservationManager { get; } = new();
 
         public Mock<IInteractionManager> InteractionManager { get; } = new();
 
@@ -165,9 +198,22 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public void SetupAcceptedReservation()
         {
+            SetupPendingReservation();
+
             ReservationService
                 .Setup(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", ActivityItemId = "act1", QueueId = "q1" });
+        }
+
+        public void SetupPendingReservation()
+        {
+            ReservationManager
+                .Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ActivityReservation { ItemId = "r1", AgentId = "a1", ActivityItemId = "act1", QueueId = "q1", Status = ReservationStatus.Pending });
+
+            AgentManager
+                .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent" });
         }
 
         public void SetupInteraction()
@@ -212,6 +258,7 @@ public sealed class ContactCenterCallCommandServiceTests
 
             return new ContactCenterCallCommandService(
                 ReservationService.Object,
+                ReservationManager.Object,
                 InteractionManager.Object,
                 AgentManager.Object,
                 VoiceProviderResolver.Object,

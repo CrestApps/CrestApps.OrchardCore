@@ -1,11 +1,16 @@
 @using System.Text.Json
 @model SupervisorDashboardIndexViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = Model.HubUrl,
         ["stateUrl"] = Model.StateUrl,
+        ["engageUrl"] = Model.EngageUrl,
+        ["antiForgeryToken"] = antiForgeryToken,
         ["strings"] = new Dictionary<string, string>
         {
             ["waiting"] = T["Waiting"].Value,
@@ -17,6 +22,11 @@
             ["slaBreaches"] = T["SLA breaches"].Value,
             ["noAgents"] = T["No agents are configured."].Value,
             ["activeInteractions"] = T["Active interactions"].Value,
+            ["monitor"] = T["Monitor"].Value,
+            ["whisper"] = T["Whisper"].Value,
+            ["barge"] = T["Barge"].Value,
+            ["takeOver"] = T["Take over"].Value,
+            ["engagementFailed"] = T["The supervisor action could not be started."].Value,
         },
     };
 }

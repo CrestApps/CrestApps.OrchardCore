@@ -465,6 +465,13 @@
     border-radius: 0.6rem;
 }
 
+.cc-agent__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: flex-end;
+}
+
 .cc-agent__body {
     min-width: 0;
     flex: 1 1 auto;

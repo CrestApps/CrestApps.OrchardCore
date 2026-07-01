@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterCallCommandService : IContactCenterCallCommandService
 {
     private readonly IActivityReservationService _reservationService;
+    private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -26,6 +27,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// Initializes a new instance of the <see cref="ContactCenterCallCommandService"/> class.
     /// </summary>
     /// <param name="reservationService">The reservation service used to accept or reject the offer.</param>
+    /// <param name="reservationManager">The reservation manager used to validate offer ownership before state changes.</param>
     /// <param name="interactionManager">The interaction manager used to advance the interaction.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to connect media.</param>
@@ -36,6 +38,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="logger">The logger instance.</param>
     public ContactCenterCallCommandService(
         IActivityReservationService reservationService,
+        IActivityReservationManager reservationManager,
         IInteractionManager interactionManager,
         IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
@@ -46,6 +49,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         ILogger<ContactCenterCallCommandService> logger)
     {
         _reservationService = reservationService;
+        _reservationManager = reservationManager;
         _interactionManager = interactionManager;
         _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
@@ -57,11 +61,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     }
 
     /// <inheritdoc/>
-    public async Task<CallCommandResult> AcceptInboundOfferAsync(string reservationId, CancellationToken cancellationToken = default)
+    public async Task<CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
+        ArgumentException.ThrowIfNullOrEmpty(agentUserId);
 
-        var reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
+        var reservation = await FindAuthorizedPendingReservationAsync(reservationId, agentUserId, cancellationToken);
 
         if (reservation is null)
         {
@@ -79,6 +84,13 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
         var deliveryModel = provider?.DeliveryModel ?? VoiceProviderDeliveryModel.AgentDeviceNative;
         var requiresDeviceAnswer = deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative;
+
+        reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
+
+        if (reservation is null)
+        {
+            return CallCommandResult.Failure("The offer is no longer available.");
+        }
 
         if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd &&
             provider is not null &&
@@ -103,6 +115,13 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                     reservation.AgentId,
                     connectResult.ErrorCode,
                     connectResult.ErrorMessage);
+
+                await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
+                if (!string.IsNullOrEmpty(reservation.QueueId))
+                {
+                    await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
+                }
 
                 return CallCommandResult.Failure(connectResult.ErrorMessage ?? "The provider could not connect the call to the agent.");
             }
@@ -133,11 +152,19 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     }
 
     /// <inheritdoc/>
-    public async Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, CancellationToken cancellationToken = default)
+    public async Task<CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
+        ArgumentException.ThrowIfNullOrEmpty(agentUserId);
 
-        var reservation = await _reservationService.RejectAsync(reservationId, cancellationToken);
+        var reservation = await FindAuthorizedPendingReservationAsync(reservationId, agentUserId, cancellationToken);
+
+        if (reservation is null)
+        {
+            return CallCommandResult.Failure("The offer is no longer available.");
+        }
+
+        reservation = await _reservationService.RejectAsync(reservationId, cancellationToken);
 
         if (reservation is null)
         {
@@ -152,6 +179,30 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         }
 
         return CallCommandResult.Success("The offer was declined and re-offered.", requiresDeviceAnswer: false);
+    }
+
+    private async Task<ActivityReservation> FindAuthorizedPendingReservationAsync(
+        string reservationId,
+        string agentUserId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await _agentManager.FindByUserIdAsync(agentUserId, cancellationToken);
+
+        if (agent is null)
+        {
+            return null;
+        }
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null ||
+            reservation.Status != ReservationStatus.Pending ||
+            !string.Equals(reservation.AgentId, agent.ItemId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return reservation;
     }
 
     private async Task<CallSession> EnsureConnectedSessionAsync(

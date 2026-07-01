@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.Core.Models;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
@@ -27,6 +28,7 @@ public sealed class SupervisorDashboardController : Controller
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IInteractionManager _interactionManager;
+    private readonly IContactCenterMonitoringService _monitoringService;
     private readonly HubRouteManager _hubRouteManager;
     private readonly IClock _clock;
 
@@ -38,6 +40,7 @@ public sealed class SupervisorDashboardController : Controller
     /// <param name="queueItemManager">The queue item manager used to compute live queue depth and SLA health.</param>
     /// <param name="agentManager">The agent profile manager used to build the agent board.</param>
     /// <param name="interactionManager">The interaction manager used to count active work per agent.</param>
+    /// <param name="monitoringServices">The optional services used to start audited supervisor live-monitoring engagements.</param>
     /// <param name="hubRouteManager">The hub route manager used to resolve the real-time hub URL.</param>
     /// <param name="clock">The clock used to compute wait times.</param>
     public SupervisorDashboardController(
@@ -46,6 +49,7 @@ public sealed class SupervisorDashboardController : Controller
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
+        IEnumerable<IContactCenterMonitoringService> monitoringServices,
         HubRouteManager hubRouteManager,
         IClock clock)
     {
@@ -54,6 +58,7 @@ public sealed class SupervisorDashboardController : Controller
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
         _interactionManager = interactionManager;
+        _monitoringService = monitoringServices.FirstOrDefault();
         _hubRouteManager = hubRouteManager;
         _clock = clock;
     }
@@ -74,6 +79,7 @@ public sealed class SupervisorDashboardController : Controller
         {
             HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
             StateUrl = Url.Action(nameof(State)),
+            EngageUrl = Url.Action(nameof(Engage)),
         };
 
         return View(viewModel);
@@ -135,15 +141,18 @@ public sealed class SupervisorDashboardController : Controller
         foreach (var agent in agents.Entries)
         {
             var activeInteractions = await _interactionManager.CountActiveByAgentAsync(agent.ItemId, HttpContext.RequestAborted);
+            var activeInteraction = await _interactionManager.FindActiveByAgentAsync(agent.ItemId, HttpContext.RequestAborted);
 
             model.Agents.Add(new SupervisorAgentViewModel
             {
+                AgentId = agent.ItemId,
                 UserId = agent.UserId,
                 DisplayName = string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName,
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
                 ActiveInteractions = activeInteractions,
+                ActiveInteractionId = activeInteraction?.ItemId,
             });
 
             if (agent.PresenceStatus == AgentPresenceStatus.Available)
@@ -153,5 +162,47 @@ public sealed class SupervisorDashboardController : Controller
         }
 
         return Json(model);
+    }
+
+    /// <summary>
+    /// Starts an audited supervisor live-monitoring engagement for the selected interaction.
+    /// </summary>
+    /// <param name="interactionId">The live interaction identifier.</param>
+    /// <param name="mode">The supervisor engagement mode.</param>
+    /// <returns>The engagement result.</returns>
+    [HttpPost]
+    [Admin("contact-center/dashboard/engage", "ContactCenterSupervisorDashboardEngage")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Engage(string interactionId, MonitorMode mode)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.MonitorContactCenter))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(interactionId))
+        {
+            return BadRequest();
+        }
+
+        if (_monitoringService is null)
+        {
+            return BadRequest();
+        }
+
+        var supervisorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(supervisorId))
+        {
+            return Forbid();
+        }
+
+        var result = await _monitoringService.EngageAsync(interactionId, supervisorId, mode, HttpContext.RequestAborted);
+
+        return Json(new
+        {
+            result.Succeeded,
+            ErrorMessage = result.Reason,
+        });
     }
 }

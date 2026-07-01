@@ -15,4 +15,9 @@ public sealed class SupervisorDashboardIndexViewModel
     /// Gets or sets the URL that returns the live supervisor dashboard state snapshot.
     /// </summary>
     public string StateUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URL that starts a supervisor live-monitoring engagement.
+    /// </summary>
+    public string EngageUrl { get; set; }
 }

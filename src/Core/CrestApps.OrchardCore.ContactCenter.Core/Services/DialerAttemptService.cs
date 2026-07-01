@@ -140,6 +140,30 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (result.Succeeded)
         {
+            var acceptedReservation = await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
+
+            if (acceptedReservation is null)
+            {
+                result = new ContactCenterVoiceProviderResult
+                {
+                    Succeeded = false,
+                    ErrorCode = "reservation_unavailable",
+                    ErrorMessage = "The reserved agent is no longer available for this dial attempt.",
+                };
+
+                interaction.Status = InteractionStatus.Failed;
+                interaction.EndedUtc = _clock.UtcNow;
+                interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+                activity.Status = ActivityStatus.Failed;
+                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+
+                await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
+                return false;
+            }
+
             interaction.Status = InteractionStatus.Ringing;
             interaction.ProviderInteractionId = result.ProviderCallId;
             interaction.StartedUtc = _clock.UtcNow;

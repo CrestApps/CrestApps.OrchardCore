@@ -79,13 +79,15 @@ capabilities they need, similar to how commercial platforms separate licensed ca
 - **Voice** - a voice channel adapter over the Telephony module that maps provider calls to
   interactions.
 - **Dialer** - outbound manual, preview, power, and progressive dialing driven by CRM activities.
-- **Wrap-up** - wrap-up timers, required activity dispositions, CRM activity completion, and
-  post-communication automation.
-- **Supervision** - live queue and agent monitoring with supervisor call-control intents.
+- **Wrap-up** - disposition-based after-call work, required activity dispositions, CRM activity
+  completion, agent presence release, and post-communication automation.
+- **Supervision** - live queue and agent monitoring with audited supervisor call-control intents.
 - **Analytics** - queue, agent, and campaign metrics and historical reporting.
 
-Inbound entry points and IVR, call recording, outbound compliance, quality management, an optional
-workflow bridge, and AI assistance are additional capabilities on the roadmap.
+Inbound entry points, call recording orchestration, outbound compliance gates, the optional workflow
+bridge, live dashboards, and AI-assist extension points are now present. Multi-step IVR decision trees,
+provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain
+advanced roadmap items.
 
 ## Real-time experience
 
@@ -348,13 +350,13 @@ controls, wrap-up, and supervisor decorations.
 
 ## Status
 
-The Contact Center is under active, phased development. The first milestone is a voice MVP that
-proves agents can run inbound and outbound voice work entirely inside the CRM while preserving the
-Telephony boundary. Inbound voice routing and the soft-phone incoming-call modal now ship in the
-[Inbound voice](#inbound-voice) feature, and the [real-time SignalR layer](#real-time-experience)
-(hub, live agent sessions, heartbeat/stale cleanup, reconnect snapshots, and presence/offer/queue
-broadcasts) now ships in the **Contact Center Real-Time** feature, which also powers the
-[agent desktop and supervisor dashboard](agent-desktop.md). This documentation will expand as
-each capability ships. See [Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue,
-reservation, and dialer features, and the [Agent desktop & supervisor dashboard](agent-desktop.md)
-guide for how agents and managers use the day-to-day surfaces.
+The Contact Center now has a usable voice contact-center MVP: managers can configure agents, skills,
+queues, business hours, entry points, campaigns, dialer profiles, callbacks, reason codes, and optional
+workflow automation; agents can sign in, receive offers, handle inbound and outbound calls, disposition
+work, and review recent history in the CRM; supervisors can monitor queue health and start provider-
+gated live engagements from the dashboard. The design still deliberately leaves advanced capabilities
+such as multi-step IVR decision trees, predictive pacing, abandonment caps, quality scorecards,
+provider-specific recording storage, and projection rebuild tooling for later phases.
+
+See [Agents, Queues & Dialer](agents-queues-dialer.md) for the setup reference and
+[Agent desktop & supervisor dashboard](agent-desktop.md) for day-to-day agent and manager workflows.

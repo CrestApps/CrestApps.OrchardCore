@@ -161,7 +161,8 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
-        if (reservation is null || reservation.Status != ReservationStatus.Pending)
+        if (reservation is null ||
+            reservation.Status is not ReservationStatus.Pending and not ReservationStatus.Accepted)
         {
             return null;
         }

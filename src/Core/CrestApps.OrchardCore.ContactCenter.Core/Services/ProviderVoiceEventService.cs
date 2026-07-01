@@ -15,6 +15,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IAgentPresenceManager _presenceManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -26,6 +27,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="voiceProviderResolver">The voice provider resolver used to bridge answered outbound calls.</param>
     /// <param name="eventStore">The interaction event store used to de-duplicate provider events.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="presenceManager">The presence manager used to move agents into wrap-up after handled calls end.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
@@ -34,6 +36,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IInteractionEventStore eventStore,
         IContactCenterEventPublisher publisher,
+        IAgentPresenceManager presenceManager,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger)
     {
@@ -42,6 +45,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _voiceProviderResolver = voiceProviderResolver;
         _eventStore = eventStore;
         _publisher = publisher;
+        _presenceManager = presenceManager;
         _clock = clock;
         _logger = logger;
     }
@@ -94,6 +98,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         if (providerEvent.State == ContactCenterCallState.Connected)
         {
             await TryBridgeAnsweredOutboundAsync(session, interaction, cancellationToken);
+        }
+        else if (IsTerminalState(providerEvent.State) && !string.IsNullOrEmpty(session.AgentId))
+        {
+            await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
         }
 
         await PublishAsync(ResolveEventType(providerEvent.State), interaction.ItemId, session.AgentId, providerEvent.IdempotencyKey, cancellationToken);
@@ -222,6 +230,16 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             ContactCenterCallState.Canceled => ContactCenterConstants.Events.CallEnded,
             _ => ContactCenterConstants.Events.CallSessionUpdated,
         };
+    }
+
+    private static bool IsTerminalState(ContactCenterCallState state)
+    {
+        return state is ContactCenterCallState.Ended or
+            ContactCenterCallState.Failed or
+            ContactCenterCallState.NoAnswer or
+            ContactCenterCallState.Rejected or
+            ContactCenterCallState.Canceled or
+            ContactCenterCallState.Transferred;
     }
 
     private async Task TryBridgeAnsweredOutboundAsync(CallSession session, Interaction interaction, CancellationToken cancellationToken)

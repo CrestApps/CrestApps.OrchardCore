@@ -189,7 +189,7 @@ public sealed class AgentWorkspaceController : Controller
         }
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, HttpContext.RequestAborted);
-        model.ActiveInteraction = await BuildActiveInteractionAsync(profile.ItemId, HttpContext.RequestAborted);
+        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, HttpContext.RequestAborted);
         model.Dispositions = await BuildDispositionsAsync(HttpContext.RequestAborted);
         model.RecentHistory = await BuildRecentHistoryAsync(profile.ItemId, HttpContext.RequestAborted);
 
@@ -248,6 +248,20 @@ public sealed class AgentWorkspaceController : Controller
             return NotFound();
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Forbid();
+        }
+
+        var profile = await _agentManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+
+        if (profile is null || !await AgentOwnsWorkAsync(profile, activityId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         activity.DispositionId = dispositionId;
 
         var result = await _dispositionService.ApplyAsync(new ActivityDispositionRequest
@@ -259,6 +273,11 @@ public sealed class AgentWorkspaceController : Controller
             ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
             ActorDisplayName = User.Identity?.Name,
         }, HttpContext.RequestAborted);
+
+        if (result.Succeeded)
+        {
+            await _presenceManager.CompleteWorkAsync(profile.ItemId, HttpContext.RequestAborted);
+        }
 
         return Json(new
         {
@@ -294,9 +313,14 @@ public sealed class AgentWorkspaceController : Controller
         };
     }
 
-    private async Task<WorkspaceActiveInteractionViewModel> BuildActiveInteractionAsync(string agentId, CancellationToken cancellationToken)
+    private async Task<WorkspaceActiveInteractionViewModel> BuildActiveInteractionAsync(AgentProfile profile, CancellationToken cancellationToken)
     {
-        var interaction = await _interactionManager.FindActiveByAgentAsync(agentId, cancellationToken);
+        var interaction = await _interactionManager.FindActiveByAgentAsync(profile.ItemId, cancellationToken);
+
+        if (interaction is null)
+        {
+            interaction = await FindPendingWrapUpInteractionAsync(profile, cancellationToken);
+        }
 
         if (interaction is null)
         {
@@ -324,6 +348,54 @@ public sealed class AgentWorkspaceController : Controller
             StartedUtc = interaction.StartedUtc,
             AnsweredUtc = interaction.AnsweredUtc,
         };
+    }
+
+    private async Task<bool> AgentOwnsWorkAsync(AgentProfile profile, string activityId, CancellationToken cancellationToken)
+    {
+        var activeInteraction = await _interactionManager.FindActiveByAgentAsync(profile.ItemId, cancellationToken);
+
+        if (string.Equals(activeInteraction?.ActivityItemId, activityId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, cancellationToken);
+
+        return string.Equals(wrapUpInteraction?.ActivityItemId, activityId, StringComparison.Ordinal);
+    }
+
+    private async Task<Interaction> FindPendingWrapUpInteractionAsync(AgentProfile profile, CancellationToken cancellationToken)
+    {
+        var interactions = await _interactionManager.ListRecentByAgentAsync(profile.ItemId, _recentHistoryCount, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            if (interaction.Status is not InteractionStatus.Ended and not InteractionStatus.Failed)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(interaction.ActivityItemId))
+            {
+                continue;
+            }
+
+            var activity = await _activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
+
+            if (activity is null ||
+                activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
+            {
+                continue;
+            }
+
+            if (string.Equals(activity.AssignedToId, profile.UserId, StringComparison.Ordinal) ||
+                string.Equals(interaction.AgentId, profile.ItemId, StringComparison.Ordinal))
+            {
+                return interaction;
+            }
+        }
+
+        return null;
     }
 
     private async Task<IList<WorkspaceLookupViewModel>> BuildDispositionsAsync(CancellationToken cancellationToken)
