@@ -25,6 +25,7 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="CrestApps.Core.SignalR" />
   </ItemGroup>
 

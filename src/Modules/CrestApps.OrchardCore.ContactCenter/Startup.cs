@@ -10,6 +10,8 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -26,6 +28,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -301,5 +304,19 @@ public sealed class RealTimeStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         HubRouteManager.MapHub<ContactCenterHub>(routes);
+    }
+}
+
+/// <summary>
+/// Registers the optional OrchardCore Workflows bridge: a Contact Center workflow event activity and the
+/// handler that triggers it for every published domain event.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class ContactCenterWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
+        services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
     }
 }
