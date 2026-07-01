@@ -203,7 +203,7 @@
 
         @if (sessionDocumentsEnabled)
         {
-            <div id="@documentBarHtmlId" class="ai-chat-widget-document-bar border-top bg-light d-none"></div>
+            <div id="@documentBarHtmlId" class="ai-chat-widget-document-bar border-top bg-body text-body d-none"></div>
         }
 
         <!-- Input Area -->
@@ -287,15 +287,16 @@
 <style asp-name="AIChatWidget" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 <style asp-name="AIChatApp" at="Head"></style>
+<style asp-name="AIChatTheme" at="Head"></style>
 <style at="Head">
     .ai-chat-widget-document-bar .small.text-muted {
-    font-size: 0.68rem !important;
-    line-height: 1.25;
+        font-size: 0.68rem !important;
+        line-height: 1.25;
     }
 
     #@widgetContainerId .ai-chat-message-body > div > p {
-    margin: 0;
-    padding: 0;
+        margin: 0;
+        padding: 0;
     }
 </style>
 

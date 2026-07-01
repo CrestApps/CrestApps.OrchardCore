@@ -112,7 +112,13 @@ browser's `localStorage`, so the widget reappears exactly where you left it afte
 it is restored before the first paint, so there is no flash or jump as the page loads. You can drag
 the widget anywhere on the screen, including all the way to the right edge and on top of other
 widgets such as the AI chat widget. By **default**, when the AI chat widget is also present, the soft
-phone automatically offsets itself so the two widgets sit side by side instead of overlapping.
+phone automatically offsets itself so the two widgets sit side by side instead of overlapping. The
+stored position is relative to the available viewport, so resizing the browser window keeps the
+widget in the same relative location instead of leaving it stuck at a temporary clamped position.
+
+The panel body, keypad, history, and footer use Bootstrap theme variables, so the configured accent
+color continues to control the header and action buttons while the rest of the widget follows the
+selected light or dark color mode.
 
 ### Status and call controls
 

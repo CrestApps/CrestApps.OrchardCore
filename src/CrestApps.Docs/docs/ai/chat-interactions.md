@@ -48,6 +48,8 @@ When a response cites uploaded or indexed content, the interaction UI renders `[
 
 The admin **Chat Interactions** list includes integrated search, multi-select, and bulk actions through the shared list management resource used across CrestApps admin catalogs.
 
+The Chat Interactions editor uses Bootstrap theme variables for the chat input and shared message controls. When the admin theme switches between light and dark mode, the interaction input follows the selected color mode.
+
 When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions now follow the site-level **Allow document uploads** and **Allow image uploads** settings, and image formats only appear when a vision deployment is configured.
 
 ## Orchestration

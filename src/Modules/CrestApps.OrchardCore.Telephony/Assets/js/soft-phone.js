@@ -65,6 +65,10 @@
         return Math.min(Math.max(value, min), max);
     }
 
+    function isFiniteNumber(value) {
+        return typeof value === 'number' && isFinite(value);
+    }
+
     function createSoftPhone(rootElement, options) {
         options = options || {};
 
@@ -177,7 +181,7 @@
             rootElement.style.bottom = 'auto';
         }
 
-        function clampPosition(left, top) {
+        function getAvailablePositionRange() {
             var toggleRect = rootElement.getBoundingClientRect();
             var toggleWidth = toggleRect.width || 56;
             var toggleHeight = toggleRect.height || 56;
@@ -202,21 +206,66 @@
             }
 
             return {
-                left: clamp(left, minLeft, maxLeft),
-                top: clamp(top, minTop, maxTop)
+                minLeft: minLeft,
+                minTop: minTop,
+                maxLeft: maxLeft,
+                maxTop: maxTop
             };
+        }
+
+        function clampPosition(left, top) {
+            var range = getAvailablePositionRange();
+
+            return {
+                left: clamp(left, range.minLeft, range.maxLeft),
+                top: clamp(top, range.minTop, range.maxTop)
+            };
+        }
+
+        function createStoredPosition(left, top) {
+            var range = getAvailablePositionRange();
+            var leftSpan = Math.max(0, range.maxLeft - range.minLeft);
+            var topSpan = Math.max(0, range.maxTop - range.minTop);
+
+            return {
+                left: left,
+                top: top,
+                leftRatio: leftSpan === 0 ? 0 : (left - range.minLeft) / leftSpan,
+                topRatio: topSpan === 0 ? 0 : (top - range.minTop) / topSpan
+            };
+        }
+
+        function resolveStoredPosition(storedPosition) {
+            if (!storedPosition) {
+                return null;
+            }
+
+            var range = getAvailablePositionRange();
+            var left = Number(storedPosition.left);
+            var top = Number(storedPosition.top);
+            var leftRatio = Number(storedPosition.leftRatio);
+            var topRatio = Number(storedPosition.topRatio);
+
+            if (Number.isFinite(leftRatio)) {
+                left = range.minLeft + Math.max(0, range.maxLeft - range.minLeft) * leftRatio;
+            }
+
+            if (Number.isFinite(topRatio)) {
+                top = range.minTop + Math.max(0, range.maxTop - range.minTop) * topRatio;
+            }
+
+            if (!Number.isFinite(left) || !Number.isFinite(top)) {
+                return null;
+            }
+
+            return clampPosition(left, top);
         }
 
         function persistPosition() {
             var rect = rootElement.getBoundingClientRect();
 
             saveLayout({
-                position: {
-                    left: rect.left,
-                    top: rect.top,
-                    leftRatio: rect.left / Math.max(1, window.innerWidth),
-                    topRatio: rect.top / Math.max(1, window.innerHeight)
-                }
+                position: createStoredPosition(rect.left, rect.top)
             });
         }
 
@@ -248,23 +297,30 @@
                 dom.panel.hidden = false;
             }
 
-            if (layout.position && isFinite(layout.position.left)) {
-                var left = layout.position.left;
-                var top = layout.position.top;
+            if (layout.position && isFiniteNumber(Number(layout.position.left))) {
+                var position = resolveStoredPosition(layout.position);
 
-                if (isFinite(layout.position.leftRatio)) {
-                    left = layout.position.leftRatio * window.innerWidth;
-                    top = layout.position.topRatio * window.innerHeight;
+                if (position) {
+                    applyRootPosition(position.left, position.top);
                 }
-
-                var position = clampPosition(left, top);
-                applyRootPosition(position.left, position.top);
             } else {
                 applyDefaultPosition();
             }
         }
 
-        function reclampPosition() {
+        function restorePosition() {
+            var layout = loadLayout();
+
+            if (layout.position) {
+                var storedPosition = resolveStoredPosition(layout.position);
+
+                if (storedPosition) {
+                    applyRootPosition(storedPosition.left, storedPosition.top);
+
+                    return;
+                }
+            }
+
             if (rootElement.style.left) {
                 var rect = rootElement.getBoundingClientRect();
                 var position = clampPosition(rect.left, rect.top);
@@ -601,7 +657,7 @@
             var shouldOpen = typeof open === 'boolean' ? open : dom.panel.hidden;
             dom.panel.hidden = !shouldOpen;
             saveLayout({ open: shouldOpen });
-            reclampPosition();
+            restorePosition();
             render();
         }
 
@@ -898,7 +954,7 @@
             attachDrag(dom.toggle, { ignoreButtons: false, suppressClick: true });
 
             window.addEventListener('message', onOAuthMessage);
-            window.addEventListener('resize', reclampPosition);
+            window.addEventListener('resize', restorePosition);
         }
 
         bindEvents();

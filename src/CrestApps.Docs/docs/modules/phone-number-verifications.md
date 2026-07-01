@@ -132,6 +132,10 @@ A **Phone Verifications Queue** dashboard is available under **Tools** for users
 - page through large result sets,
 - re-queue a single record with **Retry now**, re-queue the selected records with **Retry selected** (use the **Select all on this page** checkbox to select every row on the current page), or re-queue every failed or needs-attention record across **all pages** that matches the current search with **Retry all failed** (requires the `VerifyPhoneNumbers` permission).
 
+Queue metadata tags render next to the record display text using the same admin badge styling used
+elsewhere in the admin UI, leaving row actions isolated on the right and readable in both light and
+dark modes.
+
 All retry actions are **queued, not synchronous**: they reset the affected records' failure counters and mark them **Pending** immediately, then deferred verification work runs after the pending state is saved. The scheduled background task remains a safety net for any records still due later. This keeps the page responsive even when re-queuing many records and lets the throttle space out provider calls to avoid rate limits (HTTP 429).
 
 Explicit callers are responsible for providing the phone number to verify. After a provider returns a `PhoneNumberVerificationResult`, store it on the content item with `contentItem.AlterPhoneNumberVerificationResult(result, verifiedByUserId, revalidationIntervalDays)`. Consumers can check for existing data with `contentItem.TryGet<PhoneNumberVerificationPart>(out var part)` or read the stored result with `contentItem.TryGetPhoneNumberVerificationResult(out var result)`.
