@@ -31,8 +31,10 @@
         right: 0;
         bottom: 4rem;
         width: 18rem;
-        background-color: #fff;
+        background-color: var(--bs-body-bg, #fff);
+        border: 1px solid var(--bs-border-color, #dee2e6);
         border-radius: 0.75rem;
+        color: var(--bs-body-color, #212529);
         box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
         overflow: hidden;
     }
@@ -85,12 +87,12 @@
     &__unavailable {
         padding: 1.25rem 1rem;
         text-align: center;
-        color: #6c757d;
+        color: var(--bs-secondary-color, #6c757d);
 
         i {
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
-            color: #adb5bd;
+            color: var(--bs-tertiary-color, #adb5bd);
         }
 
         p {
@@ -114,7 +116,7 @@
     &__history-empty {
         padding: 1rem;
         text-align: center;
-        color: #6c757d;
+        color: var(--bs-secondary-color, #6c757d);
         font-size: 0.85rem;
     }
 
@@ -129,9 +131,10 @@
         padding: 0.45rem 0.5rem;
         border-radius: 0.5rem;
         cursor: pointer;
+        color: var(--bs-body-color, #212529);
 
         &:hover {
-            background-color: #f2f4f7;
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
         }
 
         &--missed {
@@ -149,7 +152,7 @@
 
     &__history-dir {
         flex: 0 0 1.25rem;
-        color: #6c757d;
+        color: var(--bs-secondary-color, #6c757d);
         text-align: center;
     }
 
@@ -169,13 +172,13 @@
 
     &__history-meta {
         font-size: 0.72rem;
-        color: #8a929b;
+        color: var(--bs-secondary-color, #6c757d);
     }
 
     &__footer {
         display: flex;
-        border-top: 1px solid #e9ecef;
-        background-color: #f8f9fb;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
     }
 
     &__tab {
@@ -184,7 +187,7 @@
         background: transparent;
         padding: 0.5rem 0.5rem 0.55rem;
         font-size: 0.74rem;
-        color: #6c757d;
+        color: var(--bs-secondary-color, #6c757d);
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -196,7 +199,7 @@
         }
 
         &:hover {
-            color: #343a40;
+            color: var(--bs-body-color, #212529);
         }
 
         &.is-active {
@@ -221,18 +224,25 @@
 
     &__number {
         width: 100%;
-        border: 1px solid #d4d8dd;
+        border: 1px solid var(--bs-border-color, #ced4da);
         border-radius: 0.5rem;
+        background-color: var(--bs-body-bg, #fff);
+        color: var(--bs-body-color, #212529);
         padding: 0.5rem 0.65rem;
         font-size: 1.1rem;
         letter-spacing: 0.05em;
+
+        &::placeholder {
+            color: var(--bs-secondary-color, #6c757d);
+            opacity: 1;
+        }
     }
 
     &__peer {
         min-height: 1rem;
         margin-top: 0.35rem;
         font-size: 0.8rem;
-        color: #6c757d;
+        color: var(--bs-secondary-color, #6c757d);
         text-align: center;
     }
 
@@ -244,7 +254,7 @@
     &__connect-text {
         margin-bottom: 0.75rem;
         font-size: 0.85rem;
-        color: #495057;
+        color: var(--bs-secondary-color, #6c757d);
     }
 
     &__error {
@@ -261,15 +271,16 @@
     }
 
     &__key {
-        border: 1px solid #e3e6ea;
+        border: 1px solid var(--bs-border-color, #dee2e6);
         border-radius: 0.5rem;
-        background-color: #f7f8fa;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        color: var(--bs-body-color, #212529);
         padding: 0.5rem 0;
         font-size: 1.05rem;
         cursor: pointer;
 
         &:hover {
-            background-color: #eef1f5;
+            background-color: var(--bs-secondary-bg, #e9ecef);
         }
     }
 
