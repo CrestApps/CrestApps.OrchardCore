@@ -46,4 +46,19 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         return match is not null;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<InteractionEvent>> ListOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? 100 : maxCount;
+
+        var events = await Session.Query<InteractionEvent, InteractionEventIndex>(
+            index => index.OccurredUtc < cutoffUtc,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderBy(index => index.OccurredUtc)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return events.ToArray();
+    }
 }

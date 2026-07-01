@@ -24,6 +24,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -37,9 +38,22 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind Contact Center options.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterConstants.CollectionName));
+
+        services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
 
         services
             .AddScoped<IInteractionStore, InteractionStore>()
@@ -51,6 +65,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
+            .AddScoped<IContactCenterRetentionService, ContactCenterRetentionService>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
         services
@@ -78,6 +93,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<CallSessionIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
 }
