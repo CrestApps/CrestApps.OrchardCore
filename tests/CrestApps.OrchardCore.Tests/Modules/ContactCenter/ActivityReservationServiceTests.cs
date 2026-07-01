@@ -27,6 +27,7 @@ public sealed class ActivityReservationServiceTests
 
         var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(item);
 
         // Act
         var reservation = await service.ReserveAsync(item, agent, 30, TestContext.Current.CancellationToken);
@@ -36,6 +37,30 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(QueueItemStatus.Reserved, item.Status);
         Assert.Equal(AgentPresenceStatus.Reserved, agent.PresenceStatus);
         publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ReserveAsync_WhenItemNoLongerWaiting_AbortsWithoutReserving()
+    {
+        // Arrange
+        var reservationManager = new Mock<IActivityReservationManager>();
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi-1", Status = QueueItemStatus.Reserved });
+        var agentManager = new Mock<IAgentProfileManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = CreateService(reservationManager, queueItemManager, agentManager, activityManager, new Mock<IContactCenterEventPublisher>());
+
+        var staleItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+
+        // Act
+        var reservation = await service.ReserveAsync(staleItem, agent, 30, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        reservationManager.Verify(m => m.CreateAsync(It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -54,6 +79,7 @@ public sealed class ActivityReservationServiceTests
 
         var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
         var selectedAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available };
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(item);
 
         // Act
         await service.ReserveAsync(item, selectedAgent, 30, TestContext.Current.CancellationToken);

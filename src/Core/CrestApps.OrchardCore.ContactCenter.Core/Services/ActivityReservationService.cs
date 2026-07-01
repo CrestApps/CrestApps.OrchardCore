@@ -50,6 +50,15 @@ public sealed class ActivityReservationService : IActivityReservationService
         ArgumentNullException.ThrowIfNull(queueItem);
         ArgumentNullException.ThrowIfNull(agent);
 
+        var current = await _queueItemManager.FindByIdAsync(queueItem.ItemId, cancellationToken);
+
+        if (current is null || current.Status != QueueItemStatus.Waiting)
+        {
+            return null;
+        }
+
+        queueItem = current;
+
         var now = _clock.UtcNow;
         var reservation = await _reservationManager.NewAsync(cancellationToken: cancellationToken);
         reservation.ActivityItemId = queueItem.ActivityItemId;
