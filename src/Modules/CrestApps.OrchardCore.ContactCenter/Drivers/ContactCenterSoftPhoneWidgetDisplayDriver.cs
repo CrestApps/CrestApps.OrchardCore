@@ -18,6 +18,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
+    private readonly IAgentStateReasonCodeManager _reasonCodeManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneWidgetDisplayDriver"/> class.
@@ -27,18 +28,21 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="reasonCodeManagers">The optional agent state reason code managers, available when the Agents feature is enabled.</param>
     public ContactCenterSoftPhoneWidgetDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IAgentProfileManager agentProfileManager,
         IActivityQueueManager queueManager,
-        ContactCenterAdminFormOptionsProvider optionsProvider)
+        ContactCenterAdminFormOptionsProvider optionsProvider,
+        IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _agentProfileManager = agentProfileManager;
         _queueManager = queueManager;
         _optionsProvider = optionsProvider;
+        _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -62,6 +66,10 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         var profile = await _agentProfileManager.FindByUserIdAsync(userId);
         var selectedCampaignIds = profile?.CampaignIds ?? [];
         var queues = await _queueManager.ListEnabledAsync();
+        var reasonCodes = _reasonCodeManager is null
+            ? []
+            : await _reasonCodeManager.ListEnabledAsync();
+
         var viewModel = new AgentSoftPhoneViewModel
         {
             Profile = profile,
@@ -69,6 +77,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
             SelectedQueueIds = profile?.QueueIds ?? [],
             CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds),
             SelectedCampaignIds = selectedCampaignIds,
+            ReasonCodes = [.. reasonCodes],
         };
 
         return Combine(

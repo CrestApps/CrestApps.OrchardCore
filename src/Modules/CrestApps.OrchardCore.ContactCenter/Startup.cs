@@ -1,16 +1,21 @@
 using CrestApps.Core.Services;
+using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
@@ -19,6 +24,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter;
@@ -36,6 +42,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
+            .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
+            .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
@@ -52,9 +60,14 @@ public sealed class Startup : StartupBase
             .AddDataMigration<InteractionEventIndexMigrations>();
 
         services
+            .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
+            .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();
+
+        services
             .AddIndexProvider<CallSessionIndexProvider>()
             .AddDataMigration<CallSessionIndexMigrations>();
 
+        services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
 }
@@ -70,11 +83,34 @@ public sealed class AgentsStartup : StartupBase
         services
             .AddScoped<IAgentProfileStore, AgentProfileStore>()
             .AddScoped<IAgentProfileManager, AgentProfileManager>()
-            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>();
+            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
+            .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
         services
             .AddIndexProvider<AgentProfileIndexProvider>()
             .AddDataMigration<AgentProfileIndexMigrations>();
+
+        services
+            .AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<AgentStateReasonCode>, AgentStateReasonCodeHandler>()
+            .AddIndexProvider<AgentStateReasonCodeIndexProvider>()
+            .AddDataMigration<AgentStateReasonCodeIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers recipe execution support for the agent feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Agents)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class AgentsRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AgentStateReasonCodeStep>();
     }
 }
 
@@ -91,6 +127,9 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityQueueManager, ActivityQueueManager>()
             .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
             .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
+            .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
+            .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
+            .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>()
             .AddScoped<IQueueItemStore, QueueItemStore>()
             .AddScoped<IQueueItemManager, QueueItemManager>()
             .AddScoped<IActivityReservationStore, ActivityReservationStore>()
@@ -100,20 +139,27 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingService, ActivityRoutingService>()
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
             .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
+            .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>()
             .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
+            .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, BusinessHoursCalendarHandler>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
             .AddDataMigration<ActivityQueueIndexMigrations>()
             .AddIndexProvider<ContactCenterSkillIndexProvider>()
             .AddDataMigration<ContactCenterSkillIndexMigrations>()
+            .AddIndexProvider<BusinessHoursCalendarIndexProvider>()
+            .AddDataMigration<BusinessHoursCalendarIndexMigrations>()
             .AddIndexProvider<QueueItemIndexProvider>()
             .AddDataMigration<QueueItemIndexMigrations>()
             .AddIndexProvider<ActivityReservationIndexProvider>()
@@ -196,5 +242,36 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the real-time agent and supervisor experience: the SignalR hub, the live agent session
+/// store, the heartbeat-driven stale-session cleanup, and the event projection that broadcasts presence,
+/// offer, and queue updates to connected clients.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.RealTime)]
+public sealed class RealTimeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAgentSessionStore, AgentSessionStore>()
+            .AddScoped<IAgentSessionManager, AgentSessionManager>()
+            .AddScoped<IAgentSessionService, AgentSessionService>()
+            .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>();
+
+        services
+            .AddIndexProvider<AgentSessionIndexProvider>()
+            .AddDataMigration<AgentSessionIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
+        services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        HubRouteManager.MapHub<ContactCenterHub>(routes);
     }
 }

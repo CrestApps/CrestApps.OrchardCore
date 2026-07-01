@@ -55,6 +55,11 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public DateTime? PresenceChangedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the agent most recently received a routing assignment, used by round-robin routing.
+    /// </summary>
+    public DateTime? LastAssignedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the queues the agent is signed in to and can receive work from.
     /// </summary>
     public IList<string> QueueIds { get; set; } = [];

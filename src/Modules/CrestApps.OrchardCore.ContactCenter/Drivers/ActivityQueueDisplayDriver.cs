@@ -50,10 +50,17 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             Name = queue.Name,
             Description = queue.Description,
             DefaultPriority = queue.DefaultPriority,
+            RoutingStrategy = queue.RoutingStrategy,
+            PreferStickyAgent = queue.PreferStickyAgent,
+            EnableSlaAging = queue.EnableSlaAging,
             SlaThresholdSeconds = queue.SlaThresholdSeconds,
             ReservationTimeoutSeconds = queue.ReservationTimeoutSeconds,
             RequiredSkills = queue.RequiredSkills,
             InboundChannelEndpointId = queue.InboundChannelEndpointId,
+            BusinessHoursCalendarId = queue.BusinessHoursCalendarId,
+            AfterHoursAction = queue.AfterHoursAction,
+            OverflowQueueId = queue.OverflowQueueId,
+            OverflowAfterSeconds = queue.OverflowAfterSeconds,
             Enabled = queue.Enabled,
         };
 
@@ -65,12 +72,21 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             model.Name = viewModel.Name;
             model.Description = viewModel.Description;
             model.DefaultPriority = viewModel.DefaultPriority;
+            model.RoutingStrategy = viewModel.RoutingStrategy;
+            model.PreferStickyAgent = viewModel.PreferStickyAgent;
+            model.EnableSlaAging = viewModel.EnableSlaAging;
             model.SlaThresholdSeconds = viewModel.SlaThresholdSeconds;
             model.ReservationTimeoutSeconds = viewModel.ReservationTimeoutSeconds;
             model.RequiredSkills = viewModel.RequiredSkills;
             model.SkillOptions = viewModel.SkillOptions;
             model.InboundChannelEndpointId = viewModel.InboundChannelEndpointId;
             model.InboundChannelEndpointOptions = viewModel.InboundChannelEndpointOptions;
+            model.BusinessHoursCalendarId = viewModel.BusinessHoursCalendarId;
+            model.BusinessHoursCalendarOptions = viewModel.BusinessHoursCalendarOptions;
+            model.AfterHoursAction = viewModel.AfterHoursAction;
+            model.OverflowQueueId = viewModel.OverflowQueueId;
+            model.OverflowQueueOptions = viewModel.OverflowQueueOptions;
+            model.OverflowAfterSeconds = viewModel.OverflowAfterSeconds;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -90,12 +106,23 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         queue.Name = model.Name?.Trim();
         queue.Description = model.Description?.Trim();
         queue.DefaultPriority = model.DefaultPriority;
+        queue.RoutingStrategy = model.RoutingStrategy;
+        queue.PreferStickyAgent = model.PreferStickyAgent;
+        queue.EnableSlaAging = model.EnableSlaAging;
         queue.SlaThresholdSeconds = model.SlaThresholdSeconds;
         queue.ReservationTimeoutSeconds = model.ReservationTimeoutSeconds;
         queue.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
         queue.InboundChannelEndpointId = string.IsNullOrWhiteSpace(model.InboundChannelEndpointId)
             ? null
             : model.InboundChannelEndpointId.Trim();
+        queue.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId)
+            ? null
+            : model.BusinessHoursCalendarId.Trim();
+        queue.AfterHoursAction = model.AfterHoursAction;
+        queue.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) || string.Equals(model.OverflowQueueId, queue.ItemId, StringComparison.Ordinal)
+            ? null
+            : model.OverflowQueueId.Trim();
+        queue.OverflowAfterSeconds = Math.Max(0, model.OverflowAfterSeconds);
         queue.Enabled = model.Enabled;
 
         return await EditAsync(queue, context);

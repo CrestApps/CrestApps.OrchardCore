@@ -1,0 +1,61 @@
+{
+  "name": "ContactCenterAgentStateReasonCodes",
+  "displayName": "Contact Center agent state reason codes",
+  "description": "Seeds the standard Contact Center agent state reason codes.",
+  "steps": [
+    {
+      "name": "AgentStateReasonCode",
+      "ReasonCodes": [
+        {
+          "Name": "Short break",
+          "Description": "A short personal break away from active work.",
+          "AppliesTo": "Break",
+          "SortOrder": 10,
+          "Enabled": true
+        },
+        {
+          "Name": "Lunch",
+          "Description": "Scheduled meal break.",
+          "AppliesTo": "Break",
+          "SortOrder": 20,
+          "Enabled": true
+        },
+        {
+          "Name": "Away from desk",
+          "Description": "Temporarily away from the desk.",
+          "AppliesTo": "Away",
+          "SortOrder": 30,
+          "Enabled": true
+        },
+        {
+          "Name": "Team meeting",
+          "Description": "Attending a team or one-on-one meeting.",
+          "AppliesTo": "Meeting",
+          "SortOrder": 40,
+          "Enabled": true
+        },
+        {
+          "Name": "Training",
+          "Description": "Attending training or onboarding.",
+          "AppliesTo": "Training",
+          "SortOrder": 50,
+          "Enabled": true
+        },
+        {
+          "Name": "Coaching",
+          "Description": "In a coaching or quality review session.",
+          "AppliesTo": "Meeting",
+          "SortOrder": 60,
+          "Enabled": true
+        },
+        {
+          "Name": "System issue",
+          "Description": "Unable to take work due to a system or tooling issue.",
+          "AppliesTo": "DoNotDisturb",
+          "SortOrder": 70,
+          "Enabled": true
+        }
+      ]
+    }
+  ]
+}

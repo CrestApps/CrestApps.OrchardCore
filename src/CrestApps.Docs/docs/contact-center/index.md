@@ -90,9 +90,73 @@ workflow bridge, and AI assistance are additional capabilities on the roadmap.
 ## Real-time experience
 
 The Contact Center publishes its own real-time event stream over SignalR for agent desktops,
-supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-phone hub for
-routing, queue, or supervisor data; voice call state continues to flow through Telephony and is
-projected into the interaction.
+supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-phone hub for routing,
+queue, or supervisor data; voice call state continues to flow through Telephony and is projected into
+the interaction.
+
+The **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`, depends on
+**Queues** and the **SignalR** module) adds:
+
+- **`ContactCenterHub`** - a SignalR hub mapped through the SignalR module's `HubRouteManager`. Agents
+  connect with the `ContactCenterSignIntoQueues` permission and join their own user group plus a group
+  per signed-in queue; supervisors connect with the new `MonitorContactCenter` permission and join the
+  `cc:supervisors` group. Supervisors can also call `WatchQueue`/`UnwatchQueue` to subscribe to a
+  single queue's group for a wallboard.
+- **Live agent sessions** - a volatile `AgentSession` aggregate, separate from the administrator-owned
+  `AgentProfile`, that tracks an agent's open SignalR connections and last heartbeat. Splitting live
+  state from configuration means a closed browser no longer leaves an agent `Available`.
+- **Heartbeat and stale-session cleanup** - the client sends a `Heartbeat` every 30 seconds. A
+  per-minute background task signs out any agent whose heartbeat is older than 90 seconds and deletes
+  the session, so routing stops targeting a dead client. A brief disconnect (for example a page
+  refresh) is tolerated by the grace window.
+- **Reconnect snapshots** - the hub's `GetSnapshot` method returns an `AgentDesktopSnapshot` combining
+  the durable profile (presence, reason, queue/campaign membership, active reservation) with live
+  session state, so a reconnecting desktop restores itself without replaying the event history.
+- **Event projection** - `ContactCenterRealTimeEventHandler` listens to the durable domain event log
+  and broadcasts presence changes (`PresenceChanged`), work offers (`OfferReceived`/`OfferRevoked`),
+  and queue depth (`QueueStatsChanged`) to the affected agent, queue watchers, and supervisors. The
+  projection is read-only with respect to domain state.
+
+A small client helper (`contact-center-realtime` script resource, depending on the `signalr` resource)
+wraps the SignalR client to connect, send heartbeats, fetch the reconnect snapshot, and dispatch the
+strongly-typed callbacks:
+
+```html
+<script asp-name="contact-center-realtime" at="Foot"></script>
+<script at="Foot" depends-on="contact-center-realtime">
+    const client = window.contactCenterRealTime.connect({
+        hubUrl: '@HubRouteManager.GetPathByHub<ContactCenterHub>()',
+        onSnapshot: (snapshot) => { /* restore desktop state */ },
+        onPresenceChanged: (n) => { /* n.userId, n.status, n.reason */ },
+        onOfferReceived: (n) => { /* show the offer until n.expiresUtc */ },
+        onOfferRevoked: (n) => { /* dismiss the offer (n.reason) */ },
+        onQueueStatsChanged: (n) => { /* update wallboard (n.queueId, n.waitingCount) */ }
+    });
+</script>
+```
+
+The agent desktop and supervisor dashboard UIs build on top of this layer and are the next deliverables
+in the agent-experience phase.
+
+## Domain events and reliable dispatch
+
+Everything the Contact Center does is recorded as an immutable `InteractionEvent` in a durable, ordered
+event log, and published through `IContactCenterEventPublisher`. Handlers (`IContactCenterEventHandler`)
+react to those events — for example the real-time projection that broadcasts presence, offers, and queue
+depth — without being coupled to the component that raised the event.
+
+Dispatch is **at-least-once**. The publisher records the event, then hands it to
+`IContactCenterOutbox`, which runs every handler inline for low latency. If a handler throws, the outbox
+persists a durable `ContactCenterOutboxMessage` instead of silently dropping the event, and the
+per-minute `OutboxDispatchBackgroundTask` retries it with exponential back-off (30s, 60s, 120s, … capped
+at 30 minutes). After ten failed attempts the message is **dead-lettered** for inspection rather than
+retried forever. A retry re-runs every handler for the event, so **handlers must be idempotent** — the
+existing handlers (such as the real-time broadcaster) already are, and provider-sourced events carry an
+idempotency key so duplicate or out-of-order deliveries are ignored.
+
+Because the event log is the source of truth and dispatch is durable, transient failures in a downstream
+projection (a momentary SignalR, index, or external-service hiccup) no longer lose work — the event is
+redelivered until it succeeds or is dead-lettered.
 
 ## Agent soft-phone work controls
 
@@ -284,6 +348,8 @@ controls, wrap-up, and supervisor decorations.
 The Contact Center is under active, phased development. The first milestone is a voice MVP that
 proves agents can run inbound and outbound voice work entirely inside the CRM while preserving the
 Telephony boundary. Inbound voice routing and the soft-phone incoming-call modal now ship in the
-[Inbound voice](#inbound-voice) feature. This documentation will expand as each capability ships. See
-[Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue, reservation, and dialer
-features.
+[Inbound voice](#inbound-voice) feature, and the [real-time SignalR layer](#real-time-experience)
+(hub, live agent sessions, heartbeat/stale cleanup, reconnect snapshots, and presence/offer/queue
+broadcasts) now ships in the **Contact Center Real-Time** feature. This documentation will expand as
+each capability ships. See [Agents, Queues & Dialer](agents-queues-dialer.md) for the agent, queue,
+reservation, and dialer features.

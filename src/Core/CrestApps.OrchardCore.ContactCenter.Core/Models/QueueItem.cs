@@ -35,6 +35,17 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public string ReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets the user identifier of the agent who most recently owned the underlying activity, used as the
+    /// sticky-agent preference when the queue enables sticky routing.
+    /// </summary>
+    public string StickyAgentUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the queue this item overflowed from, when it was moved by overflow handling.
+    /// </summary>
+    public string OverflowedFromQueueId { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent assigned to the item.
     /// </summary>
     public string AgentId { get; set; }

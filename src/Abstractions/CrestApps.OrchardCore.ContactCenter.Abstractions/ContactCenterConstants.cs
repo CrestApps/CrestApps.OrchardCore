@@ -49,6 +49,11 @@ public static class ContactCenterConstants
         /// The identifier of the inbound voice integration feature.
         /// </summary>
         public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
+
+        /// <summary>
+        /// The identifier of the real-time agent and supervisor experience feature.
+        /// </summary>
+        public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
     }
 
     /// <summary>
@@ -95,6 +100,11 @@ public static class ContactCenterConstants
         /// The call session management component.
         /// </summary>
         public const string CallSessions = "CallSessions";
+
+        /// <summary>
+        /// The real-time agent and supervisor experience component.
+        /// </summary>
+        public const string RealTime = "RealTime";
     }
 
     /// <summary>
@@ -177,6 +187,11 @@ public static class ContactCenterConstants
         /// Raised when a queue item leaves the queue.
         /// </summary>
         public const string QueueItemDequeued = "QueueItemDequeued";
+
+        /// <summary>
+        /// Raised when a waiting queue item is moved to an overflow queue.
+        /// </summary>
+        public const string QueueItemOverflowed = "QueueItemOverflowed";
 
         /// <summary>
         /// Raised when an agent signs in.

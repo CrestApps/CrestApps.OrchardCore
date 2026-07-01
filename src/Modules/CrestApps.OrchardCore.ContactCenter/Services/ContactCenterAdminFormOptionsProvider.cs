@@ -17,6 +17,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IContactCenterSkillManager _skillManager;
+    private readonly IBusinessHoursCalendarManager _calendarManager;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
 
@@ -26,18 +27,21 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// <param name="campaignManager">The omnichannel campaign manager.</param>
     /// <param name="queueManager">The activity queue manager.</param>
     /// <param name="skillManager">The Contact Center skill manager.</param>
+    /// <param name="calendarManager">The business-hours calendar manager.</param>
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
     /// <param name="voiceProviders">The registered voice call providers.</param>
     public ContactCenterAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         IActivityQueueManager queueManager,
         IContactCenterSkillManager skillManager,
+        IBusinessHoursCalendarManager calendarManager,
         IOmnichannelChannelEndpointManager channelEndpointManager,
         IEnumerable<IContactCenterVoiceProvider> voiceProviders)
     {
         _campaignManager = campaignManager;
         _queueManager = queueManager;
         _skillManager = skillManager;
+        _calendarManager = calendarManager;
         _channelEndpointManager = channelEndpointManager;
         _voiceProviders = voiceProviders;
     }
@@ -102,6 +106,37 @@ public sealed class ContactCenterAdminFormOptionsProvider
         return options;
     }
 
+    internal async Task<IList<SelectListItem>> GetBusinessHoursCalendarOptionsAsync(string selectedCalendarId)
+    {
+        var selected = CreateSelectedSet([selectedCalendarId], StringComparer.Ordinal);
+        var calendars = await _calendarManager.GetAllAsync();
+
+        var options = calendars
+            .OrderBy(calendar => calendar.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(calendar => new SelectListItem(calendar.Name ?? calendar.ItemId, calendar.ItemId, selected.Contains(calendar.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
+    }
+
+    internal async Task<IList<SelectListItem>> GetOverflowQueueOptionsAsync(string selectedQueueId, string excludeQueueId)
+    {
+        var selected = CreateSelectedSet([selectedQueueId], StringComparer.Ordinal);
+        var queues = await _queueManager.GetAllAsync();
+
+        var options = queues
+            .Where(queue => !string.Equals(queue.ItemId, excludeQueueId, StringComparison.Ordinal))
+            .OrderBy(queue => queue.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(queue => new SelectListItem(queue.Name ?? queue.ItemId, queue.ItemId, selected.Contains(queue.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
+    }
+
     internal IList<SelectListItem> GetVoiceProviderOptions(string selectedProviderName)
     {
         var selected = CreateSelectedSet([selectedProviderName], StringComparer.OrdinalIgnoreCase);
@@ -120,6 +155,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
         model.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
         model.SkillOptions = await GetSkillOptionsAsync(model.RequiredSkills);
         model.InboundChannelEndpointOptions = await GetInboundChannelEndpointOptionsAsync(model.InboundChannelEndpointId);
+        model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);
+        model.OverflowQueueOptions = await GetOverflowQueueOptionsAsync(model.OverflowQueueId, model.Id);
     }
 
     internal async Task PopulateDialerProfileEditorAsync(DialerProfileViewModel model)

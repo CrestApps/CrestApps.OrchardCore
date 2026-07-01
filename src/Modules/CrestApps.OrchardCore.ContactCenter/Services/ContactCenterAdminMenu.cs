@@ -38,6 +38,12 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
                     .Id("contactCenterSkills")
                     .Action("Index", "Skills", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageSkills)
+                    .LocalNav())
+                .Add(S["Business hours"], S["Business hours"].PrefixPosition(), businessHours => businessHours
+                    .AddClass("contact-center-business-hours")
+                    .Id("contactCenterBusinessHours")
+                    .Action("Index", "BusinessHoursCalendars", "CrestApps.OrchardCore.ContactCenter")
+                    .Permission(ContactCenterPermissions.ManageQueues)
                     .LocalNav()),
                 priority: 1);
 

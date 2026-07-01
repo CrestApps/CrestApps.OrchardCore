@@ -19,6 +19,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageSkills,
         ContactCenterPermissions.ManageDialer,
         ContactCenterPermissions.SignIntoQueues,
+        ContactCenterPermissions.MonitorContactCenter,
     ];
 
     /// <inheritdoc/>
@@ -37,6 +38,15 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                 [
                     ContactCenterPermissions.ViewInteractions,
                     ContactCenterPermissions.SignIntoQueues,
+                ],
+            },
+            new PermissionStereotype
+            {
+                Name = "Supervisor",
+                Permissions =
+                [
+                    ContactCenterPermissions.ViewInteractions,
+                    ContactCenterPermissions.MonitorContactCenter,
                 ],
             },
         ];

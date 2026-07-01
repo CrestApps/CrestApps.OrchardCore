@@ -68,3 +68,15 @@ using OrchardCore.Modules.Manifest;
         "CrestApps.OrchardCore.Telephony.SoftPhone",
     ]
 )]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.RealTime,
+    Name = "Contact Center Real-Time",
+    Description = "Adds the SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts for the agent desktop and supervisor dashboards.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+        "CrestApps.OrchardCore.SignalR",
+    ]
+)]

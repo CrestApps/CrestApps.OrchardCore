@@ -31,6 +31,21 @@ public class QueueViewModel
     public InteractionPriority DefaultPriority { get; set; } = InteractionPriority.Normal;
 
     /// <summary>
+    /// Gets or sets the strategy used to choose which available agent receives the next queued item.
+    /// </summary>
+    public QueueRoutingStrategy RoutingStrategy { get; set; } = QueueRoutingStrategy.LongestIdle;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether routing prefers the activity's last assigned user.
+    /// </summary>
+    public bool PreferStickyAgent { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether waiting items age in priority past the SLA threshold.
+    /// </summary>
+    public bool EnableSlaAging { get; set; }
+
+    /// <summary>
     /// Gets or sets the SLA threshold in seconds.
     /// </summary>
     [Range(1, int.MaxValue)]
@@ -41,6 +56,37 @@ public class QueueViewModel
     /// </summary>
     [Range(1, int.MaxValue)]
     public int ReservationTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the identifier of the business-hours calendar that gates when the queue routes work.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available business-hours calendars.
+    /// </summary>
+    public IList<SelectListItem> BusinessHoursCalendarOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the action taken for waiting items while the queue is closed.
+    /// </summary>
+    public QueueAfterHoursAction AfterHoursAction { get; set; } = QueueAfterHoursAction.HoldInQueue;
+
+    /// <summary>
+    /// Gets or sets the identifier of the queue that receives overflowed items.
+    /// </summary>
+    public string OverflowQueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available overflow queues.
+    /// </summary>
+    public IList<SelectListItem> OverflowQueueOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the seconds an item may wait before it overflows to the overflow queue.
+    /// </summary>
+    [Range(0, int.MaxValue)]
+    public int OverflowAfterSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets the selected skills required to receive work from the queue.

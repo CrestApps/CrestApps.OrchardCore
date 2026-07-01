@@ -12,16 +12,12 @@ public sealed class DefaultContactCenterEventPublisherTests
     private static readonly DateTime _now = new(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task PublishAsync_PersistsTheEvent_AndDispatchesToHandlers()
+    public async Task PublishAsync_PersistsTheEvent_AndDispatchesThroughTheOutbox()
     {
         // Arrange
         var store = CreateStore();
-        var handler = new Mock<IContactCenterEventHandler>();
-        handler
-            .Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var publisher = CreatePublisher(store.Object, [handler.Object]);
+        var outbox = new Mock<IContactCenterOutbox>();
+        var publisher = CreatePublisher(store.Object, outbox.Object);
 
         var interactionEvent = new InteractionEvent
         {
@@ -34,7 +30,7 @@ public sealed class DefaultContactCenterEventPublisherTests
 
         // Assert
         store.Verify(s => s.CreateAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
-        handler.Verify(h => h.HandleAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
+        outbox.Verify(o => o.DispatchAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -42,7 +38,7 @@ public sealed class DefaultContactCenterEventPublisherTests
     {
         // Arrange
         var store = CreateStore();
-        var publisher = CreatePublisher(store.Object, []);
+        var publisher = CreatePublisher(store.Object, new Mock<IContactCenterOutbox>().Object);
         var interactionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.InteractionCreated,
@@ -56,11 +52,29 @@ public sealed class DefaultContactCenterEventPublisherTests
     }
 
     [Fact]
+    public async Task PublishAsync_WhenItemIdIsEmpty_AssignsAnId()
+    {
+        // Arrange
+        var store = CreateStore();
+        var publisher = CreatePublisher(store.Object, new Mock<IContactCenterOutbox>().Object);
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.InteractionCreated,
+        };
+
+        // Act
+        await publisher.PublishAsync(interactionEvent, CancellationToken.None);
+
+        // Assert
+        Assert.False(string.IsNullOrEmpty(interactionEvent.ItemId));
+    }
+
+    [Fact]
     public async Task PublishAsync_WhenActorIdIsEmpty_SetsTheSystemActor()
     {
         // Arrange
         var store = CreateStore();
-        var publisher = CreatePublisher(store.Object, []);
+        var publisher = CreatePublisher(store.Object, new Mock<IContactCenterOutbox>().Object);
         var interactionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.InteractionCreated,
@@ -82,8 +96,8 @@ public sealed class DefaultContactCenterEventPublisherTests
             .Setup(s => s.ExistsByIdempotencyKeyAsync("dup-key", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var handler = new Mock<IContactCenterEventHandler>();
-        var publisher = CreatePublisher(store.Object, [handler.Object]);
+        var outbox = new Mock<IContactCenterOutbox>();
+        var publisher = CreatePublisher(store.Object, outbox.Object);
 
         var interactionEvent = new InteractionEvent
         {
@@ -96,38 +110,7 @@ public sealed class DefaultContactCenterEventPublisherTests
 
         // Assert
         store.Verify(s => s.CreateAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-        handler.Verify(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task PublishAsync_WhenAHandlerThrows_DoesNotThrow_AndStillRunsOtherHandlers()
-    {
-        // Arrange
-        var store = CreateStore();
-
-        var faultyHandler = new Mock<IContactCenterEventHandler>();
-        faultyHandler
-            .Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("boom"));
-
-        var healthyHandler = new Mock<IContactCenterEventHandler>();
-        healthyHandler
-            .Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var publisher = CreatePublisher(store.Object, [faultyHandler.Object, healthyHandler.Object]);
-
-        var interactionEvent = new InteractionEvent
-        {
-            EventType = ContactCenterConstants.Events.InteractionCreated,
-        };
-
-        // Act
-        await publisher.PublishAsync(interactionEvent, CancellationToken.None);
-
-        // Assert
-        store.Verify(s => s.CreateAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
-        healthyHandler.Verify(h => h.HandleAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
+        outbox.Verify(o => o.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static Mock<IInteractionEventStore> CreateStore()
@@ -145,14 +128,14 @@ public sealed class DefaultContactCenterEventPublisherTests
 
     private static DefaultContactCenterEventPublisher CreatePublisher(
         IInteractionEventStore store,
-        IEnumerable<IContactCenterEventHandler> handlers)
+        IContactCenterOutbox outbox)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
         return new DefaultContactCenterEventPublisher(
             store,
-            handlers,
+            outbox,
             clock.Object,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
     }

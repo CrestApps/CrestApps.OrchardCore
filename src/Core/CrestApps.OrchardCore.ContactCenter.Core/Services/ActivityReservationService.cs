@@ -80,6 +80,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         agent.PresenceStatus = AgentPresenceStatus.Reserved;
         agent.ActiveReservationId = reservation.ItemId;
         agent.PresenceChangedUtc = now;
+        agent.LastAssignedUtc = now;
         await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
 
         await UpdateActivityAsync(queueItem.ActivityItemId, activity =>

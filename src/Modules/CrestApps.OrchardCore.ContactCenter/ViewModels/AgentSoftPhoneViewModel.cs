@@ -36,6 +36,11 @@ public class AgentSoftPhoneViewModel
     public IList<string> SelectedCampaignIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the enabled agent state reason codes the agent can choose when going not ready.
+    /// </summary>
+    public IList<AgentStateReasonCode> ReasonCodes { get; set; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the agent is currently signed in.
     /// </summary>
     public bool IsSignedIn => Profile is not null &&

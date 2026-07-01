@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Moq;
 using OrchardCore.Locking.Distributed;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -197,14 +198,24 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IActivityReservationService> reservationService,
         Mock<IDistributedLock> distributedLock)
     {
+        var businessHours = new Mock<IBusinessHoursService>();
+        businessHours
+            .Setup(b => b.IsOpenAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+
         return new ActivityAssignmentService(
             queueItemManager.Object,
             agentManager.Object,
             queueManager.Object,
             CreateRoutingService(),
             reservationService.Object,
+            businessHours.Object,
             new Mock<IContactCenterEventPublisher>().Object,
-            distributedLock.Object);
+            distributedLock.Object,
+            clock.Object);
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

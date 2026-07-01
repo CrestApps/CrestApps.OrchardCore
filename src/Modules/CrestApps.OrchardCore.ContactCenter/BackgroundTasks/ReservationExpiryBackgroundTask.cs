@@ -21,6 +21,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
     {
         var reservationService = serviceProvider.GetRequiredService<IActivityReservationService>();
         var assignmentService = serviceProvider.GetRequiredService<IActivityAssignmentService>();
+        var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
         var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
         var logger = serviceProvider.GetRequiredService<ILogger<ReservationExpiryBackgroundTask>>();
 
@@ -32,6 +33,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         {
             try
             {
+                await queueService.OverflowDueAsync(queue, cancellationToken);
                 await assignmentService.AssignQueueAsync(queue.ItemId, cancellationToken);
             }
             catch (Exception ex)

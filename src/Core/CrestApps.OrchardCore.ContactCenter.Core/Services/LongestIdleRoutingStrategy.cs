@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Scores eligible agents by how long they have been available.
+/// Scores eligible agents by how long they have been available. Runs only when the queue uses the
+/// <see cref="QueueRoutingStrategy.LongestIdle"/> strategy.
 /// </summary>
 public sealed class LongestIdleRoutingStrategy : IActivityRoutingStrategy
 {
@@ -14,6 +16,11 @@ public sealed class LongestIdleRoutingStrategy : IActivityRoutingStrategy
     public ValueTask ApplyAsync(ActivityRoutingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Queue.RoutingStrategy != QueueRoutingStrategy.LongestIdle)
+        {
+            return ValueTask.CompletedTask;
+        }
 
         var eligibleCandidates = context.Candidates
             .Where(candidate => candidate.IsEligible)

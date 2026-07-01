@@ -46,4 +46,9 @@ public static class ContactCenterPermissions
     /// Grants an agent the ability to sign in to queues and campaigns and change their own presence.
     /// </summary>
     public static readonly Permission SignIntoQueues = new("ContactCenterSignIntoQueues", "Sign in to Contact Center queues and campaigns");
+
+    /// <summary>
+    /// Grants read-only, real-time visibility into queues, agents, and live interactions for supervisors.
+    /// </summary>
+    public static readonly Permission MonitorContactCenter = new("MonitorContactCenter", "Monitor the Contact Center in real time", [ManageContactCenter]);
 }

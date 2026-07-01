@@ -25,4 +25,13 @@ public interface IActivityQueueService
     /// <param name="status">The final status to record.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task DequeueAsync(QueueItem queueItem, QueueItemStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves waiting items from the queue to its configured overflow queue when they have waited past the
+    /// overflow threshold, or when the queue is closed and configured to overflow after hours.
+    /// </summary>
+    /// <param name="queue">The queue whose waiting items are evaluated for overflow.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of items moved to the overflow queue.</returns>
+    Task<int> OverflowDueAsync(ActivityQueue queue, CancellationToken cancellationToken = default);
 }

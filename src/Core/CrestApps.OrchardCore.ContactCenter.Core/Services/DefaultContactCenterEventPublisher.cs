@@ -7,13 +7,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IContactCenterEventPublisher"/>. Events are
-/// recorded in the durable interaction event history and then dispatched to every registered handler.
-/// Handler failures are logged and do not prevent the event from being recorded or other handlers from running.
+/// recorded in the durable interaction event history and then dispatched through <see cref="IContactCenterOutbox"/>,
+/// which runs the registered handlers and guarantees at-least-once delivery by scheduling a durable retry
+/// when a handler fails.
 /// </summary>
 public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPublisher
 {
     private readonly IInteractionEventStore _eventStore;
-    private readonly IEnumerable<IContactCenterEventHandler> _handlers;
+    private readonly IContactCenterOutbox _outbox;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -21,17 +22,17 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     /// Initializes a new instance of the <see cref="DefaultContactCenterEventPublisher"/> class.
     /// </summary>
     /// <param name="eventStore">The durable interaction event store.</param>
-    /// <param name="handlers">The registered event handlers.</param>
+    /// <param name="outbox">The outbox that dispatches events to handlers with durable retry.</param>
     /// <param name="clock">The clock used to stamp events.</param>
     /// <param name="logger">The logger instance.</param>
     public DefaultContactCenterEventPublisher(
         IInteractionEventStore eventStore,
-        IEnumerable<IContactCenterEventHandler> handlers,
+        IContactCenterOutbox outbox,
         IClock clock,
         ILogger<DefaultContactCenterEventPublisher> logger)
     {
         _eventStore = eventStore;
-        _handlers = handlers;
+        _outbox = outbox;
         _clock = clock;
         _logger = logger;
     }
@@ -77,21 +78,6 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
 
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
 
-        foreach (var handler in _handlers)
-        {
-            try
-            {
-                await handler.HandleAsync(interactionEvent, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "An error occurred while handling the Contact Center event '{EventType}' for interaction '{InteractionId}' in handler '{Handler}'.",
-                    interactionEvent.EventType,
-                    interactionEvent.InteractionId,
-                    handler.GetType().FullName);
-            }
-        }
+        await _outbox.DispatchAsync(interactionEvent, cancellationToken);
     }
 }

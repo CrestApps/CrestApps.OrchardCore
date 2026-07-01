@@ -24,6 +24,8 @@
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="CrestApps.Core.SignalR" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +35,14 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Reference the SignalR module directly so enabling the Contact Center Real-Time feature also brings
+      in the SignalR feature, ensuring the hub and client library are available without a manual install.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
