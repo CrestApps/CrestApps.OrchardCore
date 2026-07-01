@@ -21,7 +21,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-mIUTyBeIgoBKw6+TsaPGIuRY9EueEv+LwoPowwIEDPKbs0/zPVyZWEyKA3y3qugA",
                 "sha384-yt48W7fssAWTE5qNZ9xix75ll3KHdsXs5lODMFSkKSES3LnbcMICCTqYmr+PaDCJ")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify")
-            .SetVersion("1.0.0-preview.90");
+            .SetVersion("1.0.0");
     }
 
     /// <summary>
