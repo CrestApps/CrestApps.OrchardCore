@@ -5,9 +5,10 @@
 @model BulkManageActivityFilterViewModel
 
 <style asp-name="flatpickr"></style>
+<style asp-name="crestapps-bootstrap-select"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="crestapps-bootstrap-select" at="Foot"></script>
 
 @{
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;

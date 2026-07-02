@@ -14,9 +14,11 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
+using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -215,5 +217,20 @@ public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBas
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ImportContent, NationalDoNotCallRegistryImportOptionsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Omnichannel CRM reports contributed to the admin Reports area.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Reports)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IReport, ActivitySummaryReportProvider>()
+            .AddScoped<IReport, CampaignPerformanceReportProvider>()
+            .AddScoped<IReport, DispositionBreakdownReportProvider>();
     }
 }

@@ -17,9 +17,10 @@
 }
 
 <style asp-name="flatpickr"></style>
+<style asp-name="crestapps-bootstrap-select"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="crestapps-bootstrap-select" at="Foot"></script>
 
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
@@ -69,6 +70,20 @@
                 <span class="hint">@T["The selected subject flow determines the campaign, interaction type, and channel used when the batch loads activities."]</span>
             </div>
         </div>
+
+        @if (string.Equals(Model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="AIProfileId" class="ocat-label">@T["AI profile"]</label>
+                <div class="ocat-end">
+                    <select asp-for="AIProfileId" asp-items="Model.AIProfiles" class="form-select">
+                        <option value="">@T["Use subject flow profile"]</option>
+                    </select>
+                    <span asp-validation-for="AIProfileId" class="text-danger"></span>
+                    <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown. The selected profile is stored on each loaded activity and starts automated SMS conversations."]</span>
+                </div>
+            </div>
+        }
 
         <div class="ocat-wrapper">
             <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>

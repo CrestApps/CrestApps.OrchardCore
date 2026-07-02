@@ -47,6 +47,22 @@ The base module exposes:
 
 Provider-specific integrations can forward inbound events into this endpoint.
 
+## Reports
+
+When the **Omnichannel Reports** feature (`CrestApps.OrchardCore.Omnichannel.Reports`) is enabled, CRM
+reports are contributed to the reusable [Reports](../modules/reports.md) framework and appear under the
+top-level admin **Reports** menu (grouped under **CRM**). Each report shares the standard from/to
+date-range filter and a CSV export.
+
+- **Activity summary** - activity volume and completion, broken down by source, channel, and status,
+  with a daily created-activity trend.
+- **Campaign performance** - per-campaign *completed vs pending* progress across the CRM activity
+  inventory.
+- **Disposition breakdown** - how completed activities were dispositioned in the period.
+
+Access is gated by the **View Omnichannel reports** (`ViewOmnichannelReports`) permission, which is
+implied by **Manage activities** and granted to administrators by default.
+
 ## Notes
 
 - The base module does not provide the full management UI by itself.

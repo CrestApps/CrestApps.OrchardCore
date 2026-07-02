@@ -98,8 +98,12 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         var flowSettings = await FindFlowSettingsAsync(activity.SubjectContentType, cancellationToken)
             ?? throw new InvalidOperationException($"Unable to find subject flow settings for the activity '{activity.ItemId}' and subject '{activity.SubjectContentType}'.");
 
-        var profile = await _profileManager.FindByIdAsync(flowSettings.ProfileId, cancellationToken)
-            ?? throw new InvalidOperationException($"Unable to find the AI profile '{flowSettings.ProfileId}' for the activity '{activity.ItemId}'.");
+        var profileId = string.IsNullOrWhiteSpace(activity.AIProfileId)
+            ? flowSettings.ProfileId
+            : activity.AIProfileId;
+
+        var profile = await _profileManager.FindByIdAsync(profileId, cancellationToken)
+            ?? throw new InvalidOperationException($"Unable to find the AI profile '{profileId}' for the activity '{activity.ItemId}'.");
 
         if (profile.Type != AIProfileType.Chat)
         {

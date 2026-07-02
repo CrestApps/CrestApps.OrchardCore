@@ -9,11 +9,13 @@ using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
+using CrestApps.OrchardCore.ContactCenter.Reports;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Builder;
@@ -321,6 +323,27 @@ public sealed class RealTimeStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         HubRouteManager.MapHub<ContactCenterHub>(routes);
+    }
+}
+
+/// <summary>
+/// Registers the reporting and analytics experience: the reporting service that aggregates interactions
+/// and activities into productivity, call insights, queue usage, and campaign/subject progress reports,
+/// and the Reports admin navigation.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Analytics)]
+public sealed class AnalyticsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
+
+        services
+            .AddScoped<IReport, CallInsightsReportProvider>()
+            .AddScoped<IReport, AgentProductivityReportProvider>()
+            .AddScoped<IReport, QueueUsageReportProvider>()
+            .AddScoped<IReport, CampaignSummaryReportProvider>()
+            .AddScoped<IReport, SubjectInventoryReportProvider>();
     }
 }
 

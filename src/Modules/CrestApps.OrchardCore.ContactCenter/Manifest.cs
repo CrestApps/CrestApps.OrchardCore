@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Reports;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -78,5 +79,17 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Queues,
         "CrestApps.OrchardCore.SignalR",
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Analytics,
+    Name = "Contact Center Reports & Analytics",
+    Description = "Adds contact center productivity, call insights, queue usage, and campaign/subject progress reports to the admin Reports area, with CSV export.",
+    Category = "Communication",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
+        ReportsConstants.Feature,
     ]
 )]

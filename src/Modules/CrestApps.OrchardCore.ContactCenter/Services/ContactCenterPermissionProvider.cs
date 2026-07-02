@@ -20,6 +20,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageDialer,
         ContactCenterPermissions.SignIntoQueues,
         ContactCenterPermissions.MonitorContactCenter,
+        ContactCenterPermissions.ViewReports,
     ];
 
     /// <inheritdoc/>
@@ -47,6 +48,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                 [
                     ContactCenterPermissions.ViewInteractions,
                     ContactCenterPermissions.MonitorContactCenter,
+                    ContactCenterPermissions.ViewReports,
                 ],
             },
         ];

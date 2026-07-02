@@ -51,4 +51,9 @@ public static class ContactCenterPermissions
     /// Grants read-only, real-time visibility into queues, agents, and live interactions for supervisors.
     /// </summary>
     public static readonly Permission MonitorContactCenter = new("MonitorContactCenter", "Monitor the Contact Center in real time", [ManageContactCenter]);
+
+    /// <summary>
+    /// Grants read-only access to the Contact Center historical reports and their exports.
+    /// </summary>
+    public static readonly Permission ViewReports = new("ViewContactCenterReports", "View Contact Center reports", [MonitorContactCenter, ManageContactCenter]);
 }

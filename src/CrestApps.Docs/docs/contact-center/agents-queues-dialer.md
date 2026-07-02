@@ -18,6 +18,7 @@ module so tenants enable only what they need.
 | Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, reservations, policy-based routing, and availability-based assignment. |
 | Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer activity batches routed through Contact Center Voice. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts. |
+| Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Reports area under Interaction Center with call insights, agent productivity, queue usage, and campaign/subject progress reports plus CSV exports. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the Contact Center voice provider boundary. |
 
 ## Agents and presence
@@ -232,6 +233,7 @@ planned follow-up.
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.ContactCenter.RealTime",
+        "CrestApps.OrchardCore.ContactCenter.Analytics",
         "CrestApps.OrchardCore.DialPad.Dialer"
       ]
     }

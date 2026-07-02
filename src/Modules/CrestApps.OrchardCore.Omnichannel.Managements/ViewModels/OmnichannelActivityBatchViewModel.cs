@@ -49,6 +49,11 @@ public class OmnichannelActivityBatchViewModel
     public string ContactContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI profile identifier used by automated activities.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the instructions.
     /// </summary>
     public string Instructions { get; set; }
@@ -147,6 +152,12 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available AI profiles.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AIProfiles { get; set; }
 
     /// <summary>
     /// Gets or sets the selected users.

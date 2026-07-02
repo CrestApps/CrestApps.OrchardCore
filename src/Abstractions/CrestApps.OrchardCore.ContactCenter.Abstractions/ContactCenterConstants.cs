@@ -54,6 +54,11 @@ public static class ContactCenterConstants
         /// The identifier of the real-time agent and supervisor experience feature.
         /// </summary>
         public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
+
+        /// <summary>
+        /// The identifier of the reporting and analytics feature.
+        /// </summary>
+        public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
     }
 
     /// <summary>

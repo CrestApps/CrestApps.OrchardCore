@@ -170,18 +170,22 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(flowSettings.ProfileId))
+        var profileId = string.IsNullOrWhiteSpace(activity.AIProfileId)
+            ? flowSettings.ProfileId
+            : activity.AIProfileId;
+
+        if (string.IsNullOrWhiteSpace(profileId))
         {
             _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} do not have an AI profile. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId);
 
             return;
         }
 
-        var profile = await _profileManager.FindByIdAsync(flowSettings.ProfileId, cancellationToken);
+        var profile = await _profileManager.FindByIdAsync(profileId, cancellationToken);
 
         if (profile is null || profile.Type != AIProfileType.Chat)
         {
-            _logger.LogWarning("The AI profile '{ProfileId}' associated with Activity {ActivityId} was not found or is not a chat profile. Cannot process incoming SMS message.", flowSettings.ProfileId, activity.ItemId);
+            _logger.LogWarning("The AI profile '{ProfileId}' associated with Activity {ActivityId} was not found or is not a chat profile. Cannot process incoming SMS message.", profileId, activity.ItemId);
 
             return;
         }

@@ -708,6 +708,9 @@ public sealed class ActivityBatchesController : Controller
                         activity.Source = sourceEntry.Source;
                         activity.InteractionType = flowSettings.InteractionType;
                         activity.Channel = flowSettings.Channel;
+                        activity.AIProfileId = string.IsNullOrWhiteSpace(batch.AIProfileId)
+                            ? flowSettings.ProfileId
+                            : batch.AIProfileId;
                         activity.ContactContentItemId = contact.ContentItemId;
                         activity.ContactContentType = batch.ContactContentType;
                         activity.SubjectContentType = batch.SubjectContentType;

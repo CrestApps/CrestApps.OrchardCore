@@ -45,6 +45,11 @@ public sealed class OmnichannelActivity : CatalogItem
     public string AISessionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI profile identifier used to drive this automated activity.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }

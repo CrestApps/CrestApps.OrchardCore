@@ -89,6 +89,30 @@ bridge, live dashboards, and AI-assist extension points are now present. Multi-s
 provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain
 advanced roadmap items.
 
+## Interaction Center admin menu concepts
+
+Contact Center administration is intentionally split into focused menu entries under
+**Interaction Center**. Each entry owns one concept so a new tenant can configure routing in a predictable
+order instead of mixing CRM, routing, and telephony settings on one screen.
+
+| Menu entry | What it controls | Example |
+| --- | --- | --- |
+| **Agent states** | The not-ready reason codes agents can choose when they are unavailable. The selected reason changes presence and leaves an audit trail. | `Lunch` sets the agent to `Break`; `Coaching` sets the agent to `Training`. |
+| **Agents** | The Orchard users who can receive contact center work, their capacity, allowed queues/campaigns, and administrator-assigned skills. | Maria can handle two chats but only one voice call, belongs to the Billing queue, and has the `Spanish` skill. |
+| **Business hours** | Reusable open/closed calendars with time zone, weekly schedule, and holiday dates. Queues and entry points use them to decide whether work should route, hold, overflow, or close. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
+| **Campaigns** | Omnichannel CRM grouping and reporting records. Campaigns describe the business initiative; they do not decide routing or media execution. | `July renewal outreach` groups all outbound renewal activities and reports outcomes. |
+| **Channel endpoints** | Omnichannel sender/receiver addresses such as SMS numbers, phone numbers, or email addresses. Contact Center references them but Telephony/provider modules still execute media. | `+1 800 555 0100` is the public support number used by an inbound entry point. |
+| **Entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
+| **Queues** | Waiting rooms for activities. A queue owns priority, SLA threshold, reservation timeout, routing strategy, required skills, business-hours behavior, and overflow. | `Billing Voice` requires the Billing skill, uses longest-idle routing, and overflows to General Support after 10 minutes. |
+| **Skills** | Routeable capabilities assigned by supervisors/administrators. Queues can require skills, and routing filters out agents who do not have them. | A Spanish-language queue requires both `Spanish` and `Billing`. |
+| **Dialer profiles** | Outbound execution policy over existing CRM activities. The profile selects queue, dialing mode, pacing, voice provider, retry, and compliance rules. | A power dialer profile reserves available Billing agents and dials renewal activities within the allowed calling window. |
+| **My workspace** | The agent desktop where agents receive offers, accept or decline work, see active customer context, and complete the activity with a disposition. | An agent accepts an inbound support offer, handles the call, selects `Resolved`, and completes the activity. |
+| **Live dashboard** | Supervisor wallboard for queue depth, SLA health, and live agent presence. | A supervisor sees Billing Voice breaching SLA and asks another skilled agent to sign in. |
+
+The practical setup sequence is: create channel endpoints and campaigns in Omnichannel, configure subject
+flows and dispositions, define skills and business hours, create queues, map inbound entry points or
+dialer profiles, assign agents, then use My workspace and Live dashboard for daily operations.
+
 ## Real-time experience
 
 The Contact Center publishes its own real-time event stream over SignalR for agent desktops,
@@ -338,6 +362,30 @@ subject cannot be completed until a disposition is selected — enforced central
 dialer, or automation) for both inbound and outbound work. This replaces the need for a separate
 wrap-up entity: "must disposition" is a property of the subject's decision flow, and after-call agent
 timing/capacity release is handled by the agent desktop and agent presence (see the agent desktop phase).
+
+## Reports and analytics
+
+The optional **Contact Center Reports & Analytics** feature
+(`CrestApps.OrchardCore.ContactCenter.Analytics`) contributes contact center reports to the reusable
+[Reports](../modules/reports.md) framework, so they appear under the top-level admin **Reports** menu
+(grouped under **Contact Center**) alongside CRM and other reports. Every report shares the standard
+from/to date-range filter and a CSV export.
+
+- **Call insights** - inbound/outbound volume, answered, abandoned, and failed counts; average handle
+  time and speed of answer; breakdowns by channel and status; and a daily volume trend.
+- **Agent productivity** - per-agent handled volume (inbound/outbound), talk time, average handle time,
+  and completed activities.
+- **Queue usage** - per-queue handled volume, answered, abandoned, average handle time and speed of
+  answer, current waiting depth, and the configured SLA threshold.
+- **Campaign summary** - per-campaign *completed vs pending* progress across the activity inventory,
+  with in-progress, failed, cancelled, attempt, and completion-rate columns so administrators can see
+  what is done versus what still needs to be worked.
+- **Subject inventory** - the same completed-vs-pending progress grouped by subject type.
+
+Reports are derived read models built directly from the durable interaction history and the CRM
+activity inventory, so they are always consistent with the underlying data. Access is gated by the
+**View Contact Center reports** (`ViewContactCenterReports`) permission, which is granted to the
+built-in **Supervisor** role and to administrators by default.
 
 ## UI extensibility
 

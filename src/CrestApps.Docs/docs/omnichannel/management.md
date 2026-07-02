@@ -207,11 +207,13 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 3. Create the new batch:
    - Select contact type
    - Select subject type
+   - For **Automatic** batches, optionally select an AI profile. The list only includes chat profiles
+     with **Add initial prompt** enabled; leaving it empty uses the subject flow's AI profile.
    - Assign users when the selected source requires assignment
    - Optionally set lead created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
-The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, channel endpoint, and AI profile. Manual batches assign each created activity to a selected user. Automatic batches leave activities unassigned but immediately eligible for the automated activity processor when their schedule is due. Dialer batches leave activities unassigned with assignment status `Available` so dialers can reserve and assign them safely later.
+The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint. For Automatic batches, the loader stores the selected batch AI profile on each activity; if no batch profile is selected, the activity uses the subject flow's AI profile. The automated activity processor then uses that profile's initial prompt to send the first outbound SMS and to continue the AI conversation when the contact replies. Manual batches assign each created activity to a selected user. Automatic batches leave activities unassigned but immediately eligible for the automated activity processor when their schedule is due. Dialer batches leave activities unassigned with assignment status `Available` so dialers can reserve and assign them safely later.
 
 ### 9) Complete Activities
 
