@@ -55,6 +55,9 @@ public sealed class Startup : StartupBase
         services.AddCatalogs()
             .AddCatalogManagers();
 
+        services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
+        services.AddScoped<DefaultContactActivityBatchLoader>();
+
         services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
 
         services

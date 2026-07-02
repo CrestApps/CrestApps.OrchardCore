@@ -215,6 +215,20 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 
 The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint. For Automatic batches, the loader stores the selected batch AI profile on each activity; if no batch profile is selected, the activity uses the subject flow's AI profile. The automated activity processor then uses that profile's initial prompt to send the first outbound SMS and to continue the AI conversation when the contact replies. Manual batches assign each created activity to a selected user. Automatic batches leave activities unassigned but immediately eligible for the automated activity processor when their schedule is due. Dialer batches leave activities unassigned with assignment status `Available` so dialers can reserve and assign them safely later.
 
+### Extending activity batch sources
+
+Activity batch loading is extensible. Each batch has a **source**, and the source controls how the batch resolves and loads activities. There are two layers of extensibility:
+
+1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, and whether the source requires user assignment. Registered sources appear as creation cards, and display drivers can add source-specific editor sections.
+
+2. **Controlling the load** — implement `IActivityBatchLoader` (from `CrestApps.OrchardCore.Omnichannel.Core.Services`) to fully own how a source queries leads, applies filters, and creates activities. The loader's `Source` property must match the registered source. Register the loader as a scoped service:
+
+   ```csharp
+   services.AddScoped<IActivityBatchLoader, MyCustomActivityBatchLoader>();
+   ```
+
+When a batch is loaded, the `IActivityBatchLoadCoordinator` transitions the batch to the loading state, resolves the loader whose `Source` matches the batch source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the batch contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the batch to the `New` state so it can be retried.
+
 ### 9) Complete Activities
 
 1. Open an activity from the activities list.
