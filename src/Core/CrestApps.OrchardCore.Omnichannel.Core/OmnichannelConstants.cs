@@ -98,6 +98,11 @@ public static class OmnichannelConstants
         public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
 
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
+
+        /// <summary>
+        /// The identifier of the optional Omnichannel CRM reports feature.
+        /// </summary>
+        public const string Reports = "CrestApps.OrchardCore.Omnichannel.Reports";
     }
 
     /// <summary>
@@ -159,5 +164,10 @@ public static class OmnichannelConstants
         /// Gets the permission to manage subject flows.
         /// </summary>
         public readonly static Permission ManageSubjectFlows = new("ManageSubjectFlows", "Manage subject flows");
+
+        /// <summary>
+        /// Gets the permission to view the Omnichannel CRM reports.
+        /// </summary>
+        public readonly static Permission ViewReports = new("ViewOmnichannelReports", "View Omnichannel reports", [ManageActivities]);
     }
 }

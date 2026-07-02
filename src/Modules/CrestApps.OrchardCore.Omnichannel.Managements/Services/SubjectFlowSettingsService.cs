@@ -82,6 +82,7 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
         }
 
         return flowSettings.InteractionType != ActivityInteractionType.Automated ||
-            !string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId);
+            (!string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId) &&
+                !string.IsNullOrWhiteSpace(flowSettings.ProfileId));
     }
 }

@@ -55,8 +55,14 @@
         font-weight: 600;
     }
 
-    &__status {
+    &__header-actions {
         margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    &__status {
         font-size: 0.78rem;
         opacity: 0.9;
     }
@@ -99,6 +105,12 @@
         max-height: 18rem;
         overflow-y: auto;
         padding: 0.35rem 0.5rem 0.65rem;
+    }
+
+    &__extension-view {
+        max-height: 18rem;
+        overflow-y: auto;
+        padding: 0.75rem 0.85rem;
     }
 
     &__history-empty {
@@ -332,5 +344,154 @@
 
     100% {
         box-shadow: 0 0.25rem 0.75rem rgba(210, 63, 63, 0.5);
+    }
+}
+
+.telephony-incoming {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.45);
+    }
+
+    &__dialog {
+        position: relative;
+        width: min(26rem, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+        background-color: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
+        padding: 1.25rem;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    &__pulse {
+        flex: 0 0 auto;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        background-color: #198754;
+        animation: telephony-soft-phone-pulse 1.4s ease-in-out infinite;
+    }
+
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+    }
+
+    &__caller {
+        font-size: 1.15rem;
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    &__queue {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    &__cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        max-height: 14rem;
+        overflow-y: auto;
+    }
+
+    &__cards-heading {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+    }
+
+    &__card {
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.6rem 0.7rem;
+        border: 1px solid #e3e6ea;
+        border-radius: 0.6rem;
+        background-color: #f8f9fa;
+    }
+
+    &__card-icon {
+        flex: 0 0 auto;
+        color: var(--telephony-accent, #2f6fed);
+        font-size: 1.1rem;
+    }
+
+    &__card-body {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__card-title {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    &__card-subtitle,
+    &__card-desc {
+        font-size: 0.8rem;
+        color: #6c757d;
+        word-break: break-word;
+    }
+
+    &__card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.35rem;
+    }
+
+    &__card-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+        font-size: 0.8rem;
+    }
+
+    &__card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        justify-content: center;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 0.5rem;
+
+        .telephony-incoming__btn {
+            flex: 1 1 0;
+        }
     }
 }

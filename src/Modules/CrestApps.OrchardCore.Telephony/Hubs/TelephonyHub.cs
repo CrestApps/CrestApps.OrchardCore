@@ -124,6 +124,14 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         => ExecuteAsync((service, token) => service.RejectAsync(call, token));
 
     /// <summary>
+    /// Sends a ringing inbound call to voicemail.
+    /// </summary>
+    /// <param name="call">A reference to the inbound call to send to voicemail.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    public Task<TelephonyResult> Voicemail(CallReference call)
+        => ExecuteAsync((service, token) => service.SendToVoicemailAsync(call, token));
+
+    /// <summary>
     /// Issues the bootstrap configuration the soft phone client needs to connect to the provider.
     /// </summary>
     /// <returns>The client credentials, or <see langword="null"/> when no provider is configured.</returns>

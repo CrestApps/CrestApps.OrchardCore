@@ -118,10 +118,14 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                         <div data-telephony-view="history" data-telephony-history hidden>
                             <div data-telephony-history-list></div>
                         </div>
+                        <div data-telephony-view="contact-center" hidden>
+                            <span>Contact Center Work</span>
+                        </div>
                     </div>
                     <div data-telephony-footer hidden>
                         <button type="button" data-telephony-tab="keypad" aria-selected="true">Keypad</button>
                         <button type="button" data-telephony-tab="history" aria-selected="false">Recent</button>
+                        <button type="button" data-telephony-tab="contact-center" aria-selected="false">Work</button>
                     </div>
                 </div>
             </div>

@@ -22,6 +22,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Phone Number Verifications - Veriphone](phone-number-verifications-veriphone) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Veriphone provider for phone number verification |
 | [Phone Number Verifications - Twilio](phone-number-verifications-twilio) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider for phone number verification |
 | [Recipes](recipes) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes |
+| [Reports](reports) | `CrestApps.OrchardCore.Reports` | Reusable reporting framework with a shared admin Reports area, extensible filters, and exports |
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
 | [SignalR](signalr) | `CrestApps.OrchardCore.SignalR` | Real-time communication via SignalR |

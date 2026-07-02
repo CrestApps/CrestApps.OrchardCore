@@ -30,6 +30,11 @@ public class SubjectFlowSettingsViewModel
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using this subject can be completed.
+    /// </summary>
+    public bool RequireDisposition { get; set; }
+
+    /// <summary>
     /// Gets or sets the initial outbound prompt pattern.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
@@ -53,6 +58,21 @@ public class SubjectFlowSettingsViewModel
     /// Gets or sets a value indicating whether allow AI to update subject.
     /// </summary>
     public bool AllowAIToUpdateSubject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the no-response timeout, in minutes.
+    /// </summary>
+    public int? NoResponseTimeoutInMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMS response delay, in seconds.
+    /// </summary>
+    public int? SmsResponseDelayInSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMS opt-out keywords.
+    /// </summary>
+    public string SmsOptOutKeywords { get; set; }
 
     /// <summary>
     /// Gets or sets the available campaigns.

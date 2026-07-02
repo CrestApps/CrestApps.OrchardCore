@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +36,7 @@
       while the DialPad code itself depends only on the provider-agnostic Telephony abstractions.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

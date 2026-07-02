@@ -13,7 +13,7 @@ public sealed class SoftPhoneWidgetSettings
     /// <summary>
     /// Gets or sets a value indicating whether the floating soft phone widget is shown on the admin dashboard.
     /// </summary>
-    public bool DisplayOnAdmin { get; set; }
+    public bool DisplayOnAdmin { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the floating soft phone widget is shown on the front end.

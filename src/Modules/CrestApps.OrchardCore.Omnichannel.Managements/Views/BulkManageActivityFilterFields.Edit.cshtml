@@ -5,9 +5,10 @@
 @model BulkManageActivityFilterViewModel
 
 <style asp-name="flatpickr"></style>
+<style asp-name="crestapps-bootstrap-select"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="crestapps-bootstrap-select" at="Foot"></script>
 
 @{
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
@@ -36,7 +37,7 @@
     </div>
 
     <div class="col-lg-3">
-        <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-sm btn-outline-secondary" title="@T["Time zones"]">
+        <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-light btn-sm" title="@T["Time zones"]">
         </select>
     </div>
 

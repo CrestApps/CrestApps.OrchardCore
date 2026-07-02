@@ -14,9 +14,12 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
+using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Reports;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,7 +111,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
-            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>();
+            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>()
+            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>();
 
         // Subject Flow Settings.
         services
@@ -137,7 +141,32 @@ public sealed class Startup : StartupBase
             });
         });
 
+        services.Configure<ActivityBatchSourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Manual, entry =>
+            {
+                entry.DisplayName = S["Manual"];
+                entry.Description = S["Loads activities assigned to selected users for manual agent work."];
+                entry.RequiresUserAssignment = true;
+            });
+
+            options.AddSource(ActivitySources.Automatic, entry =>
+            {
+                entry.DisplayName = S["Automatic"];
+                entry.Description = S["Loads unassigned activities that AI automation processes through the configured subject flow."];
+                entry.RequiresUserAssignment = false;
+            });
+
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.DisplayName = S["Dialer"];
+                entry.Description = S["Loads unassigned activities that dialers reserve and assign later."];
+                entry.RequiresUserAssignment = false;
+            });
+        });
+
         services.AddPermissionProvider<PermissionProvider>();
+        services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
         services.AddNavigationProvider<AdminMenu>();
 
         services
@@ -188,5 +217,20 @@ public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBas
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ImportContent, NationalDoNotCallRegistryImportOptionsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Omnichannel CRM reports contributed to the admin Reports area.
+/// </summary>
+[Feature(OmnichannelConstants.Features.Reports)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IReport, ActivitySummaryReportProvider>()
+            .AddScoped<IReport, CampaignPerformanceReportProvider>()
+            .AddScoped<IReport, DispositionBreakdownReportProvider>();
     }
 }

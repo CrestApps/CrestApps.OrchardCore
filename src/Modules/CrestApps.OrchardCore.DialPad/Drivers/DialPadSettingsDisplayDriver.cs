@@ -75,6 +75,7 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
             model.OutboundCallerId = settings.OutboundCallerId;
             model.HasApiToken = !string.IsNullOrEmpty(settings.ApiToken);
             model.HasClientSecret = !string.IsNullOrEmpty(settings.ClientSecret);
+            model.HasWebhookSigningSecret = !string.IsNullOrEmpty(settings.WebhookSigningSecret);
         }).Location("Content:10#DialPad;15")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
@@ -173,6 +174,16 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
                 hasChanges |= settings.ClientSecret != protectedSecret;
 
                 settings.ClientSecret = protectedSecret;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.WebhookSigningSecret))
+            {
+                var protector = _dataProtectionProvider.CreateProtector(DialPadConstants.WebhookProtectorName);
+                var protectedWebhookSecret = protector.Protect(model.WebhookSigningSecret);
+
+                hasChanges |= settings.WebhookSigningSecret != protectedWebhookSecret;
+
+                settings.WebhookSigningSecret = protectedWebhookSecret;
             }
         }
 

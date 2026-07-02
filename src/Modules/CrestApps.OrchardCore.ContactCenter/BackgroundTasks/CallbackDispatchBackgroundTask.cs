@@ -1,0 +1,34 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.BackgroundTasks;
+
+namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+
+/// <summary>
+/// Promotes due callbacks into outbound activities so the dialer or an agent can handle them.
+/// </summary>
+[BackgroundTask(
+    Title = "Contact Center Callback Dispatch",
+    Schedule = "* * * * *",
+    Description = "Promotes scheduled callbacks that have become due into outbound work.",
+    LockTimeout = 5_000,
+    LockExpiration = 60_000)]
+public sealed class CallbackDispatchBackgroundTask : IBackgroundTask
+{
+    /// <inheritdoc/>
+    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        var callbackService = serviceProvider.GetRequiredService<ICallbackService>();
+        var logger = serviceProvider.GetRequiredService<ILogger<CallbackDispatchBackgroundTask>>();
+
+        try
+        {
+            await callbackService.PromoteDueAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while promoting due callbacks.");
+        }
+    }
+}

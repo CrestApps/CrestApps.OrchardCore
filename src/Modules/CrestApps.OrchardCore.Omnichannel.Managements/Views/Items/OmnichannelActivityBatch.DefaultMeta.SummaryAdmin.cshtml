@@ -34,6 +34,10 @@
     <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@status
 </span>
 
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@(Model.Value.Source ?? ActivitySources.Manual)
+</span>
+
 @if (Model.Value.Status == OmnichannelActivityBatchStatus.Loaded)
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Total loaded activities"]">

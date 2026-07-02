@@ -74,4 +74,10 @@ public sealed class DialPadSettings
     /// Gets or sets the space-separated OAuth scopes requested during authorization.
     /// </summary>
     public string Scopes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the protected secret DialPad uses to sign call-event webhooks (JWT HS256). The value
+    /// is stored encrypted using the data protection provider. When empty, unsigned webhooks are accepted.
+    /// </summary>
+    public string WebhookSigningSecret { get; set; }
 }

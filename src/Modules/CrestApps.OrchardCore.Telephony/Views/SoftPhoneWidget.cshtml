@@ -1,19 +1,33 @@
 @using CrestApps.OrchardCore.Telephony
 @using CrestApps.OrchardCore.Telephony.Hubs
+@using CrestApps.OrchardCore.Telephony.Models
 @using CrestApps.Core.SignalR.Services
 @using System.Text.Json
 @inject HubRouteManager HubRouteManager
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
-    var capabilities = Model.Capabilities is int caps ? caps : 0;
+    var capabilities = 0;
+
+    if (Model.Capabilities is TelephonyCapabilities caps)
+    {
+        capabilities = (int)caps;
+    }
+    else if (Model.Capabilities is int intCaps)
+    {
+        capabilities = intCaps;
+    }
+
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
         ["capabilities"] = capabilities,
         ["connectUrl"] = connectUrl,
+        ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
         ["strings"] = new Dictionary<string, string>
         {
@@ -40,6 +54,14 @@
             ["completed"] = T["Completed"].Value,
             ["rejected"] = T["Rejected"].Value,
             ["canceled"] = T["Canceled"].Value,
+            ["incomingCall"] = T["Incoming call"].Value,
+            ["answer"] = T["Answer"].Value,
+            ["voicemail"] = T["Send to voicemail"].Value,
+            ["ignore"] = T["Ignore"].Value,
+            ["answerAndOpen"] = T["Answer & open"].Value,
+            ["open"] = T["Open"].Value,
+            ["matchedRecords"] = T["Matched records"].Value,
+            ["offerUnavailable"] = T["This call is no longer available."].Value,
         },
     };
 }
@@ -56,6 +78,10 @@
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
             <span class="telephony-soft-phone__title">@T["Soft Phone"]</span>
+            @if (Model.HeaderActions != null)
+            {
+                @await DisplayAsync(Model.HeaderActions)
+            }
             <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>
@@ -125,6 +151,11 @@
             <div class="telephony-soft-phone__view telephony-soft-phone__history" data-telephony-view="history" data-telephony-history hidden>
                 <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
             </div>
+
+            @if (Model.Views != null)
+            {
+                @await DisplayAsync(Model.Views)
+            }
         </div>
 
         <div class="telephony-soft-phone__footer" data-telephony-footer hidden>
@@ -136,6 +167,38 @@
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
             </button>
+            @if (Model.Tabs != null)
+            {
+                @await DisplayAsync(Model.Tabs)
+            }
+        </div>
+    </div>
+
+    <div class="telephony-incoming" data-telephony-incoming hidden role="dialog" aria-modal="true" aria-label="@T["Incoming call"]">
+        <div class="telephony-incoming__backdrop"></div>
+        <div class="telephony-incoming__dialog">
+            <div class="telephony-incoming__header">
+                <span class="telephony-incoming__pulse"><i class="fa-solid fa-phone-volume"></i></span>
+                <div class="telephony-incoming__heading">
+                    <span class="telephony-incoming__label">@T["Incoming call"]</span>
+                    <span class="telephony-incoming__caller" data-telephony-incoming-caller></span>
+                    <span class="telephony-incoming__queue" data-telephony-incoming-queue hidden></span>
+                </div>
+            </div>
+
+            <div class="telephony-incoming__cards" data-telephony-incoming-cards hidden></div>
+
+            <div class="telephony-incoming__actions">
+                <button type="button" class="btn btn-success telephony-incoming__btn" data-telephony-incoming-answer>
+                    <i class="fa-solid fa-phone"></i> @T["Answer"]
+                </button>
+                <button type="button" class="btn btn-warning telephony-incoming__btn" data-telephony-incoming-voicemail hidden>
+                    <i class="fa-solid fa-voicemail"></i> @T["Voicemail"]
+                </button>
+                <button type="button" class="btn btn-danger telephony-incoming__btn" data-telephony-incoming-ignore>
+                    <i class="fa-solid fa-phone-slash"></i> @T["Ignore"]
+                </button>
+            </div>
         </div>
     </div>
 </div>

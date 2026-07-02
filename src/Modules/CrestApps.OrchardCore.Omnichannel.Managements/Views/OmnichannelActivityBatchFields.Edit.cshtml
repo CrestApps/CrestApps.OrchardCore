@@ -17,9 +17,10 @@
 }
 
 <style asp-name="flatpickr"></style>
+<style asp-name="crestapps-bootstrap-select"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="crestapps-bootstrap-select" at="Foot"></script>
 
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
@@ -33,6 +34,24 @@
         @T["Batch settings"]
     </div>
     <div class="card-body">
+        <input asp-for="Source" type="hidden" />
+
+        <div class="ocat-wrapper">
+            <label asp-for="SourceDisplayName" class="ocat-label">@T["Source"]</label>
+            <div class="ocat-end">
+                <input asp-for="SourceDisplayName" class="form-control" readonly />
+                <span asp-validation-for="Source" class="text-danger"></span>
+                @if (Model.RequiresUserAssignment)
+                {
+                    <span class="hint">@T["Activities from this source are assigned to selected users when the batch is loaded."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["Activities from this source stay unassigned until a dialer or routing component reserves them."]</span>
+                }
+            </div>
+        </div>
+
         <div class="ocat-wrapper">
             <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
             <div class="ocat-end">
@@ -52,6 +71,20 @@
             </div>
         </div>
 
+        @if (string.Equals(Model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="AIProfileId" class="ocat-label">@T["AI profile"]</label>
+                <div class="ocat-end">
+                    <select asp-for="AIProfileId" asp-items="Model.AIProfiles" class="form-select">
+                        <option value="">@T["Use subject flow profile"]</option>
+                    </select>
+                    <span asp-validation-for="AIProfileId" class="text-danger"></span>
+                    <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown. The selected profile is stored on each loaded activity and starts automated SMS conversations."]</span>
+                </div>
+            </div>
+        }
+
         <div class="ocat-wrapper">
             <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>
             <div class="ocat-end">
@@ -65,35 +98,38 @@
             </div>
         </div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="UserIds" class="ocat-label">@T["User(s) to assign activities to"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("ItemSelector", new
-                {
-                    id = $"{Html.IdFor(m => m.UserIds)}_Selector",
-                    inputName = Html.NameFor(m => m.UserIds),
-                    endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "userId" }),
-                    initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
-                    multiple = true,
-                    enableSearch = true,
-                    enableSelectAll = true,
-                    enableDeselectAll = true,
-                    buttonText = T["Browse users"].Value,
-                    searchPlaceholder = T["Search users"].Value,
-                    emptyResultsText = T["No users found."].Value,
-                    noSelectionText = T["No users selected."].Value,
-                    loadingText = T["Loading users..."].Value,
-                    loadErrorText = T["Unable to load users."].Value,
-                    resultsTextFormat = T["Found {0} user(s)."].Value,
-                    selectedItemsLabel = T["Selected users"].Value,
-                    availableItemsLabel = T["Available users"].Value,
-                    selectAllText = T["Select all"].Value,
-                    deselectAllText = T["Deselect all"].Value,
-                    searchButtonText = T["Search"].Value,
-                })
-                <span asp-validation-for="UserIds" class="text-danger"></span>
+        @if (Model.RequiresUserAssignment)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="UserIds" class="ocat-label">@T["User(s) to assign activities to"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = $"{Html.IdFor(m => m.UserIds)}_Selector",
+                        inputName = Html.NameFor(m => m.UserIds),
+                        endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "userId" }),
+                        initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+                        multiple = true,
+                        enableSearch = true,
+                        enableSelectAll = true,
+                        enableDeselectAll = true,
+                        buttonText = T["Browse users"].Value,
+                        searchPlaceholder = T["Search users"].Value,
+                        emptyResultsText = T["No users found."].Value,
+                        noSelectionText = T["No users selected."].Value,
+                        loadingText = T["Loading users..."].Value,
+                        loadErrorText = T["Unable to load users."].Value,
+                        resultsTextFormat = T["Found {0} user(s)."].Value,
+                        selectedItemsLabel = T["Selected users"].Value,
+                        availableItemsLabel = T["Available users"].Value,
+                        selectAllText = T["Select all"].Value,
+                        deselectAllText = T["Deselect all"].Value,
+                        searchButtonText = T["Search"].Value,
+                    })
+                    <span asp-validation-for="UserIds" class="text-danger"></span>
+                </div>
             </div>
-        </div>
+        }
 
         <div class="ocat-wrapper">
             <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
@@ -222,7 +258,7 @@
         <div class="ocat-wrapper">
             <label asp-for="TimeZoneIds" class="ocat-label">@T["Time zones"]</label>
             <div class="ocat-end">
-                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-outline-secondary" title="@T["Any time zone"]">
+                <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" title="@T["Any time zone"]">
                 </select>
                 <span class="hint">@T["Optionally, only include contacts in the selected time zones."]</span>
             </div>

@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -47,8 +46,7 @@ public sealed class ActivitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly ISubjectActionExecutor _subjectActionExecutor;
-    private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly IActivityDispositionService _activityDispositionService;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
@@ -69,8 +67,7 @@ public sealed class ActivitiesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
-    /// <param name="subjectActionExecutor">The subject action executor.</param>
-    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="activityDispositionService">The activity disposition service.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
@@ -87,8 +84,7 @@ public sealed class ActivitiesController : Controller
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        ISubjectActionExecutor subjectActionExecutor,
-        INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
+        IActivityDispositionService activityDispositionService,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IClock clock,
         ILocalClock localClock,
@@ -105,8 +101,7 @@ public sealed class ActivitiesController : Controller
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
-        _subjectActionExecutor = subjectActionExecutor;
-        _dispositionsCatalog = dispositionsCatalog;
+        _activityDispositionService = activityDispositionService;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _clock = clock;
         _localClock = localClock;
@@ -515,7 +510,8 @@ public sealed class ActivitiesController : Controller
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
-        if (activity is null || activity.Status != ActivityStatus.NotStated)
+        if (activity is null ||
+            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
         {
             return NotFound();
         }
@@ -536,29 +532,26 @@ public sealed class ActivitiesController : Controller
 
         if (ModelState.IsValid)
         {
-            // Execute subject actions for the selected disposition.
+            // Disposition the activity through the source-neutral path so the configured subject flow runs.
             activity.Subject = subject;
-            activity.Status = ActivityStatus.Completed;
-            activity.CompletedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            activity.CompletedByUsername = User.Identity?.Name;
-            activity.CompletedUtc = _clock.UtcNow;
 
-            await _omnichannelActivityManager.UpdateAsync(activity);
-            var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
-
-            var executionContext = new SubjectActionExecutionContext
+            var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
             {
                 Activity = activity,
-                Contact = model.ContactContentItem,
-                Subject = subject,
-                Disposition = disposition,
-            };
+                DispositionId = activity.DispositionId,
+                Source = ActivityDispositionSource.Agent,
+                ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                ActorDisplayName = User.Identity?.Name,
+            });
 
-            await _subjectActionExecutor.ExecuteAsync(executionContext);
+            if (result.Succeeded)
+            {
+                await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 
-            await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
+                return RedirectToAction(nameof(Activities));
+            }
 
-            return RedirectToAction(nameof(Activities));
+            await _notifier.ErrorAsync(H["A disposition is required to complete this activity."]);
         }
 
         return View(model);

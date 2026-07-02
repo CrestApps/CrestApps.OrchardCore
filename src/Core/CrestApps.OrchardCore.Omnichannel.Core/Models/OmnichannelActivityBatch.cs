@@ -20,6 +20,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source used when loading activities from this batch.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject content type.
     /// </summary>
     public string SubjectContentType { get; set; }
@@ -28,6 +33,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// Gets or sets the contact content type.
     /// </summary>
     public string ContactContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile identifier assigned to automated activities loaded from this batch.
+    /// </summary>
+    public string AIProfileId { get; set; }
 
     /// <summary>
     /// Gets or sets the user ids.
@@ -156,8 +166,10 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
+            Source = Source,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
+            AIProfileId = AIProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
             IncludeDoNoSms = IncludeDoNoSms,

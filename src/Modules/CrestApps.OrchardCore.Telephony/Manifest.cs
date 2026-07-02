@@ -8,14 +8,14 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides a provider-agnostic soft phone and SignalR hub for integrating telephony providers.",
-    Category = "Communications"
+    Category = "Communication"
 )]
 
 [assembly: Feature(
     Id = TelephonyConstants.Feature.Area,
     Name = "Telephony",
     Description = "Provides the provider-agnostic telephony services, SignalR hub, and site settings.",
-    Category = "Communications",
+    Category = "Communication",
     Dependencies =
     [
         "OrchardCore.Users",
@@ -27,7 +27,7 @@ using OrchardCore.Modules.Manifest;
     Id = TelephonyConstants.Feature.SoftPhone,
     Name = "Telephony Soft Phone",
     Description = "Injects the floating soft phone experience into the admin dashboard, front end, or both.",
-    Category = "Communications",
+    Category = "Communication",
     Dependencies =
     [
         TelephonyConstants.Feature.Area,

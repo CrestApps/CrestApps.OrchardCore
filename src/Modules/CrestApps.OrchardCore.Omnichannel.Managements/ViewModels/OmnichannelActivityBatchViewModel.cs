@@ -16,6 +16,23 @@ public class OmnichannelActivityBatchViewModel
     public string DisplayText { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity source display name.
+    /// </summary>
+    [BindNever]
+    public string SourceDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selected source requires user assignment while loading.
+    /// </summary>
+    [BindNever]
+    public bool RequiresUserAssignment { get; set; }
+
+    /// <summary>
     /// Gets or sets the schedule at.
     /// </summary>
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
@@ -30,6 +47,11 @@ public class OmnichannelActivityBatchViewModel
     /// Gets or sets the contact content type.
     /// </summary>
     public string ContactContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile identifier used by automated activities.
+    /// </summary>
+    public string AIProfileId { get; set; }
 
     /// <summary>
     /// Gets or sets the instructions.
@@ -130,6 +152,12 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available AI profiles.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AIProfiles { get; set; }
 
     /// <summary>
     /// Gets or sets the selected users.

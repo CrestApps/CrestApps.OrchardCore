@@ -1,0 +1,59 @@
+@model ShapeViewModel<AgentSoftPhoneViewModel>
+
+<style asp-name="crestapps-bootstrap-select"></style>
+<script asp-name="crestapps-bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    var viewModel = Model.Value;
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<div class="telephony-soft-phone__view telephony-soft-phone__extension-view contact-center-soft-phone" data-telephony-view="contact-center" hidden>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <strong>@T["Contact Center"]</strong>
+        @if (viewModel.IsSignedIn)
+        {
+            <span class="badge text-bg-success">@T["Signed in"]</span>
+        }
+        else
+        {
+            <span class="badge text-bg-secondary">@T["Offline"]</span>
+        }
+    </div>
+
+    @if (viewModel.IsSignedIn)
+    {
+        <form asp-action="SignOutAgent" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post">
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <button type="submit" class="btn btn-sm btn-secondary w-100">@T["Sign out"]</button>
+        </form>
+    }
+    else
+    {
+        <form asp-action="SignIn" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post">
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+            <div class="mb-2">
+                <label class="form-label small mb-1">@T["Queues"]</label>
+                <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" title="@T["Select queues"]">
+                    @foreach (var queue in viewModel.AvailableQueues)
+                    {
+                        <option value="@queue.ItemId" selected="@viewModel.SelectedQueueIds.Contains(queue.ItemId)">@queue.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small mb-1">@T["Campaigns"]</label>
+                <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Any campaign"]">
+                    @foreach (var option in viewModel.CampaignOptions)
+                    {
+                        <option value="@option.Value" selected="@option.Selected" disabled="@option.Disabled">@option.Text</option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-success w-100">@T["Sign in"]</button>
+        </form>
+    }
+</div>

@@ -41,6 +41,7 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
             model.InteractionType = flowSettings.InteractionType;
             model.Channel = flowSettings.Channel;
             model.ChannelEndpointId = flowSettings.ChannelEndpointId;
+            model.RequireDisposition = flowSettings.RequireDisposition;
 
             model.Campaigns = (await _campaignCatalog.GetAllAsync())
                 .Select(c => new SelectListItem(c.DisplayText, c.ItemId))
@@ -91,6 +92,7 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
         flowSettings.InteractionType = model.InteractionType;
         flowSettings.Channel = model.Channel;
         flowSettings.ChannelEndpointId = model.ChannelEndpointId;
+        flowSettings.RequireDisposition = model.RequireDisposition;
 
         return Edit(flowSettings, context);
     }
