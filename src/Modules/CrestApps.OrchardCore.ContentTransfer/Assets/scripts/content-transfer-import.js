@@ -48,16 +48,18 @@ var contentTransferImport = (function () {
         }
     }
 
-    function getSafeRedirectPath(redirectUrl) {
-        if (typeof redirectUrl !== 'string' || !redirectUrl) {
+    function getPostUploadRedirectPath() {
+        if (!window.location || typeof window.location.pathname !== 'string') {
             return null;
         }
 
-        if (redirectUrl[0] !== '/' || redirectUrl[1] === '/') {
+        var pathSegments = window.location.pathname.split('/import/contents/');
+
+        if (pathSegments.length !== 2 || !pathSegments[0]) {
             return null;
         }
 
-        return redirectUrl;
+        return pathSegments[0] + '/content-transfer-entries';
     }
 
     function initializeForm(form, config) {
@@ -83,7 +85,7 @@ var contentTransferImport = (function () {
         var maxChunkSize = config.maxChunkSize || 0;
         var maxFileSize = config.maxFileSize || 0;
         var maxFileSizeDisplay = config.maxFileSizeDisplay || '';
-        var redirectUrl = getSafeRedirectPath(config.redirectUrl);
+        var redirectUrl = getPostUploadRedirectPath();
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
