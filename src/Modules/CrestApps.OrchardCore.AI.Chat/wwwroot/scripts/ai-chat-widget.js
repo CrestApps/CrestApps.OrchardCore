@@ -6,7 +6,7 @@
 function clampWidgetValue(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
-window.openAIChatWidgetBehavior = window.openAIChatWidgetBehavior || function () {
+window.coreAIChatWidgetBehavior = window.coreAIChatWidgetBehavior || function () {
   function parsePixelValue(value) {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return value;
@@ -582,7 +582,103 @@ window.openAIChatWidgetBehavior = window.openAIChatWidgetBehavior || function ()
     onBeforeUnmount: dispose
   };
 }();
-window.openAIChatWidgetManager = window.openAIChatWidgetManager || function () {
+window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
+  function getAttributeValue(element, attributeName) {
+    var value = element.getAttribute(attributeName);
+    return value === null || value === '' ? null : value;
+  }
+  function parseBooleanAttributeValue(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    var normalized = String(value).trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+    return null;
+  }
+  function parseJsonAttribute(element, attributeName, description) {
+    var rawValue = getAttributeValue(element, attributeName);
+    if (!rawValue) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      console.error('Failed to parse ' + description + ' JSON.', error);
+      return null;
+    }
+  }
+  function buildOptionsFromDataAttributes(element) {
+    var widgetContainerSelector = getAttributeValue(element, 'data-coreai-chat-widget-container-selector');
+    if (!widgetContainerSelector) {
+      return null;
+    }
+    var chatConfig = null;
+    if (window.coreAIChatManager && typeof window.coreAIChatManager.buildConfigFromElement === 'function') {
+      chatConfig = window.coreAIChatManager.buildConfigFromElement(element, {
+        allowWidgetHost: true
+      });
+    }
+    var profileId = getAttributeValue(element, 'data-coreai-chat-widget-profile-id');
+    var profileName = getAttributeValue(element, 'data-coreai-chat-widget-profile-name');
+    var profileDisplayText = getAttributeValue(element, 'data-coreai-chat-widget-profile-display-text');
+    var profileWelcomeMessage = getAttributeValue(element, 'data-coreai-chat-widget-profile-welcome-message');
+    var profileChatMode = getAttributeValue(element, 'data-coreai-chat-widget-profile-chat-mode');
+    var profileTtsVoiceName = getAttributeValue(element, 'data-coreai-chat-widget-profile-tts-voice-name');
+    var profileMetricsEnabled = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-profile-enable-session-metrics'));
+    var profileSessionDocuments = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-profile-allow-session-documents'));
+    var profile = null;
+    if (profileId || profileName || profileDisplayText || profileWelcomeMessage || profileChatMode || profileTtsVoiceName || profileMetricsEnabled !== null || profileSessionDocuments !== null) {
+      profile = {
+        id: profileId,
+        name: profileName,
+        displayText: profileDisplayText,
+        welcomeMessage: profileWelcomeMessage,
+        chatMode: profileChatMode,
+        ttsVoiceName: profileTtsVoiceName,
+        enableSessionMetrics: profileMetricsEnabled === true,
+        allowSessionDocuments: profileSessionDocuments === true
+      };
+    }
+    var enableDragging = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-enable-dragging'));
+    var enableResizing = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-enable-resizing'));
+    var persistLayout = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-persist-layout'));
+    return {
+      shellSelector: getAttributeValue(element, 'data-coreai-chat-widget-shell-selector'),
+      widgetContainerSelector: widgetContainerSelector,
+      toggleButtonSelector: getAttributeValue(element, 'data-coreai-chat-widget-toggle-button-selector'),
+      closeButtonSelector: getAttributeValue(element, 'data-coreai-chat-widget-close-button-selector'),
+      inputSelector: getAttributeValue(element, 'data-coreai-chat-widget-input-selector'),
+      messageTemplateSelector: getAttributeValue(element, 'data-coreai-chat-widget-message-template-selector'),
+      indicatorTemplateSelector: getAttributeValue(element, 'data-coreai-chat-widget-indicator-template-selector'),
+      profile: profile,
+      widgetStateName: getAttributeValue(element, 'data-coreai-chat-widget-state-name'),
+      openStateValue: getAttributeValue(element, 'data-coreai-chat-widget-open-state-value'),
+      closedStateValue: getAttributeValue(element, 'data-coreai-chat-widget-closed-state-value'),
+      openIconHtml: getAttributeValue(element, 'data-coreai-chat-widget-open-icon-html'),
+      closedIconHtml: getAttributeValue(element, 'data-coreai-chat-widget-closed-icon-html'),
+      chatConfig: chatConfig ? Object.assign({}, chatConfig, {
+        widget: Object.assign({}, chatConfig.widget || {}, {
+          chatWidgetContainer: widgetContainerSelector,
+          chatWidgetStateName: getAttributeValue(element, 'data-coreai-chat-widget-state-name'),
+          newChatButton: getAttributeValue(element, 'data-coreai-chat-widget-new-chat-button-selector'),
+          toggleButtonSelector: getAttributeValue(element, 'data-coreai-chat-widget-toggle-button-selector'),
+          resetSizeButtonSelector: getAttributeValue(element, 'data-coreai-chat-widget-reset-size-button-selector'),
+          dragHandleSelector: getAttributeValue(element, 'data-coreai-chat-widget-drag-handle-selector'),
+          enableDragging: enableDragging === null ? undefined : enableDragging,
+          enableResizing: enableResizing === null ? undefined : enableResizing,
+          persistLayout: persistLayout === null ? undefined : persistLayout
+        })
+      }) : null
+    };
+  }
   function initialize(options) {
     if (!options) {
       return null;
@@ -590,7 +686,7 @@ window.openAIChatWidgetManager = window.openAIChatWidgetManager || function () {
     var chatConfig = options.chatConfig;
     if (!chatConfig && options.configElementSelector) {
       var configElement = document.querySelector(options.configElementSelector);
-      chatConfig = configElement ? JSON.parse(configElement.getAttribute('data-config')) : null;
+      chatConfig = configElement ? parseJsonAttribute(configElement, 'data-config', 'AI chat widget config') : null;
     }
     if (!chatConfig) {
       return null;
@@ -676,7 +772,7 @@ window.openAIChatWidgetManager = window.openAIChatWidgetManager || function () {
         shell.style.visibility = '';
       }
     }
-    var widgetApp = window.openAIChatManager.initialize(chatConfig);
+    var widgetApp = window.coreAIChatManager.initialize(chatConfig);
     if (options.applySessionProfilePatch !== false && window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
       window.crestAppsAIChat.patchSessionProfileSync(widgetApp);
     }
@@ -807,8 +903,62 @@ window.openAIChatWidgetManager = window.openAIChatWidgetManager || function () {
     }
     return widgetApp;
   }
+  function initializeFromElement(element) {
+    if (!element || element.dataset.coreAiChatWidgetInitialized === 'true') {
+      return element ? element.__coreAIChatWidgetApp || null : null;
+    }
+    var jsonOptions = parseJsonAttribute(element, 'data-coreai-chat-widget-config', 'CoreAI chat widget config');
+    var attributeOptions = buildOptionsFromDataAttributes(element);
+    if (!jsonOptions && !attributeOptions) {
+      return null;
+    }
+    var options = Object.assign({}, jsonOptions || {}, attributeOptions || {});
+    var widgetApp = initialize(options);
+    if (!widgetApp) {
+      return null;
+    }
+    element.dataset.coreAiChatWidgetInitialized = 'true';
+    element.__coreAIChatWidgetApp = widgetApp;
+    return widgetApp;
+  }
+  function scanForAutoInitialization(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+    if (typeof root.matches === 'function' && root.matches('[data-coreai-chat-widget-config],[data-coreai-chat-widget-container-selector]')) {
+      initializeFromElement(root);
+    }
+    root.querySelectorAll('[data-coreai-chat-widget-config],[data-coreai-chat-widget-container-selector]').forEach(initializeFromElement);
+  }
+  function startAutoInitialization() {
+    scanForAutoInitialization(document);
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node && node.nodeType === 1) {
+            scanForAutoInitialization(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAutoInitialization, {
+      once: true
+    });
+  } else {
+    startAutoInitialization();
+  }
   return {
-    initialize: initialize
+    initialize: initialize,
+    initializeFromElement: initializeFromElement
   };
 }();
 //# sourceMappingURL=ai-chat-widget.js.map

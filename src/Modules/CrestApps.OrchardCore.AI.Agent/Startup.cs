@@ -211,6 +211,7 @@ public sealed class ContentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<IContentItemPayloadAssistanceService, DefaultContentItemPayloadAssistanceService>();
+        services.TryAddScoped<ContentItemPreparationService>();
 
         services.AddCoreAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
             .WithTitle(S["Search Content Items"])

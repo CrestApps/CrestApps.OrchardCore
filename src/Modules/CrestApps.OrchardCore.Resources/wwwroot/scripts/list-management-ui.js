@@ -9,191 +9,407 @@ function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t =
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.listManagementUI = function () {
+  'use strict';
+
   var defaultOptions = {
     clientSideSearch: true,
+    selectedLabel: '',
+    selectionEnabled: true,
+    filterSubmit: false,
     itemInputName: 'itemIds',
     bulkActionInputName: 'Options.BulkAction',
     submitBulkActionName: 'submit.BulkAction',
-    searchBoxId: 'search-box',
-    listAlertId: 'list-alert',
-    actionsId: 'actions'
+    searchBoxSelector: '#search-box',
+    searchResultSelector: '[data-filter-value]',
+    searchDomSelector: '',
+    searchAlertSelector: '#list-alert',
+    emptyAlertSelector: '',
+    submitFilterSelector: '#submitFilter',
+    filterSubmitSelector: '.filter select, .filter input, .filter-options select, .filter-options input, .selectpicker[data-filter-submit], [data-list-filter-submit]',
+    actionsSelector: '#actions',
+    itemsSelector: '#items',
+    filtersSelector: '.filter',
+    selectedItemsSelector: '#selected-items',
+    selectAllSelector: '#select-all',
+    bulkActionSelector: '.dropdown-menu .dropdown-item[data-action]',
+    singleResultActionSelector: '',
+    searchFirstElementClasses: '',
+    searchLastElementClasses: ''
   };
-  var initialize = function initialize(selectedLabel, options) {
-    var config = Object.assign({}, defaultOptions, options);
-    var searchBox = document.getElementById(config.searchBoxId);
-    var filterElements = document.querySelectorAll('[data-filter-value]');
-
-    // If the user press Enter, don't submit.
-    if (searchBox) {
-      var searchAlert = document.getElementById(config.listAlertId);
-      searchBox.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          if (config.clientSideSearch) {
-            e.preventDefault();
-          } else {
-            // Submit the filter form for server-side search
-            e.preventDefault();
-            var submitFilter = document.getElementById('submitFilter');
-            if (submitFilter) {
-              submitFilter.click();
-            }
-          }
-        }
+  var initializedAttribute = 'data-list-management-initialized';
+  var ready = function ready(callback) {
+    if (document.readyState !== 'loading') {
+      callback();
+      return;
+    }
+    document.addEventListener('DOMContentLoaded', callback, {
+      once: true
+    });
+  };
+  var parseBoolean = function parseBoolean(value, fallback) {
+    if (value === undefined || value === null || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    switch (String(value).toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'yes':
+      case 'on':
+        return true;
+      case 'false':
+      case '0':
+      case 'no':
+      case 'off':
+        return false;
+      default:
+        return fallback;
+    }
+  };
+  var splitClasses = function splitClasses(value) {
+    return (value || '').split(/\s+/).map(function (entry) {
+      return entry.trim();
+    }).filter(Boolean);
+  };
+  var normalizeSearchText = function normalizeSearchText(value) {
+    if (value === undefined || value === null) {
+      return '';
+    }
+    return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  };
+  var getElements = function getElements(root, selector) {
+    if (!selector) {
+      return [];
+    }
+    try {
+      return Array.from(root.querySelectorAll(selector));
+    } catch (error) {
+      console.warn('Invalid list management selector.', selector, error);
+      return [];
+    }
+  };
+  var getElement = function getElement(root, selector) {
+    return getElements(root, selector)[0] || null;
+  };
+  var getScopedRoot = function getScopedRoot(root) {
+    return root && typeof root.querySelector === 'function' ? root : document;
+  };
+  var getItemCheckboxes = function getItemCheckboxes(root, options) {
+    return getElements(root, "input[type='checkbox'][name='".concat(options.itemInputName, "']"));
+  };
+  var getCheckedItemCheckboxes = function getCheckedItemCheckboxes(root, options) {
+    return getElements(root, "input[type='checkbox'][name='".concat(options.itemInputName, "']:checked"));
+  };
+  var getSearchResults = function getSearchResults(root, options) {
+    return getElements(root, options.searchResultSelector);
+  };
+  var readOptionsFromElement = function readOptionsFromElement(root) {
+    var _root$dataset$selecte, _root$dataset$itemInp, _root$dataset$bulkAct, _root$dataset$submitB, _root$dataset$searchB, _root$dataset$searchR, _ref, _root$dataset$searchD, _root$dataset$searchA, _root$dataset$emptyAl, _root$dataset$submitF, _root$dataset$filterS, _root$dataset$actions, _root$dataset$itemsSe, _root$dataset$filters, _root$dataset$selecte2, _root$dataset$selectA, _root$dataset$bulkAct2, _root$dataset$singleR, _root$dataset$searchF, _root$dataset$searchL;
+    if (!root || !root.dataset) {
+      return {};
+    }
+    var clientSideSearch = parseBoolean(root.dataset.clientSideSearch, defaultOptions.clientSideSearch);
+    return {
+      selectedLabel: (_root$dataset$selecte = root.dataset.selectedLabel) !== null && _root$dataset$selecte !== void 0 ? _root$dataset$selecte : defaultOptions.selectedLabel,
+      clientSideSearch: clientSideSearch,
+      selectionEnabled: parseBoolean(root.dataset.selectionEnabled, defaultOptions.selectionEnabled),
+      filterSubmit: parseBoolean(root.dataset.filterSubmit, !clientSideSearch),
+      itemInputName: (_root$dataset$itemInp = root.dataset.itemInputName) !== null && _root$dataset$itemInp !== void 0 ? _root$dataset$itemInp : defaultOptions.itemInputName,
+      bulkActionInputName: (_root$dataset$bulkAct = root.dataset.bulkActionInputName) !== null && _root$dataset$bulkAct !== void 0 ? _root$dataset$bulkAct : defaultOptions.bulkActionInputName,
+      submitBulkActionName: (_root$dataset$submitB = root.dataset.submitBulkActionName) !== null && _root$dataset$submitB !== void 0 ? _root$dataset$submitB : defaultOptions.submitBulkActionName,
+      searchBoxSelector: (_root$dataset$searchB = root.dataset.searchBoxSelector) !== null && _root$dataset$searchB !== void 0 ? _root$dataset$searchB : defaultOptions.searchBoxSelector,
+      searchResultSelector: (_root$dataset$searchR = root.dataset.searchResultSelector) !== null && _root$dataset$searchR !== void 0 ? _root$dataset$searchR : defaultOptions.searchResultSelector,
+      searchDomSelector: (_ref = (_root$dataset$searchD = root.dataset.searchDomSelector) !== null && _root$dataset$searchD !== void 0 ? _root$dataset$searchD : root.dataset.searchTextSelector) !== null && _ref !== void 0 ? _ref : defaultOptions.searchDomSelector,
+      searchAlertSelector: (_root$dataset$searchA = root.dataset.searchAlertSelector) !== null && _root$dataset$searchA !== void 0 ? _root$dataset$searchA : defaultOptions.searchAlertSelector,
+      emptyAlertSelector: (_root$dataset$emptyAl = root.dataset.emptyAlertSelector) !== null && _root$dataset$emptyAl !== void 0 ? _root$dataset$emptyAl : defaultOptions.emptyAlertSelector,
+      submitFilterSelector: (_root$dataset$submitF = root.dataset.submitFilterSelector) !== null && _root$dataset$submitF !== void 0 ? _root$dataset$submitF : defaultOptions.submitFilterSelector,
+      filterSubmitSelector: (_root$dataset$filterS = root.dataset.filterSubmitSelector) !== null && _root$dataset$filterS !== void 0 ? _root$dataset$filterS : defaultOptions.filterSubmitSelector,
+      actionsSelector: (_root$dataset$actions = root.dataset.actionsSelector) !== null && _root$dataset$actions !== void 0 ? _root$dataset$actions : defaultOptions.actionsSelector,
+      itemsSelector: (_root$dataset$itemsSe = root.dataset.itemsSelector) !== null && _root$dataset$itemsSe !== void 0 ? _root$dataset$itemsSe : defaultOptions.itemsSelector,
+      filtersSelector: (_root$dataset$filters = root.dataset.filtersSelector) !== null && _root$dataset$filters !== void 0 ? _root$dataset$filters : defaultOptions.filtersSelector,
+      selectedItemsSelector: (_root$dataset$selecte2 = root.dataset.selectedItemsSelector) !== null && _root$dataset$selecte2 !== void 0 ? _root$dataset$selecte2 : defaultOptions.selectedItemsSelector,
+      selectAllSelector: (_root$dataset$selectA = root.dataset.selectAllSelector) !== null && _root$dataset$selectA !== void 0 ? _root$dataset$selectA : defaultOptions.selectAllSelector,
+      bulkActionSelector: (_root$dataset$bulkAct2 = root.dataset.bulkActionSelector) !== null && _root$dataset$bulkAct2 !== void 0 ? _root$dataset$bulkAct2 : defaultOptions.bulkActionSelector,
+      singleResultActionSelector: (_root$dataset$singleR = root.dataset.singleResultActionSelector) !== null && _root$dataset$singleR !== void 0 ? _root$dataset$singleR : defaultOptions.singleResultActionSelector,
+      searchFirstElementClasses: (_root$dataset$searchF = root.dataset.searchFirstElementClasses) !== null && _root$dataset$searchF !== void 0 ? _root$dataset$searchF : defaultOptions.searchFirstElementClasses,
+      searchLastElementClasses: (_root$dataset$searchL = root.dataset.searchLastElementClasses) !== null && _root$dataset$searchL !== void 0 ? _root$dataset$searchL : defaultOptions.searchLastElementClasses
+    };
+  };
+  var getFilterText = function getFilterText(element, options) {
+    var text = element.getAttribute('data-filter-value');
+    if (options.searchDomSelector) {
+      var searchTextNodes = getElements(element, options.searchDomSelector);
+      if (searchTextNodes.length > 0) {
+        text = searchTextNodes.map(function (node) {
+          return node.textContent || '';
+        }).join(' ');
+      }
+    }
+    if (!text) {
+      text = element.textContent || '';
+    }
+    return normalizeSearchText(text);
+  };
+  var getBoundaryElements = function getBoundaryElements(root, options) {
+    var ignoredElements = getElements(root, '.ignore-elements');
+    var searchResults = getSearchResults(root, options);
+    return _toConsumableArray(new Set([].concat(_toConsumableArray(ignoredElements), _toConsumableArray(searchResults))));
+  };
+  var clearVisibleBoundaryClasses = function clearVisibleBoundaryClasses(root, options) {
+    var elements = getBoundaryElements(root, options);
+    var classesToRemove = ['first-child-visible', 'last-child-visible'].concat(_toConsumableArray(splitClasses(options.searchFirstElementClasses)), _toConsumableArray(splitClasses(options.searchLastElementClasses)));
+    elements.forEach(function (element) {
+      var _element$classList;
+      (_element$classList = element.classList).remove.apply(_element$classList, _toConsumableArray(classesToRemove));
+    });
+  };
+  var hasVisibleIgnoredSibling = function hasVisibleIgnoredSibling(element, siblingProperty) {
+    var _element$siblingPrope;
+    var sibling = (_element$siblingPrope = element === null || element === void 0 ? void 0 : element[siblingProperty]) !== null && _element$siblingPrope !== void 0 ? _element$siblingPrope : null;
+    while (sibling) {
+      if (!sibling.classList.contains('d-none')) {
+        return sibling.classList.contains('ignore-elements');
+      }
+      sibling = sibling[siblingProperty];
+    }
+    return false;
+  };
+  var applyVisibleBoundaryClasses = function applyVisibleBoundaryClasses(root, visibleElements, options) {
+    clearVisibleBoundaryClasses(root, options);
+    var firstElementClasses = splitClasses(options.searchFirstElementClasses);
+    var lastElementClasses = splitClasses(options.searchLastElementClasses);
+    if (visibleElements.length === 0) {
+      var visibleIgnoredElements = getBoundaryElements(root, options).filter(function (element) {
+        return element.classList.contains('ignore-elements') && !element.classList.contains('d-none');
       });
-      if (config.clientSideSearch) {
-        searchBox.addEventListener('keyup', function (e) {
-          var search = e.target.value.toLowerCase();
-          // On ESC, clear the search box and display all rules.
-          if (e.key == 'Escape' || search == '') {
-            searchAlert.classList.add('d-none');
-            searchBox.value = '';
-            for (var i = 0; i < filterElements.length; i++) {
-              filterElements[i].classList.remove("d-none");
-              filterElements[i].classList.remove("first-child-visible");
-              filterElements[i].classList.remove("last-child-visible");
-            }
-            if (filterElements.length > 0) {
-              filterElements[0].classList.add('first-child-visible');
-              filterElements[filterElements.length - 1].classList.add('last-child-visible');
-            }
-          } else {
-            var visibleElements = [];
-            for (var _i = 0; _i < filterElements.length; _i++) {
-              var filter = filterElements[_i];
-              var text = filter.getAttribute('data-filter-value');
-              if (!text) {
-                filter.classList.add("d-none");
-                continue;
-              }
-              var found = text.indexOf(search) > -1;
-              if (found) {
-                filter.classList.remove("d-none");
-                filter.classList.remove("first-child-visible");
-                filter.classList.remove("last-child-visible");
-                visibleElements.push(filter);
-              } else {
-                filter.classList.add("d-none");
-              }
-            }
-            if (visibleElements.length > 0) {
-              visibleElements[0].classList.add('first-child-visible');
-              visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
-              searchAlert.classList.add('d-none');
-            } else {
-              searchAlert.classList.remove('d-none');
-            }
-          }
-        });
+      if (visibleIgnoredElements.length > 0) {
+        var _visibleIgnoredElemen, _visibleIgnoredElemen2;
+        (_visibleIgnoredElemen = visibleIgnoredElements[0].classList).add.apply(_visibleIgnoredElemen, ['first-child-visible'].concat(_toConsumableArray(firstElementClasses)));
+        (_visibleIgnoredElemen2 = visibleIgnoredElements[visibleIgnoredElements.length - 1].classList).add.apply(_visibleIgnoredElemen2, ['last-child-visible'].concat(_toConsumableArray(lastElementClasses)));
       }
+      return;
     }
-    var actions = document.getElementById(config.actionsId);
-    var items = document.getElementById('items');
-    var filters = document.querySelectorAll('.filter');
-    var selectedItems = document.getElementById('selected-items');
-    function displayActionsOrFilters() {
-      // Select all checked checkboxes with the configured name
-      var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
-      if (checkedCheckboxes.length > 1) {
-        if (actions) {
-          actions.classList.remove('d-none');
-        }
-        for (var i = 0; i < filters.length; i++) {
-          filters[i].classList.add('d-none');
-        }
-        if (selectedItems) {
-          selectedItems.classList.remove('d-none');
-        }
-        if (items) {
-          items.classList.add('d-none');
-        }
-      } else {
-        if (actions) {
-          actions.classList.add('d-none');
-        }
-        for (var _i2 = 0; _i2 < filters.length; _i2++) {
-          filters[_i2].classList.remove('d-none');
-        }
-        if (selectedItems) {
-          selectedItems.classList.add('d-none');
-        }
-        if (items) {
-          items.classList.remove('d-none');
-        }
+    if (!hasVisibleIgnoredSibling(visibleElements[0], 'previousElementSibling')) {
+      var _visibleElements$0$cl;
+      (_visibleElements$0$cl = visibleElements[0].classList).add.apply(_visibleElements$0$cl, ['first-child-visible'].concat(_toConsumableArray(firstElementClasses)));
+    }
+    if (!hasVisibleIgnoredSibling(visibleElements[visibleElements.length - 1], 'nextElementSibling')) {
+      var _visibleElements$clas;
+      (_visibleElements$clas = visibleElements[visibleElements.length - 1].classList).add.apply(_visibleElements$clas, ['last-child-visible'].concat(_toConsumableArray(lastElementClasses)));
+    }
+  };
+  var toggleSearchAlerts = function toggleSearchAlerts(root, options, hasSearch, visibleCount) {
+    var searchAlert = getElement(root, options.searchAlertSelector);
+    if (searchAlert) {
+      searchAlert.classList.toggle('d-none', !hasSearch || visibleCount > 0);
+    }
+    var emptyAlert = getElement(root, options.emptyAlertSelector);
+    if (emptyAlert && hasSearch) {
+      emptyAlert.classList.add('d-none');
+    }
+  };
+  var filterClientSideResults = function filterClientSideResults(root, options, rawSearch) {
+    var search = normalizeSearchText(rawSearch);
+    var results = getSearchResults(root, options);
+    var visibleElements = [];
+    clearVisibleBoundaryClasses(root, options);
+    results.forEach(function (element) {
+      var isMatch = search === '' || getFilterText(element, options).includes(search);
+      element.classList.toggle('d-none', !isMatch);
+      if (isMatch) {
+        visibleElements.push(element);
       }
+    });
+    applyVisibleBoundaryClasses(root, visibleElements, options);
+    toggleSearchAlerts(root, options, search !== '', visibleElements.length);
+    return visibleElements;
+  };
+  var getVisibleResults = function getVisibleResults(root, options) {
+    return getSearchResults(root, options).filter(function (element) {
+      return !element.classList.contains('d-none');
+    });
+  };
+  var submitFilter = function submitFilter(root, options) {
+    var submitFilterButton = getElement(root, options.submitFilterSelector);
+    if (submitFilterButton) {
+      submitFilterButton.click();
     }
-    var dropdownItems = document.querySelectorAll(".dropdown-menu .dropdown-item");
-
-    // Add click event listeners to each dropdown item
-    dropdownItems.forEach(function (item) {
-      // Check if the item has a data-action attribute
-      if (!item.dataset.action) {
+  };
+  var initializeSearch = function initializeSearch(root, options) {
+    var searchBox = getElement(root, options.searchBoxSelector);
+    if (!searchBox) {
+      return;
+    }
+    searchBox.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        searchBox.value = '';
+        if (options.clientSideSearch) {
+          filterClientSideResults(root, options, '');
+        }
+        event.preventDefault();
         return;
       }
-      item.addEventListener("click", function () {
-        // Get all checked checkboxes
-        var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
-
-        // Check if more than one checkbox is checked
-        if (checkedCheckboxes.length > 1) {
-          // Get data attributes from the clicked item
-          var actionData = Object.assign({}, item.dataset);
-          confirmDialog(_objectSpread(_objectSpread({}, actionData), {}, {
-            callback: function callback(r) {
-              if (r) {
-                // Set the value of the BulkAction option
-                document.querySelector("[name='" + config.bulkActionInputName + "']").value = actionData.action;
-                // Trigger the submit action
-                document.querySelector("[name='" + config.submitBulkActionName + "']").click();
-              }
-            }
-          }));
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      if (!options.clientSideSearch) {
+        submitFilter(root, options);
+        return;
+      }
+      var visibleResults = getVisibleResults(root, options);
+      if (visibleResults.length === 1 && options.singleResultActionSelector) {
+        var actionElement = getElement(visibleResults[0], options.singleResultActionSelector);
+        if (actionElement) {
+          actionElement.click();
         }
+      }
+    });
+    if (options.clientSideSearch) {
+      var applySearch = function applySearch() {
+        filterClientSideResults(root, options, searchBox.value);
+      };
+      searchBox.addEventListener('input', applySearch);
+      applySearch();
+    }
+  };
+  var initializeSelection = function initializeSelection(root, options) {
+    if (!options.selectionEnabled) {
+      return;
+    }
+    var actions = getElement(root, options.actionsSelector);
+    var items = getElement(root, options.itemsSelector);
+    var filters = getElements(root, options.filtersSelector);
+    var selectedItems = getElement(root, options.selectedItemsSelector);
+    var selectAllCtrl = getElement(root, options.selectAllSelector);
+    var itemsCheckboxes = getItemCheckboxes(root, options);
+    var updateSelectedItemsText = function updateSelectedItemsText() {
+      if (!selectedItems) {
+        return;
+      }
+      var selectedCount = getCheckedItemCheckboxes(root, options).length;
+      var label = options.selectedLabel ? " ".concat(options.selectedLabel) : '';
+      selectedItems.textContent = "".concat(selectedCount).concat(label);
+    };
+    var displayActionsOrFilters = function displayActionsOrFilters() {
+      var checkedCount = getCheckedItemCheckboxes(root, options).length;
+      var showActions = checkedCount > 1;
+      if (actions) {
+        actions.classList.toggle('d-none', !showActions);
+      }
+      filters.forEach(function (filterElement) {
+        filterElement.classList.toggle('d-none', showActions);
+      });
+      if (selectedItems) {
+        selectedItems.classList.toggle('d-none', !showActions);
+      }
+      if (items) {
+        items.classList.toggle('d-none', showActions);
+      }
+    };
+    getElements(root, options.bulkActionSelector).forEach(function (item) {
+      item.addEventListener('click', function () {
+        var checkedCheckboxes = getCheckedItemCheckboxes(root, options);
+        if (checkedCheckboxes.length <= 1) {
+          return;
+        }
+        var actionData = Object.assign({}, item.dataset);
+        confirmDialog(_objectSpread(_objectSpread({}, actionData), {}, {
+          callback: function callback(result) {
+            if (!result) {
+              return;
+            }
+            var bulkActionInput = getElement(root, "[name='".concat(options.bulkActionInputName, "']"));
+            var submitBulkAction = getElement(root, "[name='".concat(options.submitBulkActionName, "']"));
+            if (bulkActionInput) {
+              bulkActionInput.value = actionData.action;
+            }
+            if (submitBulkAction) {
+              submitBulkAction.click();
+            }
+          }
+        }));
       });
     });
-    var selectAllCtrl = document.getElementById('select-all');
-    var itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']");
     if (selectAllCtrl) {
-      selectAllCtrl.addEventListener("change", function () {
+      selectAllCtrl.addEventListener('change', function () {
         itemsCheckboxes.forEach(function (checkbox) {
-          if (checkbox !== selectAllCtrl) {
-            checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
-          }
+          checkbox.checked = selectAllCtrl.checked;
         });
-
-        // Update the selected items text
         updateSelectedItemsText();
         displayActionsOrFilters();
       });
     }
-
-    // Event listener for individual checkboxes
     itemsCheckboxes.forEach(function (checkbox) {
-      checkbox.addEventListener("change", function () {
+      checkbox.addEventListener('change', function () {
         var itemsCount = itemsCheckboxes.length;
-        var selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
-
-        // Update selectAllCtrl state
+        var selectedItemsCount = getCheckedItemCheckboxes(root, options).length;
         if (selectAllCtrl) {
           selectAllCtrl.checked = selectedItemsCount === itemsCount;
           selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
         }
-
-        // Update the selected items text
         updateSelectedItemsText();
         displayActionsOrFilters();
       });
     });
-
-    // Function to update selected items text
-    function updateSelectedItemsText() {
-      var selectedCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
-      if (selectedItems) {
-        selectedItems.textContent = selectedCount + ' ' + selectedLabel;
-      }
-    }
+    updateSelectedItemsText();
+    displayActionsOrFilters();
   };
+  var initializeFilterSubmission = function initializeFilterSubmission(root, options) {
+    if (!options.filterSubmit) {
+      return;
+    }
+    getElements(root, options.filterSubmitSelector).forEach(function (element) {
+      element.addEventListener('change', function () {
+        return submitFilter(root, options);
+      });
+      element.addEventListener('changed.bs.select', function () {
+        return submitFilter(root, options);
+      });
+    });
+  };
+  var initializeRoot = function initializeRoot(root, options) {
+    var scopedRoot = getScopedRoot(root);
+    if (scopedRoot !== document && scopedRoot.hasAttribute(initializedAttribute)) {
+      return scopedRoot;
+    }
+    var config = Object.assign({}, defaultOptions, readOptionsFromElement(scopedRoot), options);
+    initializeSearch(scopedRoot, config);
+    initializeSelection(scopedRoot, config);
+    initializeFilterSubmission(scopedRoot, config);
+    if (scopedRoot !== document) {
+      scopedRoot.setAttribute(initializedAttribute, 'true');
+    }
+    return scopedRoot;
+  };
+  var initializeAll = function initializeAll(root) {
+    getElements(getScopedRoot(root), '[data-list-management]').forEach(function (element) {
+      initializeRoot(element);
+    });
+  };
+  var initialize = function initialize(rootOrSelectedLabel, options) {
+    if (rootOrSelectedLabel && rootOrSelectedLabel.nodeType === 1) {
+      return initializeRoot(rootOrSelectedLabel, options);
+    }
+    var overrides = typeof rootOrSelectedLabel === 'string' ? Object.assign({}, options, {
+      selectedLabel: rootOrSelectedLabel
+    }) : options;
+    return initializeRoot(document, overrides);
+  };
+  ready(function () {
+    return initializeAll(document);
+  });
   return {
-    initialize: initialize
+    initialize: initialize,
+    initializeAll: initializeAll
   };
 }();

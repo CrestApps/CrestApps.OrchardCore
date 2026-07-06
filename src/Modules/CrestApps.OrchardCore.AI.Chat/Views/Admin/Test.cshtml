@@ -17,6 +17,21 @@
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var placeholderHtmlId = $"{baseId}_Placeholder";
+    var chatConfigJson = JsonSerializer.Serialize(new
+    {
+        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        appElementSelector = $"#{chatAppHtmlId}",
+        chatContainerElementSelector = $"#{chatContainerHtmlId}",
+        inputElementSelector = $"#{userPromptHtmlId}",
+        sendButtonElementSelector = $"#{buttonHtmlId}",
+        placeholderElementSelector = $"#{placeholderHtmlId}",
+        autoCreateSession = false,
+        messages = Array.Empty<object>(),
+        metricsEnabled = false,
+        chatMode = ChatMode.TextInput.ToString(),
+        isOrchestratorAvailable = true,
+        singleResponseMode = true,
+    }, JOptions.CamelCase);
 }
 
 <div class="container-fluid d-flex flex-column" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
@@ -57,45 +72,9 @@
 
 <script asp-name="AIChatApp" at="Foot"></script>
 
-<script at="Foot" depends-on="AIChatApp">
-    document.addEventListener('DOMContentLoaded', function () {
-        var configEl = document.getElementById('@($"{baseId}_Config")');
-
-        if (configEl) {
-            var config = JSON.parse(configEl.getAttribute('data-config'));
-            var app = openAIChatManager.initialize(config);
-
-            // In test mode, reset the session and clear all messages before
-            // each send so every request is independent with no history.
-            var originalSendMessage = app.sendMessage;
-            app.sendMessage = function () {
-                app.resetSession();
-                app.messages.splice(0, app.messages.length);
-                originalSendMessage.call(app);
-            };
-        }
-    });
-</script>
-
-@{
-    var chatConfig = new Dictionary<string, object>
-    {
-        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
-        ["appElementSelector"] = $"#{chatAppHtmlId}",
-        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-        ["inputElementSelector"] = $"#{userPromptHtmlId}",
-        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-        ["autoCreateSession"] = false,
-        ["messages"] = Array.Empty<object>(),
-        ["metricsEnabled"] = false,
-        ["chatMode"] = "TextInput",
-        ["isOrchestratorAvailable"] = true,
-        ["widget"] = (object)null,
-    };
-}
-
-<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
+<div id="@($"{baseId}_Config")"
+     class="d-none"
+     data-coreai-chat-config="@chatConfigJson"></div>
 
 <style at="Head">
     .ta-content {

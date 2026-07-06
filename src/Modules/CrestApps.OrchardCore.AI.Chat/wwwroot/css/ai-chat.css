@@ -1,9 +1,28 @@
-.ai-chat-msg-role {
-    font-size: 1.25rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.ai-chat-message-heading {
+    font-size: 0.75rem;
     margin-bottom: 0.35rem;
+}
+
+.ai-chat-message-heading .ai-chat-msg-role {
+    margin-bottom: 0;
+    letter-spacing: 0.03em;
+}
+
+.ai-chat-message-heading-assistant .ai-chat-msg-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ai-chat-message-role-label {
+    display: inline-block;
+    text-transform: inherit;
+}
+
+.ai-chat-msg-role {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
 }
 
 .ai-chat-msg-role-user {
@@ -117,6 +136,19 @@
 .ai-chat-messages .message-buttons-container > .button-message-toolbox:hover,
 .ai-chat-messages .message-buttons-container > .button-message-toolbox:focus {
     color: var(--bs-body-color, #212529) !important;
+    text-decoration: none;
+}
+
+.ai-chat-messages .message-buttons-container > .button-message-toolbox.text-success,
+.ai-chat-messages .message-buttons-container > .button-message-toolbox.text-success:hover,
+.ai-chat-messages .message-buttons-container > .button-message-toolbox.text-success:focus {
+    color: var(--bs-success, #198754) !important;
+    text-decoration: none;
+}
+
+.ai-chat-messages .message-buttons-container > .button-message-toolbox.text-success svg {
+    color: inherit !important;
+    fill: currentColor;
 }
 
 .ai-chat-messages .message-buttons-container .tts-playing {

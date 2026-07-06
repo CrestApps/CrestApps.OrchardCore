@@ -15,11 +15,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineScript("ChatInteractionApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction.min.js", "~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/chat-interaction.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.90/dist/chat-interaction.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.98/dist/chat-interaction.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.98/dist/chat-interaction.js")
             .SetCdnIntegrity(
-                "sha384-mIUTyBeIgoBKw6+TsaPGIuRY9EueEv+LwoPowwIEDPKbs0/zPVyZWEyKA3y3qugA",
-                "sha384-yt48W7fssAWTE5qNZ9xix75ll3KHdsXs5lODMFSkKSES3LnbcMICCTqYmr+PaDCJ")
+                "sha384-uC6L8aVbSTxixhG/bE9jmmHj6RLZpKWJxvKSrEpUNO0xjbLFRSbR7sCwsLXzReFW",
+                "sha384-DOgSQbLi4SIC5E4pkElu6AZwpxhCutOVkQiVsUo6V8x9fadXltD2w9/NN6ZMteQs")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify")
             .SetVersion("1.0.0");
     }
