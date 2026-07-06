@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.DialPad.Drivers;
 using CrestApps.OrchardCore.DialPad.Services;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;

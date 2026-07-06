@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Settings;
 using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -28,11 +27,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     /// The name constant.
     /// </summary>
     public const string TheName = "createOrUpdateContentItem";
-
-    private static readonly JsonMergeSettings _updateJsonMergeSettings = new()
-    {
-        MergeArrayHandling = MergeArrayHandling.Replace,
-    };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     $$"""
@@ -142,20 +136,15 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             return "The contentItem argument must be a JSON object.";
         }
 
-        var model = doc.RootElement.Deserialize<ContentItem>(JsonSerializerOptions);
-
-        if (model is null)
-        {
-            logger.LogWarning("AI tool '{ToolName}': The contentItem argument could not be mapped to a content item.", TheName);
-
-            return "The contentItem argument could not be mapped to a content item.";
-        }
-
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var contentItemId = GetStringPropertyValue(inputNode, nameof(ContentItem.ContentItemId));
+        var requestedContentType = GetStringPropertyValue(inputNode, nameof(ContentItem.ContentType));
 
-        var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
-        var resolvedContentType = contentItem?.ContentType ?? model.ContentType;
+        var contentItem = string.IsNullOrWhiteSpace(contentItemId)
+            ? null
+            : await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
+        var resolvedContentType = contentItem?.ContentType ?? requestedContentType;
 
         if (contentItem is null)
         {
@@ -167,7 +156,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             }
         }
 
-        var contentType = resolvedContentType!;
+        var contentType = resolvedContentType;
         var contentDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(contentType);
 
         if (contentDefinition is null)
@@ -202,9 +191,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         if (contentItem is null)
         {
-            contentItem = await contentManager.NewAsync(contentType);
-
-            contentItem.Merge(model);
+            var contentItemPreparationService = arguments.Services.GetRequiredService<ContentItemPreparationService>();
+            contentItem = await contentItemPreparationService.PrepareAsync(
+                contentDefinition,
+                inputNode,
+                cancellationToken: cancellationToken);
 
             // When no user is authenticated, try to resolve an owner from optional parameters
             // so that contentItem.Owner is set correctly.
@@ -229,7 +220,12 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         else
         {
-            contentItem.Merge(model, _updateJsonMergeSettings);
+            var contentItemPreparationService = arguments.Services.GetRequiredService<ContentItemPreparationService>();
+            contentItem = await contentItemPreparationService.PrepareAsync(
+                contentDefinition,
+                inputNode,
+                contentItem,
+                cancellationToken);
 
             await contentManager.UpdateAsync(contentItem);
 
@@ -304,6 +300,21 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         }
 
         return response;
+    }
+
+    private static string GetStringPropertyValue(JsonObject jsonObject, string propertyName)
+    {
+        ArgumentNullException.ThrowIfNull(jsonObject);
+
+        foreach (var property in jsonObject)
+        {
+            if (string.Equals(property.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value?.GetValue<string>();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
