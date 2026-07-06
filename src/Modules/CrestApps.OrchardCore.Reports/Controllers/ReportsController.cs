@@ -100,6 +100,7 @@ public sealed class ReportsController : Controller
         return View(new ReportDisplayViewModel
         {
             Report = report,
+            ExportFormats = _exportManager.ListFormats(),
             FilterShape = filterShape,
             Document = document,
             FromUtc = filter.FromUtc.GetValueOrDefault(),

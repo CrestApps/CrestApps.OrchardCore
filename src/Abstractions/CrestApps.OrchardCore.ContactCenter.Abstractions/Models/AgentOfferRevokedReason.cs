@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Identifies why an offer presented to an agent was revoked.

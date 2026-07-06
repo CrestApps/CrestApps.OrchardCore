@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Describes an offer that is no longer presented to an agent so the agent desktop can dismiss the

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using Microsoft.AspNetCore.SignalR;
 

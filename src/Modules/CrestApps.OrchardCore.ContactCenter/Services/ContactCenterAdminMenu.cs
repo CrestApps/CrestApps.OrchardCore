@@ -44,7 +44,8 @@ public sealed class ContactCenterAdminMenu : AdminNavigationProvider
                     .Id("contactCenterBusinessHours")
                     .Action("Index", "BusinessHoursCalendars", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageQueues)
-                    .LocalNav()),
+                    .LocalNav()
+                ),
                 priority: 1);
 
         return ValueTask.CompletedTask;

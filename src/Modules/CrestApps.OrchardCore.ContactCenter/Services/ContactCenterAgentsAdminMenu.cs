@@ -32,7 +32,8 @@ public sealed class ContactCenterAgentsAdminMenu : AdminNavigationProvider
                     .Id("contactCenterAgentStates")
                     .Action("Index", "AgentStateReasonCodes", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageAgents)
-                    .LocalNav()),
+                    .LocalNav()
+                ),
                 priority: 1);
 
         return ValueTask.CompletedTask;

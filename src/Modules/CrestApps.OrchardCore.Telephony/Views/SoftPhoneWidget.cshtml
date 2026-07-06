@@ -40,7 +40,7 @@
             ["failed"] = T["Call failed"].Value,
             ["disconnectedHub"] = T["Disconnected"].Value,
             ["notReady"] = T["Not Ready"].Value,
-            ["notConfigured"] = T["No telephony provider is configured."].Value,
+            ["notConfigured"] = T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."].Value,
             ["notConnected"] = T["Not connected"].Value,
             ["invalidNumber"] = T["Enter a phone number to call."].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
@@ -82,15 +82,9 @@
             {
                 @await DisplayAsync(Model.HeaderActions)
             }
-            <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-        </div>
-
-        <div class="telephony-soft-phone__unavailable" data-telephony-unavailable hidden>
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <p data-telephony-unavailable-text>@T["No telephony provider is configured."]</p>
         </div>
 
         <div class="telephony-soft-phone__connect" data-telephony-connect-panel hidden>
@@ -101,8 +95,16 @@
         </div>
 
         <div class="telephony-soft-phone__body" data-telephony-body>
+            <div class="telephony-soft-phone__unavailable alert alert-warning" data-telephony-unavailable hidden>
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p data-telephony-unavailable-text>@T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."]</p>
+            </div>
+
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">
                 <div class="telephony-soft-phone__display">
+                    <div class="telephony-soft-phone__display-meta">
+                        <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
+                    </div>
                     <input type="tel"
                            class="telephony-soft-phone__number"
                            data-telephony-number

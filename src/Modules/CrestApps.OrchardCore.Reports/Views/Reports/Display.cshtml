@@ -18,9 +18,12 @@
                     </button>
                 </div>
                 <div class="col-auto p-1">
-                    <button type="submit" class="btn btn-outline-secondary" formaction="@Url.Action("Export", new { id = Model.Report.Name })" formmethod="get">
-                        <i class="fa-solid fa-file-csv"></i> @T["Export CSV"]
-                    </button>
+                    @foreach (var exportFormat in Model.ExportFormats)
+                    {
+                        <button type="submit" class="btn btn-outline-secondary me-2" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
+                            <i class="fa-solid fa-download"></i> @T["Export {0}", exportFormat.DisplayName]
+                        </button>
+                    }
                 </div>
             </div>
         </form>

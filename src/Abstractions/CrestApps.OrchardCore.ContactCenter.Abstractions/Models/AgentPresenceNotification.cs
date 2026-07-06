@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Describes a real-time change to an agent's presence broadcast to the agent's own connections and to

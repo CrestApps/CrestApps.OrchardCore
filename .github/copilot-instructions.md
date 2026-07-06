@@ -150,6 +150,7 @@ dotnet run
 #### Documentation
 
 * Keep public docs and comments accurate and aligned with the code.
+* In Markdown docs, do not manually hard-wrap prose at a fixed column. Keep each paragraph or list item on a single line and let the editor/viewer wrap it visually.
 * Always document:
 
   * Every public method (including constructors) with XML `<summary>` and `<param>` tags.

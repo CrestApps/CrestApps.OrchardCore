@@ -1,8 +1,8 @@
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Describes a work item being offered to a specific agent in real time so the agent desktop can render
-/// the offer (with its accept/decline countdown) without waiting for the telephony ring event.
+/// the offer without waiting for the telephony ring event.
 /// </summary>
 public sealed class AgentOfferNotification
 {

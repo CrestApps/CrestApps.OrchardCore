@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Describes the current depth of a queue broadcast to the queue's watchers and supervisor dashboards so

@@ -33,13 +33,15 @@ public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
                     .Id("contactCenterWorkspace")
                     .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.SignIntoQueues)
-                    .LocalNav())
+                    .LocalNav()
+                )
                 .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("1"), dashboard => dashboard
                     .AddClass("contact-center-dashboard")
                     .Id("contactCenterDashboard")
                     .Action("Index", "SupervisorDashboard", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.MonitorContactCenter)
-                    .LocalNav()),
+                    .LocalNav()
+                ),
                 priority: 2);
 
         return ValueTask.CompletedTask;

@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Broadcasts Contact Center real-time updates to the appropriate SignalR audiences (the affected agent,
-/// queue watchers, and supervisors) without exposing the underlying hub or group naming to callers.
+/// Broadcasts Contact Center real-time updates to the appropriate audiences without exposing the
+/// underlying transport or group naming details to callers.
 /// </summary>
 public interface IContactCenterRealTimeNotifier
 {

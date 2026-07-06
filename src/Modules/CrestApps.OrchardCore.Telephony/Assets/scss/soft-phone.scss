@@ -53,6 +53,7 @@
 
     &__title {
         font-weight: 600;
+        margin-right: auto;
     }
 
     &__header-actions {
@@ -63,8 +64,8 @@
     }
 
     &__status {
-        font-size: 0.78rem;
-        opacity: 0.9;
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, rgba(255, 255, 255, 0.85));
     }
 
     &__icon-btn {
@@ -85,19 +86,21 @@
     }
 
     &__unavailable {
-        padding: 1.25rem 1rem;
-        text-align: center;
-        color: var(--bs-secondary-color, #6c757d);
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin: 0.85rem;
+        padding: 0.75rem 0.85rem;
+        font-size: 0.8rem;
 
         i {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: var(--bs-tertiary-color, #adb5bd);
+            flex: 0 0 auto;
+            margin-top: 0.1rem;
         }
 
         p {
             margin: 0;
-            font-size: 0.85rem;
+            text-align: left;
         }
     }
 
@@ -220,6 +223,13 @@
 
     &__display {
         padding: 0.85rem 0.85rem 0.35rem;
+    }
+
+    &__display-meta {
+        display: flex;
+        justify-content: flex-end;
+        min-height: 1rem;
+        margin-bottom: 0.35rem;
     }
 
     &__number {

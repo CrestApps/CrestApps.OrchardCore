@@ -124,16 +124,11 @@ phone automatically offsets itself so the two widgets sit side by side instead o
 
 ### Status and call controls
 
-The widget reflects the live connection status reported by the hub and only enables the dial pad and
-call controls when the provider is **available, connected, and authenticated**:
+The widget reflects the live connection status reported by the hub and only enables the dial pad and call controls when the provider is **available, connected, and authenticated**:
 
-- When no provider is enabled, the header status reads **Not Ready** instead of a misleading
-  **Ready** status, the body shows an **unavailable** message, and the number pad and buttons are
-  hidden.
-- When the provider requires a per-user connection, the widget shows the **Connect to provider**
-  button (see [Authenticating users with a provider](#authenticating-users-with-a-provider)).
-- During an active call the main toggle button turns red and switches to a hang-up icon, and the
-  widget exposes mute, hold, transfer, and merge controls based on the provider's capabilities.
+- When no provider is enabled, the widget shows an inline warning that explains how to fix the setup: enable at least one provider and set the default phone provider in site settings. The keypad and call buttons stay hidden, and the live status text is shown as small muted text inside the keypad container instead of cluttering the header.
+- When the provider requires a per-user connection, the widget shows the **Connect to provider** button (see [Authenticating users with a provider](#authenticating-users-with-a-provider)).
+- During an active call the main toggle button turns red and switches to a hang-up icon, and the widget exposes mute, hold, transfer, and merge controls based on the provider's capabilities.
 
 ### Keypad, recent calls, and extension tabs
 

@@ -32,7 +32,8 @@ public sealed class ContactCenterDialerAdminMenu : AdminNavigationProvider
                     .Id("dialerProfiles")
                     .Action("Index", "DialerProfiles", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageDialer)
-                    .LocalNav()),
+                    .LocalNav()
+                ),
                 priority: 1);
 
         return ValueTask.CompletedTask;
