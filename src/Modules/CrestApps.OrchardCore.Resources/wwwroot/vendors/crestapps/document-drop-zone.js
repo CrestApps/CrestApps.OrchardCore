@@ -6,6 +6,7 @@
 (function (window, document) {
   'use strict';
 
+  var dropZoneStateKey = '__documentDropZoneState';
   function assignFiles(fileInput, files) {
     if (!fileInput || !files) {
       return;
@@ -29,6 +30,9 @@
     if (!dropZone || !fileInput) {
       return;
     }
+    if (dropZone[dropZoneStateKey] && typeof dropZone[dropZoneStateKey].dispose === 'function') {
+      dropZone[dropZoneStateKey].dispose();
+    }
     function openPicker() {
       fileInput.click();
     }
@@ -39,40 +43,114 @@
     function setDragState(isActive) {
       dropZone.classList.toggle('document-drop-zone--dragover', isActive);
     }
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (eventName) {
-      dropZone.addEventListener(eventName, preventDefaults);
-    });
-    dropZone.addEventListener('dragenter', function () {
+    function handleDragEnter() {
       setDragState(true);
-    });
-    dropZone.addEventListener('dragover', function () {
+    }
+    function handleDragOver() {
       setDragState(true);
-    });
-    dropZone.addEventListener('dragleave', function (event) {
+    }
+    function handleDragLeave(event) {
       if (!dropZone.contains(event.relatedTarget)) {
         setDragState(false);
       }
-    });
-    dropZone.addEventListener('drop', function (event) {
+    }
+    function handleDrop(event) {
       setDragState(false);
       var files = event.dataTransfer ? event.dataTransfer.files : null;
       if (files && files.length > 0) {
         assignFiles(fileInput, files);
       }
+    }
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (eventName) {
+      dropZone.addEventListener(eventName, preventDefaults);
     });
+    dropZone.addEventListener('dragenter', handleDragEnter);
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+    var handleBrowseClick = null;
     if (browseButton) {
-      browseButton.addEventListener('click', function (event) {
+      handleBrowseClick = function handleBrowseClick(event) {
         event.preventDefault();
         event.stopPropagation();
         openPicker();
-      });
+      };
+      browseButton.addEventListener('click', handleBrowseClick);
     }
-    dropZone.addEventListener('click', function (event) {
+    function handleClick(event) {
       if (event.target.closest('[data-drop-zone-browse]')) {
         return;
       }
       openPicker();
-    });
+    }
+    dropZone.addEventListener('click', handleClick);
+    dropZone[dropZoneStateKey] = {
+      dispose: function dispose() {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (eventName) {
+          dropZone.removeEventListener(eventName, preventDefaults);
+        });
+        dropZone.removeEventListener('dragenter', handleDragEnter);
+        dropZone.removeEventListener('dragover', handleDragOver);
+        dropZone.removeEventListener('dragleave', handleDragLeave);
+        dropZone.removeEventListener('drop', handleDrop);
+        dropZone.removeEventListener('click', handleClick);
+        if (browseButton && handleBrowseClick) {
+          browseButton.removeEventListener('click', handleBrowseClick);
+        }
+      }
+    };
+    return dropZone[dropZoneStateKey];
   };
+  function initializeFromElement(element) {
+    if (!element || element.dataset.documentDropZoneInitialized === 'true') {
+      return element ? element[dropZoneStateKey] || null : null;
+    }
+    var options = {
+      dropZone: element,
+      fileInput: element.getAttribute('data-document-drop-zone-file-input'),
+      browseButton: element.getAttribute('data-document-drop-zone-browse-button')
+    };
+    var state = window.initDocumentDropZone(options);
+    if (!state) {
+      return null;
+    }
+    element.dataset.documentDropZoneInitialized = 'true';
+    return state;
+  }
+  function scanForAutoInitialization(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+    if (typeof root.matches === 'function' && root.matches('[data-document-drop-zone-file-input]')) {
+      initializeFromElement(root);
+    }
+    root.querySelectorAll('[data-document-drop-zone-file-input]').forEach(initializeFromElement);
+  }
+  function startAutoInitialization() {
+    scanForAutoInitialization(document);
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node && node.nodeType === 1) {
+            scanForAutoInitialization(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAutoInitialization, {
+      once: true
+    });
+  } else {
+    startAutoInitialization();
+  }
 })(window, document);
 //# sourceMappingURL=document-drop-zone.js.map

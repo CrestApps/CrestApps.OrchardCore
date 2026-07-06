@@ -154,8 +154,29 @@
     border-top: 1px solid rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.08);
 }
 
+.ai-chat-widget-messages .ai-chat-message-heading {
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.ai-chat-widget-messages .ai-chat-message-heading .ai-chat-msg-role {
+    margin-bottom: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ai-chat-widget-messages .ai-chat-message-heading-assistant .ai-chat-msg-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ai-chat-widget-messages .ai-chat-message-role-label {
+    display: inline-block;
+    text-transform: inherit;
+}
+
 .ai-chat-widget-messages .ai-chat-msg-role {
-    font-size: 0.7rem;
     font-weight: 600;
     margin-bottom: 2px;
 }
@@ -168,12 +189,28 @@
     color: var(--ai-widget-primary, #6f42c1);
 }
 
-.ai-chat-widget-messages .ai-chat-msg-role-assistant i.ai-streaming-icon {
-    animation: ai-widget-pulse 1.5s infinite;
+.ai-chat-widget-messages .ai-bot-icon {
+    color: currentColor;
+    display: inline-block;
+    animation: none;
 }
 
-.ai-chat-widget-messages .ai-chat-msg-role-assistant i.ai-bot-icon {
+@keyframes ai-widget-streaming-effect {
+    0% { opacity: 1; transform: rotate(0deg); }
+    10% { opacity: 0.3; transform: rotate(0deg); }
+    20% { opacity: 1; transform: rotate(0deg); }
+    30% { opacity: 0.3; transform: rotate(0deg); }
+    40% { opacity: 1; transform: rotate(0deg); }
+    50% { opacity: 0.3; transform: rotate(0deg); }
+    60% { opacity: 1; transform: rotate(0deg); }
+    80% { opacity: 1; transform: rotate(360deg); }
+    100% { opacity: 1; transform: rotate(360deg); }
+}
+
+.ai-chat-widget-messages .ai-streaming-icon {
     color: currentColor;
+    display: inline-block;
+    animation: ai-widget-streaming-effect 4s ease-in-out infinite;
 }
 
 .ai-chat-widget-messages .ai-chat-message-body {
@@ -244,6 +281,19 @@
 .ai-chat-widget-messages .message-buttons-container > .button-message-toolbox:hover,
 .ai-chat-widget-messages .message-buttons-container > .button-message-toolbox:focus {
     color: var(--bs-body-color, #212529) !important;
+    text-decoration: none;
+}
+
+.ai-chat-widget-messages .message-buttons-container > .button-message-toolbox.text-success,
+.ai-chat-widget-messages .message-buttons-container > .button-message-toolbox.text-success:hover,
+.ai-chat-widget-messages .message-buttons-container > .button-message-toolbox.text-success:focus {
+    color: var(--bs-success, #198754) !important;
+    text-decoration: none;
+}
+
+.ai-chat-widget-messages .message-buttons-container > .button-message-toolbox.text-success svg {
+    color: inherit !important;
+    fill: currentColor;
 }
 
 .ai-chat-widget-messages .message-buttons-container > .button-message-toolbox.tts-playing {
@@ -372,11 +422,6 @@
 
 .ai-chat-widget-messages .ai-chat-message-body code {
     font-size: 0.85em;
-}
-
-@keyframes ai-widget-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
 }
 
 .ai-chat-widget-input {

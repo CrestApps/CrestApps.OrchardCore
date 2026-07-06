@@ -71,6 +71,8 @@ After enabling the relevant features, Orchard Core exposes AI management in the 
 - feature enablement under **Tools -> Features**
 - AI connection and deployment editors
 - AI profile editors used by chat, agents, and related modules
+- submit-based AI list screens that keep **Enter** support and now expose a visible **Go** button next to the search box on screens such as AI Profiles, AI Templates, AI Provider Connections, and Chat Interactions
+- shared client-side list screens that keep dedicated header rows visually attached to the list, including filtered no-result states on AI connections, deployments, A2A connections, data sources, and MCP management pages
 
 ## Configuration sources
 

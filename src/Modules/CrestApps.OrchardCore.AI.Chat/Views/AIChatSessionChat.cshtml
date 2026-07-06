@@ -217,6 +217,37 @@
             });
         }
     }
+
+    var chatConfigJson = JsonSerializer.Serialize(new
+    {
+        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        appElementSelector = $"#{chatAppHtmlId}",
+        chatContainerElementSelector = $"#{chatContainerHtmlId}",
+        inputElementSelector = $"#{userPromptHtmlId}",
+        sendButtonElementSelector = $"#{buttonHtmlId}",
+        placeholderElementSelector = $"#{placeholderHtmlId}",
+        autoCreateSession = addInitialPrompt,
+        initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+        messages = prompts,
+        metricsEnabled,
+        chatMode = effectiveChatMode.ToString(),
+        micButtonElementSelector = $"#{micBtnHtmlId}",
+        ttsVoiceName = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
+        conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
+        textToSpeechEnabled,
+        visionEnabled,
+        isOrchestratorAvailable = orchestratorAvailability.IsAvailable,
+        orchestratorUnavailableMessage = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
+        sessionDocumentsEnabled,
+        documentBarSelector = sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null,
+        uploadDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null,
+        removeDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null,
+        allowedExtensions = sessionDocumentsEnabled ? allowedExtensions : null,
+        supportedExtensionsText = sessionDocumentsEnabled ? supportedExtensionsText : null,
+        existingDocuments = sessionDocumentsEnabled
+            ? Model.Session.Documents ?? new List<ChatDocumentInfo>()
+            : new List<ChatDocumentInfo>(),
+    }, JOptions.CamelCase);
 }
 
 <style asp-name="AIChatApp" at="Head"></style>
@@ -227,53 +258,11 @@
 {
     <style asp-name="SpeechToText" at="Head"></style>
 }
-
 <script asp-name="AIChatApp" at="Foot"></script>
 
-<script at="Foot" depends-on="AIChatApp">
-    var configEl = document.getElementById('@($"{baseId}_Config")');
-
-    if (configEl) {
-        openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
-    }
-</script>
-
-@{
-    var chatConfig = new Dictionary<string, object>
-    {
-        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
-        ["appElementSelector"] = $"#{chatAppHtmlId}",
-        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-        ["inputElementSelector"] = $"#{userPromptHtmlId}",
-        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-        ["autoCreateSession"] = addInitialPrompt,
-        ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
-        ["messages"] = prompts,
-        ["metricsEnabled"] = metricsEnabled,
-        ["chatMode"] = effectiveChatMode.ToString(),
-        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
-        ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
-        ["textToSpeechEnabled"] = textToSpeechEnabled,
-        ["visionEnabled"] = visionEnabled,
-        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
-        ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
-    };
-
-    if (sessionDocumentsEnabled)
-    {
-        chatConfig["sessionDocumentsEnabled"] = true;
-        chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
-        chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
-        chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
-        chatConfig["allowedExtensions"] = allowedExtensions;
-        chatConfig["supportedExtensionsText"] = supportedExtensionsText;
-        chatConfig["existingDocuments"] = Model.Session.Documents ?? new List<ChatDocumentInfo>();
-    }
-}
-
-<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
+<div id="@($"{baseId}_Config")"
+     class="d-none"
+     data-coreai-chat-config="@chatConfigJson"></div>
 
 <style at="Head">
     .chat-user-prompt-input:focus {

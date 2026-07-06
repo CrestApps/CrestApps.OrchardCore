@@ -29,6 +29,21 @@
     var maxUploadChunkSize = ContentImportOptions.Value.MaxUploadChunkSize;
     var maxUploadFileSize = ContentImportOptions.Value.MaxUploadFileSize;
     var maxUploadFileSizeDisplay = FormatBytes(maxUploadFileSize);
+    var importConfig = new
+    {
+        maxChunkSize = maxUploadChunkSize,
+        maxFileSize = maxUploadFileSize,
+        maxFileSizeDisplay = maxUploadFileSizeDisplay,
+        messages = new
+        {
+            selectFile = T["Please select a file to upload."].Value,
+            fileTooLargeClient = T["The selected file is larger than the maximum allowed size of {0}."].Value,
+            uploadGeneric = T["An error occurred while uploading the file."].Value,
+            fileTooLargeServer = T["The file is too large to upload. Maximum allowed size is {0}."].Value,
+            uploadInterrupted = T["The upload was interrupted. Please check your connection and try again."].Value,
+            uploading = T["Uploading..."].Value,
+        },
+    };
 }
 
 <nav aria-label="breadcrumb">
@@ -46,7 +61,7 @@
 <div class="card text-bg-theme mb-3">
     <div class="card-header fw-bold">@T["Import {0} contents", Model.ContentTypeDefinition.DisplayName]</div>
     <div class="card-body">
-        <form id="import-form" asp-route-contentTypeId="@(Model.ContentTypeDefinition.Name)" enctype="multipart/form-data" method="post">
+        <form id="import-form" asp-route-contentTypeId="@(Model.ContentTypeDefinition.Name)" enctype="multipart/form-data" method="post" data-content-transfer-import data-config="@JsonSerializer.Serialize(importConfig, JOptions.CamelCase)">
 
             @await DisplayAsync(Model.Content)
             <div id="upload-progress" class="mb-3 mt-2" style="display:none;">
@@ -145,28 +160,3 @@
 </div>
 
 <script asp-name="ContentTransferImport" at="Foot"></script>
-
-@{
-    var importConfig = new
-    {
-        maxChunkSize = maxUploadChunkSize,
-        maxFileSize = maxUploadFileSize,
-        maxFileSizeDisplay = maxUploadFileSizeDisplay,
-        redirectUrl = Url.Action("List", "Admin", new { area = ContentTransferConstants.Feature.ModuleId }),
-        messages = new
-        {
-            selectFile = T["Please select a file to upload."].Value,
-            fileTooLargeClient = T["The selected file is larger than the maximum allowed size of {0}."].Value,
-            uploadGeneric = T["An error occurred while uploading the file."].Value,
-            fileTooLargeServer = T["The file is too large to upload. Maximum allowed size is {0}."].Value,
-            uploadInterrupted = T["The upload was interrupted. Please check your connection and try again."].Value,
-            uploading = T["Uploading..."].Value,
-        },
-    };
-}
-
-<script at="Foot" depends-on="ContentTransferImport">
-    document.addEventListener('DOMContentLoaded', function () {
-        contentTransferImport.initialize(@Html.Raw(JsonSerializer.Serialize(importConfig, JOptions.CamelCase)));
-    });
-</script>

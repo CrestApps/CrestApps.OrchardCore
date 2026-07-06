@@ -5,6 +5,7 @@ var contentTransferImport = (function () {
     'use strict';
 
     var UPLOAD_ID_FIELD_NAME = '__chunkedFileUploadId';
+    var initializedAttribute = 'data-content-transfer-initialized';
 
     var defaultMessages = {
         selectFile: 'Please select a file to upload.',
@@ -23,26 +24,68 @@ var contentTransferImport = (function () {
         return template.replace('{0}', value);
     }
 
-    function initialize(config) {
-        config = config || {};
+    function ready(callback) {
+        if (document.readyState !== 'loading') {
+            callback();
+            return;
+        }
 
-        var form = document.getElementById('import-form');
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+    }
+
+    function parseConfig(form) {
+        var rawConfig = form.getAttribute('data-config');
+
+        if (!rawConfig) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(rawConfig);
+        } catch (error) {
+            console.error('Failed to parse content transfer import config.', error);
+            return {};
+        }
+    }
+
+    function getPostUploadRedirectPath() {
+        if (!window.location || typeof window.location.pathname !== 'string') {
+            return null;
+        }
+
+        var pathSegments = window.location.pathname.split('/import/contents/');
+
+        if (pathSegments.length !== 2 || !pathSegments[0]) {
+            return null;
+        }
+
+        return pathSegments[0] + '/content-transfer-entries';
+    }
+
+    function initializeForm(form, config) {
+        config = config || {};
 
         if (!form) {
             return;
         }
 
-        var progressContainer = document.getElementById('upload-progress');
+        if (form.hasAttribute(initializedAttribute)) {
+            return;
+        }
+
+        form.setAttribute(initializedAttribute, 'true');
+
+        var progressContainer = form.querySelector('#upload-progress');
         var progressBar = progressContainer.querySelector('.progress-bar');
-        var uploadStatus = document.getElementById('upload-status');
-        var uploadError = document.getElementById('upload-error');
-        var uploadActions = document.getElementById('upload-actions');
+        var uploadStatus = form.querySelector('#upload-status');
+        var uploadError = form.querySelector('#upload-error');
+        var uploadActions = form.querySelector('#upload-actions');
 
         var messages = Object.assign({}, defaultMessages, config.messages || {});
         var maxChunkSize = config.maxChunkSize || 0;
         var maxFileSize = config.maxFileSize || 0;
         var maxFileSizeDisplay = config.maxFileSizeDisplay || '';
-        var redirectUrl = config.redirectUrl || '';
+        var redirectUrl = getPostUploadRedirectPath();
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -54,10 +97,9 @@ var contentTransferImport = (function () {
                 uploadError.style.display = '';
                 return;
             }
-
             var file = fileInput.files[0];
             var url = form.action;
-            var token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+            var url = form.action;
 
             uploadError.style.display = 'none';
 
@@ -71,13 +113,13 @@ var contentTransferImport = (function () {
             progressContainer.style.display = '';
 
             if (maxChunkSize > 0 && file.size > maxChunkSize) {
-                uploadChunked(file, fileInput.name, url, token, maxChunkSize);
+                uploadChunked(file, fileInput.name, url, maxChunkSize);
             } else {
-                uploadWhole(file, url, token);
+                uploadWhole(url);
             }
         });
 
-        function uploadWhole(file, url, token) {
+        function uploadWhole(url) {
             var formData = new FormData(form);
             var xhr = new XMLHttpRequest();
 
@@ -93,7 +135,9 @@ var contentTransferImport = (function () {
                     var response = JSON.parse(xhr.responseText);
 
                     if (response.success) {
-                        window.location.href = redirectUrl;
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
                     }
                 } else {
                     showError(xhr);
@@ -108,7 +152,7 @@ var contentTransferImport = (function () {
             xhr.send(formData);
         }
 
-        function uploadChunked(file, fileFieldName, url, token, chunkSize) {
+        function uploadChunked(file, fileFieldName, url, chunkSize) {
             var uploadId = crypto.randomUUID();
             var fileSize = file.size;
             var start = 0;
@@ -136,7 +180,9 @@ var contentTransferImport = (function () {
                             var response = JSON.parse(xhr.responseText);
 
                             if (response.success) {
-                                window.location.href = redirectUrl;
+                                if (redirectUrl) {
+                                    window.location.href = redirectUrl;
+                                }
                             }
                         }
                     } else {
@@ -186,7 +232,25 @@ var contentTransferImport = (function () {
         }
     }
 
+    function initialize(rootOrConfig, explicitConfig) {
+        if (rootOrConfig && rootOrConfig.nodeType === 1) {
+            initializeForm(rootOrConfig, explicitConfig);
+            return;
+        }
+
+        initializeForm(document.getElementById('import-form'), rootOrConfig);
+    }
+
+    function initializeAll() {
+        document.querySelectorAll('[data-content-transfer-import]').forEach(function (form) {
+            initializeForm(form, parseConfig(form));
+        });
+    }
+
+    ready(initializeAll);
+
     return {
-        initialize: initialize
+        initialize: initialize,
+        initializeAll: initializeAll
     };
 })();
