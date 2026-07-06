@@ -46,6 +46,15 @@ var contentTransferImport = function () {
       return {};
     }
   }
+  function getSafeRedirectPath(redirectUrl) {
+    if (typeof redirectUrl !== 'string' || !redirectUrl) {
+      return null;
+    }
+    if (redirectUrl[0] !== '/' || redirectUrl[1] === '/') {
+      return null;
+    }
+    return redirectUrl;
+  }
   function initializeForm(form, config) {
     config = config || {};
     if (!form) {
@@ -64,7 +73,7 @@ var contentTransferImport = function () {
     var maxChunkSize = config.maxChunkSize || 0;
     var maxFileSize = config.maxFileSize || 0;
     var maxFileSizeDisplay = config.maxFileSizeDisplay || '';
-    var redirectUrl = config.redirectUrl || '';
+    var redirectUrl = getSafeRedirectPath(config.redirectUrl);
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var fileInput = form.querySelector('input[type="file"]');
@@ -103,7 +112,9 @@ var contentTransferImport = function () {
         if (xhr.status >= 200 && xhr.status < 300) {
           var response = JSON.parse(xhr.responseText);
           if (response.success) {
-            window.location.href = redirectUrl;
+            if (redirectUrl) {
+              window.location.href = redirectUrl;
+            }
           }
         } else {
           showError(xhr);
@@ -139,7 +150,9 @@ var contentTransferImport = function () {
             } else {
               var response = JSON.parse(xhr.responseText);
               if (response.success) {
-                window.location.href = redirectUrl;
+                if (redirectUrl) {
+                  window.location.href = redirectUrl;
+                }
               }
             }
           } else {
