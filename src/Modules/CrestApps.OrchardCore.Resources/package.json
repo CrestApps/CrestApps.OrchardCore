@@ -9,7 +9,7 @@
     "marked": "^18.0.5"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "1.0.0-preview.96",
+    "@crestapps/ai-chat-ui": "1.0.0-preview.98",
     "chart.js": "^4.5.1",
     "intl-tel-input": "29.1.0"
   },
