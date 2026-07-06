@@ -1,214 +1,486 @@
-window.listManagementUI = function () {
+window.listManagementUI = (function () {
+    'use strict';
 
     const defaultOptions = {
         clientSideSearch: true,
+        selectedLabel: '',
+        selectionEnabled: true,
+        filterSubmit: false,
         itemInputName: 'itemIds',
         bulkActionInputName: 'Options.BulkAction',
         submitBulkActionName: 'submit.BulkAction',
-        searchBoxId: 'search-box',
-        listAlertId: 'list-alert',
-        actionsId: 'actions'
+        searchBoxSelector: '#search-box',
+        searchResultSelector: '[data-filter-value]',
+        searchDomSelector: '',
+        searchAlertSelector: '#list-alert',
+        emptyAlertSelector: '',
+        submitFilterSelector: '#submitFilter',
+        filterSubmitSelector: '.filter select, .filter input, .filter-options select, .filter-options input, .selectpicker[data-filter-submit], [data-list-filter-submit]',
+        actionsSelector: '#actions',
+        itemsSelector: '#items',
+        filtersSelector: '.filter',
+        selectedItemsSelector: '#selected-items',
+        selectAllSelector: '#select-all',
+        bulkActionSelector: '.dropdown-menu .dropdown-item[data-action]',
+        singleResultActionSelector: '',
+        searchFirstElementClasses: '',
+        searchLastElementClasses: ''
     };
 
-    const initialize = (selectedLabel, options) => {
+    const initializedAttribute = 'data-list-management-initialized';
 
-        const config = Object.assign({}, defaultOptions, options);
+    const ready = (callback) => {
+        if (document.readyState !== 'loading') {
+            callback();
+            return;
+        }
 
-        let searchBox = document.getElementById(config.searchBoxId);
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+    };
 
-        const filterElements = document.querySelectorAll('[data-filter-value]');
+    const parseBoolean = (value, fallback) => {
+        if (value === undefined || value === null || value === '') {
+            return fallback;
+        }
 
-        // If the user press Enter, don't submit.
-        if (searchBox) {
-            let searchAlert = document.getElementById(config.listAlertId);
+        if (typeof value === 'boolean') {
+            return value;
+        }
 
-            searchBox.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    if (config.clientSideSearch) {
-                        e.preventDefault();
-                    } else {
-                        // Submit the filter form for server-side search
-                        e.preventDefault();
-                        let submitFilter = document.getElementById('submitFilter');
-                        if (submitFilter) {
-                            submitFilter.click();
-                        }
-                    }
-                }
-            });
+        switch (String(value).toLowerCase()) {
+            case 'true':
+            case '1':
+            case 'yes':
+            case 'on':
+                return true;
+            case 'false':
+            case '0':
+            case 'no':
+            case 'off':
+                return false;
+            default:
+                return fallback;
+        }
+    };
 
-            if (config.clientSideSearch) {
-                searchBox.addEventListener('keyup', e => {
+    const splitClasses = (value) => (value || '')
+        .split(/\s+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean);
 
-                    let search = e.target.value.toLowerCase();
-                    // On ESC, clear the search box and display all rules.
-                    if (e.key == 'Escape' || search == '') {
-                        searchAlert.classList.add('d-none');
-                        searchBox.value = '';
-                        for (let i = 0; i < filterElements.length; i++) {
-                            filterElements[i].classList.remove("d-none");
-                            filterElements[i].classList.remove("first-child-visible");
-                            filterElements[i].classList.remove("last-child-visible");
-                        }
+    const normalizeSearchText = (value) => {
+        if (value === undefined || value === null) {
+            return '';
+        }
 
-                        if (filterElements.length > 0) {
-                            filterElements[0].classList.add('first-child-visible');
-                            filterElements[filterElements.length - 1].classList.add('last-child-visible');
-                        }
-                    } else {
-                        let visibleElements = [];
-                        for (let i = 0; i < filterElements.length; i++) {
-                            let filter = filterElements[i];
+        return String(value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    };
 
-                            let text = filter.getAttribute('data-filter-value');
+    const getElements = (root, selector) => {
+        if (!selector) {
+            return [];
+        }
 
-                            if (!text) {
-                                filter.classList.add("d-none");
-                                continue;
-                            }
+        try {
+            return Array.from(root.querySelectorAll(selector));
+        } catch (error) {
+            console.warn('Invalid list management selector.', selector, error);
+            return [];
+        }
+    };
 
-                            let found = text.indexOf(search) > -1;
+    const getElement = (root, selector) => getElements(root, selector)[0] || null;
 
-                            if (found) {
-                                filter.classList.remove("d-none");
-                                filter.classList.remove("first-child-visible");
-                                filter.classList.remove("last-child-visible");
-                                visibleElements.push(filter);
-                            } else {
-                                filter.classList.add("d-none");
-                            }
-                        }
+    const getScopedRoot = (root) => root && typeof root.querySelector === 'function'
+        ? root
+        : document;
 
-                        if (visibleElements.length > 0) {
-                            visibleElements[0].classList.add('first-child-visible');
-                            visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
-                            searchAlert.classList.add('d-none');
-                        } else {
-                            searchAlert.classList.remove('d-none');
-                        }
-                    }
-                });
+    const getItemCheckboxes = (root, options) =>
+        getElements(root, `input[type='checkbox'][name='${options.itemInputName}']`);
+
+    const getCheckedItemCheckboxes = (root, options) =>
+        getElements(root, `input[type='checkbox'][name='${options.itemInputName}']:checked`);
+
+    const getSearchResults = (root, options) => getElements(root, options.searchResultSelector);
+
+    const readOptionsFromElement = (root) => {
+        if (!root || !root.dataset) {
+            return {};
+        }
+
+        const clientSideSearch = parseBoolean(root.dataset.clientSideSearch, defaultOptions.clientSideSearch);
+
+        return {
+            selectedLabel: root.dataset.selectedLabel ?? defaultOptions.selectedLabel,
+            clientSideSearch,
+            selectionEnabled: parseBoolean(root.dataset.selectionEnabled, defaultOptions.selectionEnabled),
+            filterSubmit: parseBoolean(root.dataset.filterSubmit, !clientSideSearch),
+            itemInputName: root.dataset.itemInputName ?? defaultOptions.itemInputName,
+            bulkActionInputName: root.dataset.bulkActionInputName ?? defaultOptions.bulkActionInputName,
+            submitBulkActionName: root.dataset.submitBulkActionName ?? defaultOptions.submitBulkActionName,
+            searchBoxSelector: root.dataset.searchBoxSelector ?? defaultOptions.searchBoxSelector,
+            searchResultSelector: root.dataset.searchResultSelector ?? defaultOptions.searchResultSelector,
+            searchDomSelector: root.dataset.searchDomSelector ?? root.dataset.searchTextSelector ?? defaultOptions.searchDomSelector,
+            searchAlertSelector: root.dataset.searchAlertSelector ?? defaultOptions.searchAlertSelector,
+            emptyAlertSelector: root.dataset.emptyAlertSelector ?? defaultOptions.emptyAlertSelector,
+            submitFilterSelector: root.dataset.submitFilterSelector ?? defaultOptions.submitFilterSelector,
+            filterSubmitSelector: root.dataset.filterSubmitSelector ?? defaultOptions.filterSubmitSelector,
+            actionsSelector: root.dataset.actionsSelector ?? defaultOptions.actionsSelector,
+            itemsSelector: root.dataset.itemsSelector ?? defaultOptions.itemsSelector,
+            filtersSelector: root.dataset.filtersSelector ?? defaultOptions.filtersSelector,
+            selectedItemsSelector: root.dataset.selectedItemsSelector ?? defaultOptions.selectedItemsSelector,
+            selectAllSelector: root.dataset.selectAllSelector ?? defaultOptions.selectAllSelector,
+            bulkActionSelector: root.dataset.bulkActionSelector ?? defaultOptions.bulkActionSelector,
+            singleResultActionSelector: root.dataset.singleResultActionSelector ?? defaultOptions.singleResultActionSelector,
+            searchFirstElementClasses: root.dataset.searchFirstElementClasses ?? defaultOptions.searchFirstElementClasses,
+            searchLastElementClasses: root.dataset.searchLastElementClasses ?? defaultOptions.searchLastElementClasses
+        };
+    };
+
+    const getFilterText = (element, options) => {
+        let text = element.getAttribute('data-filter-value');
+
+        if (options.searchDomSelector) {
+            const searchTextNodes = getElements(element, options.searchDomSelector);
+
+            if (searchTextNodes.length > 0) {
+                text = searchTextNodes
+                    .map((node) => node.textContent || '')
+                    .join(' ');
             }
         }
 
-        let actions = document.getElementById(config.actionsId);
-        let items = document.getElementById('items');
-        let filters = document.querySelectorAll('.filter');
-        let selectedItems = document.getElementById('selected-items');
-
-        function displayActionsOrFilters() {
-            // Select all checked checkboxes with the configured name
-            let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
-
-            if (checkedCheckboxes.length > 1) {
-                if (actions) {
-                    actions.classList.remove('d-none');
-                }
-                for (let i = 0; i < filters.length; i++) {
-                    filters[i].classList.add('d-none');
-                }
-                if (selectedItems) {
-                    selectedItems.classList.remove('d-none');
-                }
-                if (items) {
-                    items.classList.add('d-none');
-                }
-            } else {
-                if (actions) {
-                    actions.classList.add('d-none');
-                }
-
-                for (let i = 0; i < filters.length; i++) {
-                    filters[i].classList.remove('d-none');
-                }
-                if (selectedItems) {
-                    selectedItems.classList.add('d-none');
-                }
-                if (items) {
-                    items.classList.remove('d-none');
-                }
-            }
+        if (!text) {
+            text = element.textContent || '';
         }
 
-        let dropdownItems = document.querySelectorAll(".dropdown-menu .dropdown-item");
+        return normalizeSearchText(text);
+    };
 
-        // Add click event listeners to each dropdown item
-        dropdownItems.forEach((item) => {
-            // Check if the item has a data-action attribute
-            if (!item.dataset.action) {
+    const getBoundaryElements = (root, options) => {
+        const ignoredElements = getElements(root, '.ignore-elements');
+        const searchResults = getSearchResults(root, options);
+
+        return [...new Set([...ignoredElements, ...searchResults])];
+    };
+
+    const clearVisibleBoundaryClasses = (root, options) => {
+        const elements = getBoundaryElements(root, options);
+        const classesToRemove = [
+            'first-child-visible',
+            'last-child-visible',
+            ...splitClasses(options.searchFirstElementClasses),
+            ...splitClasses(options.searchLastElementClasses)
+        ];
+
+        elements.forEach((element) => {
+            element.classList.remove(...classesToRemove);
+        });
+    };
+
+    const hasVisibleIgnoredSibling = (element, siblingProperty) => {
+        let sibling = element?.[siblingProperty] ?? null;
+
+        while (sibling) {
+            if (!sibling.classList.contains('d-none')) {
+                return sibling.classList.contains('ignore-elements');
+            }
+
+            sibling = sibling[siblingProperty];
+        }
+
+        return false;
+    };
+
+    const applyVisibleBoundaryClasses = (root, visibleElements, options) => {
+        clearVisibleBoundaryClasses(root, options);
+
+        const firstElementClasses = splitClasses(options.searchFirstElementClasses);
+        const lastElementClasses = splitClasses(options.searchLastElementClasses);
+
+        if (visibleElements.length === 0) {
+            const visibleIgnoredElements = getBoundaryElements(root, options)
+                .filter((element) => element.classList.contains('ignore-elements') && !element.classList.contains('d-none'));
+
+            if (visibleIgnoredElements.length > 0) {
+                visibleIgnoredElements[0].classList.add('first-child-visible', ...firstElementClasses);
+                visibleIgnoredElements[visibleIgnoredElements.length - 1].classList.add('last-child-visible', ...lastElementClasses);
+            }
+
+            return;
+        }
+
+        if (!hasVisibleIgnoredSibling(visibleElements[0], 'previousElementSibling')) {
+            visibleElements[0].classList.add('first-child-visible', ...firstElementClasses);
+        }
+
+        if (!hasVisibleIgnoredSibling(visibleElements[visibleElements.length - 1], 'nextElementSibling')) {
+            visibleElements[visibleElements.length - 1].classList.add('last-child-visible', ...lastElementClasses);
+        }
+    };
+
+    const toggleSearchAlerts = (root, options, hasSearch, visibleCount) => {
+        const searchAlert = getElement(root, options.searchAlertSelector);
+
+        if (searchAlert) {
+            searchAlert.classList.toggle('d-none', !hasSearch || visibleCount > 0);
+        }
+
+        const emptyAlert = getElement(root, options.emptyAlertSelector);
+
+        if (emptyAlert && hasSearch) {
+            emptyAlert.classList.add('d-none');
+        }
+    };
+
+    const filterClientSideResults = (root, options, rawSearch) => {
+        const search = normalizeSearchText(rawSearch);
+        const results = getSearchResults(root, options);
+        const visibleElements = [];
+
+        clearVisibleBoundaryClasses(root, options);
+
+        results.forEach((element) => {
+            const isMatch = search === '' || getFilterText(element, options).includes(search);
+
+            element.classList.toggle('d-none', !isMatch);
+
+            if (isMatch) {
+                visibleElements.push(element);
+            }
+        });
+
+        applyVisibleBoundaryClasses(root, visibleElements, options);
+        toggleSearchAlerts(root, options, search !== '', visibleElements.length);
+
+        return visibleElements;
+    };
+
+    const getVisibleResults = (root, options) =>
+        getSearchResults(root, options).filter((element) => !element.classList.contains('d-none'));
+
+    const submitFilter = (root, options) => {
+        const submitFilterButton = getElement(root, options.submitFilterSelector);
+
+        if (submitFilterButton) {
+            submitFilterButton.click();
+        }
+    };
+
+    const initializeSearch = (root, options) => {
+        const searchBox = getElement(root, options.searchBoxSelector);
+
+        if (!searchBox) {
+            return;
+        }
+
+        searchBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                searchBox.value = '';
+
+                if (options.clientSideSearch) {
+                    filterClientSideResults(root, options, '');
+                }
+
+                event.preventDefault();
                 return;
             }
 
-            item.addEventListener("click", () => {
-                // Get all checked checkboxes
-                let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
+            if (event.key !== 'Enter') {
+                return;
+            }
 
-                // Check if more than one checkbox is checked
-                if (checkedCheckboxes.length > 1) {
-                    // Get data attributes from the clicked item
-                    let actionData = Object.assign({}, item.dataset);
+            event.preventDefault();
 
-                    confirmDialog({
-                        ...actionData,
-                        callback: (r) => {
-                            if (r) {
-                                // Set the value of the BulkAction option
-                                document.querySelector("[name='" + config.bulkActionInputName + "']").value = actionData.action;
-                                // Trigger the submit action
-                                document.querySelector("[name='" + config.submitBulkActionName + "']").click();
-                            }
-                        }
-                    });
+            if (!options.clientSideSearch) {
+                submitFilter(root, options);
+                return;
+            }
+
+            const visibleResults = getVisibleResults(root, options);
+
+            if (visibleResults.length === 1 && options.singleResultActionSelector) {
+                const actionElement = getElement(visibleResults[0], options.singleResultActionSelector);
+
+                if (actionElement) {
+                    actionElement.click();
                 }
-            });
-
+            }
         });
 
-        let selectAllCtrl = document.getElementById('select-all');
-        let itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']");
+        if (options.clientSideSearch) {
+            const applySearch = () => {
+                filterClientSideResults(root, options, searchBox.value);
+            };
 
-        if (selectAllCtrl) {
-            selectAllCtrl.addEventListener("change", () => {
-                itemsCheckboxes.forEach((checkbox) => {
-                    if (checkbox !== selectAllCtrl) {
-                        checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
+            searchBox.addEventListener('input', applySearch);
+            applySearch();
+        }
+    };
+
+    const initializeSelection = (root, options) => {
+        if (!options.selectionEnabled) {
+            return;
+        }
+
+        const actions = getElement(root, options.actionsSelector);
+        const items = getElement(root, options.itemsSelector);
+        const filters = getElements(root, options.filtersSelector);
+        const selectedItems = getElement(root, options.selectedItemsSelector);
+        const selectAllCtrl = getElement(root, options.selectAllSelector);
+        const itemsCheckboxes = getItemCheckboxes(root, options);
+
+        const updateSelectedItemsText = () => {
+            if (!selectedItems) {
+                return;
+            }
+
+            const selectedCount = getCheckedItemCheckboxes(root, options).length;
+            const label = options.selectedLabel ? ` ${options.selectedLabel}` : '';
+
+            selectedItems.textContent = `${selectedCount}${label}`;
+        };
+
+        const displayActionsOrFilters = () => {
+            const checkedCount = getCheckedItemCheckboxes(root, options).length;
+            const showActions = checkedCount > 1;
+
+            if (actions) {
+                actions.classList.toggle('d-none', !showActions);
+            }
+
+            filters.forEach((filterElement) => {
+                filterElement.classList.toggle('d-none', showActions);
+            });
+
+            if (selectedItems) {
+                selectedItems.classList.toggle('d-none', !showActions);
+            }
+
+            if (items) {
+                items.classList.toggle('d-none', showActions);
+            }
+        };
+
+        getElements(root, options.bulkActionSelector).forEach((item) => {
+            item.addEventListener('click', () => {
+                const checkedCheckboxes = getCheckedItemCheckboxes(root, options);
+
+                if (checkedCheckboxes.length <= 1) {
+                    return;
+                }
+
+                const actionData = Object.assign({}, item.dataset);
+
+                confirmDialog({
+                    ...actionData,
+                    callback: (result) => {
+                        if (!result) {
+                            return;
+                        }
+
+                        const bulkActionInput = getElement(root, `[name='${options.bulkActionInputName}']`);
+                        const submitBulkAction = getElement(root, `[name='${options.submitBulkActionName}']`);
+
+                        if (bulkActionInput) {
+                            bulkActionInput.value = actionData.action;
+                        }
+
+                        if (submitBulkAction) {
+                            submitBulkAction.click();
+                        }
                     }
                 });
+            });
+        });
 
-                // Update the selected items text
+        if (selectAllCtrl) {
+            selectAllCtrl.addEventListener('change', () => {
+                itemsCheckboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAllCtrl.checked;
+                });
+
                 updateSelectedItemsText();
                 displayActionsOrFilters();
             });
         }
 
-        // Event listener for individual checkboxes
         itemsCheckboxes.forEach((checkbox) => {
-            checkbox.addEventListener("change", () => {
-                let itemsCount = itemsCheckboxes.length;
-                let selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
+            checkbox.addEventListener('change', () => {
+                const itemsCount = itemsCheckboxes.length;
+                const selectedItemsCount = getCheckedItemCheckboxes(root, options).length;
 
-                // Update selectAllCtrl state
                 if (selectAllCtrl) {
                     selectAllCtrl.checked = selectedItemsCount === itemsCount;
                     selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
                 }
 
-                // Update the selected items text
                 updateSelectedItemsText();
                 displayActionsOrFilters();
             });
         });
 
-        // Function to update selected items text
-        function updateSelectedItemsText() {
-            let selectedCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
-            if (selectedItems) {
-                selectedItems.textContent = selectedCount + ' ' + selectedLabel;
-            }
+        updateSelectedItemsText();
+        displayActionsOrFilters();
+    };
+
+    const initializeFilterSubmission = (root, options) => {
+        if (!options.filterSubmit) {
+            return;
         }
-    }
+
+        getElements(root, options.filterSubmitSelector).forEach((element) => {
+            element.addEventListener('change', () => submitFilter(root, options));
+            element.addEventListener('changed.bs.select', () => submitFilter(root, options));
+        });
+    };
+
+    const initializeRoot = (root, options) => {
+        const scopedRoot = getScopedRoot(root);
+
+        if (scopedRoot !== document && scopedRoot.hasAttribute(initializedAttribute)) {
+            return scopedRoot;
+        }
+
+        const config = Object.assign({}, defaultOptions, readOptionsFromElement(scopedRoot), options);
+
+        initializeSearch(scopedRoot, config);
+        initializeSelection(scopedRoot, config);
+        initializeFilterSubmission(scopedRoot, config);
+
+        if (scopedRoot !== document) {
+            scopedRoot.setAttribute(initializedAttribute, 'true');
+        }
+
+        return scopedRoot;
+    };
+
+    const initializeAll = (root) => {
+        getElements(getScopedRoot(root), '[data-list-management]').forEach((element) => {
+            initializeRoot(element);
+        });
+    };
+
+    const initialize = (rootOrSelectedLabel, options) => {
+        if (rootOrSelectedLabel && rootOrSelectedLabel.nodeType === 1) {
+            return initializeRoot(rootOrSelectedLabel, options);
+        }
+
+        const overrides = typeof rootOrSelectedLabel === 'string'
+            ? Object.assign({}, options, { selectedLabel: rootOrSelectedLabel })
+            : options;
+
+        return initializeRoot(document, overrides);
+    };
+
+    ready(() => initializeAll(document));
 
     return {
-        initialize: initialize
-    }
-}();
+        initialize: initialize,
+        initializeAll: initializeAll
+    };
+})();

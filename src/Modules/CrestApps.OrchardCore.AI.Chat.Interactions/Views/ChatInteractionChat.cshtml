@@ -118,75 +118,25 @@
 {
     <style asp-name="SpeechToText" at="Head"></style>
 }
-<script asp-name="ChatInteractionApp" at="Foot"></script>
-<script depends-on="ChatInteractionApp" at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var configEl = document.getElementById('@($"{baseId}_Config")');
-        if (configEl) {
-            chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
-        }
-
-        // Provide a renderPendingCharts fallback for chart-interaction.js which
-        // stores unrendered chart configs in window.__chartConfigs but does not
-        // include a retry mechanism (unlike ai-chat.js).
-        if (typeof window.renderPendingCharts !== 'function') {
-            window.renderPendingCharts = function () {
-                if (typeof Chart === 'undefined') return;
-                var configs = window.__chartConfigs;
-                if (!configs) return;
-                requestAnimationFrame(function () {
-                    Object.keys(configs).forEach(function (chartId) {
-                        var canvas = document.getElementById(chartId);
-                        if (!canvas || canvas.offsetParent === null) return;
-                        try {
-                            if (canvas._chartInstance) canvas._chartInstance.destroy();
-                            var cfg = typeof configs[chartId] === 'string' ? JSON.parse(configs[chartId]) : configs[chartId];
-                            cfg.options = cfg.options || {};
-                            cfg.options.responsive = true;
-                            cfg.options.maintainAspectRatio = true;
-                            cfg.options.aspectRatio = cfg.options.aspectRatio || 4 / 3;
-                            canvas._chartInstance = new Chart(canvas, cfg);
-                            delete configs[chartId];
-                        } catch (e) {
-                            console.error('Error creating chart:', e);
-                        }
-                    });
-                });
-            };
-        }
-
-        // Observe the chat container for newly added canvas elements that may
-        // need chart rendering. This catches charts that were deferred because
-        // the canvas was not yet visible or was replaced during streaming.
-        var chatContainer = document.getElementById('@chatContainerHtmlId');
-        if (chatContainer) {
-            new MutationObserver(function () {
-                window.renderPendingCharts();
-            }).observe(chatContainer, { childList: true, subtree: true });
-        }
-    });
-</script>
-@{
-    var chatInteractionConfig = new Dictionary<string, object>
-    {
-        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<ChatInteractionHub>(),
-        ["appElementSelector"] = $"#{chatAppHtmlId}",
-        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-        ["inputElementSelector"] = $"#{userPromptHtmlId}",
-        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-        ["messages"] = prompts,
-        ["untitledText"] = T["Untitled"].Value,
-        ["clearHistoryTitle"] = T["Clear History"].Value,
-        ["clearHistoryMessage"] = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,
-        ["clearHistoryOkText"] = T["Yes"].Value,
-        ["clearHistoryCancelText"] = T["Cancel"].Value,
-        ["chatMode"] = chatMode.ToString(),
-        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
-        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
-        ["saveIndicatorElementSelector"] = "#settings-save-indicator",
-        ["textToSpeechEnabled"] = textToSpeechEnabled,
-        ["visionEnabled"] = visionEnabled,
-    };
-}
-<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>
+<script asp-name="ChatInteractionBootstrap" at="Foot"></script>
+<div id="@($"{baseId}_Config")"
+     class="d-none"
+     data-chat-interaction-config
+     data-signal-r-hub-url="@(HubRouteManager.GetPathByHub<ChatInteractionHub>())"
+     data-app-element-selector="#@chatAppHtmlId"
+     data-chat-container-element-selector="#@chatContainerHtmlId"
+     data-input-element-selector="#@userPromptHtmlId"
+     data-send-button-element-selector="#@buttonHtmlId"
+     data-placeholder-element-selector="#@placeholderHtmlId"
+     data-messages="@JsonSerializer.Serialize(prompts, JOptions.CamelCase)"
+     data-untitled-text="@T["Untitled"].Value"
+     data-clear-history-title="@T["Clear History"].Value"
+     data-clear-history-message="@T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value"
+     data-clear-history-ok-text="@T["Yes"].Value"
+     data-clear-history-cancel-text="@T["Cancel"].Value"
+     data-chat-mode="@chatMode"
+     data-mic-button-element-selector="#@micBtnHtmlId"
+     data-conversation-button-element-selector="#@conversationBtnHtmlId"
+     data-save-indicator-element-selector="#settings-save-indicator"
+     data-text-to-speech-enabled="@(textToSpeechEnabled ? "true" : "false")"
+     data-vision-enabled="@(visionEnabled ? "true" : "false")"></div>

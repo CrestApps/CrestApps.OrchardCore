@@ -9,18 +9,23 @@
 <zone Name="Title"><h1>@RenderTitleSegments(T["AI Templates"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-1">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    <div class="input-group">
+                        <div class="has-search flex-grow-1">
+                            <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                            <input id="search-box" asp-for="Options.Search" class="form-control rounded-end-0" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        </div>
+                        <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                            <i class="fa-solid fa-search me-1" aria-hidden="true"></i>@T["Go"]
+                        </button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -134,9 +139,3 @@
 @await DisplayAsync(Model.Pager)
 
 <script asp-name="list-management-ui" at="Foot"></script>
-
-<script at="Foot" depends-on="list-management-ui">
-    document.addEventListener('DOMContentLoaded', () => {
-        window.listManagementUI.initialize('@T["selected"]', { clientSideSearch: false });
-    });
-</script>

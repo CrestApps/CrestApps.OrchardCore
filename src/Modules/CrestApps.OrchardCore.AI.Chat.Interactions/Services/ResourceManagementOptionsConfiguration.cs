@@ -22,6 +22,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-yt48W7fssAWTE5qNZ9xix75ll3KHdsXs5lODMFSkKSES3LnbcMICCTqYmr+PaDCJ")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("ChatInteractionBootstrap")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction-bootstrap.min.js", "~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction-bootstrap.js")
+            .SetDependencies("ChatInteractionApp")
+            .SetVersion("1.0.0");
     }
 
     /// <summary>

@@ -304,122 +304,66 @@
     <style asp-name="SpeechToText" at="Head"></style>
 }
 
-<script asp-name="AIChatApp" at="Foot"></script>
-<script asp-name="AIChatWidgetApp" at="Foot"></script>
+<script asp-name="AIChatWidgetBootstrap" at="Foot"></script>
 
 @{
-    var chatConfig = new Dictionary<string, object>
-    {
-        ["signalRHubUrl"] = hubLink,
-        ["appElementSelector"] = $"#{chatAppHtmlId}",
-        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-        ["inputElementSelector"] = $"#{userPromptHtmlId}",
-        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-        ["autoCreateSession"] = addInitialPrompt,
-        ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
-        ["messages"] = Array.Empty<object>(),
-        ["metricsEnabled"] = metricsEnabled,
-        ["chatMode"] = effectiveChatMode.ToString(),
-        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
-        ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
-        ["textToSpeechEnabled"] = textToSpeechEnabled,
-        ["visionEnabled"] = visionEnabled,
-        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
-        ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
-    };
-
-    if (sessionDocumentsEnabled)
-    {
-        chatConfig["sessionDocumentsEnabled"] = true;
-        chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
-        chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
-        chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
-        chatConfig["allowedExtensions"] = allowedExtensions;
-        chatConfig["supportedExtensionsText"] = supportedExtensionsText;
-        chatConfig["existingDocuments"] = Array.Empty<object>();
-    }
+    var widgetStateName = storagePrefix + "-ai-admin-widget";
 }
-
-<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
-
-<script at="Foot" depends-on="AIChatWidgetApp">
-    (function () {
-        var shell = document.getElementById('@($"{baseId}_Shell")');
-        var initializationAttempts = 0;
-        var maxInitializationAttempts = 40;
-        var isInitialized = false;
-
-        function revealShell() {
-            if (shell) {
-                shell.style.visibility = '';
-            }
-        }
-
-        function initializeWidget() {
-            if (isInitialized) {
-                return;
-            }
-
-            if (!window.openAIChatWidgetManager || !window.openAIChatManager) {
-                initializationAttempts++;
-
-                if (initializationAttempts < maxInitializationAttempts) {
-                    window.requestAnimationFrame(initializeWidget);
-                    return;
-                }
-
-                console.warn('AI chat widget runtime is not available.');
-                revealShell();
-                return;
-            }
-
-            isInitialized = true;
-
-            var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
-            window.openAIChatWidgetManager.initialize({
-                configElementSelector: '#@($"{baseId}_Config")',
-                messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
-                indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
-                shellSelector: '#@($"{baseId}_Shell")',
-                widgetContainerSelector: '#@widgetContainerId',
-                toggleButtonSelector: '#@toggleBtnId',
-                closeButtonSelector: '#@closeBtnId',
-                inputSelector: '#@userPromptHtmlId',
-                widgetStateName: widgetStateName,
-                widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
-                openStateValue: 'open',
-                closedStateValue: 'closed',
-                openIconHtml: '<i class="fas fa-times"></i>',
-                closedIconHtml: '<i class="fas fa-comments"></i>',
-                chatConfig: Object.assign(
-                    {},
-                    JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
-                    {
-                        widget: {
-                            chatWidgetContainer: '#@widgetContainerId',
-                            chatWidgetStateName: widgetStateName,
-                            chatHistorySection: '#@historyPanelId',
-                            closeHistoryButton: '#@closeHistoryBtnId',
-                            showHistoryButton: '#@historyBtnId',
-                            newChatButton: '#@newChatBtnId',
-                            toggleButtonSelector: '#@toggleBtnId',
-                            resetSizeButtonSelector: '#@restoreSizeBtnId',
-                            dragHandleSelector: '.ai-chat-widget-header',
-                            enableDragging: true,
-                            enableResizing: true,
-                            persistLayout: true,
-                            minWidth: 288,
-                            minHeight: 320
-                        }
-                    })
-            });
-        }
-
-        initializeWidget();
-    })();
-</script>
+<div id="@($"{baseId}_Config")"
+     class="d-none"
+     data-ai-chat-widget-config
+     data-signal-r-hub-url="@hubLink"
+     data-app-element-selector="#@chatAppHtmlId"
+     data-chat-container-element-selector="#@chatContainerHtmlId"
+     data-input-element-selector="#@userPromptHtmlId"
+     data-send-button-element-selector="#@buttonHtmlId"
+     data-placeholder-element-selector="#@placeholderHtmlId"
+     data-auto-create-session="@(addInitialPrompt ? "true" : "false")"
+     data-initial-prompt="@(addInitialPrompt ? profileMetadata.InitialPrompt : null)"
+     data-messages="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
+     data-metrics-enabled="@(metricsEnabled ? "true" : "false")"
+     data-chat-mode="@effectiveChatMode"
+     data-mic-button-element-selector="#@micBtnHtmlId"
+     data-tts-voice-name="@(string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName)"
+     data-conversation-button-element-selector="#@conversationBtnHtmlId"
+     data-text-to-speech-enabled="@(textToSpeechEnabled ? "true" : "false")"
+     data-vision-enabled="@(visionEnabled ? "true" : "false")"
+     data-is-orchestrator-available="@(orchestratorAvailability.IsAvailable ? "true" : "false")"
+     data-orchestrator-unavailable-message="@(orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message)"
+     data-session-documents-enabled="@(sessionDocumentsEnabled ? "true" : "false")"
+     data-document-bar-selector="@(sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null)"
+     data-upload-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null)"
+     data-remove-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null)"
+     data-allowed-extensions="@(sessionDocumentsEnabled ? allowedExtensions : null)"
+     data-supported-extensions-text="@(sessionDocumentsEnabled ? supportedExtensionsText : null)"
+     data-existing-documents="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
+     data-message-template-selector="#@($"{baseId}_MessageTemplate")"
+     data-indicator-template-selector="#@($"{baseId}_IndicatorTemplate")"
+     data-shell-selector="#@($"{baseId}_Shell")"
+     data-widget-container-selector="#@widgetContainerId"
+     data-toggle-button-selector="#@toggleBtnId"
+     data-close-button-selector="#@closeBtnId"
+     data-input-selector="#@userPromptHtmlId"
+     data-widget-state-name="@widgetStateName"
+     data-widget-open-state-key="@(storagePrefix + "-ai-admin-widget-state")"
+     data-open-state-value="open"
+     data-closed-state-value="closed"
+     data-open-icon-html="<i class=&quot;fas fa-times&quot;></i>"
+     data-closed-icon-html="<i class=&quot;fas fa-comments&quot;></i>"
+     data-widget-chat-widget-container="#@widgetContainerId"
+     data-widget-chat-widget-state-name="@widgetStateName"
+     data-widget-chat-history-section="#@historyPanelId"
+     data-widget-close-history-button="#@closeHistoryBtnId"
+     data-widget-show-history-button="#@historyBtnId"
+     data-widget-new-chat-button="#@newChatBtnId"
+     data-widget-toggle-button-selector="#@toggleBtnId"
+     data-widget-reset-size-button-selector="#@restoreSizeBtnId"
+     data-widget-drag-handle-selector=".ai-chat-widget-header"
+     data-widget-enable-dragging="true"
+     data-widget-enable-resizing="true"
+     data-widget-persist-layout="true"
+     data-widget-min-width="288"
+     data-widget-min-height="320"></div>
 
 <template id="@($"{baseId}_MessageTemplate")">
 

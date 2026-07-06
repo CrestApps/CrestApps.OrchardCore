@@ -55,47 +55,23 @@
 <style asp-name="AIChatApp" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 
-<script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatBootstrap" at="Foot"></script>
 
-<script at="Foot" depends-on="AIChatApp">
-    document.addEventListener('DOMContentLoaded', function () {
-        var configEl = document.getElementById('@($"{baseId}_Config")');
-
-        if (configEl) {
-            var config = JSON.parse(configEl.getAttribute('data-config'));
-            var app = openAIChatManager.initialize(config);
-
-            // In test mode, reset the session and clear all messages before
-            // each send so every request is independent with no history.
-            var originalSendMessage = app.sendMessage;
-            app.sendMessage = function () {
-                app.resetSession();
-                app.messages.splice(0, app.messages.length);
-                originalSendMessage.call(app);
-            };
-        }
-    });
-</script>
-
-@{
-    var chatConfig = new Dictionary<string, object>
-    {
-        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
-        ["appElementSelector"] = $"#{chatAppHtmlId}",
-        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-        ["inputElementSelector"] = $"#{userPromptHtmlId}",
-        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-        ["autoCreateSession"] = false,
-        ["messages"] = Array.Empty<object>(),
-        ["metricsEnabled"] = false,
-        ["chatMode"] = "TextInput",
-        ["isOrchestratorAvailable"] = true,
-        ["widget"] = (object)null,
-    };
-}
-
-<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
+<div id="@($"{baseId}_Config")"
+     class="d-none"
+     data-ai-chat-config
+     data-reset-session-on-send="true"
+     data-signal-r-hub-url="@(HubRouteManager.GetPathByHub<AIChatHub>())"
+     data-app-element-selector="#@chatAppHtmlId"
+     data-chat-container-element-selector="#@chatContainerHtmlId"
+     data-input-element-selector="#@userPromptHtmlId"
+     data-send-button-element-selector="#@buttonHtmlId"
+     data-placeholder-element-selector="#@placeholderHtmlId"
+     data-auto-create-session="false"
+     data-messages="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
+     data-metrics-enabled="false"
+     data-chat-mode="TextInput"
+     data-is-orchestrator-available="true"></div>
 
 <style at="Head">
     .ta-content {

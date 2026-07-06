@@ -9,14 +9,14 @@
 <zone Name="Title"><h1>@RenderTitleSegments(T["MCP Resources"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-1">
                 <div class="col">
                     <div class="has-search">
                         <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
@@ -132,9 +132,3 @@
 </div>
 
 <script asp-name="list-management-ui" at="Foot"></script>
-
-<script at="Foot" depends-on="list-management-ui">
-    document.addEventListener('DOMContentLoaded', () => {
-        window.listManagementUI.initialize('@T["selected"]', { clientSideSearch: true });
-    });
-</script>

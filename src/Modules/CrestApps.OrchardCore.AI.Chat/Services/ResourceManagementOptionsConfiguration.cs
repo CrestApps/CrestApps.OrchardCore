@@ -36,6 +36,18 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("AIChatBootstrap")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-bootstrap.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-bootstrap.js")
+            .SetDependencies("AIChatApp")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("AIChatWidgetBootstrap")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget-bootstrap.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget-bootstrap.js")
+            .SetDependencies("AIChatWidgetApp")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineStyle("AIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.css")
             .SetCdn(

@@ -8,7 +8,7 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds">
     <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
     <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
     <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />
@@ -83,12 +83,8 @@
     @await DisplayAsync(Model.Pager)
 }
 
-<script at="Foot" depends-on="list-management-ui, flatpickr, flatpickr-culture">
+<script at="Foot" depends-on="flatpickr, flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
-        listManagementUI.initialize('@T["selected"]', {
-            itemInputName: 'ItemIds'
-        });
-
         if (typeof flatpickr !== 'undefined') {
             flatpickr('#new-scheduled-date', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
                 altInputClass: 'form-control',
