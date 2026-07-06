@@ -1,27 +1,27 @@
 .attached-documents-panel {
     border: 1px solid var(--bs-border-color, #dee2e6);
     border-radius: 0.75rem;
-    background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb, 13, 110, 253), 0.04), rgba(var(--bs-primary-rgb, 13, 110, 253), 0.01));
     padding: 1rem;
 }
 
 .document-drop-zone {
     position: relative;
-    border: 2px dashed rgba(13, 110, 253, 0.35);
+    border: 2px dashed rgba(var(--bs-primary-rgb, 13, 110, 253), 0.35);
     border-radius: 1rem;
-    background: rgba(248, 249, 250, 0.8);
+    background: rgba(var(--bs-tertiary-bg-rgb, 248, 249, 250), 0.8);
     transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .document-drop-zone:hover {
-    border-color: rgba(13, 110, 253, 0.55);
-    background: rgba(248, 249, 250, 0.95);
+    border-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.55);
+    background: rgba(var(--bs-tertiary-bg-rgb, 248, 249, 250), 0.95);
 }
 
 .document-drop-zone--dragover {
     border-color: var(--bs-primary, #0d6efd);
-    background: rgba(13, 110, 253, 0.08);
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+    background: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.12);
     transform: translateY(-1px);
 }
 
@@ -41,7 +41,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(13, 110, 253, 0.12);
+    background: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.12);
     color: var(--bs-primary, #0d6efd);
     font-size: 1.5rem;
 }
@@ -71,7 +71,7 @@
     padding: 0.75rem 0.875rem;
     border: 1px solid var(--bs-border-color, #dee2e6);
     border-radius: 0.75rem;
-    background: #fff;
+    background: var(--bs-body-bg, #fff);
 }
 
 .attached-document-icon {
@@ -81,7 +81,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 0.65rem;
-    background: rgba(13, 110, 253, 0.1);
+    background: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.1);
     color: var(--bs-primary, #0d6efd);
     flex-shrink: 0;
 }
