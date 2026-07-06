@@ -160,7 +160,6 @@
 
 .ai-chat-widget-messages .ai-chat-message-heading .ai-chat-msg-role {
     margin-bottom: 0;
-    text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
@@ -178,6 +177,7 @@
 .ai-chat-widget-messages .ai-chat-msg-role {
     font-weight: 600;
     margin-bottom: 2px;
+    text-transform: uppercase;
 }
 
 .ai-chat-widget-messages .ai-chat-msg-role-user {
