@@ -17,6 +17,21 @@
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var placeholderHtmlId = $"{baseId}_Placeholder";
+    var chatConfigJson = JsonSerializer.Serialize(new
+    {
+        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        appElementSelector = $"#{chatAppHtmlId}",
+        chatContainerElementSelector = $"#{chatContainerHtmlId}",
+        inputElementSelector = $"#{userPromptHtmlId}",
+        sendButtonElementSelector = $"#{buttonHtmlId}",
+        placeholderElementSelector = $"#{placeholderHtmlId}",
+        autoCreateSession = false,
+        messages = Array.Empty<object>(),
+        metricsEnabled = false,
+        chatMode = ChatMode.TextInput.ToString(),
+        isOrchestratorAvailable = true,
+        singleResponseMode = true,
+    }, JOptions.CamelCase);
 }
 
 <div class="container-fluid d-flex flex-column" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
@@ -55,23 +70,11 @@
 <style asp-name="AIChatApp" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 
-<script asp-name="AIChatBootstrap" at="Foot"></script>
+<script asp-name="AIChatApp" at="Foot"></script>
 
 <div id="@($"{baseId}_Config")"
      class="d-none"
-     data-ai-chat-config
-     data-reset-session-on-send="true"
-     data-signal-r-hub-url="@(HubRouteManager.GetPathByHub<AIChatHub>())"
-     data-app-element-selector="#@chatAppHtmlId"
-     data-chat-container-element-selector="#@chatContainerHtmlId"
-     data-input-element-selector="#@userPromptHtmlId"
-     data-send-button-element-selector="#@buttonHtmlId"
-     data-placeholder-element-selector="#@placeholderHtmlId"
-     data-auto-create-session="false"
-     data-messages="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
-     data-metrics-enabled="false"
-     data-chat-mode="TextInput"
-     data-is-orchestrator-available="true"></div>
+     data-coreai-chat-config="@chatConfigJson"></div>
 
 <style at="Head">
     .ta-content {

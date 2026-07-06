@@ -100,6 +100,28 @@
             });
         }
     }
+
+    var chatInteractionConfigJson = JsonSerializer.Serialize(new
+    {
+        signalRHubUrl = HubRouteManager.GetPathByHub<ChatInteractionHub>(),
+        appElementSelector = $"#{chatAppHtmlId}",
+        chatContainerElementSelector = $"#{chatContainerHtmlId}",
+        inputElementSelector = $"#{userPromptHtmlId}",
+        sendButtonElementSelector = $"#{buttonHtmlId}",
+        placeholderElementSelector = $"#{placeholderHtmlId}",
+        messages = prompts,
+        untitledText = T["Untitled"].Value,
+        clearHistoryTitle = T["Clear History"].Value,
+        clearHistoryMessage = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,
+        clearHistoryOkText = T["Yes"].Value,
+        clearHistoryCancelText = T["Cancel"].Value,
+        chatMode = chatMode.ToString(),
+        micButtonElementSelector = $"#{micBtnHtmlId}",
+        conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
+        saveIndicatorElementSelector = "#settings-save-indicator",
+        textToSpeechEnabled,
+        visionEnabled,
+    }, JOptions.CamelCase);
 }
 
 <style at="Head">
@@ -118,25 +140,7 @@
 {
     <style asp-name="SpeechToText" at="Head"></style>
 }
-<script asp-name="ChatInteractionBootstrap" at="Foot"></script>
+<script asp-name="ChatInteractionApp" at="Foot"></script>
 <div id="@($"{baseId}_Config")"
      class="d-none"
-     data-chat-interaction-config
-     data-signal-r-hub-url="@(HubRouteManager.GetPathByHub<ChatInteractionHub>())"
-     data-app-element-selector="#@chatAppHtmlId"
-     data-chat-container-element-selector="#@chatContainerHtmlId"
-     data-input-element-selector="#@userPromptHtmlId"
-     data-send-button-element-selector="#@buttonHtmlId"
-     data-placeholder-element-selector="#@placeholderHtmlId"
-     data-messages="@JsonSerializer.Serialize(prompts, JOptions.CamelCase)"
-     data-untitled-text="@T["Untitled"].Value"
-     data-clear-history-title="@T["Clear History"].Value"
-     data-clear-history-message="@T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value"
-     data-clear-history-ok-text="@T["Yes"].Value"
-     data-clear-history-cancel-text="@T["Cancel"].Value"
-     data-chat-mode="@chatMode"
-     data-mic-button-element-selector="#@micBtnHtmlId"
-     data-conversation-button-element-selector="#@conversationBtnHtmlId"
-     data-save-indicator-element-selector="#settings-save-indicator"
-     data-text-to-speech-enabled="@(textToSpeechEnabled ? "true" : "false")"
-     data-vision-enabled="@(visionEnabled ? "true" : "false")"></div>
+     data-chat-interaction-config="@chatInteractionConfigJson"></div>

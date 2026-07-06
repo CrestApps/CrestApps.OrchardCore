@@ -224,63 +224,72 @@
 
 @{
     var widgetStateName = storagePrefix + "-ai-admin-widget";
+    var widgetConfigJson = JsonSerializer.Serialize(new
+    {
+        shellSelector = $"#{baseId}_Shell",
+        widgetContainerSelector = $"#{widgetContainerId}",
+        toggleButtonSelector = $"#{toggleBtnId}",
+        closeButtonSelector = $"#{closeBtnId}",
+        inputSelector = $"#{userPromptHtmlId}",
+        messageTemplateSelector = $"#{baseId}_MessageTemplate",
+        indicatorTemplateSelector = $"#{baseId}_IndicatorTemplate",
+        widgetStateName,
+        widgetOpenStateKey = storagePrefix + "-ai-admin-widget-state",
+        openStateValue = "open",
+        closedStateValue = "closed",
+        openIconHtml = "<i class='fas fa-times'></i>",
+        closedIconHtml = "<i class='fa fa-robot'></i>",
+        chatConfig = new
+        {
+            signalRHubUrl = hubLink,
+            appElementSelector = $"#{chatAppHtmlId}",
+            chatContainerElementSelector = $"#{chatContainerHtmlId}",
+            inputElementSelector = $"#{userPromptHtmlId}",
+            sendButtonElementSelector = $"#{buttonHtmlId}",
+            placeholderElementSelector = $"#{placeholderHtmlId}",
+            autoCreateSession = addInitialPrompt,
+            initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+            messages = Array.Empty<object>(),
+            metricsEnabled,
+            chatMode = effectiveChatMode.ToString(),
+            micButtonElementSelector = $"#{micBtnHtmlId}",
+            ttsVoiceName = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
+            conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
+            textToSpeechEnabled,
+            visionEnabled,
+            isOrchestratorAvailable = orchestratorAvailability.IsAvailable,
+            orchestratorUnavailableMessage = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
+            sessionDocumentsEnabled,
+            documentBarSelector = sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null,
+            uploadDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null,
+            removeDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null,
+            allowedExtensions = sessionDocumentsEnabled ? allowedExtensions : null,
+            supportedExtensionsText = sessionDocumentsEnabled ? supportedExtensionsText : null,
+            existingDocuments = Array.Empty<object>(),
+            widget = new
+            {
+                chatWidgetContainer = $"#{widgetContainerId}",
+                chatWidgetStateName = widgetStateName,
+                chatHistorySection = showHistory ? $"#{historyPanelId}" : null,
+                closeHistoryButton = showHistory ? $"#{closeHistoryBtnId}" : null,
+                showHistoryButton = showHistory ? $"#{historyBtnId}" : null,
+                newChatButton = $"#{newChatBtnId}",
+                toggleButtonSelector = $"#{toggleBtnId}",
+                resetSizeButtonSelector = $"#{restoreSizeBtnId}",
+                dragHandleSelector = ".ai-chat-widget-header",
+                enableDragging = true,
+                enableResizing = true,
+                persistLayout = true,
+                minWidth = 288,
+                minHeight = 320,
+            },
+        },
+    }, JOptions.CamelCase);
 }
-<script asp-name="AIChatWidgetBootstrap" at="Foot"></script>
+<script asp-name="AIChatWidgetApp" at="Foot"></script>
 <div id="@($"{baseId}_Config")"
      class="d-none"
-     data-ai-chat-widget-config
-     data-signal-r-hub-url="@hubLink"
-     data-app-element-selector="#@chatAppHtmlId"
-     data-chat-container-element-selector="#@chatContainerHtmlId"
-     data-input-element-selector="#@userPromptHtmlId"
-     data-send-button-element-selector="#@buttonHtmlId"
-     data-placeholder-element-selector="#@placeholderHtmlId"
-     data-auto-create-session="@(addInitialPrompt ? "true" : "false")"
-     data-initial-prompt="@(addInitialPrompt ? profileMetadata.InitialPrompt : null)"
-     data-messages="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
-     data-metrics-enabled="@(metricsEnabled ? "true" : "false")"
-     data-chat-mode="@effectiveChatMode"
-     data-mic-button-element-selector="#@micBtnHtmlId"
-     data-tts-voice-name="@(string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName)"
-     data-conversation-button-element-selector="#@conversationBtnHtmlId"
-     data-text-to-speech-enabled="@(textToSpeechEnabled ? "true" : "false")"
-     data-vision-enabled="@(visionEnabled ? "true" : "false")"
-     data-is-orchestrator-available="@(orchestratorAvailability.IsAvailable ? "true" : "false")"
-     data-orchestrator-unavailable-message="@(orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message)"
-     data-session-documents-enabled="@(sessionDocumentsEnabled ? "true" : "false")"
-     data-document-bar-selector="@(sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null)"
-     data-upload-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null)"
-     data-remove-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null)"
-     data-allowed-extensions="@(sessionDocumentsEnabled ? allowedExtensions : null)"
-     data-supported-extensions-text="@(sessionDocumentsEnabled ? supportedExtensionsText : null)"
-     data-existing-documents="@JsonSerializer.Serialize(Array.Empty<object>(), JOptions.CamelCase)"
-     data-message-template-selector="#@($"{baseId}_MessageTemplate")"
-     data-indicator-template-selector="#@($"{baseId}_IndicatorTemplate")"
-     data-shell-selector="#@($"{baseId}_Shell")"
-     data-widget-container-selector="#@widgetContainerId"
-     data-toggle-button-selector="#@toggleBtnId"
-     data-close-button-selector="#@closeBtnId"
-     data-input-selector="#@userPromptHtmlId"
-     data-widget-state-name="@widgetStateName"
-     data-widget-open-state-key="@(storagePrefix + "-ai-admin-widget-state")"
-     data-open-state-value="open"
-     data-closed-state-value="closed"
-     data-open-icon-html="<i class=&quot;fas fa-times&quot;></i>"
-     data-closed-icon-html="<i class=&quot;fa fa-robot&quot;></i>"
-     data-widget-chat-widget-container="#@widgetContainerId"
-     data-widget-chat-widget-state-name="@widgetStateName"
-     data-widget-chat-history-section="#@historyPanelId"
-     data-widget-close-history-button="#@closeHistoryBtnId"
-     data-widget-show-history-button="#@historyBtnId"
-     data-widget-new-chat-button="#@newChatBtnId"
-     data-widget-toggle-button-selector="#@toggleBtnId"
-     data-widget-reset-size-button-selector="#@restoreSizeBtnId"
-     data-widget-drag-handle-selector=".ai-chat-widget-header"
-     data-widget-enable-dragging="true"
-     data-widget-enable-resizing="true"
-     data-widget-persist-layout="true"
-     data-widget-min-width="288"
-     data-widget-min-height="320"></div>
+     data-coreai-chat-widget-config="@widgetConfigJson"></div>
 <template id="@($"{baseId}_MessageTemplate")">
     <div class="ai-chat-messages">
         <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">

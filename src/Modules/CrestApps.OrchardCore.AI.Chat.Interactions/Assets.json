@@ -19,19 +19,5 @@
       "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js.map"
     ],
     "output": "wwwroot/scripts/chat-interaction.min.js.map"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "Assets/scripts/chat-interaction-bootstrap.js"
-    ],
-    "output": "wwwroot/scripts/chat-interaction-bootstrap.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "Assets/scripts/chat-interaction-bootstrap.min.js"
-    ],
-    "output": "wwwroot/scripts/chat-interaction-bootstrap.min.js"
   }
 ]

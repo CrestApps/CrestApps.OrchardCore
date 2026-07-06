@@ -217,6 +217,37 @@
             });
         }
     }
+
+    var chatConfigJson = JsonSerializer.Serialize(new
+    {
+        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        appElementSelector = $"#{chatAppHtmlId}",
+        chatContainerElementSelector = $"#{chatContainerHtmlId}",
+        inputElementSelector = $"#{userPromptHtmlId}",
+        sendButtonElementSelector = $"#{buttonHtmlId}",
+        placeholderElementSelector = $"#{placeholderHtmlId}",
+        autoCreateSession = addInitialPrompt,
+        initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+        messages = prompts,
+        metricsEnabled,
+        chatMode = effectiveChatMode.ToString(),
+        micButtonElementSelector = $"#{micBtnHtmlId}",
+        ttsVoiceName = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
+        conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
+        textToSpeechEnabled,
+        visionEnabled,
+        isOrchestratorAvailable = orchestratorAvailability.IsAvailable,
+        orchestratorUnavailableMessage = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
+        sessionDocumentsEnabled,
+        documentBarSelector = sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null,
+        uploadDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null,
+        removeDocumentUrl = sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null,
+        allowedExtensions = sessionDocumentsEnabled ? allowedExtensions : null,
+        supportedExtensionsText = sessionDocumentsEnabled ? supportedExtensionsText : null,
+        existingDocuments = sessionDocumentsEnabled
+            ? Model.Session.Documents ?? new List<ChatDocumentInfo>()
+            : new List<ChatDocumentInfo>(),
+    }, JOptions.CamelCase);
 }
 
 <style asp-name="AIChatApp" at="Head"></style>
@@ -227,36 +258,11 @@
 {
     <style asp-name="SpeechToText" at="Head"></style>
 }
-<script asp-name="AIChatBootstrap" at="Foot"></script>
+<script asp-name="AIChatApp" at="Foot"></script>
 
 <div id="@($"{baseId}_Config")"
      class="d-none"
-     data-ai-chat-config
-     data-signal-r-hub-url="@(HubRouteManager.GetPathByHub<AIChatHub>())"
-     data-app-element-selector="#@chatAppHtmlId"
-     data-chat-container-element-selector="#@chatContainerHtmlId"
-     data-input-element-selector="#@userPromptHtmlId"
-     data-send-button-element-selector="#@buttonHtmlId"
-     data-placeholder-element-selector="#@placeholderHtmlId"
-     data-auto-create-session="@(addInitialPrompt ? "true" : "false")"
-     data-initial-prompt="@(addInitialPrompt ? profileMetadata.InitialPrompt : null)"
-     data-messages="@JsonSerializer.Serialize(prompts, JOptions.CamelCase)"
-     data-metrics-enabled="@(metricsEnabled ? "true" : "false")"
-     data-chat-mode="@effectiveChatMode"
-     data-mic-button-element-selector="#@micBtnHtmlId"
-     data-tts-voice-name="@(string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName)"
-     data-conversation-button-element-selector="#@conversationBtnHtmlId"
-     data-text-to-speech-enabled="@(textToSpeechEnabled ? "true" : "false")"
-     data-vision-enabled="@(visionEnabled ? "true" : "false")"
-     data-is-orchestrator-available="@(orchestratorAvailability.IsAvailable ? "true" : "false")"
-     data-orchestrator-unavailable-message="@(orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message)"
-     data-session-documents-enabled="@(sessionDocumentsEnabled ? "true" : "false")"
-     data-document-bar-selector="@(sessionDocumentsEnabled ? $"#{documentBarHtmlId}" : null)"
-     data-upload-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument) : null)"
-     data-remove-document-url="@(sessionDocumentsEnabled ? Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument) : null)"
-     data-allowed-extensions="@(sessionDocumentsEnabled ? allowedExtensions : null)"
-     data-supported-extensions-text="@(sessionDocumentsEnabled ? supportedExtensionsText : null)"
-     data-existing-documents="@JsonSerializer.Serialize(sessionDocumentsEnabled ? Model.Session.Documents ?? new List<ChatDocumentInfo>() : new List<ChatDocumentInfo>(), JOptions.CamelCase)"></div>
+     data-coreai-chat-config="@chatConfigJson"></div>
 
 <style at="Head">
     .chat-user-prompt-input:focus {

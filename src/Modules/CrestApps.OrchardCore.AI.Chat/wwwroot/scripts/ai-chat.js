@@ -22,7 +22,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-window.openAIChatManager = function () {
+window.coreAIChatManager = function () {
   // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
     // UI defaults for generated media
@@ -36,7 +36,9 @@ window.openAIChatManager = function () {
     thumbsUpTitle: 'Thumbs up',
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
+    copiedTitle: 'Response copied to clipboard.',
     codeCopiedText: 'Copied!',
+    copyResetDelayMs: 2000,
     widget: {
       chatWidgetContainer: null,
       chatWidgetStateName: null,
@@ -55,8 +57,8 @@ window.openAIChatManager = function () {
       minWidth: 320,
       minHeight: 420
     },
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                        {{ getAssistantLabel(message) }}\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                            <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                <span v-else>{{ citation.label }}</span>\n                            </li>\n                        </ol>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button type=\"button\" v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button type=\"button\" class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button type=\"button\" v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button type=\"button\" v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
-    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-message-heading ai-chat-message-heading-user\">\n                        <span class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</span>\n                    </div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-message-heading ai-chat-message-heading-assistant\">\n                        <div :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                            <span class=\"ai-chat-message-role-label\">{{ getAssistantLabel(message) }}</span>\n                        </div>\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                            <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                <span v-else>{{ citation.label }}</span>\n                            </li>\n                        </ol>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button type=\"button\" v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button type=\"button\" class=\"btn btn-sm btn-link p-0 button-message-toolbox ai-response-copy-btn\" :class=\"copiedMessageIndex === index ? 'text-success' : 'text-secondary'\" :data-copy-message-index=\"index\" @click=\"copyResponse(message, index, $event)\" :title=\"copiedMessageIndex === index ? copiedTitle : copyTitle\">\n                                <i :class=\"copiedMessageIndex === index ? 'fa-solid fa-check' : 'fa-solid fa-copy'\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button type=\"button\" v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button type=\"button\" v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-message-heading ai-chat-message-heading-assistant\">\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                <span class=\"ai-chat-message-role-label\">Assistant</span>\n            </div>\n        </div>\n    "
   };
 
   // Sanitize URLs to prevent javascript: protocol injection.
@@ -125,7 +127,7 @@ window.openAIChatManager = function () {
     return Math.min(Math.max(value, min), max);
   }
   function normalizeReference(reference) {
-    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference;
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference, _normalized$isGenerat;
     if (!reference || _typeof(reference) !== 'object') {
       return null;
     }
@@ -135,6 +137,7 @@ window.openAIChatManager = function () {
     normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
     normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
     normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
+    normalized.isGenerated = ((_normalized$isGenerat = normalized.isGenerated) !== null && _normalized$isGenerat !== void 0 ? _normalized$isGenerat : normalized.IsGenerated) === true;
     return normalized;
   }
   function isDownloadCitationReference(reference) {
@@ -169,28 +172,42 @@ window.openAIChatManager = function () {
   function buildCitationDisplay(content, references) {
     var processedContent = (content || '').trim();
     var messageReferences = normalizeReferences(references);
-    if (!processedContent || !Object.keys(messageReferences).length) {
+    var referenceEntries = Object.entries(messageReferences);
+    if (!referenceEntries.length) {
       return {
         content: processedContent,
         citations: []
       };
     }
-    var citedRefs = Object.entries(messageReferences).filter(function (_ref6) {
+    var citedRefs = referenceEntries.filter(function (_ref6) {
       var _ref7 = _slicedToArray(_ref6, 1),
         key = _ref7[0];
       return processedContent.includes(key);
     });
-    if (!citedRefs.length) {
+    var generatedRefs = referenceEntries.filter(function (_ref8) {
+      var _ref9 = _slicedToArray(_ref8, 2),
+        key = _ref9[0],
+        value = _ref9[1];
+      return value.isGenerated && !processedContent.includes(key);
+    });
+    if (!citedRefs.length && !generatedRefs.length) {
       return {
         content: processedContent,
         citations: []
       };
     }
-    citedRefs.sort(function (_ref8, _ref9) {
-      var _ref0 = _slicedToArray(_ref8, 2),
-        a = _ref0[1];
-      var _ref1 = _slicedToArray(_ref9, 2),
-        b = _ref1[1];
+    citedRefs.sort(function (_ref0, _ref1) {
+      var _ref10 = _slicedToArray(_ref0, 2),
+        a = _ref10[1];
+      var _ref11 = _slicedToArray(_ref1, 2),
+        b = _ref11[1];
+      return a.index - b.index;
+    });
+    generatedRefs.sort(function (_ref12, _ref13) {
+      var _ref14 = _slicedToArray(_ref12, 2),
+        a = _ref14[1];
+      var _ref15 = _slicedToArray(_ref13, 2),
+        b = _ref15[1];
       return a.index - b.index;
     });
     var citations = [];
@@ -224,11 +241,36 @@ window.openAIChatManager = function () {
       processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
     }
     processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+
+    // Generated files (such as exported tabular data) are always offered as a download even when
+    // the model does not cite them inline, so the user never loses access to the produced file.
+    var _iterator2 = _createForOfIteratorHelper(generatedRefs),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var _step2$value = _slicedToArray(_step2.value, 2),
+          _key = _step2$value[0],
+          _value = _step2$value[1];
+        citations.push({
+          referenceKey: _key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(_value, _key),
+          link: _value.link || null,
+          isDownload: true,
+          placeholder: null
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
     return {
       content: processedContent,
-      citations: citations.map(function (_ref10) {
-        var placeholder = _ref10.placeholder,
-          citation = _objectWithoutProperties(_ref10, _excluded);
+      citations: citations.map(function (_ref16) {
+        var placeholder = _ref16.placeholder,
+          citation = _objectWithoutProperties(_ref16, _excluded);
         return citation;
       })
     };
@@ -238,24 +280,24 @@ window.openAIChatManager = function () {
     if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
       return copyContent;
     }
-    var _iterator2 = _createForOfIteratorHelper(citations),
-      _step2;
-    try {
-      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-        var citation = _step2.value;
-        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
-      }
-    } catch (err) {
-      _iterator2.e(err);
-    } finally {
-      _iterator2.f();
-    }
-    copyContent += '\n\nReferences:\n';
     var _iterator3 = _createForOfIteratorHelper(citations),
       _step3;
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-        var _citation = _step3.value;
+        var citation = _step3.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator4 = _createForOfIteratorHelper(citations),
+      _step4;
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var _citation = _step4.value;
         copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
         if (_citation.link) {
           copyContent += " - ".concat(_citation.link);
@@ -263,9 +305,9 @@ window.openAIChatManager = function () {
         copyContent += '\n';
       }
     } catch (err) {
-      _iterator3.e(err);
+      _iterator4.e(err);
     } finally {
-      _iterator3.f();
+      _iterator4.f();
     }
     return copyContent.trimEnd();
   }
@@ -447,17 +489,17 @@ window.openAIChatManager = function () {
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator4 = _createForOfIteratorHelper(charts),
-        _step4;
+      var _iterator5 = _createForOfIteratorHelper(charts),
+        _step5;
       try {
-        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var c = _step4.value;
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var c = _step5.value;
           renderChartOnCanvas(c.chartId, c.config);
         }
       } catch (err) {
-        _iterator4.e(err);
+        _iterator5.e(err);
       } finally {
-        _iterator4.f();
+        _iterator5.f();
       }
     });
   }
@@ -531,11 +573,31 @@ window.openAIChatManager = function () {
       ADD_ATTR: ['target']
     });
   }
+  function compactObject(source) {
+    if (!source || _typeof(source) !== 'object') {
+      return {};
+    }
+    return Object.fromEntries(Object.entries(source).filter(function (_ref17) {
+      var _ref18 = _slicedToArray(_ref17, 2),
+        value = _ref18[1];
+      return value !== undefined;
+    }));
+  }
+  function resolveIndicatorTemplate(template, assistantLabel) {
+    if (!template) {
+      return template;
+    }
+    var encodedAssistantLabel = escapeHtmlEntities(assistantLabel || 'Assistant');
+    return template.replace(/\{\{\s*assistantLabel\s*\}\}/g, encodedAssistantLabel);
+  }
   var initialize = function initialize(instanceConfig) {
-    var config = Object.assign({}, defaultConfig, instanceConfig);
-    config.widget = Object.assign({}, defaultConfig.widget || {}, instanceConfig && instanceConfig.widget ? instanceConfig.widget : {});
-    var hasWidgetConfig = !!(instanceConfig && instanceConfig.widget && instanceConfig.widget.chatWidgetContainer && instanceConfig.widget.chatWidgetStateName);
-    var widgetBehavior = window.openAIChatWidgetBehavior || null;
+    var normalizedInstanceConfig = compactObject(instanceConfig);
+    var normalizedWidgetConfig = compactObject(normalizedInstanceConfig.widget);
+    var config = Object.assign({}, defaultConfig, normalizedInstanceConfig);
+    config.widget = Object.assign({}, defaultConfig.widget || {}, normalizedWidgetConfig);
+    config.indicatorTemplate = resolveIndicatorTemplate(config.indicatorTemplate, config.assistantLabel);
+    var hasWidgetConfig = !!(normalizedWidgetConfig.chatWidgetContainer && normalizedWidgetConfig.chatWidgetStateName);
+    var widgetBehavior = window.coreAIChatWidgetBehavior || null;
     // Keep defaultConfig in sync so renderers use overridden values
     defaultConfig = config;
     if (!config.signalRHubUrl) {
@@ -587,6 +649,7 @@ window.openAIChatManager = function () {
           thumbsUpTitle: config.thumbsUpTitle,
           thumbsDownTitle: config.thumbsDownTitle,
           copyTitle: config.copyTitle,
+          copiedTitle: config.copiedTitle,
           isRecording: false,
           mediaRecorder: null,
           preRecordingPrompt: '',
@@ -611,7 +674,10 @@ window.openAIChatManager = function () {
           pendingSessionPromise: null,
           pendingSessionResolver: null,
           pendingSessionRejector: null,
-          pendingSessionTimeoutId: null
+          pendingSessionTimeoutId: null,
+          copiedMessageIndex: -1,
+          copyResetTimeoutId: null,
+          activeCopyButton: null
         };
       },
       computed: {
@@ -1325,14 +1391,14 @@ window.openAIChatManager = function () {
           if (message.content && !message.htmlContent) {
             message.htmlContent = parseMarkdownContent(message.content, message);
           }
-          this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", {
+          this.fireEvent(new CustomEvent("addingCoreAIPromotMessage", {
             detail: {
               message: message
             }
           }));
           this.messages.push(message);
           this.$nextTick(function () {
-            _this4.fireEvent(new CustomEvent("addedOpenAIPromotMessage", {
+            _this4.fireEvent(new CustomEvent("addedCoreAIPromotMessage", {
               detail: {
                 message: message
               }
@@ -1653,9 +1719,9 @@ window.openAIChatManager = function () {
           var _this9 = this;
           references = normalizeReferences(references);
           if (Object.keys(references).length) {
-            var _ref15, _message$rawContent2;
+            var _ref23, _message$rawContent2;
             var message = this.messages[messageIndex];
-            message.rawContent = (_ref15 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref15 !== void 0 ? _ref15 : '';
+            message.rawContent = (_ref23 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref23 !== void 0 ? _ref23 : '';
             updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
             this.$nextTick(function () {
@@ -1723,8 +1789,38 @@ window.openAIChatManager = function () {
             button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
           });
         },
-        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+        updateCopyButtons: function updateCopyButtons() {
           var _this1 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-copy-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-copy-message-index'));
+            var isCopied = buttonIndex === _this1.copiedMessageIndex;
+            var iconHtml = isCopied ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-copy"></i>';
+            button.classList.toggle('text-success', isCopied);
+            button.classList.toggle('text-secondary', !isCopied);
+            button.setAttribute('title', isCopied ? _this1.copiedTitle : _this1.copyTitle);
+            button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          });
+        },
+        setCopyButtonState: function setCopyButtonState(button, isCopied) {
+          if (!button) {
+            return;
+          }
+          var iconHtml = isCopied ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-copy"></i>';
+          button.classList.toggle('text-success', isCopied);
+          button.classList.toggle('text-secondary', !isCopied);
+          button.setAttribute('title', isCopied ? this.copiedTitle : this.copyTitle);
+          button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+            RETURN_DOM_FRAGMENT: true
+          }));
+        },
+        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+          var _this10 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
@@ -1733,16 +1829,16 @@ window.openAIChatManager = function () {
           this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
           this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this1.isPlayingAudio = false;
-            _this1.ttsPlayingMessageIndex = -1;
-            _this1._ttsCacheIndex = -1;
-            _this1.$nextTick(function () {
-              return _this1.updateTtsPlaybackButtons();
+            _this10.isPlayingAudio = false;
+            _this10.ttsPlayingMessageIndex = -1;
+            _this10._ttsCacheIndex = -1;
+            _this10.$nextTick(function () {
+              return _this10.updateTtsPlaybackButtons();
             });
           });
         },
         toggleMessageTts: function toggleMessageTts(message, index) {
-          var _this10 = this;
+          var _this11 = this;
           if (this.ttsPlayingMessageIndex === index) {
             this.stopAudio();
             return;
@@ -1755,7 +1851,7 @@ window.openAIChatManager = function () {
           }));
           this.ttsPlayingMessageIndex = index;
           this.$nextTick(function () {
-            return _this10.updateTtsPlaybackButtons();
+            return _this11.updateTtsPlaybackButtons();
           });
           if (this.ttsAudioCache[index]) {
             this.playAudioBlob(this.ttsAudioCache[index]);
@@ -1764,13 +1860,13 @@ window.openAIChatManager = function () {
           this.synthesizeSpeech(message.content, index);
         },
         playCollectedAudio: function playCollectedAudio() {
-          var _this11 = this;
+          var _this12 = this;
           if (this.audioChunks.length === 0) {
             if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
               this.isPlayingAudio = false;
               this.ttsPlayingMessageIndex = -1;
               this.$nextTick(function () {
-                return _this11.updateTtsPlaybackButtons();
+                return _this12.updateTtsPlaybackButtons();
               });
             }
             return;
@@ -1780,18 +1876,18 @@ window.openAIChatManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator5 = _createForOfIteratorHelper(this.audioChunks),
-            _step5;
+          var _iterator6 = _createForOfIteratorHelper(this.audioChunks),
+            _step6;
           try {
-            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-              var chunk = _step5.value;
+            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+              var chunk = _step6.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator5.e(err);
+            _iterator6.e(err);
           } finally {
-            _iterator5.f();
+            _iterator6.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
@@ -1810,39 +1906,39 @@ window.openAIChatManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this12 = this;
+          var _this13 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
           this.currentAudioUrl = url;
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
-            _this12.currentAudioElement = null;
-            _this12.currentAudioUrl = null;
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this12.playNextInQueue();
+            _this13.playNextInQueue();
           });
           audio.addEventListener('error', function () {
-            _this12.currentAudioElement = null;
-            _this12.currentAudioUrl = null;
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this12.playNextInQueue();
+            _this13.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
-            _this12.currentAudioElement = null;
-            _this12.currentAudioUrl = null;
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this12.audioPlayQueue = [];
-            _this12.isPlayingAudio = false;
-            _this12.ttsPlayingMessageIndex = -1;
-            _this12.$nextTick(function () {
-              return _this12.updateTtsPlaybackButtons();
+            _this13.audioPlayQueue = [];
+            _this13.isPlayingAudio = false;
+            _this13.ttsPlayingMessageIndex = -1;
+            _this13.$nextTick(function () {
+              return _this13.updateTtsPlaybackButtons();
             });
           });
         },
         playNextInQueue: function playNextInQueue() {
-          var _this13 = this;
+          var _this14 = this;
           if (this.audioPlayQueue.length > 0) {
             var nextBlob = this.audioPlayQueue.shift();
             this.playAudioBlob(nextBlob);
@@ -1850,13 +1946,13 @@ window.openAIChatManager = function () {
             this.isPlayingAudio = false;
             this.ttsPlayingMessageIndex = -1;
             this.$nextTick(function () {
-              return _this13.updateTtsPlaybackButtons();
+              return _this14.updateTtsPlaybackButtons();
             });
             this.conversationModeOnAudioEnded();
           }
         },
         stopAudio: function stopAudio() {
-          var _this14 = this;
+          var _this15 = this;
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             this.currentAudioElement.currentTime = 0;
@@ -1871,7 +1967,7 @@ window.openAIChatManager = function () {
           this.isPlayingAudio = false;
           this.ttsPlayingMessageIndex = -1;
           this.$nextTick(function () {
-            return _this14.updateTtsPlaybackButtons();
+            return _this15.updateTtsPlaybackButtons();
           });
         },
         toggleConversationMode: function toggleConversationMode() {
@@ -1882,7 +1978,7 @@ window.openAIChatManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this15 = this;
+          var _this16 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1902,12 +1998,12 @@ window.openAIChatManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this15.mediaRecorder = new MediaRecorder(stream, {
+            _this16.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this15._conversationSubject = new signalR.Subject();
-            _this15._conversationStream = stream;
+            _this16._conversationSubject = new signalR.Subject();
+            _this16._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             // During TTS playback, detect when the user speaks above
@@ -1916,20 +2012,20 @@ window.openAIChatManager = function () {
             // speaker echo so the STT stream has no gaps.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this15._conversationAudioCtx = new AudioCtx();
-              _this15._conversationAnalyser = _this15._conversationAudioCtx.createAnalyser();
-              _this15._conversationAnalyser.fftSize = 256;
-              var micSource = _this15._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this15._conversationAnalyser);
+              _this16._conversationAudioCtx = new AudioCtx();
+              _this16._conversationAnalyser = _this16._conversationAudioCtx.createAnalyser();
+              _this16._conversationAnalyser.fftSize = 256;
+              var micSource = _this16._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this16._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this15._conversationAnalyser;
+            var analyser = _this16._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this15.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this16.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this15.isPlayingAudio && analyser) {
+                if (_this16.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1939,7 +2035,7 @@ window.openAIChatManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this15.stopAudio();
+                    _this16.stopAudio();
                   }
                 }
 
@@ -1961,7 +2057,7 @@ window.openAIChatManager = function () {
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this15._conversationSubject.next(base64);
+                          _this16._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
@@ -1972,28 +2068,28 @@ window.openAIChatManager = function () {
                 })));
               }
             });
-            _this15.mediaRecorder.addEventListener('stop', function () {
+            _this16.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this15._conversationSubject.complete();
+                  _this16._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var profileId = _this15.getProfileId();
-            var sessionId = _this15.getSessionId() || '';
+            var profileId = _this16.getProfileId();
+            var sessionId = _this16.getSessionId() || '';
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this15.connection.send("StartConversation", profileId, sessionId, _this15._conversationSubject, mimeType, language);
-            _this15.mediaRecorder.start(250);
-            _this15.isRecording = true;
+            _this16.connection.send("StartConversation", profileId, sessionId, _this16._conversationSubject, mimeType, language);
+            _this16.mediaRecorder.start(250);
+            _this16.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this15.isConversationMode = false;
-            _this15.updateConversationButton();
+            _this16.isConversationMode = false;
+            _this16.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -2120,7 +2216,7 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         receiveNotification: function receiveNotification(notification) {
-          var _this16 = this;
+          var _this17 = this;
           if (!notification || !notification.type) {
             return;
           }
@@ -2135,7 +2231,7 @@ window.openAIChatManager = function () {
           }
           this.scheduleNotificationDismiss(notification);
           this.$nextTick(function () {
-            _this16.scrollToBottom();
+            _this17.scrollToBottom();
           });
         },
         updateNotification: function updateNotification(notification) {
@@ -2152,12 +2248,12 @@ window.openAIChatManager = function () {
           }
         },
         scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
-          var _this17 = this;
+          var _this18 = this;
           if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
             return;
           }
           this.notificationDismissTimers[notification.type] = setTimeout(function () {
-            _this17.removeNotification(notification.type);
+            _this18.removeNotification(notification.type);
           }, notification.autoDismissMs);
         },
         clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
@@ -2187,12 +2283,12 @@ window.openAIChatManager = function () {
           });
         },
         scrollToBottom: function scrollToBottom() {
-          var _this18 = this;
+          var _this19 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this18.chatContainer.scrollTop = _this18.chatContainer.scrollHeight - _this18.chatContainer.clientHeight;
+            _this19.chatContainer.scrollTop = _this19.chatContainer.scrollHeight - _this19.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -2238,27 +2334,27 @@ window.openAIChatManager = function () {
           });
         },
         ensureSessionForDocuments: function ensureSessionForDocuments(profileId) {
-          var _this19 = this;
+          var _this20 = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
             var sessionId;
             return _regenerator().w(function (_context9) {
               while (1) switch (_context9.n) {
                 case 0:
-                  sessionId = _this19.getSessionId();
+                  sessionId = _this20.getSessionId();
                   if (!sessionId) {
                     _context9.n = 1;
                     break;
                   }
                   return _context9.a(2, sessionId);
                 case 1:
-                  if (!(!profileId || !_this19.connection)) {
+                  if (!(!profileId || !_this20.connection)) {
                     _context9.n = 2;
                     break;
                   }
                   return _context9.a(2, null);
                 case 2:
                   _context9.n = 3;
-                  return _this19.requestNewSession(profileId);
+                  return _this20.requestNewSession(profileId);
                 case 3:
                   return _context9.a(2, _context9.v);
               }
@@ -2266,7 +2362,7 @@ window.openAIChatManager = function () {
           }))();
         },
         requestNewSession: function requestNewSession(profileId) {
-          var _this20 = this;
+          var _this21 = this;
           if (this.pendingSessionPromise) {
             return this.pendingSessionPromise;
           }
@@ -2274,14 +2370,14 @@ window.openAIChatManager = function () {
             return Promise.resolve(null);
           }
           this.pendingSessionPromise = new Promise(function (resolve, reject) {
-            _this20.pendingSessionResolver = resolve;
-            _this20.pendingSessionRejector = reject;
-            _this20.pendingSessionTimeoutId = window.setTimeout(function () {
-              _this20.rejectPendingSessionRequest('Timed out while creating a chat session.');
+            _this21.pendingSessionResolver = resolve;
+            _this21.pendingSessionRejector = reject;
+            _this21.pendingSessionTimeoutId = window.setTimeout(function () {
+              _this21.rejectPendingSessionRequest('Timed out while creating a chat session.');
             }, 15000);
           });
           this.connection.invoke("StartSession", profileId, null)["catch"](function (err) {
-            _this20.rejectPendingSessionRequest(err);
+            _this21.rejectPendingSessionRequest(err);
           });
           return this.pendingSessionPromise;
         },
@@ -2307,7 +2403,7 @@ window.openAIChatManager = function () {
           this.pendingSessionTimeoutId = null;
         },
         initializeApp: function initializeApp() {
-          var _this21 = this;
+          var _this22 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -2345,7 +2441,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this21.handleFileInputChange(e);
+                return _this22.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -2353,13 +2449,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this21.handleDragOver(e);
+                  return _this22.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this21.handleDragLeave(e);
+                  return _this22.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this21.handleDrop(e);
+                  return _this22.handleDrop(e);
                 });
               }
             }
@@ -2367,55 +2463,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this21.stream) {
+            if (!_this22.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this21.chatContainer.scrollHeight - _this21.chatContainer.clientHeight - _this21.chatContainer.scrollTop <= threshold;
-            _this21.autoScroll = atBottom;
+            var atBottom = _this22.chatContainer.scrollHeight - _this22.chatContainer.clientHeight - _this22.chatContainer.scrollTop <= threshold;
+            _this22.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this21.stream != null) {
+            if (_this22.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this21.buttonElement.click();
+              _this22.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this21.handleUserInput(e);
+            _this22.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this21.buttonElement.removeAttribute('disabled');
+              _this22.buttonElement.removeAttribute('disabled');
             } else {
-              _this21.buttonElement.setAttribute('disabled', true);
+              _this22.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this21.stream != null) {
-              _this21.stream.dispose();
-              _this21.stream = null;
-              _this21.streamingFinished();
-              _this21.hideTypingIndicator();
+            if (_this22.stream != null) {
+              _this22.stream.dispose();
+              _this22.stream = null;
+              _this22.streamingFinished();
+              _this22.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this21.messages.length > 0) {
-                var lastMsg = _this21.messages[_this21.messages.length - 1];
+              if (_this22.messages.length > 0) {
+                var lastMsg = _this22.messages[_this22.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this21.messages.pop();
+                  _this22.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this21.sendMessage();
+            _this22.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this21.generatePrompt(e.target);
+              _this22.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -2427,17 +2523,18 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this21.loadSession(sessionId);
-              _this21.showChatScreen();
+              _this22.loadSession(sessionId);
+              _this22.showChatScreen();
             });
           }
-          for (var _i5 = 0; _i5 < config.messages.length; _i5++) {
-            this.addMessage(config.messages[_i5]);
+          var initialMessages = Array.isArray(config.messages) ? config.messages : [];
+          for (var _i5 = 0; _i5 < initialMessages.length; _i5++) {
+            this.addMessage(initialMessages[_i5]);
           }
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this21.refreshAllFeedbackIcons();
+            _this22.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -2469,7 +2566,7 @@ window.openAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this21.toggleRecording();
+                _this22.toggleRecording();
               });
             }
           }
@@ -2479,7 +2576,7 @@ window.openAIChatManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this21.toggleConversationMode();
+                _this22.toggleConversationMode();
               });
             }
           }
@@ -2503,7 +2600,7 @@ window.openAIChatManager = function () {
             }
             return;
           }
-          this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", {
+          this.fireEvent(new CustomEvent("initializingSessionCoreAIChat", {
             detail: {
               sessionId: sessionId
             }
@@ -2522,10 +2619,45 @@ window.openAIChatManager = function () {
           }
           return sessionId;
         },
-        copyResponse: function copyResponse(message) {
-          var _ref17, _message$copyContent;
-          var text = message && _typeof(message) === 'object' ? (_ref17 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref17 !== void 0 ? _ref17 : '' : message !== null && message !== void 0 ? message : '';
-          navigator.clipboard.writeText(text);
+        clearCopiedMessageState: function clearCopiedMessageState() {
+          if (this.copyResetTimeoutId) {
+            window.clearTimeout(this.copyResetTimeoutId);
+            this.copyResetTimeoutId = null;
+          }
+          if (this.activeCopyButton) {
+            this.setCopyButtonState(this.activeCopyButton, false);
+            this.activeCopyButton = null;
+          }
+          this.copiedMessageIndex = -1;
+        },
+        copyResponse: function copyResponse(message, index, event) {
+          var _ref25,
+            _message$copyContent,
+            _event$target,
+            _event$target$closest,
+            _this23 = this;
+          var text = message && _typeof(message) === 'object' ? (_ref25 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref25 !== void 0 ? _ref25 : '' : message !== null && message !== void 0 ? message : '';
+          var button = (event === null || event === void 0 ? void 0 : event.currentTarget) || (event === null || event === void 0 || (_event$target = event.target) === null || _event$target === void 0 || (_event$target$closest = _event$target.closest) === null || _event$target$closest === void 0 ? void 0 : _event$target$closest.call(_event$target, '[data-copy-message-index]')) || null;
+          navigator.clipboard.writeText(text).then(function () {
+            _this23.clearCopiedMessageState();
+            _this23.copiedMessageIndex = typeof index === 'number' ? index : -1;
+            _this23.activeCopyButton = button;
+            if (button) {
+              _this23.setCopyButtonState(button, true);
+            } else {
+              _this23.$nextTick(function () {
+                return _this23.updateCopyButtons();
+              });
+            }
+            _this23.copyResetTimeoutId = window.setTimeout(function () {
+              _this23.clearCopiedMessageState();
+              _this23.$nextTick(function () {
+                return _this23.updateCopyButtons();
+              });
+            }, Number(config.copyResetDelayMs) || 2000);
+          })["catch"](function (err) {
+            return console.error('Failed to copy response:', err);
+          });
         },
         updateFeedbackIcons: function updateFeedbackIcons(container, userRating) {
           if (!container) {
@@ -2620,6 +2752,12 @@ window.openAIChatManager = function () {
           // Reserved for future use — volume-based interrupt detection
           // no longer mutes tracks; browser echo cancellation handles echo.
         },
+        copiedMessageIndex: function copiedMessageIndex() {
+          var _this24 = this;
+          this.$nextTick(function () {
+            return _this24.updateCopyButtons();
+          });
+        },
         isConversationMode: function isConversationMode(active) {
           // Hide/show mic button.
           if (this.micButton) {
@@ -2641,22 +2779,23 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this22 = this;
+        var _this25 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
           var isInitialized;
           return _regenerator().w(function (_context0) {
             while (1) switch (_context0.n) {
               case 0:
                 _context0.n = 1;
-                return _this22.startConnection();
+                return _this25.startConnection();
               case 1:
-                isInitialized = _this22.initializeApp();
+                isInitialized = _this25.initializeApp();
                 if (isInitialized && hasWidgetConfig && widgetBehavior && typeof widgetBehavior.onMounted === 'function') {
-                  widgetBehavior.onMounted(_this22, config);
+                  widgetBehavior.onMounted(_this25, config);
                 }
-                _this22.$nextTick(function () {
-                  refreshFontAwesomeIcons(_this22.$el);
-                  _this22.fontAwesomeObserver = observeFontAwesomeIcons(_this22.$el);
+                _this25.$nextTick(function () {
+                  _this25.updateCopyButtons();
+                  refreshFontAwesomeIcons(_this25.$el);
+                  _this25.fontAwesomeObserver = observeFontAwesomeIcons(_this25.$el);
                 });
               case 2:
                 return _context0.a(2);
@@ -2673,6 +2812,7 @@ window.openAIChatManager = function () {
           this.fontAwesomeObserver.disconnect();
           this.fontAwesomeObserver = null;
         }
+        this.clearCopiedMessageState();
         this.stopAudio(false);
         if (this.stream) {
           this.stream.dispose();
@@ -2693,8 +2833,151 @@ window.openAIChatManager = function () {
     }
     return app;
   };
+  var autoInitializeSelector = '[data-coreai-chat-config],[data-coreai-chat-app-element-selector]';
+  function getAttributeValue(element, attributeName) {
+    var value = element.getAttribute(attributeName);
+    return value === null || value === '' ? null : value;
+  }
+  function parseBooleanAttributeValue(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    var normalized = String(value).trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+    return null;
+  }
+  function parseJsonAttribute(element, attributeName, description) {
+    var rawValue = getAttributeValue(element, attributeName);
+    if (!rawValue) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      console.error('Failed to parse ' + description + ' JSON.', error);
+      return null;
+    }
+  }
+  function buildConfigFromDataAttributes(element, options) {
+    var _parseJsonAttribute, _parseJsonAttribute2;
+    var settings = options || {};
+    if (element.hasAttribute('data-coreai-chat-widget-container-selector') && settings.allowWidgetHost !== true) {
+      return null;
+    }
+    var appElementSelector = getAttributeValue(element, 'data-coreai-chat-app-element-selector');
+    if (!appElementSelector) {
+      return null;
+    }
+    var config = {
+      signalRHubUrl: getAttributeValue(element, 'data-coreai-chat-signalr-hub-url'),
+      appElementSelector: appElementSelector,
+      chatContainerElementSelector: getAttributeValue(element, 'data-coreai-chat-container-element-selector'),
+      inputElementSelector: getAttributeValue(element, 'data-coreai-chat-input-element-selector'),
+      sendButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-send-button-element-selector'),
+      placeholderElementSelector: getAttributeValue(element, 'data-coreai-chat-placeholder-element-selector'),
+      messages: (_parseJsonAttribute = parseJsonAttribute(element, 'data-coreai-chat-messages', 'CoreAI chat messages')) !== null && _parseJsonAttribute !== void 0 ? _parseJsonAttribute : undefined,
+      chatMode: getAttributeValue(element, 'data-coreai-chat-mode'),
+      micButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-mic-button-element-selector'),
+      conversationButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-conversation-button-element-selector'),
+      ttsVoiceName: getAttributeValue(element, 'data-coreai-chat-tts-voice-name'),
+      documentBarSelector: getAttributeValue(element, 'data-coreai-chat-document-bar-selector'),
+      uploadDocumentUrl: getAttributeValue(element, 'data-coreai-chat-upload-document-url'),
+      removeDocumentUrl: getAttributeValue(element, 'data-coreai-chat-remove-document-url'),
+      allowedExtensions: getAttributeValue(element, 'data-coreai-chat-allowed-extensions'),
+      supportedExtensionsText: getAttributeValue(element, 'data-coreai-chat-supported-extensions-text'),
+      existingDocuments: (_parseJsonAttribute2 = parseJsonAttribute(element, 'data-coreai-chat-existing-documents', 'CoreAI chat existing documents')) !== null && _parseJsonAttribute2 !== void 0 ? _parseJsonAttribute2 : undefined,
+      initialPrompt: getAttributeValue(element, 'data-coreai-chat-initial-prompt'),
+      userLabel: getAttributeValue(element, 'data-coreai-chat-user-label'),
+      assistantLabel: getAttributeValue(element, 'data-coreai-chat-assistant-label'),
+      copyTitle: getAttributeValue(element, 'data-coreai-chat-copy-title'),
+      copiedTitle: getAttributeValue(element, 'data-coreai-chat-copied-title')
+    };
+    var booleanAttributes = {
+      metricsEnabled: 'data-coreai-chat-metrics-enabled',
+      textToSpeechEnabled: 'data-coreai-chat-text-to-speech-enabled',
+      sessionDocumentsEnabled: 'data-coreai-chat-session-documents-enabled',
+      autoCreateSession: 'data-coreai-chat-auto-create-session',
+      singleResponseMode: 'data-coreai-chat-single-response-mode'
+    };
+    Object.keys(booleanAttributes).forEach(function (key) {
+      var parsed = parseBooleanAttributeValue(getAttributeValue(element, booleanAttributes[key]));
+      if (parsed !== null) {
+        config[key] = parsed;
+      }
+    });
+    return compactObject(config);
+  }
+  function buildConfigFromElement(element, options) {
+    var jsonConfig = parseJsonAttribute(element, 'data-coreai-chat-config', 'CoreAI chat config');
+    var attributeConfig = buildConfigFromDataAttributes(element, options);
+    if (!jsonConfig && !attributeConfig) {
+      return null;
+    }
+    return Object.assign({}, jsonConfig || {}, attributeConfig || {});
+  }
+  function initializeFromElement(element) {
+    if (!element || element.dataset.coreAiChatInitialized === 'true') {
+      return element ? element.__coreAIChatApp || null : null;
+    }
+    var config = buildConfigFromElement(element);
+    if (!config) {
+      return null;
+    }
+    var app = initialize(config);
+    if (!app) {
+      return null;
+    }
+    element.dataset.coreAiChatInitialized = 'true';
+    element.__coreAIChatApp = app;
+    return app;
+  }
+  function scanForAutoInitialization(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+    if (typeof root.matches === 'function' && root.matches(autoInitializeSelector)) {
+      initializeFromElement(root);
+    }
+    root.querySelectorAll(autoInitializeSelector).forEach(initializeFromElement);
+  }
+  function startAutoInitialization() {
+    scanForAutoInitialization(document);
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node && node.nodeType === 1) {
+            scanForAutoInitialization(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAutoInitialization, {
+      once: true
+    });
+  } else {
+    startAutoInitialization();
+  }
   return {
-    initialize: initialize
+    initialize: initialize,
+    initializeFromElement: initializeFromElement,
+    buildConfigFromElement: buildConfigFromElement
   };
 }();
 
