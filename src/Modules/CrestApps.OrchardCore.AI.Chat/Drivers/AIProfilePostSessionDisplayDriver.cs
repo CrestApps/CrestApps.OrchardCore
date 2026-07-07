@@ -151,7 +151,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 
         if (selectedToolKeys is not null && selectedToolKeys.Any())
         {
-            toolNames = _toolDefinitions.Tools.Keys
+            toolNames = _toolDefinitions.GetSelectableTools().Keys
                 .Intersect(selectedToolKeys)
                 .ToArray();
         }
@@ -184,13 +184,8 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
         var user = _httpContextAccessor.HttpContext?.User;
         var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
 
-        foreach (var tool in _toolDefinitions.Tools)
+        foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (tool.Value.IsSystemTool)
-            {
-                continue;
-            }
-
             if (user is not null && await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
                 accessibleTools[tool.Key] = tool.Value;
