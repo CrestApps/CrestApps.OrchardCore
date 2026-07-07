@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -1126,13 +1127,5 @@ public sealed class ActivitiesController : Controller
     }
 
     private static string MapDialerModeToActivitySource(DialerMode mode)
-    {
-        return mode switch
-        {
-            DialerMode.Power => ActivitySources.PowerDial,
-            DialerMode.Progressive => ActivitySources.ProgressiveDial,
-            DialerMode.Predictive => ActivitySources.PredictiveDial,
-            _ => ActivitySources.PreviewDial,
-        };
-    }
+        => DialerActivitySourceHelper.GetActivitySource(mode);
 }

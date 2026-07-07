@@ -42,7 +42,7 @@ Contact Center extends `OmnichannelActivity` with metadata needed by queues and 
 - Nullable ownership so preview, power, progressive, and predictive dialing can create activities before an agent is selected.
 - Activity kind and extensible source metadata so the same Activity model can represent calls, SMS, email, meetings, tasks, callbacks, inbound work, workflow-created work, API-created work, and dialer inventory.
 - Assignment and reservation metadata so multiple dialer or routing instances do not claim the same record concurrently.
-- Activity batches can load either user-assigned manual work or unassigned dialer work. The batch creation dialog selects a source first, then display drivers render source-specific UI.
+- Activity batches can load either user-assigned manual work or unassigned dialer work. The batch creation dialog selects a source first, and dialer batches require a dialer profile so the loaded activities inherit the correct dialing mode and campaign.
 
 Dispositions are applied to Activities, not Interactions. Agent, provider, AI, workflow, and system outcomes converge through the activity disposition service before Subject Actions or workflow automation runs.
 

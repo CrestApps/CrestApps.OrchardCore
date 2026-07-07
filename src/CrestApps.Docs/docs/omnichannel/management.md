@@ -202,24 +202,22 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 1. Go to `Interaction Center` → `Activity Batches`.
 2. Click **Add Activity Batch** and choose a source:
    - **Manual** loads activities assigned to the selected users immediately.
-   - **Automatic** loads unassigned automated activities for AI processing.
-   - **Dialer** loads unassigned activities that a dialer reserves and assigns later.
+   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the batch is created.
 3. Create the new batch:
    - Select contact type
    - Select subject type
-   - For **Automatic** batches, optionally select an AI profile. The list only includes chat profiles
-     with **Add initial prompt** enabled; leaving it empty uses the subject flow's AI profile.
-   - Assign users when the selected source requires assignment
+   - For **Dialer** batches, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
+   - Assign users when the selected source requires assignment.
    - Optionally set lead created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
-The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint. For Automatic batches, the loader stores the selected batch AI profile on each activity; if no batch profile is selected, the activity uses the subject flow's AI profile. The automated activity processor then uses that profile's initial prompt to send the first outbound SMS and to continue the AI conversation when the contact replies. Manual batches assign each created activity to a selected user. Automatic batches leave activities unassigned but immediately eligible for the automated activity processor when their schedule is due. Dialer batches leave activities unassigned with assignment status `Available` so dialers can reserve and assign them safely later.
+The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual batches assign each created activity to a selected user. Dialer batches require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
 
 ### Extending activity batch sources
 
 Activity batch loading is extensible. Each batch has a **source**, and the source controls how the batch resolves and loads activities. There are two layers of extensibility:
 
-1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, and whether the source requires user assignment. Registered sources appear as creation cards, and display drivers can add source-specific editor sections.
+1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, whether the source requires user assignment, and whether it should appear in the creation picker. Display drivers can add source-specific editor sections.
 
 2. **Controlling the load** — implement `IActivityBatchLoader` (from `CrestApps.OrchardCore.Omnichannel.Core.Services`) to fully own how a source queries leads, applies filters, and creates activities. The loader's `Source` property must match the registered source. Register the loader as a scoped service:
 

@@ -54,6 +54,11 @@ public class OmnichannelActivityBatchViewModel
     public string AIProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile identifier used by dialer activities.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the instructions.
     /// </summary>
     public string Instructions { get; set; }
@@ -158,6 +163,12 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> AIProfiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available dialer profiles.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> DialerProfiles { get; set; }
 
     /// <summary>
     /// Gets or sets the selected users.

@@ -32,6 +32,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IStringLocalizer S;
@@ -47,6 +48,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <param name="session">The YesSql session.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="optionsProvider">The bulk activity options provider.</param>
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
@@ -58,6 +60,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
@@ -69,6 +72,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         S = stringLocalizer;
     }
@@ -102,6 +106,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
             model.AIProfileId = batch.AIProfileId;
+            model.DialerProfileId = batch.DialerProfileId;
             model.UserIds = batch.UserIds;
             model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
             model.IncludeDoNoSms = batch.IncludeDoNoSms;
@@ -145,6 +150,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             }
 
             model.AIProfiles = await GetAIProfileOptionsAsync(selectedAIProfileId);
+            model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, "Select a dialer profile");
 
             if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
             {
@@ -252,6 +258,18 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserIds), S["At least one user is required."]);
         }
 
+        if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(model.DialerProfileId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer activity batches."]);
+            }
+            else if (!await _optionsProvider.DialerProfileExistsAsync(model.DialerProfileId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["The selected dialer profile is invalid."]);
+            }
+        }
+
         if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
             flowSettings?.InteractionType != ActivityInteractionType.Automated)
         {
@@ -262,6 +280,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             !string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Automated subject flows must be loaded with the Automatic source."]);
+        }
+
+        if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) &&
+            flowSettings?.Channel is not null &&
+            !string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Dialer activity batches require a subject flow that uses the Phone channel."]);
         }
 
         var selectedAIProfileId = string.IsNullOrWhiteSpace(model.AIProfileId)
@@ -305,6 +330,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.ContactContentType = model.ContactContentType;
         batch.AIProfileId = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase)
             ? model.AIProfileId?.Trim()
+            : null;
+        batch.DialerProfileId = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase)
+            ? model.DialerProfileId?.Trim()
             : null;
 
         batch.Instructions = model.Instructions?.Trim();

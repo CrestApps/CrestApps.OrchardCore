@@ -241,11 +241,19 @@ public sealed class DialerStartup : StartupBase
 
         services.Configure<ActivityBatchSourceOptions>(options =>
         {
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.DisplayName = S["Dialer"];
+                entry.Description = S["Loads unassigned activities and applies the selected dialer profile when the batch is loaded."];
+                entry.RequiresUserAssignment = false;
+            });
+
             options.AddSource(ActivitySources.PreviewDial, entry =>
             {
                 entry.DisplayName = S["Preview dial batch"];
                 entry.Description = S["Loads unassigned activities the dialer offers to agents one at a time for review before dialing."];
                 entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
             });
 
             options.AddSource(ActivitySources.PowerDial, entry =>
@@ -253,6 +261,7 @@ public sealed class DialerStartup : StartupBase
                 entry.DisplayName = S["Power dial batch"];
                 entry.Description = S["Loads unassigned activities the dialer dials automatically for available agents."];
                 entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
             });
         });
     }

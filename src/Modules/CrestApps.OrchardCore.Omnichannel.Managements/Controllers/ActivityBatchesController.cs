@@ -113,6 +113,7 @@ public sealed class ActivityBatchesController : Controller
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _activityBatchSourceOptions.Sources.Values
+                .Where(source => source.ShowInCreationPicker)
                 .OrderBy(source => source.DisplayName.Value),
         };
 

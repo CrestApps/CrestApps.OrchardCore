@@ -1,9 +1,13 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Dapper;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -36,6 +40,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IStore _store;
     private readonly IDbConnectionAccessor _dbConnectionAccessor;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ActivityBatchSourceOptions _sourceOptions;
     private readonly ILogger _logger;
 
@@ -50,6 +55,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="store">The store.</param>
     /// <param name="dbConnectionAccessor">The database connection accessor.</param>
+    /// <param name="serviceProvider">The service provider used to resolve optional dialer services.</param>
     /// <param name="sourceOptions">The configured activity batch sources.</param>
     /// <param name="logger">The logger.</param>
     public DefaultContactActivityBatchLoader(
@@ -61,6 +67,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IOmnichannelActivityManager activityManager,
         IStore store,
         IDbConnectionAccessor dbConnectionAccessor,
+        IServiceProvider serviceProvider,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         ILogger<DefaultContactActivityBatchLoader> logger)
     {
@@ -72,6 +79,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _activityManager = activityManager;
         _store = store;
         _dbConnectionAccessor = dbConnectionAccessor;
+        _serviceProvider = serviceProvider;
         _sourceOptions = sourceOptions.Value;
         _logger = logger;
     }
@@ -124,6 +132,55 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             _logger.LogError("Configured subject flow settings are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
             return;
+        }
+
+        DialerProfile dialerProfile = null;
+
+        if (string.Equals(sourceEntry.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(batch.DialerProfileId))
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogError("A dialer profile is required before loading the dialer batch with ID '{BatchId}'.", batch.ItemId);
+                return;
+            }
+
+            var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
+
+            if (dialerProfileManager is null)
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogError("The Contact Center dialer services are not available for the dialer batch with ID '{BatchId}'.", batch.ItemId);
+                return;
+            }
+
+            dialerProfile = await dialerProfileManager.FindByIdAsync(batch.DialerProfileId.Trim(), cancellationToken);
+
+            if (dialerProfile is null)
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogError("Unable to find the dialer profile '{DialerProfileId}' for the dialer batch with ID '{BatchId}'.", batch.DialerProfileId, batch.ItemId);
+                return;
+            }
+
+            if (!string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogError("Dialer batches require a phone subject flow. Batch '{BatchId}' uses channel '{Channel}'.", batch.ItemId, flowSettings.Channel);
+                return;
+            }
         }
 
         long documentId = 0;
@@ -355,14 +412,26 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     : null;
 
                 var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
-
-                activity.Kind = GetActivityKind(flowSettings.Channel);
-                activity.Source = sourceEntry.Source;
-                activity.InteractionType = flowSettings.InteractionType;
-                activity.Channel = flowSettings.Channel;
-                activity.AIProfileId = string.IsNullOrWhiteSpace(batch.AIProfileId)
+                var activitySource = sourceEntry.Source;
+                var campaignId = flowSettings.CampaignId;
+                var interactionType = flowSettings.InteractionType;
+                var aiProfileId = string.IsNullOrWhiteSpace(batch.AIProfileId)
                     ? flowSettings.ProfileId
                     : batch.AIProfileId;
+
+                if (dialerProfile is not null)
+                {
+                    activitySource = DialerActivitySourceHelper.GetActivitySource(dialerProfile.Mode);
+                    campaignId = dialerProfile.CampaignId;
+                    interactionType = ActivityInteractionType.Manual;
+                    aiProfileId = null;
+                }
+
+                activity.Kind = GetActivityKind(flowSettings.Channel);
+                activity.Source = activitySource;
+                activity.InteractionType = interactionType;
+                activity.Channel = flowSettings.Channel;
+                activity.AIProfileId = aiProfileId;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
@@ -375,7 +444,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 }
 
                 activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
-                activity.CampaignId = flowSettings.CampaignId;
+                activity.CampaignId = campaignId;
                 activity.ScheduledUtc = scheduledUtc;
                 if (user is not null)
                 {

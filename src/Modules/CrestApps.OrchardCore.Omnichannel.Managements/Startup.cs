@@ -160,13 +160,7 @@ public sealed class Startup : StartupBase
                 entry.DisplayName = S["Automatic"];
                 entry.Description = S["Loads unassigned activities that AI automation processes through the configured subject flow."];
                 entry.RequiresUserAssignment = false;
-            });
-
-            options.AddSource(ActivitySources.Dialer, entry =>
-            {
-                entry.DisplayName = S["Dialer"];
-                entry.Description = S["Loads unassigned activities that dialers reserve and assign later."];
-                entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
             });
         });
 

@@ -40,6 +40,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string AIProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the user ids.
     /// </summary>
     public string[] UserIds { get; set; }
@@ -170,6 +175,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
             AIProfileId = AIProfileId,
+            DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
             IncludeDoNoSms = IncludeDoNoSms,

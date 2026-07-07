@@ -73,4 +73,9 @@ public sealed class ActivityBatchSourceEntry
     /// Gets or sets a value indicating whether batches from this source require user assignment while loading.
     /// </summary>
     public bool RequiresUserAssignment { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the source should appear in the batch creation picker.
+    /// </summary>
+    public bool ShowInCreationPicker { get; set; } = true;
 }

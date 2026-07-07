@@ -141,6 +141,23 @@ public sealed class BulkActivityAdminFormOptionsProvider
         return options;
     }
 
+    internal async Task<bool> DialerProfileExistsAsync(string dialerProfileId)
+    {
+        if (string.IsNullOrWhiteSpace(dialerProfileId))
+        {
+            return false;
+        }
+
+        var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
+
+        if (dialerProfileManager is null)
+        {
+            return false;
+        }
+
+        return await dialerProfileManager.FindByIdAsync(dialerProfileId.Trim()) is not null;
+    }
+
     private static string GetCampaignText(OmnichannelCampaign campaign)
     {
         return string.IsNullOrWhiteSpace(campaign.DisplayText)

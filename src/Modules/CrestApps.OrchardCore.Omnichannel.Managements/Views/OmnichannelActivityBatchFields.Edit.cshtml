@@ -85,6 +85,19 @@
             </div>
         }
 
+        @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="DialerProfileId" class="ocat-label">@T["Dialer profile"]</label>
+                <div class="ocat-end">
+                    <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select">
+                    </select>
+                    <span asp-validation-for="DialerProfileId" class="text-danger"></span>
+                    <span class="hint">@T["Required. The selected dialer profile controls the outbound dialing mode, queue, and campaign assignment for the loaded activities."]</span>
+                </div>
+            </div>
+        }
+
         <div class="ocat-wrapper">
             <label asp-for="ScheduleAt" class="ocat-label">@T["Schedule at"]</label>
             <div class="ocat-end">
