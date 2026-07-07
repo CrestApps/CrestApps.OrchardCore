@@ -49,15 +49,8 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
         var user = _httpContextAccessor.HttpContext.User;
         var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
 
-        foreach (var tool in _toolDefinitions.Tools)
+        foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            // Exclude system tools — they are auto-included by the orchestrator.
-
-            if (tool.Value.IsSystemTool)
-            {
-                continue;
-            }
-
             // Check if user has access to this tool
 
             if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
@@ -101,7 +94,7 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
         interaction.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
         ? []
-        : _toolDefinitions.Tools.Keys
+        : _toolDefinitions.GetSelectableTools().Keys
             .Intersect(selectedToolKeys)
             .ToList();
 
