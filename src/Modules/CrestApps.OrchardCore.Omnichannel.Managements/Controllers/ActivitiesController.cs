@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -11,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -731,7 +735,7 @@ public sealed class ActivitiesController : Controller
             {
                 var activity = await _omnichannelActivityManager.FindByIdAsync(itemId);
 
-                if (activity is not null && activity.Status == ActivityStatus.NotStated && activity.InteractionType == ActivityInteractionType.Manual)
+                if (IsBulkManageableActivity(activity))
                 {
                     activities.Add(activity);
                 }
@@ -771,6 +775,18 @@ public sealed class ActivitiesController : Controller
 
             case BulkActivityAction.ChangeSubject:
                 processedCount = await BulkChangeSubjectAsync(activities, viewModel.NewSubjectContentType);
+                break;
+
+            case BulkActivityAction.ClearAssignment:
+                processedCount = await BulkClearAssignmentAsync(activities);
+                break;
+
+            case BulkActivityAction.ChangeSource:
+                processedCount = await BulkChangeSourceAsync(activities, viewModel.NewSource, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
+                break;
+
+            case BulkActivityAction.ChangeDialerProfile:
+                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, viewModel.ClearCurrentAssignment);
                 break;
         }
 
@@ -822,6 +838,9 @@ public sealed class ActivitiesController : Controller
             activity.AssignedToId = user.UserId;
             activity.AssignedToUsername = user.UserName;
             activity.AssignedToUtc = now;
+            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+            ClearReservationState(activity);
+            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: true);
 
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
@@ -864,6 +883,7 @@ public sealed class ActivitiesController : Controller
         foreach (var activity in activities)
         {
             activity.Status = ActivityStatus.Purged;
+            ClearReservationState(activity);
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }
@@ -940,6 +960,7 @@ public sealed class ActivitiesController : Controller
             activity.InteractionType = flowSettings.InteractionType;
             activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
             activity.Subject = null;
+            activity.Source = ResolveSourceForChangedSubject(activity.Source, flowSettings.InteractionType);
 
             var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -948,10 +969,170 @@ public sealed class ActivitiesController : Controller
                 activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
             }
 
+            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(
+                activity.InteractionType,
+                hasAssignedUser: !string.IsNullOrEmpty(activity.AssignedToId));
+
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }
 
         return processedCount;
+    }
+
+    private async Task<int> BulkClearAssignmentAsync(List<OmnichannelActivity> activities)
+    {
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            ResetAssignment(activity);
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkChangeSourceAsync(
+        List<OmnichannelActivity> activities,
+        string newSource,
+        ActivityInteractionType? newInteractionType,
+        bool clearCurrentAssignment)
+    {
+        if (string.IsNullOrWhiteSpace(newSource))
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.Source = newSource.Trim();
+
+            if (newInteractionType.HasValue)
+            {
+                activity.InteractionType = newInteractionType.Value;
+
+                if (activity.InteractionType == ActivityInteractionType.Manual)
+                {
+                    activity.AISessionId = null;
+                }
+            }
+
+            if (clearCurrentAssignment)
+            {
+                ResetAssignment(activity);
+            }
+            else if (string.IsNullOrEmpty(activity.AssignedToId))
+            {
+                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+            }
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkChangeDialerProfileAsync(
+        List<OmnichannelActivity> activities,
+        string dialerProfileId,
+        bool clearCurrentAssignment)
+    {
+        if (string.IsNullOrWhiteSpace(dialerProfileId))
+        {
+            return 0;
+        }
+
+        var dialerProfileManager = HttpContext.RequestServices.GetService<IDialerProfileManager>();
+
+        if (dialerProfileManager is null)
+        {
+            return 0;
+        }
+
+        var profile = await dialerProfileManager.FindByIdAsync(dialerProfileId);
+
+        if (profile is null)
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.CampaignId = profile.CampaignId;
+            activity.Source = MapDialerModeToActivitySource(profile.Mode);
+            activity.InteractionType = ActivityInteractionType.Manual;
+            activity.AISessionId = null;
+
+            if (clearCurrentAssignment)
+            {
+                ResetAssignment(activity);
+            }
+            else if (string.IsNullOrEmpty(activity.AssignedToId))
+            {
+                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+            }
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private static bool IsBulkManageableActivity(OmnichannelActivity activity)
+    {
+        return activity is not null &&
+            activity.Status is ActivityStatus.NotStated or ActivityStatus.Scheduled or ActivityStatus.Pending or ActivityStatus.AwaitingAgentResponse or ActivityStatus.Failed or ActivityStatus.Cancelled;
+    }
+
+    private static void ResetAssignment(OmnichannelActivity activity)
+    {
+        activity.AssignedToId = null;
+        activity.AssignedToUsername = null;
+        activity.AssignedToUtc = null;
+        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+        ClearReservationState(activity);
+    }
+
+    private static void ClearReservationState(OmnichannelActivity activity)
+    {
+        activity.ReservationId = null;
+        activity.ReservedById = null;
+        activity.ReservedByUsername = null;
+        activity.ReservedUtc = null;
+        activity.ReservationExpiresUtc = null;
+    }
+
+    private static string ResolveSourceForChangedSubject(string currentSource, ActivityInteractionType interactionType)
+    {
+        if (interactionType == ActivityInteractionType.Automated)
+        {
+            return ActivitySources.Automatic;
+        }
+
+        return string.Equals(currentSource, ActivitySources.Automatic, StringComparison.Ordinal)
+            ? ActivitySources.Manual
+            : currentSource;
+    }
+
+    private static string MapDialerModeToActivitySource(DialerMode mode)
+    {
+        return mode switch
+        {
+            DialerMode.Power => ActivitySources.PowerDial,
+            DialerMode.Progressive => ActivitySources.ProgressiveDial,
+            DialerMode.Predictive => ActivitySources.PredictiveDial,
+            _ => ActivitySources.PreviewDial,
+        };
     }
 }

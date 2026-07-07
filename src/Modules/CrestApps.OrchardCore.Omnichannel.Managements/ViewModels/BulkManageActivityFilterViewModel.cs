@@ -30,6 +30,31 @@ public class BulkManageActivityFilterViewModel
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the source filter.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type filter.
+    /// </summary>
+    public string InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity status filter.
+    /// </summary>
+    public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignment status filter.
+    /// </summary>
+    public string AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign identifier filter.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets the assigned to user IDs filter.
     /// </summary>
     public string[] AssignedToUserIds { get; set; } = [];
@@ -112,6 +137,36 @@ public class BulkManageActivityFilterViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available activity sources.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Sources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available interaction types.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> InteractionTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available activity statuses.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available assignment statuses.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AssignmentStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available campaigns.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Campaigns { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the available urgency levels.

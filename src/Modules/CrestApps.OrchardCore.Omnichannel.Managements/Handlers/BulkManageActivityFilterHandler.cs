@@ -44,6 +44,41 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             builder.WhereAnd($"{col} = @Channel");
         }
 
+        if (!string.IsNullOrEmpty(filter.Source))
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Source))}";
+            builder.Parameters["@Source"] = filter.Source;
+            builder.WhereAnd($"{col} = @Source");
+        }
+
+        if (filter.InteractionType.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.InteractionType))}";
+            builder.Parameters["@InteractionType"] = (int)filter.InteractionType.Value;
+            builder.WhereAnd($"{col} = @InteractionType");
+        }
+
+        if (filter.Status.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status))}";
+            builder.Parameters["@Status"] = (int)filter.Status.Value;
+            builder.WhereAnd($"{col} = @Status");
+        }
+
+        if (filter.AssignmentStatus.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.AssignmentStatus))}";
+            builder.Parameters["@AssignmentStatus"] = (int)filter.AssignmentStatus.Value;
+            builder.WhereAnd($"{col} = @AssignmentStatus");
+        }
+
+        if (!string.IsNullOrEmpty(filter.CampaignId))
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.CampaignId))}";
+            builder.Parameters["@CampaignId"] = filter.CampaignId;
+            builder.WhereAnd($"{col} = @CampaignId");
+        }
+
         if (filter.AssignedToUserIds is { Length: > 0 })
         {
             var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.AssignedToId))}";

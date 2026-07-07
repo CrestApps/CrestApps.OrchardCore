@@ -246,7 +246,7 @@ The scheduled activities list now includes a **Time zone** filter alongside the 
 
 ## Bulk Activity Management
 
-The **Manage Activities** page provides a centralized interface for performing bulk operations on `NotStarted` manual activities.
+The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one.
 
 ### Accessing the page
 
@@ -271,6 +271,11 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Attempts | Select | Filter by the current attempt number. Values `0` and `1` both mean no attempt, and `2` means the second attempt. |
 | Subject | Select | Filter by subject content type |
 | Channel | Select | Filter by communication channel (Phone, SMS, Email) |
+| Source | Select | Filter by activity source such as Manual, Automatic, Dialer, Preview dial, Power dial, or Progressive dial |
+| Interaction type | Select | Filter by manual versus automated activities |
+| Status | Select | Filter by active editable statuses |
+| Assignment status | Select | Filter by unassigned, available, reserved, assigned, in-progress, or released work |
+| Campaign | Select | Filter by campaign |
 | Assigned to users | User picker | Filter by one or more assigned users |
 | Urgency level | Select | Filter by urgency level (Normal, Low, Medium, High, etc.) |
 | Scheduled from | Date | Filter activities scheduled on or after this date |
@@ -299,3 +304,8 @@ The page also includes a **Page size** selector so managers can review more than
 | **Set Instructions** | Set instruction text for all selected activities. Instructions are notes the agent reads before completing the task. |
 | **Set Urgency Level** | Update the urgency level for all selected activities. |
 | **Change Subject** | Change the subject content type for all selected activities. |
+| **Clear Assignment** | Remove the current assignee and clear reservation state so the activity can be re-routed or dialed again. |
+| **Change Source** | Change the activity source and optionally clear assignment and reservation state. This is useful when reclassifying inventory between manual, automatic, and dialer-style workflows. |
+| **Change Dialer Profile** | When the Contact Center dialer feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
+
+Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want to move selected outbound inventory to a different dialer campaign path without recreating the activities.

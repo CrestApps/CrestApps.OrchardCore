@@ -39,4 +39,19 @@ public enum BulkActivityAction
     /// Change the subject content type for all selected activities.
     /// </summary>
     ChangeSubject,
+
+    /// <summary>
+    /// Clear the assigned user and reservation state so the activity can be routed again.
+    /// </summary>
+    ClearAssignment,
+
+    /// <summary>
+    /// Change the activity source and optionally its interaction type.
+    /// </summary>
+    ChangeSource,
+
+    /// <summary>
+    /// Apply a dialer profile to the selected activities.
+    /// </summary>
+    ChangeDialerProfile,
 }

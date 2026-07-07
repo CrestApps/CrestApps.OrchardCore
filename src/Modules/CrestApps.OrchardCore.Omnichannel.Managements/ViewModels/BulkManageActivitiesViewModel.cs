@@ -46,4 +46,24 @@ public sealed class BulkManageActivitiesViewModel
     /// Gets or sets the new subject content type (for ChangeSubject action).
     /// </summary>
     public string NewSubjectContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new activity source (for ChangeSource action).
+    /// </summary>
+    public string NewSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new interaction type (for ChangeSource action).
+    /// </summary>
+    public ActivityInteractionType? NewInteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected dialer profile identifier (for ChangeDialerProfile action).
+    /// </summary>
+    public string NewDialerProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether current assignment and reservation state should be cleared.
+    /// </summary>
+    public bool ClearCurrentAssignment { get; set; }
 }

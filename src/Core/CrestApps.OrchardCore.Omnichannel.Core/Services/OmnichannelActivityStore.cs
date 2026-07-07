@@ -202,12 +202,9 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         sqlBuilder.Selector($"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DocumentId))}");
         sqlBuilder.Table(activityTableName, ActivityAlias, schema);
 
-        // Base conditions: only not-started manual activities.
+        // Base conditions: only editable inventory, excluding completed, purged, and in-flight work.
         var statusCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status))}";
-        var interactionCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.InteractionType))}";
-
-        sqlBuilder.WhereAnd($"{statusCol} = {(int)ActivityStatus.NotStated}");
-        sqlBuilder.WhereAnd($"{interactionCol} = {(int)ActivityInteractionType.Manual}");
+        sqlBuilder.WhereAnd($"{statusCol} IN ({(int)ActivityStatus.NotStated}, {(int)ActivityStatus.Scheduled}, {(int)ActivityStatus.Pending}, {(int)ActivityStatus.AwaitingAgentResponse}, {(int)ActivityStatus.Failed}, {(int)ActivityStatus.Cancelled})");
 
         // Default ordering.
         var scheduledCol = $"{dialect.QuoteForAliasName(ActivityAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.ScheduledUtc))}";

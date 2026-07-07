@@ -92,6 +92,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<BulkManageActivityFilter, BulkManageActivityFilterDisplayDriver>()
             .AddScoped<IBulkManageActivityFilterHandler, BulkManageActivityFilterHandler>();
 
+        services.AddScoped<BulkActivityAdminFormOptionsProvider>();
+
         services
             .AddDisplayDriver<BulkManageOmnichannelActivityContainer, BulkManageActivityActionsDisplayDriver>();
 

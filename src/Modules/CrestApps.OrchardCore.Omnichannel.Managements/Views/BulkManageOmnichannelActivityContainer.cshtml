@@ -95,6 +95,17 @@
         var bulkActionInput = document.getElementById('BulkAction');
         var bulkActionTitle = document.getElementById('bulk-action-title');
         var dropdownItems = document.querySelectorAll('.bulk-action-item');
+        var togglePanelInputs = function (activePanel) {
+            document.querySelectorAll('.bulk-action-param').forEach(function (panel) {
+                var isActive = panel === activePanel;
+
+                panel.querySelectorAll('input, select, textarea, button').forEach(function (input) {
+                    input.disabled = !isActive;
+                });
+            });
+        };
+
+        togglePanelInputs(null);
 
         dropdownItems.forEach(function (item) {
             item.addEventListener('click', function () {
@@ -110,11 +121,15 @@
                 if (paramPanel) {
                     paramPanel.classList.remove('d-none');
                     bulkActionParams.classList.remove('d-none');
+                    togglePanelInputs(paramPanel);
                 } else if (action === 'Purge') {
+                    togglePanelInputs(null);
                     bulkActionInput.value = action;
                     document.querySelector('[name="submit.BulkAction"]').click();
 
                     return;
+                } else {
+                    togglePanelInputs(null);
                 }
 
                 bulkActionInput.value = action;

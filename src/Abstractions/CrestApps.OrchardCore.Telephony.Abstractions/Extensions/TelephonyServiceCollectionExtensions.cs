@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace CrestApps.OrchardCore.Telephony.Extensions;
 
 /// <summary>
 /// Provides extension methods to register telephony providers with the dependency injection container.

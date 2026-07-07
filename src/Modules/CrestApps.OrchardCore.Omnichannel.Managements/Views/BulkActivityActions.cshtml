@@ -37,6 +37,12 @@
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.SetInstructions)" data-title="@T["Set instructions"]">@T["Set Instructions"]</a></li>
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.SetUrgencyLevel)" data-title="@T["Set urgency level"]">@T["Set Urgency Level"]</a></li>
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSubject)" data-title="@T["Change subject"]">@T["Change Subject"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ClearAssignment)" data-title="@T["Clear assignment"]">@T["Clear Assignment"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSource)" data-title="@T["Change activity source"]">@T["Change Source"]</a></li>
+                        @if (Model.DialerProfileOptions.Count() > 1)
+                        {
+                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeDialerProfile)" data-title="@T["Change dialer profile"]">@T["Change Dialer Profile"]</a></li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -114,6 +120,63 @@
                             <option value="@subjectType.Value">@subjectType.Text</option>
                         }
                     </select>
+                </div>
+            </div>
+
+            @* Clear Assignment Parameters *@
+            <div id="params-ClearAssignment" class="bulk-action-param d-none">
+                <div class="alert alert-warning mb-0">
+                    @T["This removes the current assignee and any reservation state so the selected activities can be routed or dialed again."]
+                </div>
+            </div>
+
+            @* Change Source Parameters *@
+            <div id="params-ChangeSource" class="bulk-action-param d-none">
+                <div class="mb-3">
+                    <label class="form-label">@T["New source"]</label>
+                    <select name="NewSource" class="form-select">
+                        @foreach (var source in Model.SourceOptions)
+                        {
+                            <option value="@source.Value">@source.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">@T["Interaction type"]</label>
+                    <select name="NewInteractionType" class="form-select">
+                        @foreach (var interactionType in Model.InteractionTypeOptions)
+                        {
+                            <option value="@interactionType.Value">@interactionType.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="clear-assignment-for-source" name="ClearCurrentAssignment" value="true" checked>
+                    <label class="form-check-label" for="clear-assignment-for-source">
+                        @T["Clear assignment and reservation state"]
+                    </label>
+                </div>
+            </div>
+
+            @* Change Dialer Profile Parameters *@
+            <div id="params-ChangeDialerProfile" class="bulk-action-param d-none">
+                <div class="mb-3">
+                    <label class="form-label">@T["Dialer profile"]</label>
+                    <select name="NewDialerProfileId" class="form-select">
+                        @foreach (var profile in Model.DialerProfileOptions)
+                        {
+                            <option value="@profile.Value">@profile.Text</option>
+                        }
+                    </select>
+                    <div class="form-text">
+                        @T["Applying a dialer profile updates the activity campaign and dialer source to match that profile."]
+                    </div>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="clear-assignment-for-profile" name="ClearCurrentAssignment" value="true" checked>
+                    <label class="form-check-label" for="clear-assignment-for-profile">
+                        @T["Clear assignment and reservation state"]
+                    </label>
                 </div>
             </div>
 

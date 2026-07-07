@@ -78,6 +78,26 @@
     </div>
 
     <div class="col-lg-3">
+        <select asp-for="Source" asp-items="Model.Sources" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="Status" asp-items="Model.Statuses" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="AssignmentStatus" asp-items="Model.AssignmentStatuses" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
+    </div>
+
+    <div class="col-lg-3">
         <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
     </div>
 

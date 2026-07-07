@@ -18,6 +18,21 @@ public class BulkActivityActionsViewModel
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the available activity sources for the bulk action.
+    /// </summary>
+    public IEnumerable<SelectListItem> SourceOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available interaction types for the bulk action.
+    /// </summary>
+    public IEnumerable<SelectListItem> InteractionTypeOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available dialer profiles for the bulk action.
+    /// </summary>
+    public IEnumerable<SelectListItem> DialerProfileOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the user search endpoint URL.
     /// </summary>
     public string UserSearchEndpoint { get; set; }
