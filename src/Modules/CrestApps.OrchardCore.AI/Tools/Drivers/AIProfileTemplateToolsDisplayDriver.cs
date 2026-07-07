@@ -50,13 +50,8 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
         var user = _httpContextAccessor.HttpContext.User;
         var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
 
-        foreach (var tool in _toolDefinitions.Tools)
+        foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (tool.Value.IsSystemTool)
-            {
-                continue;
-            }
-
             if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
                 accessibleTools[tool.Key] = tool.Value;
@@ -108,7 +103,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
         }
         else
         {
-            metadata.ToolNames = _toolDefinitions.Tools.Keys
+            metadata.ToolNames = _toolDefinitions.GetSelectableTools().Keys
                 .Intersect(selectedToolKeys)
                 .ToArray();
         }

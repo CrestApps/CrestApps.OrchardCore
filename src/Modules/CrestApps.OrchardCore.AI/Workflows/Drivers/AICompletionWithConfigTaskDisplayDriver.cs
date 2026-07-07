@@ -78,8 +78,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
         var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            model.Tools = _toolDefinitions.Tools
-            .Where(tool => !tool.Value.IsSystemTool)
+            model.Tools = _toolDefinitions.GetSelectableTools()
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
             .OrderBy(group => group.Key)
             .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
@@ -150,7 +149,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             }
             else
             {
-                activity.ToolNames = _toolDefinitions.Tools.Keys
+                activity.ToolNames = _toolDefinitions.GetSelectableTools().Keys
                     .Intersect(selectedToolKeys)
                     .ToArray();
             }
