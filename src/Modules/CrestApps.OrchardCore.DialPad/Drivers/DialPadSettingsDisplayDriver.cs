@@ -76,7 +76,7 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
             model.HasApiToken = !string.IsNullOrEmpty(settings.ApiToken);
             model.HasClientSecret = !string.IsNullOrEmpty(settings.ClientSecret);
             model.HasWebhookSigningSecret = !string.IsNullOrEmpty(settings.WebhookSigningSecret);
-        }).Location("Content:10#DialPad;15")
+        }).Location("Content:10#DialPad")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
     }

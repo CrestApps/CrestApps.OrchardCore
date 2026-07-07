@@ -83,10 +83,10 @@ When an activity is completed, the user selects a disposition and is shown a pre
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
-### Activity Batch
-An **Activity Batch** defines filters to find contacts and then **loads activities in the background**.
+### Load Inventory
+A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 
-The batch loader runs as a background process to avoid overloading the system and to allow loading large contact lists safely.
+The loader runs as a background process to avoid overloading the system and to allow loading large inventory sets safely.
 
 ## Getting started (recommended order)
 
@@ -175,7 +175,7 @@ After creating your subject content types and campaigns, go to `Interaction Cent
 6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, no-response timeout, response delay, and opt-out keyword fields.
 7. Save the subject flow.
 
-Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, batch loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
+Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, inventory loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
 
 ### 7) Manage Flow
 
@@ -197,25 +197,25 @@ After saving the subject flow, click **Manage Flow** from the `Subject Flows` li
 
 Subjects without any actions show a **Missing flow** badge in the Subject Flows list so you can find incomplete setups quickly.
 
-### 8) Create and Load an Activity Batch
+### 8) Create and Load Inventory
 
-1. Go to `Interaction Center` → `Activity Batches`.
-2. Click **Add Activity Batch** and choose a source:
+1. Go to `Interaction Center` → `Load Inventory`.
+2. Click **Add Inventory Load** and choose a source:
    - **Manual** loads activities assigned to the selected users immediately.
-   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the batch is created.
-3. Create the new batch:
+   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
+3. Create the inventory load:
    - Select contact type
    - Select subject type
-   - For **Dialer** batches, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
+   - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
    - Assign users when the selected source requires assignment.
    - Optionally set lead created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
-The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual batches assign each created activity to a selected user. Dialer batches require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
+The inventory load runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
 
-### Extending activity batch sources
+### Extending inventory load sources
 
-Activity batch loading is extensible. Each batch has a **source**, and the source controls how the batch resolves and loads activities. There are two layers of extensibility:
+Inventory loading is extensible. Each inventory load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:
 
 1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, whether the source requires user assignment, and whether it should appear in the creation picker. Display drivers can add source-specific editor sections.
 
@@ -225,7 +225,7 @@ Activity batch loading is extensible. Each batch has a **source**, and the sourc
    services.AddScoped<IActivityBatchLoader, MyCustomActivityBatchLoader>();
    ```
 
-When a batch is loaded, the `IActivityBatchLoadCoordinator` transitions the batch to the loading state, resolves the loader whose `Source` matches the batch source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the batch contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the batch to the `New` state so it can be retried.
+When an inventory load is started, the `IActivityBatchLoadCoordinator` transitions it to the loading state, resolves the loader whose `Source` matches the selected source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the inventory load's contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the inventory load to the `New` state so it can be retried.
 
 ### 9) Complete Activities
 

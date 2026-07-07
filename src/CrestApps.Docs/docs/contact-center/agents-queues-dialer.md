@@ -13,7 +13,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | --- | --- | --- |
 | Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in. |
 | Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, reservations, policy-based routing, and availability-based assignment. |
-| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer activity batches routed through Contact Center Voice. |
+| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer inventory loads routed through Contact Center Voice. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Reports area under Interaction Center with call insights, agent productivity, queue usage, and campaign/subject progress reports plus CSV exports. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the Contact Center voice provider boundary. |
@@ -74,7 +74,7 @@ Assignment is concurrency-safe. Each queue's assignment runs under a per-queue d
 
 ## Dialer
 
-A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, batches, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Power and progressive profiles run automatically each minute: the Contact Center reserves an available agent, evaluates the compliance gate, creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call. Manual and preview profiles wait for agent action. Dialer activity batches load **unassigned** inventory the dialer reserves later.
+A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, inventory definitions, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Power and progressive profiles run automatically each minute: the Contact Center reserves an available agent, evaluates the compliance gate, creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call. Manual and preview profiles wait for agent action. Dialer inventory loads load **unassigned** inventory the dialer reserves later.
 
 ### Dialing modes and safety
 

@@ -10,14 +10,14 @@ description: A reusable reporting framework for OrchardCore with a shared admin 
 | **Feature Name** | Reports |
 | **Feature ID** | `CrestApps.OrchardCore.Reports` |
 
-The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, and bars), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md) and [Omnichannel](../omnichannel/index.md) CRM contribute their reports through this framework so every report looks and behaves the same.
+The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, and bars), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same.
 
 | | |
 | --- | --- |
 | **Add-on Feature Name** | Reports (OpenXml) |
 | **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.OpenXml` |
 
-The optional **Reports (OpenXml)** add-on extends the Reports area with Excel workbook (`.xlsx`) exports using the `DocumentFormat.OpenXml` library. When the add-on is enabled, report pages show an additional export button alongside CSV.
+The optional **Reports (OpenXml)** add-on extends the Reports area with Excel workbook (`.xlsx`) exports using the `DocumentFormat.OpenXml` library. When the add-on is enabled alongside other exporters, report pages collapse those formats into a single **Export** dropdown so operators can choose the file type they want.
 
 The implementation is split into three layers:
 
@@ -34,7 +34,7 @@ The implementation is split into three layers:
 
 ## Reports area
 
-Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are grouped by their category, and each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and one export button per enabled format so the current filter can be downloaded as CSV and, when the add-on is enabled, Excel (`.xlsx`).
+Enabling the feature adds a top-level **Reports** item to the admin menu. Reports with a category are grouped under that heading, while uncategorized reports appear directly under **Reports**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
 ## Extensible filters
 
@@ -98,4 +98,4 @@ services.AddScoped<IReport, MyReport>();
 }
 ```
 
-Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports. The base Reports feature is enabled automatically when you enable a feature that contributes reports, such as **Contact Center Reports & Analytics** or **Omnichannel Reports**.
+Enable `CrestApps.OrchardCore.Reports.OpenXml` only when you want Excel workbook exports. The base Reports feature is enabled automatically when you enable **Contact Center Reports & Analytics**. Enabled modules such as **Omnichannel Management** and **Phone Number Verifications** also contribute their reports automatically once `CrestApps.OrchardCore.Reports` is enabled.

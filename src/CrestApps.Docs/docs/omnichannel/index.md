@@ -49,7 +49,7 @@ Provider-specific integrations can forward inbound events into this endpoint.
 
 ## Reports
 
-When the **Omnichannel Reports** feature (`CrestApps.OrchardCore.Omnichannel.Reports`) is enabled, CRM
+When **Omnichannel Management** and the shared **Reports** feature (`CrestApps.OrchardCore.Reports`) are enabled, CRM
 reports are contributed to the reusable [Reports](../modules/reports.md) framework and appear under the
 top-level admin **Reports** menu (grouped under **CRM**). Each report shares the standard from/to
 date-range filter and a CSV export.

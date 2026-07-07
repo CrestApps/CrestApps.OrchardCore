@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
-using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.TimeZones;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -31,17 +30,5 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Users",
         TimeZonesConstants.Features.Area,
         "CrestApps.OrchardCore.Users",
-    ]
-)]
-
-[assembly: Feature(
-    Name = "Omnichannel Reports",
-    Id = OmnichannelConstants.Features.Reports,
-    Category = "Communication",
-    Description = "Adds Omnichannel CRM reports (activity summary, campaign performance, and disposition breakdown) to the admin Reports area.",
-    Dependencies =
-    [
-        OmnichannelConstants.Features.Managements,
-        ReportsConstants.Feature,
     ]
 )]

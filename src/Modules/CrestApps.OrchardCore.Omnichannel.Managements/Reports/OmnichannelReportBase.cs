@@ -7,7 +7,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
 /// <summary>
-/// Provides the shared category and permission for the Omnichannel CRM reports contributed to the admin
+/// Provides the shared category and permission for the Omnichannel reports contributed to the admin
 /// Reports area.
 /// </summary>
 public abstract class OmnichannelReportBase : IReport
@@ -36,7 +36,7 @@ public abstract class OmnichannelReportBase : IReport
     public abstract LocalizedString Description { get; }
 
     /// <inheritdoc/>
-    public string Category => ReportsConstants.Categories.Crm;
+    public string Category => ReportsConstants.Categories.Omnichannel;
 
     /// <inheritdoc/>
     public Permission Permission => OmnichannelConstants.Permissions.ViewReports;

@@ -68,7 +68,7 @@ Use this checklist before publishing a new inbound line:
 Use CRM campaigns and activities as the source of outbound work; the dialer profile only controls execution.
 
 1. Create the campaign and Subject Flow in Omnichannel. Configure dispositions and subject actions first so every outcome has a business result.
-2. Load activities through an Activity Batch. Choose a dialer source for dialer inventory so activities are loaded unassigned and available for reservation.
+2. Load activities through **Load Inventory**. Choose a dialer source for dialer inventory so activities are loaded unassigned and available for reservation.
 3. Create a dialer profile that points to the campaign, queue, voice provider, dialing mode, pacing, and compliance settings.
 4. Confirm do-not-call, retry delay, calling window, and national registry settings before enabling an automated mode.
 5. For callbacks, schedule a callback request with the destination, due time, queue, and notes. The callback dispatcher promotes due callbacks into outbound callback activities and enqueues them when a queue is set.

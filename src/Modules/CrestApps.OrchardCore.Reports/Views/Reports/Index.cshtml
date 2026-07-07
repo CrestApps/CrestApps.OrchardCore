@@ -11,7 +11,11 @@ else
 {
     @foreach (var group in Model.Reports.GroupBy(report => report.Category ?? string.Empty))
     {
-        <h2 class="h4 mt-3">@(string.IsNullOrEmpty(group.Key) ? T["General"].Value : group.Key)</h2>
+        @if (!string.IsNullOrEmpty(group.Key))
+        {
+            <h2 class="h4 mt-3">@group.Key</h2>
+        }
+
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-3">
             @foreach (var report in group)
             {

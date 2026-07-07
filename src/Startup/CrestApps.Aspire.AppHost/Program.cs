@@ -17,10 +17,17 @@ ollama.AddModel(ollamaModelName);
 
 var redis = builder.AddRedis("Redis");
 
+var asterisk = builder.AddContainer("Asterisk", "andrius/asterisk", "latest")
+    .WithHttpEndpoint(port: 8088, targetPort: 8088, name: "HttpAsterisk")
+    .WithBindMount("Asterisk/http.conf", "/etc/asterisk/http.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/ari.conf", "/etc/asterisk/ari.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/extensions.conf", "/etc/asterisk/extensions.conf", isReadOnly: true);
+
 var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
 // .WithReference(redis)
 // .WithReference(ollama)
 // .WaitFor(redis)
+// .WaitFor(asterisk)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
     .WithEnvironment((options) =>
     {
@@ -59,6 +66,14 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__McpServer__AuthenticationType", "None");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__AuthenticationType", "None");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__ExposeAgentsAsSkill", "false");
+
+        // Configure the configuration-backed default Asterisk telephony provider.
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__BaseUrl", "http://localhost:8088/ari/");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__UserName", "crestapps");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__Password", "crestapps-dev");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__ApplicationName", "crestapps-telephony");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate", "Local/{number}@default");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds", "30");
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")

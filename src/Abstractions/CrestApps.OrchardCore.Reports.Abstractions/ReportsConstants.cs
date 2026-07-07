@@ -31,9 +31,9 @@ public static class ReportsConstants
     public static class Categories
     {
         /// <summary>
-        /// The customer relationship management report category.
+        /// The Omnichannel report category.
         /// </summary>
-        public const string Crm = "CRM";
+        public const string Omnichannel = "Omnichannel";
 
         /// <summary>
         /// The contact center report category.

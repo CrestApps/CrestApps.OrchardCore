@@ -244,7 +244,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             if (flowSettings is null)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activity batches can load activities."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before inventory loads can load activities."]);
             }
         }
 
@@ -262,7 +262,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             if (string.IsNullOrWhiteSpace(model.DialerProfileId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer activity batches."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer inventory loads."]);
             }
             else if (!await _optionsProvider.DialerProfileExistsAsync(model.DialerProfileId))
             {
@@ -286,7 +286,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             flowSettings?.Channel is not null &&
             !string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Dialer activity batches require a subject flow that uses the Phone channel."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Dialer inventory loads require a subject flow that uses the Phone channel."]);
         }
 
         var selectedAIProfileId = string.IsNullOrWhiteSpace(model.AIProfileId)
@@ -297,7 +297,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             if (string.IsNullOrWhiteSpace(selectedAIProfileId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["AI profile is required for automatic activity batches."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["AI profile is required for automatic inventory loads."]);
             }
             else
             {

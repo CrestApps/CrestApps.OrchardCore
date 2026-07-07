@@ -38,7 +38,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 3. Create a chat AI profile with **Add initial prompt** enabled. The profile's initial prompt is sent as the first outbound SMS message that starts the conversation.
 4. If the AI feature is enabled, select that initial-prompt chat profile on the subject flow, then configure the subject goal, update permissions, no-response timeout, response delay, and opt-out keywords.
 5. Configure your SMS provider webhook to deliver inbound SMS messages to Orchard Core.
-6. Load activities via Activity Batches using the **Automatic** source.
+6. Load activities via **Load Inventory** using the **Automatic** source.
 7. The Automated Activities Processor will run in the background and let AI handle the assigned SMS interactions.
 
 ## Automated SMS behavior

@@ -1,0 +1,55 @@
+using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Options;
+
+namespace CrestApps.OrchardCore.Tests.Telephony;
+
+public sealed class AsteriskProviderOptionsConfigurationsTests
+{
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Configure_RegistersTenantAsteriskProvider_WithEnabledStateFromSettings(bool enabled)
+    {
+        // Arrange
+        var siteService = SiteServiceFactory.Create(new AsteriskSettings { IsEnabled = enabled });
+        var configuration = new AsteriskProviderOptionsConfigurations(
+            siteService,
+            Options.Create(new DefaultAsteriskOptions()));
+        var options = new TelephonyProviderOptions();
+
+        // Act
+        configuration.Configure(options);
+
+        // Assert
+        Assert.True(options.Providers.ContainsKey(AsteriskConstants.ProviderTechnicalName));
+
+        var typeOptions = options.Providers[AsteriskConstants.ProviderTechnicalName];
+        Assert.Equal(typeof(AsteriskTelephonyProvider), typeOptions.Type);
+        Assert.Equal(enabled, typeOptions.IsEnabled);
+    }
+
+    [Fact]
+    public void Configure_WhenDefaultAsteriskIsConfigured_RegistersDefaultProvider()
+    {
+        // Arrange
+        var siteService = SiteServiceFactory.Create(new AsteriskSettings());
+        var configuration = new AsteriskProviderOptionsConfigurations(
+            siteService,
+            Options.Create(new DefaultAsteriskOptions { IsEnabled = true }));
+        var options = new TelephonyProviderOptions();
+
+        // Act
+        configuration.Configure(options);
+
+        // Assert
+        Assert.True(options.Providers.ContainsKey(AsteriskConstants.DefaultProviderTechnicalName));
+
+        var typeOptions = options.Providers[AsteriskConstants.DefaultProviderTechnicalName];
+        Assert.Equal(typeof(DefaultAsteriskTelephonyProvider), typeOptions.Type);
+        Assert.True(typeOptions.IsEnabled);
+    }
+}

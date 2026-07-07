@@ -220,9 +220,9 @@ public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBas
 }
 
 /// <summary>
-/// Registers the Omnichannel CRM reports contributed to the admin Reports area.
+/// Registers the Omnichannel reports contributed to the admin Reports area.
 /// </summary>
-[Feature(OmnichannelConstants.Features.Reports)]
+[RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

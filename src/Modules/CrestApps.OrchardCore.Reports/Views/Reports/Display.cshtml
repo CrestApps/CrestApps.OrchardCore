@@ -18,11 +18,31 @@
                     </button>
                 </div>
                 <div class="col-auto p-1">
-                    @foreach (var exportFormat in Model.ExportFormats)
+                    @if (Model.ExportFormats.Count == 1)
                     {
-                        <button type="submit" class="btn btn-outline-secondary me-2" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
+                        var exportFormat = Model.ExportFormats[0];
+
+                        <button type="submit" class="btn btn-outline-secondary" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
                             <i class="fa-solid fa-download"></i> @T["Export {0}", exportFormat.DisplayName]
                         </button>
+                    }
+                    else if (Model.ExportFormats.Count > 1)
+                    {
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="report-export-menu-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa-solid fa-download"></i> @T["Export"]
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="report-export-menu-button">
+                                @foreach (var exportFormat in Model.ExportFormats)
+                                {
+                                    <li>
+                                        <button type="submit" class="dropdown-item" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
+                                            @T["Export {0}", exportFormat.DisplayName]
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     }
                 </div>
             </div>

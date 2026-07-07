@@ -36,7 +36,7 @@ TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolve
   A provider module depends only on this package.
 - **`CrestApps.OrchardCore.Telephony`** contains the `TelephonyHub`, the default service and resolver
   implementations, the site settings, and the soft phone widget.
-- A **provider module** (such as DialPad) implements `ITelephonyProvider` and registers itself as a
+- A **provider module** (such as DialPad or Asterisk) implements `ITelephonyProvider` and registers itself as a
   selectable provider.
 
 ## The provider contract
@@ -295,4 +295,4 @@ To add a new provider:
    `ITelephonyAuthenticationService`. Providers that only use a shared account key do not implement
    this interface.
 
-See the [DialPad](dialpad) provider for a complete example.
+See the [DialPad](dialpad) and [Asterisk](asterisk) providers for complete examples.

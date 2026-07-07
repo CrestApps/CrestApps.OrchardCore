@@ -25,13 +25,13 @@
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
     <div class="alert alert-info" role="alert">
-        @T["You cannot change the settings of an activity batch once it has started loading. If you need to change any of these settings, please create a new activity batch."]
+        @T["You cannot change the settings of an inventory load once it has started loading. If you need to change any of these settings, please create a new inventory load."]
     </div>
 }
 
 <div class="card mb-3">
     <div class="card-header">
-        @T["Batch settings"]
+        @T["Inventory load settings"]
     </div>
     <div class="card-body">
         <input asp-for="Source" type="hidden" />
