@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>[3.0.0, )</OrchardCoreVersion>
-    <CrestAppsCoreVersion>1.0.0-preview.163</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview.168</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>1.4.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -19,6 +19,7 @@
     <PackageVersion Include="NodaTime" Version="3.3.2" />
     <PackageVersion Include="NLog" Version="6.1.3" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.1.3" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.6.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />

@@ -26,8 +26,8 @@ public sealed class AIDataSourceOptionsRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton(CreateSiteService(settings));
 
-        new CrestApps.OrchardCore.AI.DataSources.Startup().ConfigureServices(services);
-        new CrestApps.OrchardCore.AI.DataSources.AzureAI.Startup(Mock.Of<IStringLocalizer<CrestApps.OrchardCore.AI.DataSources.AzureAI.Startup>>())
+        new OrchardCore.AI.DataSources.Startup().ConfigureServices(services);
+        new OrchardCore.AI.DataSources.AzureAI.Startup(Mock.Of<IStringLocalizer<OrchardCore.AI.DataSources.AzureAI.Startup>>())
             .ConfigureServices(services);
 
         using var serviceProvider = services.BuildServiceProvider();

@@ -1,0 +1,55 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model EditAIDataSourceExternalFieldsViewModel
+
+<div data-ai-data-source-external-fields hidden>
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["Field Mapping"]</legend>
+        <div class="ocat-end">
+            <div class="mb-3">
+                <label asp-for="ContentFieldName" class="form-label">@T["Content field"]</label>
+                @if (Model.IsConfigurationLocked)
+                {
+                    <input type="text" class="form-control" value="@Model.ContentFieldName" readonly />
+                    <input type="hidden" asp-for="ContentFieldName" />
+                }
+                else
+                {
+                    <input asp-for="ContentFieldName" class="form-control" />
+                }
+                <span asp-validation-for="ContentFieldName" class="text-danger"></span>
+                <span class="hint">@T["The source field that maps to the document content (text)."]</span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TitleFieldName" class="form-label">@T["Title field"]</label>
+                @if (Model.IsConfigurationLocked)
+                {
+                    <input type="text" class="form-control" value="@Model.TitleFieldName" readonly />
+                    <input type="hidden" asp-for="TitleFieldName" />
+                }
+                else
+                {
+                    <input asp-for="TitleFieldName" class="form-control" />
+                }
+                <span asp-validation-for="TitleFieldName" class="text-danger"></span>
+                <span class="hint">@T["The source field that maps to the document title (optional)."]</span>
+            </div>
+
+            <div class="mb-0">
+                <label asp-for="KeyFieldName" class="form-label">@T["Key field"]</label>
+                @if (Model.IsConfigurationLocked)
+                {
+                    <input type="text" class="form-control" value="@Model.KeyFieldName" readonly />
+                    <input type="hidden" asp-for="KeyFieldName" />
+                }
+                else
+                {
+                    <input asp-for="KeyFieldName" class="form-control" />
+                }
+                <span asp-validation-for="KeyFieldName" class="text-danger"></span>
+                <span class="hint">@T["The source field used as the document reference ID in citations. Leave empty only when the source type can supply a stable native document ID."]</span>
+            </div>
+        </div>
+    </fieldset>
+</div>

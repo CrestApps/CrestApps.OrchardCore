@@ -1,7 +1,9 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Core;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
@@ -38,6 +41,12 @@ public sealed class Startup : StartupBase
         services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreAzureAISearchDataSourceDocumentReader>(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
+        services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
+        services.AddKeyedScoped<IAIDataSourceSourceHandler, AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
+        services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
+            AIDataSourceSourceTypes.AzureAISearch,
+            S["Azure AI Search"],
+            S["Read source documents from an external Azure AI Search index using explicit connection settings."]));
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

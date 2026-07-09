@@ -1,6 +1,7 @@
 #pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
 
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -26,6 +27,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Migrations;
 internal sealed class DataSourceMetadataMigrations : DataMigration
 {
     private const string LegacyKey = "AIProfileDataSourceMetadata";
+    private const string LegacySourceMetadataKey = "AIDataSourceSourceMetadata";
     private const string NewKey = nameof(DataSourceMetadata);
     private const int _batchSize = 50;
     private const string _legacyDocumentTypePrefix =
@@ -50,12 +52,12 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 3;
+            return 4;
         }
 
         ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -65,12 +67,12 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 2;
+            return 4;
         }
 
         ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
-        return 2;
+        return 4;
     }
 
     /// <summary>
@@ -80,18 +82,34 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 3;
+            return 4;
         }
 
         ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
-        return 3;
+        return 4;
+    }
+
+    /// <summary>
+    /// Updates the from3.
+    /// </summary>
+    public int UpdateFrom3()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 4;
+        }
+
+        ShellScope.AddDeferredTask(scope => BackfillSourceTypesAsync(scope.ServiceProvider));
+
+        return 4;
     }
 
     private static async Task MigrateLegacyDataSourcesAsync(IServiceProvider serviceProvider)
     {
         await ImportLegacyDataSourcesAsync(serviceProvider);
         await MigrateLegacyProfileMetadataAsync(serviceProvider);
+        await BackfillSourceTypesAsync(serviceProvider);
     }
 
     private static async Task ImportLegacyDataSourcesAsync(IServiceProvider serviceProvider)
@@ -379,5 +397,33 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding deployment.");
 
         return new DataSourceIndexProfileMetadata();
+    }
+
+    private static async Task BackfillSourceTypesAsync(IServiceProvider serviceProvider)
+    {
+        var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
+        var dataSources = await dataSourceManager.GetAllAsync();
+
+        foreach (var dataSource in dataSources)
+        {
+            if (!string.IsNullOrWhiteSpace(dataSource.SourceType))
+            {
+                continue;
+            }
+
+            var sourceType = AIDataSourceSourceTypes.SearchIndexProfile;
+
+            if (dataSource.Properties is not null &&
+                dataSource.Properties.TryGetValue(LegacySourceMetadataKey, out var legacySourceMetadata) &&
+                legacySourceMetadata is JsonObject metadataObject &&
+                metadataObject[nameof(AIDataSource.SourceType)]?.GetValue<string>() is { Length: > 0 } legacySourceType)
+            {
+                sourceType = legacySourceType;
+                dataSource.Properties.Remove(LegacySourceMetadataKey);
+            }
+
+            dataSource.SourceType = sourceType;
+            await dataSourceManager.UpdateAsync(dataSource);
+        }
     }
 }

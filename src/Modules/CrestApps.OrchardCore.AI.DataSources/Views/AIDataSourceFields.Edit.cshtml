@@ -10,39 +10,23 @@
     </div>
 </div>
 
-@if (Model.IsLocked)
+@if (Model.IsConfigurationLocked)
 {
     <div class="ocat-wrapper">
         <div class="ocat-end-offset">
             <div class="alert alert-info mb-0">
-                @T["The index configuration is locked. To change the index or field mappings, delete this data source and create a new one."]
+                @T["The source type, knowledge base index, and field mappings are locked. Delete this data source and create a new one to change that structure."]
             </div>
         </div>
     </div>
 }
 
-<div class="ocat-wrapper">
-    <label asp-for="SourceIndexProfileName" class="ocat-label">@T["Source index"]</label>
-    <div class="ocat-end">
-        @if (Model.IsLocked)
-        {
-            <input type="text" class="form-control" value="@Model.SourceIndexProfileName" readonly />
-            <input type="hidden" asp-for="SourceIndexProfileName" />
-        }
-        else
-        {
-            <select asp-for="SourceIndexProfileName" asp-items="Model.SourceIndexProfileNames" class="form-select" id="sourceIndexSelect">
-                <option value="">@T["Select an index"]</option>
-            </select>
-        }
-        <span class="hint">@T["The index to use as a data source for querying."]</span>
-    </div>
-</div>
+<input type="hidden" asp-for="SourceType" id="ai-data-source-source-type" />
 
 <div class="ocat-wrapper">
     <label asp-for="AIKnowledgeBaseIndexProfileName" class="ocat-label">@T["Knowledge base index"]</label>
     <div class="ocat-end">
-        @if (Model.IsLocked)
+        @if (Model.IsConfigurationLocked)
         {
             <input type="text" class="form-control" value="@Model.AIKnowledgeBaseIndexProfileName" readonly />
             <input type="hidden" asp-for="AIKnowledgeBaseIndexProfileName" />
@@ -63,156 +47,29 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="ContentFieldName" class="ocat-label">@T["Content field"]</label>
-    <div class="ocat-end">
-        @if (Model.IsLocked)
-        {
-            <input type="text" class="form-control" value="@Model.ContentFieldName" readonly />
-            <input type="hidden" asp-for="ContentFieldName" />
-        }
-        else
-        {
-            <select asp-for="ContentFieldName" class="form-select field-mapping-select" id="contentFieldSelect" disabled>
-                <option value="">@T["Select an index first"]</option>
-                @if (Model.FieldNames?.Any() == true)
-                {
-                    @foreach (var field in Model.FieldNames)
-                    {
-                        <option value="@field.Value" selected="@(field.Value == Model.ContentFieldName)">@field.Text</option>
-                    }
-                }
-            </select>
-        }
-        <span class="hint">@T["The source index field that maps to the document content (text)."]</span>
-    </div>
-</div>
+<span asp-validation-for="SourceType" class="text-danger"></span>
 
-<div class="ocat-wrapper">
-    <label asp-for="TitleFieldName" class="ocat-label">@T["Title field"]</label>
-    <div class="ocat-end">
-        @if (Model.IsLocked)
-        {
-            <input type="text" class="form-control" value="@Model.TitleFieldName" readonly />
-            <input type="hidden" asp-for="TitleFieldName" />
+<script asp-name="ai-data-source-type-toggle" at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var sourceTypeSelect = document.getElementById('ai-data-source-source-type');
+
+        if (!sourceTypeSelect) {
+            return;
         }
-        else
-        {
-            <select asp-for="TitleFieldName" class="form-select field-mapping-select" id="titleFieldSelect" disabled>
-                <option value="">@T["Select an index first"]</option>
-                @if (Model.FieldNames?.Any() == true)
-                {
-                    @foreach (var field in Model.FieldNames)
-                    {
-                        <option value="@field.Value" selected="@(field.Value == Model.TitleFieldName)">@field.Text</option>
-                    }
-                }
-            </select>
-        }
-        <span class="hint">@T["The source index field that maps to the document title (optional)."]</span>
-    </div>
-</div>
 
-<div class="ocat-wrapper">
-    <label asp-for="KeyFieldName" class="ocat-label">@T["Key field"]</label>
-    <div class="ocat-end">
-        @if (Model.IsLocked)
-        {
-            <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.KeyFieldName) ? T["Document ID (_id)"].Value : Model.KeyFieldName)" readonly />
-            <input type="hidden" asp-for="KeyFieldName" />
-        }
-        else
-        {
-            <select asp-for="KeyFieldName" class="form-select field-mapping-select" id="keyFieldSelect" disabled>
-                <option value="">@T["Select an index first"]</option>
-                @if (Model.FieldNames?.Any() == true)
-                {
-                    @foreach (var field in Model.FieldNames)
-                    {
-                        <option value="@field.Value" selected="@(field.Value == Model.KeyFieldName)">@field.Text</option>
-                    }
-                }
-            </select>
-        }
-        <span class="hint">@T["The source index field used as the document reference ID in citations. If not set, the document's native key is used."]</span>
-    </div>
-</div>
+        function updateSections() {
+            var sourceType = sourceTypeSelect.value || 'SearchIndexProfile';
 
-@if (!Model.IsLocked)
-{
-    <script asp-name="ai-datasource-fields" at="Foot">
-        document.addEventListener('DOMContentLoaded', function () {
-            var sourceSelect = document.getElementById('sourceIndexSelect');
-            var contentSelect = document.getElementById('contentFieldSelect');
-            var titleSelect = document.getElementById('titleFieldSelect');
-            var keySelect = document.getElementById('keyFieldSelect');
-
-            if (!sourceSelect || !contentSelect || !titleSelect || !keySelect) return;
-
-            if (sourceSelect.value) {
-                loadFields(sourceSelect.value, '@Html.Raw(Model.ContentFieldName)', '@Html.Raw(Model.TitleFieldName)', '@Html.Raw(Model.KeyFieldName)');
-            }
-
-            sourceSelect.addEventListener('change', function () {
-                if (this.value) {
-                    loadFields(this.value, null, null, null);
-                } else {
-                    clearFields();
-                }
+            document.querySelectorAll('[data-ai-data-source-section]').forEach(function (section) {
+                section.hidden = section.getAttribute('data-ai-data-source-section') !== sourceType;
             });
 
-            function loadFields(indexProfileName, preserveContentField, preserveTitleField, preserveKeyField) {
-                contentSelect.disabled = true;
-                titleSelect.disabled = true;
-                keySelect.disabled = true;
+            document.querySelectorAll('[data-ai-data-source-external-fields]').forEach(function (section) {
+                section.hidden = sourceType === 'SearchIndexProfile';
+            });
+        }
 
-                fetch('@Url.Content("~/")' + 'ai/data-sources/fields/' + encodeURIComponent(indexProfileName))
-                    .then(function (response) {
-                        if (!response.ok) throw new Error('Failed to load fields');
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        populateSelect(contentSelect, data.fields, preserveContentField || data.suggestedContentField, data.suggestedContentField, '@T["Select a content field"]');
-                        populateSelect(titleSelect, data.fields, preserveTitleField || data.suggestedTitleField, data.suggestedTitleField, '@T["Select a title field (optional)"]');
-                        populateSelect(keySelect, data.fields, preserveKeyField || data.suggestedKeyField, data.suggestedKeyField, '@T["Use document ID (_id)"]');
-                        contentSelect.disabled = false;
-                        titleSelect.disabled = false;
-                        keySelect.disabled = false;
-                    })
-                    .catch(function () {
-                        clearFields();
-                    });
-            }
-
-            function populateSelect(select, fields, selectedValue, defaultField, placeholder) {
-                select.innerHTML = '';
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = placeholder;
-                select.appendChild(opt);
-
-                if (fields && fields.length > 0) {
-                    fields.forEach(function (field) {
-                        var option = document.createElement('option');
-                        option.value = field;
-                        option.textContent = (defaultField && field === defaultField) ? field + ' @T["(Default)"]' : field;
-                        if (selectedValue && field === selectedValue) {
-                            option.selected = true;
-                        }
-                        select.appendChild(option);
-                    });
-                }
-            }
-
-            function clearFields() {
-                var placeholder = '@T["Select an index first"]';
-                contentSelect.innerHTML = '<option value="">' + placeholder + '</option>';
-                titleSelect.innerHTML = '<option value="">' + placeholder + '</option>';
-                keySelect.innerHTML = '<option value="">' + placeholder + '</option>';
-                contentSelect.disabled = true;
-                titleSelect.disabled = true;
-                keySelect.disabled = true;
-            }
-        });
-    </script>
-}
+        sourceTypeSelect.addEventListener('change', updateSections);
+        updateSections();
+    });
+</script>

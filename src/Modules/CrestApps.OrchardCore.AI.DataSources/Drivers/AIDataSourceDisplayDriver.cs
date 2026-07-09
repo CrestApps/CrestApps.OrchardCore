@@ -1,7 +1,5 @@
-using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -18,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly IIndexProfileStore _indexProfileStore;
+    private readonly AIDataSourceSourceOptions _sourceOptions;
     private readonly IndexingOptions _indexingOptions;
 
     internal readonly IStringLocalizer S;
@@ -26,14 +25,17 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     /// Initializes a new instance of the <see cref="AIDataSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="sourceOptions">The source options.</param>
     /// <param name="indexingOptions">The indexing options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceDisplayDriver(
         IIndexProfileStore indexProfileStore,
+        IOptions<AIDataSourceSourceOptions> sourceOptions,
         IOptions<IndexingOptions> indexingOptions,
         IStringLocalizer<AIDataSourceDisplayDriver> stringLocalizer)
     {
         _indexProfileStore = indexProfileStore;
+        _sourceOptions = sourceOptions.Value;
         _indexingOptions = indexingOptions.Value;
         S = stringLocalizer;
     }
@@ -54,34 +56,14 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         return Initialize<EditAIDataSourceViewModel>("AIDataSourceFields_Edit", async model =>
         {
             model.DisplayText = dataSource.DisplayText;
-            model.SourceIndexProfileName = dataSource.SourceIndexProfileName;
+            model.SourceType = AIDataSourceDriverHelper.GetSourceType(dataSource);
             model.AIKnowledgeBaseIndexProfileName = dataSource.AIKnowledgeBaseIndexProfileName;
-            model.KeyFieldName = dataSource.KeyFieldName;
-            model.TitleFieldName = dataSource.TitleFieldName;
-            model.ContentFieldName = dataSource.ContentFieldName;
+            model.IsConfigurationLocked = AIDataSourceDriverHelper.IsConfigurationLocked(dataSource);
 
-            // Lock configuration once both index and master index are set (already created),
-            // but allow editing if either is missing (e.g., migration failure).
-            model.IsLocked = !string.IsNullOrEmpty(dataSource.SourceIndexProfileName) &&
-                !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
-                    !string.IsNullOrEmpty(dataSource.ContentFieldName);
-
-            // Show source indexes from all providers, excluding AI-managed index profiles.
             var allIndexes = await _indexProfileStore.GetAllAsync();
-
-            var sourceIndexes = allIndexes
-                .Where(i =>
-                    !string.Equals(i.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(i.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
-            model.SourceIndexProfileNames = BuildGroupedIndexProfileItems(sourceIndexes, _indexingOptions);
-
-            // Show ALL master indexes from all providers, grouped by provider.
             var knowledgeBaseIndexes = allIndexes
-                .Where(i => string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
-            model.AIKnowledgeBaseIndexProfileNames = BuildGroupedIndexProfileItems(knowledgeBaseIndexes, _indexingOptions);
-
-            model.FieldNames ??= [];
+                .Where(index => string.Equals(index.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
+            model.AIKnowledgeBaseIndexProfileNames = BuildGroupedIndexProfileItems(knowledgeBaseIndexes);
         }).Location("Content:1");
     }
 
@@ -98,36 +80,27 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
         dataSource.DisplayText = model.DisplayText;
 
-        // Allow updating index config if new OR if fields are missing (migration failure recovery).
-        var canUpdateIndex = context.IsNew ||
-            string.IsNullOrEmpty(dataSource.SourceIndexProfileName) ||
-                string.IsNullOrEmpty(dataSource.ContentFieldName) ||
-                    string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName);
-
-        if (canUpdateIndex)
+        if (!AIDataSourceDriverHelper.IsConfigurationLocked(dataSource))
         {
-            dataSource.SourceIndexProfileName = model.SourceIndexProfileName;
+            dataSource.SourceType = string.IsNullOrWhiteSpace(model.SourceType)
+                ? AIDataSourceSourceTypes.SearchIndexProfile
+                : model.SourceType.Trim();
             dataSource.AIKnowledgeBaseIndexProfileName = model.AIKnowledgeBaseIndexProfileName;
-            dataSource.KeyFieldName = model.KeyFieldName;
-            dataSource.TitleFieldName = model.TitleFieldName;
-            dataSource.ContentFieldName = model.ContentFieldName;
         }
 
         return Edit(dataSource, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildGroupedIndexProfileItems(
-        IEnumerable<IndexProfile> indexProfiles,
-        IndexingOptions indexingOptions)
+    private IEnumerable<SelectListItem> BuildGroupedIndexProfileItems(IEnumerable<IndexProfile> indexProfiles)
     {
         return indexProfiles
             .GroupBy(profile => profile.ProviderName, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(group => GetProviderDisplayName(group.Key, indexingOptions), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GetProviderDisplayName(group.Key), StringComparer.OrdinalIgnoreCase)
             .SelectMany(group =>
             {
                 var selectListGroup = new SelectListGroup
                 {
-                    Name = GetProviderDisplayName(group.Key, indexingOptions),
+                    Name = GetProviderDisplayName(group.Key),
                 };
 
                 return group
@@ -139,10 +112,10 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             });
     }
 
-    private static string GetProviderDisplayName(string providerName, IndexingOptions indexingOptions)
+    private string GetProviderDisplayName(string providerName)
     {
         if (!string.IsNullOrWhiteSpace(providerName) &&
-            indexingOptions?.Providers.TryGetValue(providerName, out var entry) == true &&
+            _indexingOptions.Providers.TryGetValue(providerName, out var entry) &&
             !string.IsNullOrWhiteSpace(entry.DisplayName.Value))
         {
             return entry.DisplayName.Value;
