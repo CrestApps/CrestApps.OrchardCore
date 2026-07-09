@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -208,6 +211,112 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
     }
 
+    /// <summary>
+    /// Signs the current agent into the selected queues and campaigns without reloading the page.
+    /// </summary>
+    /// <param name="queueIds">The selected queues.</param>
+    /// <param name="campaignIds">The selected campaigns.</param>
+    /// <returns>The updated agent snapshot.</returns>
+    public async Task<AgentDesktopSnapshot> SignIn(IList<string> queueIds, IList<string> campaignIds)
+    {
+        var userId = EnsureUserId();
+        AgentDesktopSnapshot snapshot = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
+            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
+            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+
+            await presenceManager.SignInAsync(
+                userId,
+                ContactCenterFormHelpers.NormalizeList(queueIds),
+                ContactCenterFormHelpers.NormalizeList(campaignIds),
+                Context.ConnectionAborted);
+
+            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
+        });
+
+        return snapshot;
+    }
+
+    /// <summary>
+    /// Signs the current agent out without reloading the page.
+    /// </summary>
+    /// <returns>The updated agent snapshot.</returns>
+    public async Task<AgentDesktopSnapshot> SignOut()
+    {
+        var userId = EnsureUserId();
+        AgentDesktopSnapshot snapshot = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
+            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
+            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+
+            await presenceManager.SignOutAsync(userId, Context.ConnectionAborted);
+
+            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
+        });
+
+        return snapshot;
+    }
+
+    /// <summary>
+    /// Re-checks the signed-in queues for already-waiting inbound voice work.
+    /// </summary>
+    /// <returns>The number of offers attempted.</returns>
+    public async Task<int> SyncQueuedVoiceWork()
+    {
+        var userId = EnsureUserId();
+        var offered = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var queuedVoiceWorkOfferService = scope.ServiceProvider.GetServices<IQueuedVoiceWorkOfferService>().FirstOrDefault();
+
+            if (queuedVoiceWorkOfferService is not null)
+            {
+                offered = await queuedVoiceWorkOfferService.OfferForUserAsync(userId, Context.ConnectionAborted);
+            }
+        });
+
+        return offered;
+    }
+
+    /// <summary>
+    /// Gets the current pending inbound offer so the soft-phone modal can restore it after reconnecting.
+    /// </summary>
+    /// <returns>The current pending inbound offer, or <see langword="null"/> when none exists.</returns>
+    public async Task<PendingIncomingCallOffer> GetCurrentIncomingOffer()
+    {
+        var userId = EnsureUserId();
+        PendingIncomingCallOffer offer = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var pendingIncomingCallOfferService = scope.ServiceProvider.GetServices<IPendingIncomingCallOfferService>().FirstOrDefault();
+
+            if (pendingIncomingCallOfferService is not null)
+            {
+                offer = await pendingIncomingCallOfferService.GetForUserAsync(userId, Context.ConnectionAborted);
+            }
+        });
+
+        return offer;
+    }
+
     private async Task<bool> AuthorizeAsync(IServiceProvider services, Permission permission)
     {
         var httpContext = Context.GetHttpContext();
@@ -239,5 +348,41 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         }
 
         return fallback;
+    }
+
+    private string EnsureUserId()
+    {
+        var userId = Context.UserIdentifier;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new HubException("The current connection is not associated with an authenticated Contact Center user.");
+        }
+
+        return userId;
+    }
+
+    private async Task EnsureAuthorizedAsync(IServiceProvider services, Permission permission)
+    {
+        if (!await AuthorizeAsync(services, permission))
+        {
+            throw new HubException($"The current user is not authorized for '{permission.Name}'.");
+        }
+    }
+
+    private async Task UpdateQueueGroupsAsync(IEnumerable<string> previousQueueIds, IEnumerable<string> currentQueueIds)
+    {
+        var previous = new HashSet<string>(previousQueueIds ?? [], StringComparer.OrdinalIgnoreCase);
+        var current = new HashSet<string>(currentQueueIds ?? [], StringComparer.OrdinalIgnoreCase);
+
+        foreach (var queueId in current.Except(previous))
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+        }
+
+        foreach (var queueId in previous.Except(current))
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+        }
     }
 }

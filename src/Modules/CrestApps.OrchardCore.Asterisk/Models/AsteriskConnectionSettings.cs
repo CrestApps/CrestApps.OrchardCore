@@ -35,4 +35,22 @@ public class AsteriskConnectionSettings
     /// Gets or sets the outbound dial timeout, in seconds.
     /// </summary>
     public virtual int TimeoutSeconds { get; set; } = AsteriskConstants.DefaultTimeoutSeconds;
+
+    /// <summary>
+    /// Gets or sets the dialplan context the provider should continue a call into when the user sends
+    /// an inbound offer to voicemail from the soft phone.
+    /// </summary>
+    public virtual string VoicemailContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets the template that resolves the dialplan extension for voicemail routing.
+    /// The template may reference provider-neutral call metadata tokens such as
+    /// <c>{voicemailRecipientUserName}</c> or <c>{calledAddress}</c>.
+    /// </summary>
+    public virtual string VoicemailExtensionTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialplan priority to use when continuing a call to voicemail.
+    /// </summary>
+    public virtual int VoicemailPriority { get; set; } = 1;
 }

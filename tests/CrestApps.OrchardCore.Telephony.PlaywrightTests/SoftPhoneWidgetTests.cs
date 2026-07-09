@@ -63,6 +63,9 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
         Assert.Equal("In call", status.Trim());
         Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
+        Assert.Equal("fa-solid fa-phone", await page.Locator("[data-telephony-toggle-icon]").GetAttributeAsync("class"));
+        Assert.True(await page.Locator("[data-telephony-mute]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-telephony-merge]").IsVisibleAsync());
 
         // Act - hang up
         await page.ClickAsync("[data-telephony-hangup]");
@@ -142,6 +145,165 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.True(await page.Locator("[data-telephony-view=\"history\"]").IsHiddenAsync());
     }
 
+    [Theory]
+    [InlineData("keypad")]
+    [InlineData("history")]
+    [InlineData("contact-center")]
+    public async Task SelectedTab_PersistsAcrossReload(string tab)
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.ClickAsync($"[data-telephony-tab=\"{tab}\"]");
+
+        // Act
+        await page.ReloadAsync();
+        await WaitForConnectedAsync(page);
+
+        // Assert
+        await page.Locator($"[data-telephony-view=\"{tab}\"]")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.Equal("true", await page.Locator($"[data-telephony-tab=\"{tab}\"]").GetAttributeAsync("aria-selected"));
+
+        if (tab == "history")
+        {
+            var historyText = await page.Locator("[data-telephony-history-list]").InnerTextAsync();
+            Assert.Contains("15551234567", historyText);
+        }
+    }
+
+    [Fact]
+    public async Task AllTabs_KeepTheSameBodyHeight()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+
+        // Act
+        await page.ClickAsync("[data-telephony-tab=\"keypad\"]");
+        await page.Locator("[data-telephony-view=\"keypad\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var keypadHeight = await GetConfiguredHeightAsync(page);
+        await page.ClickAsync("[data-telephony-tab=\"history\"]");
+        await page.Locator("[data-telephony-view=\"history\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var historyHeight = await GetConfiguredHeightAsync(page);
+        await page.ClickAsync("[data-telephony-tab=\"contact-center\"]");
+        await page.Locator("[data-telephony-view=\"contact-center\"]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var extensionHeight = await GetConfiguredHeightAsync(page);
+
+        // Assert
+        Assert.NotEqual(string.Empty, keypadHeight);
+        Assert.Equal(keypadHeight, historyHeight);
+        Assert.Equal(keypadHeight, extensionHeight);
+    }
+
+    [Fact]
+    public async Task RingingInboundCall_DoesNotShowHangup_UntilConnected()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+
+        await page.EvaluateAsync(
+            """
+            () => {
+                const api = window.telephonySoftPhone.getInstance();
+                api.setIncomingOffer(
+                    {
+                        callId: 'call-inbound-1',
+                        from: '+15550001000',
+                        direction: 'Inbound',
+                        state: 'Ringing',
+                        providerName: 'InMemory'
+                    },
+                    {
+                        properties: {
+                            acceptUrl: '/accept',
+                            reservationId: 'res-1'
+                        }
+                    });
+
+                window.fetch = async () => ({
+                    ok: true,
+                    json: async () => ({ succeeded: true, requiresDeviceAnswer: false })
+                });
+            }
+            """);
+
+        // Assert - ringing should not expose hangup yet.
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
+        Assert.Equal("Ringing...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+
+        // Act
+        await page.ClickAsync("[data-telephony-incoming-answer]");
+
+        // Assert - once the authoritative accept completes, the call is live.
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+    }
+
+    [Fact]
+    public async Task AcceptedInboundOffer_RemainsActive_WhenOfferIsRevokedDuringAccept()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+
+        await page.EvaluateAsync(
+            """
+            () => {
+                const api = window.telephonySoftPhone.getInstance();
+                api.setIncomingOffer(
+                    {
+                        callId: 'call-inbound-2',
+                        from: '+15550001000',
+                        direction: 'Inbound',
+                        state: 'Ringing',
+                        providerName: 'InMemory'
+                    },
+                    {
+                        properties: {
+                            acceptUrl: '/accept',
+                            reservationId: 'res-2'
+                        }
+                    });
+
+                window.__completeInboundAccept = null;
+                window.fetch = () => new Promise(resolve => {
+                    window.__completeInboundAccept = () => resolve({
+                        ok: true,
+                        json: async () => ({ succeeded: true, requiresDeviceAnswer: false })
+                    });
+                });
+            }
+            """);
+
+        // Act
+        await page.ClickAsync("[data-telephony-incoming-answer]");
+        await page.EvaluateAsync(
+            """
+            () => {
+                const api = window.telephonySoftPhone.getInstance();
+                api.clearIncomingOffer({ preserveCurrentCall: true, preservePendingAccept: true });
+                window.__completeInboundAccept();
+            }
+            """);
+
+        // Assert
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+    }
+
     private static async Task WaitForConnectedAsync(IPage page)
     {
         await page.WaitForFunctionAsync(
@@ -153,5 +315,11 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
                 return connection && connection.state === 'Connected';
             }
             """);
+    }
+
+    private static async Task<string> GetConfiguredHeightAsync(IPage page)
+    {
+        return await page.Locator("#telephony-soft-phone").EvaluateAsync<string>(
+            "element => element.style.getPropertyValue('--telephony-view-height').trim()");
     }
 }

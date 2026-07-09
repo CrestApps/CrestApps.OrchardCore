@@ -79,6 +79,20 @@
     <div class="ocat-limited">
         <input asp-for="ReservationTimeoutSeconds" class="form-control" />
         <span asp-validation-for="ReservationTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long an offered call can ring for an agent before the queue applies the unanswered-offer action."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="UnansweredOfferAction">
+    <label asp-for="UnansweredOfferAction" class="ocat-label">@T["Unanswered offer action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="UnansweredOfferAction" class="form-select">
+            <option value="@UnansweredOfferAction.Requeue">@T["Requeue"]</option>
+            <option value="@UnansweredOfferAction.Voicemail">@T["Send to voicemail"]</option>
+            <option value="@UnansweredOfferAction.Reject">@T["Reject call"]</option>
+        </select>
+        <span asp-validation-for="UnansweredOfferAction" class="text-danger"></span>
+        <span class="hint">@T["Applied only when an offered call times out without an answer. Requeue offers it again, voicemail sends the live call to the telephony provider's voicemail path, and reject ends the live call."]</span>
     </div>
 </div>
 

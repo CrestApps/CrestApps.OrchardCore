@@ -27,7 +27,7 @@ public sealed class ContactCenterEntryPointsAdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Entry points"], S["Entry points"].PrefixPosition(), entryPoints => entryPoints
+                .Add(S["Inbound entry points"], S["Inbound entry points"].PrefixPosition(), entryPoints => entryPoints
                     .AddClass("contact-center-entry-points")
                     .Id("contactCenterEntryPoints")
                     .Action("Index", "EntryPoints", "CrestApps.OrchardCore.ContactCenter")

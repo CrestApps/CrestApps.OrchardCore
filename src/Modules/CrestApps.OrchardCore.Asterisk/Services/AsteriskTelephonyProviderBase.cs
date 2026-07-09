@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.WebUtilities;
@@ -14,6 +15,9 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 {
+    private const string HoldStateVariableName = "CRESTAPPS_STATE_ONHOLD";
+    private const string MuteStateVariableName = "CRESTAPPS_STATE_MUTED";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -36,19 +40,8 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
     public abstract LocalizedString Name { get; }
 
-    public TelephonyCapabilities Capabilities
-    {
-        get
-        {
-            return TelephonyCapabilities.Dial |
-                TelephonyCapabilities.Hangup |
-                TelephonyCapabilities.Hold |
-                TelephonyCapabilities.Resume |
-                TelephonyCapabilities.Mute |
-                TelephonyCapabilities.Merge |
-                TelephonyCapabilities.SendDigits;
-        }
-    }
+    public virtual TelephonyCapabilities Capabilities
+        => GetCapabilities(null, false);
 
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
@@ -75,12 +68,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             ? settings.OutboundCallerId
             : request.From;
 
-        var query = new Dictionary<string, string>
-        {
-            ["endpoint"] = endpoint,
-            ["app"] = settings.ApplicationName,
-            ["timeout"] = AsteriskSettingsUtilities.ToInvariantString(settings.TimeoutSeconds),
-        };
+        var query = CreateDialQuery(settings, endpoint);
 
         if (!string.IsNullOrWhiteSpace(callerId))
         {
@@ -89,13 +77,30 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
         try
         {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                var dialMode = query.ContainsKey("app") ? "Stasis" : "Dialplan";
+
+                _logger.LogInformation(
+                    "Sending an Asterisk dial request for provider {ProviderName}. Endpoint: {Endpoint}. Mode: {DialMode}.",
+                    ProviderName,
+                    endpoint,
+                    dialMode);
+            }
+
             using var response = await SendAsync(settings, HttpMethod.Post, "channels", query, request.Metadata, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Asterisk rejected a dial request for provider {ProviderName} with status code {StatusCode}.", ProviderName, response.StatusCode);
+                var responseBody = await ReadResponseBodyAsync(response, cancellationToken);
 
-                return TelephonyResult.Failed(S["Asterisk could not place the call."].Value);
+                _logger.LogError(
+                    "Asterisk rejected a dial request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
+                    ProviderName,
+                    response.StatusCode,
+                    responseBody);
+
+                return TelephonyResult.Failed(S["The call could not be placed."].Value);
             }
 
             var callId = await ReadIdAsync(response, cancellationToken);
@@ -105,10 +110,16 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
                 CallId = callId ?? request.To,
                 From = callerId,
                 To = request.To,
-                State = CallState.Connecting,
+                State = AsteriskSettingsUtilities.IsImmediateConnectionEndpoint(endpoint)
+                    ? CallState.Connected
+                    : CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = ProviderName,
                 StartedUtc = _clock.UtcNow,
+                Metadata = request.Metadata?.ToDictionary(
+                    entry => entry.Key,
+                    entry => (object)entry.Value,
+                    StringComparer.OrdinalIgnoreCase) ?? [],
             };
 
             return TelephonyResult.Success(call);
@@ -117,7 +128,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
         {
             _logger.LogError(ex, "An error occurred while placing an Asterisk call for provider {ProviderName}.", ProviderName);
 
-            return TelephonyResult.Failed(S["Asterisk could not place the call. Error: {0}", ex.Message].Value);
+            return TelephonyResult.Failed(S["The call could not be placed."].Value);
         }
     }
 
@@ -127,8 +138,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Delete,
             "channels/{callId}",
             null,
-            () => BuildCall(call?.CallId, CallState.Disconnected),
-            S["Asterisk could not end the call."].Value,
+            null,
+            () => BuildCall(call?.CallId, CallState.Disconnected, metadata: call?.Metadata),
+            S["The call could not be ended."].Value,
             S["A call id is required to end the call."].Value,
             cancellationToken);
 
@@ -138,8 +150,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Post,
             "channels/{callId}/hold",
             null,
-            () => BuildCall(call?.CallId, CallState.OnHold, isOnHold: true),
-            S["Asterisk could not place the call on hold."].Value,
+            new Dictionary<string, string> { [HoldStateVariableName] = bool.TrueString },
+            () => BuildCall(call?.CallId, CallState.OnHold, isOnHold: true, metadata: call?.Metadata),
+            S["The call could not be placed on hold."].Value,
             S["A call id is required to hold the call."].Value,
             cancellationToken);
 
@@ -149,8 +162,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Delete,
             "channels/{callId}/hold",
             null,
-            () => BuildCall(call?.CallId, CallState.Connected),
-            S["Asterisk could not resume the call."].Value,
+            new Dictionary<string, string> { [HoldStateVariableName] = bool.FalseString },
+            () => BuildCall(call?.CallId, CallState.Connected, metadata: call?.Metadata),
+            S["The call could not be resumed."].Value,
             S["A call id is required to resume the call."].Value,
             cancellationToken);
 
@@ -160,8 +174,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Post,
             "channels/{callId}/mute",
             new Dictionary<string, string> { ["direction"] = "both" },
-            () => BuildCall(call?.CallId, CallState.Connected, isMuted: true),
-            S["Asterisk could not mute the call."].Value,
+            new Dictionary<string, string> { [MuteStateVariableName] = bool.TrueString },
+            () => BuildCall(call?.CallId, CallState.Connected, isMuted: true, metadata: call?.Metadata),
+            S["The call could not be muted."].Value,
             S["A call id is required to mute the call."].Value,
             cancellationToken);
 
@@ -171,13 +186,54 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Delete,
             "channels/{callId}/mute",
             new Dictionary<string, string> { ["direction"] = "both" },
-            () => BuildCall(call?.CallId, CallState.Connected),
-            S["Asterisk could not unmute the call."].Value,
+            new Dictionary<string, string> { [MuteStateVariableName] = bool.FalseString },
+            () => BuildCall(call?.CallId, CallState.Connected, metadata: call?.Metadata),
+            S["The call could not be unmuted."].Value,
             S["A call id is required to unmute the call."].Value,
             cancellationToken);
 
-    public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
-        => Task.FromResult(TelephonyResult.Failed(S["The {0} provider does not support call transfers.", Name.Value].Value));
+    public async Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.CallId) || string.IsNullOrWhiteSpace(request.To))
+        {
+            return TelephonyResult.Failed(S["A call id and destination are required to transfer the call."].Value);
+        }
+
+        if (request.Mode == TransferMode.Warm)
+        {
+            return TelephonyResult.Failed(S["Warm transfers are not supported."].Value);
+        }
+
+        var settings = await GetResolvedSettingsAsync(cancellationToken);
+
+        if (!IsConfigured(settings))
+        {
+            return NotConfigured();
+        }
+
+        var endpoint = AsteriskSettingsUtilities.ResolveEndpoint(settings.EndpointTemplate, request.To);
+
+        if (!AsteriskSettingsUtilities.TryGetImmediateConnectionRoute(endpoint, out var extension, out var context))
+        {
+            return TelephonyResult.Failed(S["Blind transfers require a Local endpoint template such as Local/{number}@default."].Value);
+        }
+
+        return await ExecuteCallActionAsync(
+            request.CallId,
+            HttpMethod.Post,
+            "channels/{callId}/continue",
+            new Dictionary<string, string>
+            {
+                ["context"] = context,
+                ["extension"] = extension,
+                ["priority"] = "1",
+            },
+            null,
+            () => BuildCall(request.CallId, CallState.Disconnected),
+            S["The call could not be transferred."].Value,
+            S["A call id is required to transfer the call."].Value,
+            cancellationToken);
+    }
 
     public async Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {
@@ -209,9 +265,13 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
             if (!createBridgeResponse.IsSuccessStatusCode)
             {
-                _logger.LogError("Asterisk rejected a bridge creation request for provider {ProviderName} with status code {StatusCode}.", ProviderName, createBridgeResponse.StatusCode);
+                _logger.LogError(
+                    "Asterisk rejected a bridge creation request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
+                    ProviderName,
+                    createBridgeResponse.StatusCode,
+                    await ReadResponseBodyAsync(createBridgeResponse, cancellationToken));
 
-                return TelephonyResult.Failed(S["Asterisk could not merge the calls."].Value);
+                return TelephonyResult.Failed(S["The calls could not be merged."].Value);
             }
 
             var bridgeId = await ReadIdAsync(createBridgeResponse, cancellationToken);
@@ -220,7 +280,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             {
                 _logger.LogError("Asterisk did not return a bridge id when merging calls for provider {ProviderName}.", ProviderName);
 
-                return TelephonyResult.Failed(S["Asterisk could not merge the calls."].Value);
+                return TelephonyResult.Failed(S["The calls could not be merged."].Value);
             }
 
             var addChannelQuery = new Dictionary<string, string>
@@ -238,9 +298,13 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
             if (!addChannelResponse.IsSuccessStatusCode)
             {
-                _logger.LogError("Asterisk rejected a bridge add-channel request for provider {ProviderName} with status code {StatusCode}.", ProviderName, addChannelResponse.StatusCode);
+                _logger.LogError(
+                    "Asterisk rejected a bridge add-channel request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
+                    ProviderName,
+                    addChannelResponse.StatusCode,
+                    await ReadResponseBodyAsync(addChannelResponse, cancellationToken));
 
-                return TelephonyResult.Failed(S["Asterisk could not merge the calls."].Value);
+                return TelephonyResult.Failed(S["The calls could not be merged."].Value);
             }
 
             return TelephonyResult.Success(BuildCall(request.PrimaryCallId, CallState.Connected));
@@ -249,7 +313,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
         {
             _logger.LogError(ex, "An error occurred while merging Asterisk calls for provider {ProviderName}.", ProviderName);
 
-            return TelephonyResult.Failed(S["Asterisk could not merge the calls. Error: {0}", ex.Message].Value);
+            return TelephonyResult.Failed(S["The calls could not be merged."].Value);
         }
     }
 
@@ -265,20 +329,90 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Post,
             "channels/{callId}/dtmf",
             new Dictionary<string, string> { ["dtmf"] = request.Digits },
+            null,
             () => null,
-            S["Asterisk could not send the digits."].Value,
+            S["The digits could not be sent."].Value,
             S["A call id is required to send digits."].Value,
             cancellationToken);
     }
 
     public Task<TelephonyResult> AnswerAsync(CallReference call, CancellationToken cancellationToken = default)
-        => Task.FromResult(TelephonyResult.Failed(S["The {0} provider does not support answering inbound calls in the soft phone.", Name.Value].Value));
+        => ExecuteCallActionAsync(
+            call?.CallId,
+            HttpMethod.Post,
+            "channels/{callId}/answer",
+            null,
+            null,
+            () => BuildCall(call?.CallId, CallState.Connected, direction: CallDirection.Inbound, metadata: call?.Metadata),
+            S["The call could not be answered."].Value,
+            S["A call id is required to answer the call."].Value,
+            cancellationToken);
 
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
-        => Task.FromResult(TelephonyResult.Failed(S["The {0} provider does not support rejecting inbound calls in the soft phone.", Name.Value].Value));
+        => ExecuteCallActionAsync(
+            call?.CallId,
+            HttpMethod.Delete,
+            "channels/{callId}",
+            null,
+            null,
+            () => BuildCall(call?.CallId, CallState.Disconnected, direction: CallDirection.Inbound, metadata: call?.Metadata),
+            S["The call could not be rejected."].Value,
+            S["A call id is required to reject the call."].Value,
+            cancellationToken);
 
-    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
-        => Task.FromResult(TelephonyResult.Failed(S["The {0} provider does not support sending calls to voicemail from the soft phone.", Name.Value].Value));
+    public async Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(call?.CallId))
+        {
+            return TelephonyResult.Failed(S["A call id is required to send the call to voicemail."].Value);
+        }
+
+        var settings = await GetResolvedSettingsAsync(cancellationToken);
+
+        if (!IsConfigured(settings))
+        {
+            return NotConfigured();
+        }
+
+        if (!AsteriskSettingsUtilities.HasVoicemailConfiguration(settings))
+        {
+            return TelephonyResult.Failed(S["Voicemail is not configured for the current telephony provider."].Value);
+        }
+
+        var extension = ResolveVoicemailExtension(settings.VoicemailExtensionTemplate, call);
+
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return TelephonyResult.Failed(S["The call does not contain enough metadata to resolve the voicemail destination."].Value);
+        }
+
+        try
+        {
+            await SetChannelVariablesAsync(settings, call.CallId, call.Metadata, cancellationToken);
+
+            return await ExecuteCallActionAsync(
+                call.CallId,
+                HttpMethod.Post,
+                "channels/{callId}/continue",
+                new Dictionary<string, string>
+                {
+                    ["context"] = settings.VoicemailContext,
+                    ["extension"] = extension,
+                    ["priority"] = AsteriskSettingsUtilities.ToInvariantString(settings.VoicemailPriority),
+                },
+                null,
+                () => BuildCall(call.CallId, CallState.Disconnected, direction: CallDirection.Inbound, metadata: call.Metadata),
+                S["The call could not be sent to voicemail."].Value,
+                S["A call id is required to send the call to voicemail."].Value,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while routing an Asterisk call to voicemail for provider {ProviderName}.", ProviderName);
+
+            return TelephonyResult.Failed(S["The call could not be sent to voicemail."].Value);
+        }
+    }
 
     public async Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
@@ -298,11 +432,37 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
     protected abstract ValueTask<AsteriskResolvedSettings> GetResolvedSettingsAsync(CancellationToken cancellationToken);
 
+    protected static TelephonyCapabilities GetCapabilities(string endpointTemplate, bool hasVoicemailConfiguration)
+    {
+        var capabilities =
+            TelephonyCapabilities.Dial |
+            TelephonyCapabilities.Hangup |
+            TelephonyCapabilities.SendDigits |
+            TelephonyCapabilities.ReceiveCalls |
+            TelephonyCapabilities.Hold |
+            TelephonyCapabilities.Resume |
+            TelephonyCapabilities.Mute |
+            TelephonyCapabilities.Merge;
+
+        if (AsteriskSettingsUtilities.IsImmediateConnectionEndpoint(endpointTemplate))
+        {
+            capabilities |= TelephonyCapabilities.Transfer;
+        }
+
+        if (hasVoicemailConfiguration)
+        {
+            capabilities |= TelephonyCapabilities.Voicemail;
+        }
+
+        return capabilities;
+    }
+
     private async Task<TelephonyResult> ExecuteCallActionAsync(
         string callId,
         HttpMethod method,
         string pathTemplate,
         IDictionary<string, string> query,
+        IDictionary<string, string> stateVariables,
         Func<TelephonyCall> onSuccess,
         string errorMessage,
         string missingCallIdMessage,
@@ -328,14 +488,19 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
             if (!response.IsSuccessStatusCode)
             {
+                var responseBody = await ReadResponseBodyAsync(response, cancellationToken);
+
                 _logger.LogError(
-                    "Asterisk rejected a call action request for provider {ProviderName}. Path: {Path}. Status code: {StatusCode}.",
+                    "Asterisk rejected a call action request for provider {ProviderName}. Path: {Path}. Status code: {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
                     path,
-                    response.StatusCode);
+                    response.StatusCode,
+                    responseBody);
 
-                return TelephonyResult.Failed(errorMessage);
+                return TelephonyResult.Failed(ResolveActionErrorMessage(errorMessage, responseBody));
             }
+
+            await SetChannelVariablesAsync(settings, callId, stateVariables, cancellationToken);
 
             return TelephonyResult.Success(onSuccess?.Invoke());
         }
@@ -343,7 +508,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
         {
             _logger.LogError(ex, "An error occurred while executing an Asterisk call action for provider {ProviderName}.", ProviderName);
 
-            return TelephonyResult.Failed(S["{0} Error: {1}", errorMessage, ex.Message].Value);
+            return TelephonyResult.Failed(errorMessage);
         }
     }
 
@@ -362,16 +527,193 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
         string callId,
         CallState state,
         bool isOnHold = false,
-        bool isMuted = false)
+        bool isMuted = false,
+        CallDirection direction = CallDirection.Outbound,
+        IDictionary<string, object> metadata = null)
         => new()
         {
             CallId = callId,
             State = state,
-            Direction = CallDirection.Outbound,
+            Direction = direction,
             IsOnHold = isOnHold,
             IsMuted = isMuted,
             ProviderName = ProviderName,
+            Metadata = metadata is null ? [] : new Dictionary<string, object>(metadata, StringComparer.OrdinalIgnoreCase),
         };
+
+    private async Task SetChannelVariablesAsync(
+        AsteriskResolvedSettings settings,
+        string callId,
+        IDictionary<string, string> variables,
+        CancellationToken cancellationToken)
+    {
+        if (variables is null || variables.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var entry in variables)
+        {
+            await SetChannelVariableAsync(settings, callId, entry.Key, entry.Value, cancellationToken);
+        }
+    }
+
+    private async Task SetChannelVariablesAsync(
+        AsteriskResolvedSettings settings,
+        string callId,
+        IDictionary<string, object> metadata,
+        CancellationToken cancellationToken)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var entry in metadata)
+        {
+            var value = NormalizeMetadataValue(entry.Value);
+
+            if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            await SetChannelVariableAsync(settings, callId, BuildMetadataVariableName(entry.Key), value, cancellationToken);
+        }
+    }
+
+    private async Task SetChannelVariableAsync(
+        AsteriskResolvedSettings settings,
+        string callId,
+        string variableName,
+        string value,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"channels/{Uri.EscapeDataString(callId)}/variable",
+            new Dictionary<string, string>
+            {
+                ["variable"] = variableName,
+                ["value"] = value,
+            },
+            null,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseBody = await ReadResponseBodyAsync(response, cancellationToken);
+
+            _logger.LogWarning(
+                "Asterisk rejected a channel-variable request for provider {ProviderName}. CallId: {CallId}. Variable: {Variable}. Status code: {StatusCode}. Response: {ResponseBody}",
+                ProviderName,
+                callId,
+                variableName,
+                response.StatusCode,
+                responseBody);
+        }
+    }
+
+    private static string ResolveVoicemailExtension(string template, CallReference call)
+    {
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["callId"] = call?.CallId,
+        };
+
+        if (call?.Metadata is not null)
+        {
+            foreach (var entry in call.Metadata)
+            {
+                var value = NormalizeMetadataValue(entry.Value);
+
+                if (!string.IsNullOrWhiteSpace(entry.Key) && !string.IsNullOrWhiteSpace(value))
+                {
+                    values[entry.Key] = value;
+                }
+            }
+        }
+
+        var resolved = Regex.Replace(template, "\\{(?<key>[^{}]+)\\}", match =>
+        {
+            var key = match.Groups["key"].Value;
+
+            return values.TryGetValue(key, out var value)
+                ? value
+                : string.Empty;
+        });
+
+        return resolved.Trim();
+    }
+
+    private static string BuildMetadataVariableName(string key)
+    {
+        var builder = new StringBuilder("CRESTAPPS_METADATA_");
+
+        foreach (var character in key)
+        {
+            builder.Append(char.IsLetterOrDigit(character)
+                ? char.ToUpperInvariant(character)
+                : '_');
+        }
+
+        return builder.ToString();
+    }
+
+    private static string NormalizeMetadataValue(object value)
+    {
+        return value switch
+        {
+            null => null,
+            string text => text,
+            JsonElement element => NormalizeJsonElementValue(element),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => value.ToString(),
+        };
+    }
+
+    private static string NormalizeJsonElementValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.True => bool.TrueString,
+            JsonValueKind.False => bool.FalseString,
+            _ => element.GetRawText(),
+        };
+    }
+
+    private static Dictionary<string, string> CreateDialQuery(AsteriskResolvedSettings settings, string endpoint)
+    {
+        var query = new Dictionary<string, string>
+        {
+            ["endpoint"] = endpoint,
+            ["timeout"] = AsteriskSettingsUtilities.ToInvariantString(settings.TimeoutSeconds),
+        };
+
+        query["app"] = settings.ApplicationName;
+
+        return query;
+    }
+
+    private string ResolveActionErrorMessage(string defaultErrorMessage, string responseBody)
+    {
+        if (!string.IsNullOrWhiteSpace(responseBody) &&
+            responseBody.Contains("Channel not in Stasis application", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["This action is not available for the current call."].Value;
+        }
+
+        return defaultErrorMessage;
+    }
 
     private static bool IsConfigured(AsteriskResolvedSettings settings)
         => settings is not null &&
@@ -382,7 +724,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             !string.IsNullOrWhiteSpace(settings.ApplicationName);
 
     private TelephonyResult NotConfigured()
-        => TelephonyResult.Failed(S["The {0} provider is not configured.", Name.Value].Value);
+        => TelephonyResult.Failed(S["The telephony provider is not configured."].Value);
 
     private async Task<HttpResponseMessage> SendAsync(
         AsteriskResolvedSettings settings,
@@ -432,5 +774,12 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             JsonValueKind.Number => idElement.GetRawText(),
             _ => null,
         };
+    }
+
+    private static async Task<string> ReadResponseBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(content) ? "<empty>" : content;
     }
 }

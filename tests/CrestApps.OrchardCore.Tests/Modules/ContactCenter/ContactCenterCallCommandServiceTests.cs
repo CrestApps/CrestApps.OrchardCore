@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.Modules;
 
@@ -71,6 +73,55 @@ public sealed class ContactCenterCallCommandServiceTests
 
         harness.Provider.Verify(
             p => p.ConnectToAgentAsync(It.Is<ContactCenterConnectRequest>(r => r.AgentId == "a1" && r.InteractionId == "int1"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenNoContactCenterVoiceProvider_DoesNotRequireDeviceAnswer()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupAcceptedReservation();
+        harness.SetupInteraction();
+        harness.SetupNewCallSession();
+        harness.SetupTelephonyProviderAnswer();
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Equal(VoiceProviderDeliveryModel.ServerSideAcd, harness.CreatedCallSession?.DeliveryModel);
+        harness.TelephonyProvider.Verify(
+            p => p.AnswerAsync(It.Is<CallReference>(call => call.CallId == "call-1"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenTelephonyFallbackAnswerFails_ReturnsFailure()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupAcceptedReservation();
+        harness.SetupInteraction();
+        harness.SetupTelephonyProviderAnswer(TelephonyResult.Failed("The call could not be answered."));
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("The call could not be answered.", result.Reason);
+        harness.ReservationService.Verify(
+            s => s.CancelAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.InboundVoiceService.Verify(
+            s => s.OfferNextAsync("q1", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -186,6 +237,8 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
 
+        public Mock<ITelephonyProviderResolver> TelephonyProviderResolver { get; } = new();
+
         public Mock<ICallSessionManager> CallSessionManager { get; } = new();
 
         public Mock<IInboundVoiceService> InboundVoiceService { get; } = new();
@@ -194,7 +247,11 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public Mock<IContactCenterVoiceProvider> Provider { get; } = new();
 
+        public Mock<ITelephonyProvider> TelephonyProvider { get; } = new();
+
         public Interaction Interaction { get; } = new() { ItemId = "int1", ProviderName = "dp", ProviderInteractionId = "call-1", Direction = InteractionDirection.Inbound };
+
+        public CallSession CreatedCallSession { get; private set; }
 
         public void SetupAcceptedReservation()
         {
@@ -247,6 +304,30 @@ public sealed class ContactCenterCallCommandServiceTests
             CallSessionManager
                 .Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new CallSession());
+
+            CallSessionManager
+                .Setup(m => m.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()))
+                .Callback<CallSession, CancellationToken>((session, _) => CreatedCallSession = session)
+                .Returns(ValueTask.CompletedTask);
+        }
+
+        public void SetupTelephonyProviderAnswer(TelephonyResult result = null)
+        {
+            result ??= TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = "call-1",
+                State = CallState.Connected,
+                Direction = CallDirection.Inbound,
+                ProviderName = "dp",
+            });
+
+            TelephonyProviderResolver
+                .Setup(r => r.GetAsync("dp"))
+                .ReturnsAsync(TelephonyProvider.Object);
+
+            TelephonyProvider
+                .Setup(p => p.AnswerAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(result);
         }
 
         public ContactCenterCallCommandService CreateService()
@@ -262,6 +343,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 InteractionManager.Object,
                 AgentManager.Object,
                 VoiceProviderResolver.Object,
+                TelephonyProviderResolver.Object,
                 CallSessionManager.Object,
                 InboundVoiceService.Object,
                 Publisher.Object,

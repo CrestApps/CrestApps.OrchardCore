@@ -148,6 +148,22 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
             }
         }
 
+        context.Properties["reservationId"] = reservation.ItemId;
+        context.Properties["expiresUtc"] = reservation.ExpiresUtc.ToString("O");
+
+        context.Call.Metadata ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        context.Call.Metadata["voicemailRecipientUserId"] = agent.UserId;
+
+        if (!string.IsNullOrWhiteSpace(agent.UserName))
+        {
+            context.Call.Metadata["voicemailRecipientUserName"] = agent.UserName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(agent.DisplayName))
+        {
+            context.Call.Metadata["voicemailRecipientDisplayName"] = agent.DisplayName;
+        }
+
         if (string.IsNullOrEmpty(reservation.QueueId))
         {
             return null;
@@ -161,6 +177,8 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         }
 
         context.Properties["queue"] = queue.Name;
+        context.Call.Metadata["queueId"] = queue.ItemId;
+        context.Call.Metadata["queueName"] = queue.Name;
 
         return queue.Name;
     }

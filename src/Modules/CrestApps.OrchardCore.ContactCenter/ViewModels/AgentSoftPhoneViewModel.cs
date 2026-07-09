@@ -11,6 +11,11 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 public class AgentSoftPhoneViewModel
 {
     /// <summary>
+    /// Gets or sets the Contact Center real-time hub URL.
+    /// </summary>
+    public string HubUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent profile, when the agent has signed in before.
     /// </summary>
     public AgentProfile Profile { get; set; }

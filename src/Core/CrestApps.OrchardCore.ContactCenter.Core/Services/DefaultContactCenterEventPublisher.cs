@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -78,6 +80,36 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
 
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
 
-        await _outbox.DispatchAsync(interactionEvent, cancellationToken);
+        if (ShellScope.Current is null)
+        {
+            await _outbox.DispatchAsync(interactionEvent, cancellationToken);
+
+            return;
+        }
+
+        ShellScope.AddDeferredTask(scope => DispatchDeferredAsync(scope, interactionEvent.ItemId));
+    }
+
+    private static async Task DispatchDeferredAsync(ShellScope scope, string eventId)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentException.ThrowIfNullOrEmpty(eventId);
+
+        var services = scope.ServiceProvider;
+        var eventStore = services.GetRequiredService<IInteractionEventStore>();
+        var outbox = services.GetRequiredService<IContactCenterOutbox>();
+        var logger = services.GetRequiredService<ILogger<DefaultContactCenterEventPublisher>>();
+        var interactionEvent = await eventStore.FindByIdAsync(eventId);
+
+        if (interactionEvent is null)
+        {
+            logger.LogWarning(
+                "Skipped deferred Contact Center event dispatch because event '{EventId}' no longer exists.",
+                eventId);
+
+            return;
+        }
+
+        await outbox.DispatchAsync(interactionEvent);
     }
 }

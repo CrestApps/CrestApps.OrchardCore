@@ -52,6 +52,11 @@ public sealed class ActivityQueue : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int ReservationTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
+    /// Gets or sets what happens when an offered reservation expires before the agent accepts it.
+    /// </summary>
+    public UnansweredOfferAction UnansweredOfferAction { get; set; } = UnansweredOfferAction.Requeue;
+
+    /// <summary>
     /// Gets or sets the identifier of the business-hours calendar that gates when the queue routes work.
     /// When empty, the queue routes around the clock.
     /// </summary>

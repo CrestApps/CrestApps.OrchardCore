@@ -16,6 +16,10 @@ provider is configured for the tenant. The UI never talks to a provider directly
 phone works with any provider that implements the telephony abstractions (for example
 [DialPad](dialpad)).
 
+In this module, **provider** means the configured **telephony backend adapter** (for example Asterisk,
+DialPad, or another PBX/carrier API integration), not the user's phone company in the business or
+billing sense.
+
 ## Architecture
 
 The feature is split into three layers so that providers stay decoupled from the UI and the hub:
@@ -41,7 +45,8 @@ TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolve
 
 ## The provider contract
 
-A telephony provider implements `ITelephonyProvider`. The interface covers the common soft phone
+A telephony provider implements `ITelephonyProvider`. The interface is the adapter contract between
+the shared soft phone and a concrete telephony backend, and it covers the common soft phone
 operations:
 
 | Operation | Method |
@@ -60,6 +65,10 @@ operations:
 
 Each provider also advertises the operations it supports through the `Capabilities` property (a
 `TelephonyCapabilities` flags value). The soft phone UI uses these flags to show or hide controls.
+
+Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
+`TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange
+routing hints or contextual data for scenarios such as voicemail routing.
 
 ## SignalR hub
 
@@ -115,20 +124,15 @@ Contact Center work.
 
 ### Moving and persisting the widget
 
-The soft phone is draggable by its header. Its position and open/closed state are saved to the
-browser's `localStorage`, so the widget reappears exactly where you left it after a page reload — and
-it is restored before the first paint, so there is no flash or jump as the page loads. You can drag
-the widget anywhere on the screen, including all the way to the right edge and on top of other
-widgets such as the AI chat widget. By **default**, when the AI chat widget is also present, the soft
-phone automatically offsets itself so the two widgets sit side by side instead of overlapping.
+The soft phone is draggable by its header. Its position, open/closed state, and the selected footer tab are saved to the browser's `localStorage`, so the widget reappears exactly where you left it after a page reload — and it is restored before the first paint, so there is no flash or jump as the page loads. You can drag the widget anywhere on the screen, including all the way to the right edge and on top of other widgets such as the AI chat widget. By **default**, when the AI chat widget is also present, the soft phone automatically offsets itself so the two widgets sit side by side instead of overlapping.
 
 ### Status and call controls
 
 The widget reflects the live connection status reported by the hub and only enables the dial pad and call controls when the provider is **available, connected, and authenticated**:
 
-- When no provider is enabled, the widget shows an inline warning that explains how to fix the setup: enable at least one provider and set the default phone provider in site settings. The keypad and call buttons stay hidden, and the live status text is shown as small muted text inside the keypad container instead of cluttering the header.
+- When no provider is enabled, the widget shows an inline warning that explains how to fix the setup: enable at least one provider and set the default phone provider in site settings. The warning is shown only after the hub resolves the real provider status, so a configured tenant does not flash a false **No provider is configured** warning during page load. The keypad and call buttons stay hidden, and the live status text is shown as small muted text inside the keypad container instead of cluttering the header.
 - When the provider requires a per-user connection, the widget shows the **Connect to provider** button (see [Authenticating users with a provider](#authenticating-users-with-a-provider)).
-- During an active call the main toggle button turns red and switches to a hang-up icon, and the widget exposes mute, hold, transfer, and merge controls based on the provider's capabilities.
+- During an active call the main floating toggle keeps its normal accent color and phone icon; hang-up remains on the keypad itself. The widget exposes hold/resume and transfer when the provider supports them, and only exposes mute/unmute and merge after the call has reached the **Connected** state. End-user error messages stay provider-neutral even when the active provider logs provider-specific details on the server.
 
 ### Keypad, recent calls, and extension tabs
 
@@ -136,13 +140,13 @@ The widget's footer is a tab bar that switches the panel between built-in and co
 
 - **Keypad** – the number field, dial pad, and call controls.
 - **Recent** – the call history, listing active calls, recent inbound and outbound interactions, and
-  missed calls (highlighted in red with a direction icon). Selecting a recent call dials it again.
+  missed calls (highlighted in red with a direction icon). Active calls stay visually highlighted, but the list no longer adds a separate **In progress** text label for them. Selecting a recent call dials it again.
 - **Contributed tabs** – modules can add their own views through Display Management. For example,
   Contact Center adds a **Work** tab for queue/campaign sign-in and presence.
 
 The history is read from the hub's `GetInteractions` method and is backed by the persisted
 interaction store described below, so it survives page reloads and is available independently of the
-provider.
+provider. Inbound calls are now persisted as soon as they are offered, so the **Recent** tab shows inbound and outbound history instead of only calls placed from the keypad. When the latest interaction is still in progress, the soft phone now restores that active call on reconnect or page reload so agents do not lose the connected-call state just because the page refreshed. The widget also keeps the **Keypad** tab's natural height as the shared body height for **Recent** and contributed tabs such as Contact Center **Work**, so switching tabs does not resize the panel unless the user moves it. When a non-keypad tab needs more room than that shared height, it scrolls within the panel instead of clipping its contents.
 
 ## Incoming calls
 
@@ -154,8 +158,7 @@ three actions:
   the provider advertises the `Voicemail` capability.
 - **Ignore** declines the ringing call on this device (`RejectAsync`).
 
-The modal appears for a ringing **inbound** call even when the panel is closed, and it hides itself
-once the call connects or ends.
+The modal appears for a ringing **inbound** call even when the panel is closed. When Contact Center is using the soft phone for queue offers, the modal now restores the current ringing offer after a page refresh or reconnect, reopens immediately when the Contact Center hub reports a new queued offer, and keeps the ringing state visible until the offer is accepted, declined, or the authoritative reservation timeout expires. Those Contact Center offer actions now go through the authoritative reservation endpoints without sending an extra duplicate reject/answer device action, and the modal then hides itself once the call connects, ends, or times out. If the real-time revoke event arrives while the authoritative accept is still completing, the soft phone now preserves the accepted call instead of clearing it back to idle. When the authoritative accept indicates that the server-side voice flow already connected the media, the widget immediately advances its local call state out of `Ringing` so the keypad reflects the live call instead of a stale ringing shell, and the active call header shows the remote number for the side you are actually speaking to. For provider-only server-side queue flows that do not register a Contact Center voice provider, Contact Center now also answers the underlying telephony call during accept so the live call remains visible and hangup still works. The keypad **Hangup** control also stays hidden while a call is still only ringing and appears only once the live call is connected or held.
 
 ### Offering a call to a user
 

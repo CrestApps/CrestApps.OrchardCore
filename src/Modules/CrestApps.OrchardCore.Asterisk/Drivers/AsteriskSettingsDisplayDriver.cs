@@ -76,6 +76,11 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             model.TimeoutSeconds = settings.TimeoutSeconds > 0
                 ? settings.TimeoutSeconds
                 : AsteriskConstants.DefaultTimeoutSeconds;
+            model.VoicemailContext = settings.VoicemailContext;
+            model.VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate;
+            model.VoicemailPriority = settings.VoicemailPriority > 0
+                ? settings.VoicemailPriority
+                : 1;
             model.HasPassword = !string.IsNullOrEmpty(settings.Password);
         }).Location("Content:10#Asterisk")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
@@ -122,6 +127,9 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             var timeoutSeconds = model.TimeoutSeconds > 0
                 ? model.TimeoutSeconds
                 : AsteriskConstants.DefaultTimeoutSeconds;
+            var voicemailPriority = model.VoicemailPriority > 0
+                ? model.VoicemailPriority
+                : 1;
 
             hasChanges |= settings.BaseUrl != normalizedBaseUrl;
             hasChanges |= settings.UserName != model.UserName?.Trim();
@@ -129,6 +137,9 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             hasChanges |= settings.EndpointTemplate != model.EndpointTemplate?.Trim();
             hasChanges |= settings.OutboundCallerId != model.OutboundCallerId?.Trim();
             hasChanges |= settings.TimeoutSeconds != timeoutSeconds;
+            hasChanges |= settings.VoicemailContext != model.VoicemailContext?.Trim();
+            hasChanges |= settings.VoicemailExtensionTemplate != model.VoicemailExtensionTemplate?.Trim();
+            hasChanges |= settings.VoicemailPriority != voicemailPriority;
 
             settings.BaseUrl = normalizedBaseUrl;
             settings.UserName = model.UserName?.Trim();
@@ -136,6 +147,9 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             settings.EndpointTemplate = model.EndpointTemplate?.Trim();
             settings.OutboundCallerId = model.OutboundCallerId?.Trim();
             settings.TimeoutSeconds = timeoutSeconds;
+            settings.VoicemailContext = model.VoicemailContext?.Trim();
+            settings.VoicemailExtensionTemplate = model.VoicemailExtensionTemplate?.Trim();
+            settings.VoicemailPriority = voicemailPriority;
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl) || !Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out _))
             {
@@ -155,6 +169,19 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             if (settings.TimeoutSeconds <= 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.TimeoutSeconds), S["Enter a timeout greater than zero."]);
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.VoicemailContext) != string.IsNullOrWhiteSpace(settings.VoicemailExtensionTemplate))
+            {
+                context.Updater.ModelState.AddModelError(
+                    Prefix,
+                    nameof(model.VoicemailExtensionTemplate),
+                    S["Enter both the voicemail context and voicemail extension template, or leave both empty to disable soft-phone voicemail routing."]);
+            }
+
+            if (settings.VoicemailPriority <= 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.VoicemailPriority), S["Enter a voicemail priority greater than zero."]);
             }
 
             if (string.IsNullOrEmpty(settings.Password) && string.IsNullOrWhiteSpace(model.Password))

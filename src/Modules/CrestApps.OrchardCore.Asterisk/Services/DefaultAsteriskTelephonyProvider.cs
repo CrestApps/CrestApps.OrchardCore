@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,10 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
     /// <inheritdoc/>
     public override LocalizedString Name => S["Default Asterisk"];
 
+    /// <inheritdoc/>
+    public override TelephonyCapabilities Capabilities
+        => GetCapabilities(_options.EndpointTemplate, AsteriskSettingsUtilities.HasVoicemailConfiguration(_options));
+
     protected override string ProviderName
         => AsteriskConstants.DefaultProviderTechnicalName;
 
@@ -50,5 +55,8 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
             EndpointTemplate = _options.EndpointTemplate,
             OutboundCallerId = _options.OutboundCallerId,
             TimeoutSeconds = _options.TimeoutSeconds,
+            VoicemailContext = _options.VoicemailContext,
+            VoicemailExtensionTemplate = _options.VoicemailExtensionTemplate,
+            VoicemailPriority = _options.VoicemailPriority,
         });
 }

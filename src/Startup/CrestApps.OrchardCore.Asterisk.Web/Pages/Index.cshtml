@@ -1,0 +1,283 @@
+@page
+@using System.Text.Json
+@model CrestApps.OrchardCore.Asterisk.Web.Pages.IndexModel
+
+@{
+    var dashboardConfig = new
+    {
+        hubUrl = Model.DashboardHubUrl,
+        snapshotUrl = Model.DashboardSnapshotUrl,
+        reconciliationSeconds = Model.DashboardRefreshSeconds,
+        initialSnapshot = Model.Diagnostics,
+    };
+}
+
+<style>
+    .dashboard-pre {
+        max-height: 18rem;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .dashboard-scroll {
+        max-height: 24rem;
+        overflow: auto;
+    }
+</style>
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card shadow-sm" data-asterisk-dashboard data-config='@JsonSerializer.Serialize(dashboardConfig)'>
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
+                    <div>
+                        <h1 class="h3 mb-1">Asterisk Dashboard</h1>
+                        <p class="text-body-secondary mb-0">Live ARI telemetry for active calls, ringing channels, bridges, and dialer health. The dashboard pushes updates from live Stasis events and performs slower periodic reconciliation polls.</p>
+                    </div>
+                    <div class="text-lg-end">
+                        <span class="badge @(Model.Diagnostics.Reachable ? "bg-success" : "bg-secondary")" data-dashboard-status>
+                            @(Model.Diagnostics.Reachable ? "Connected" : "Unavailable")
+                        </span>
+                        <div class="small text-body-secondary mt-2">
+                            Last updated:
+                            <span data-dashboard-updated>
+                                @(Model.Diagnostics.LastUpdatedUtc == default ? "Not yet refreshed" : Model.Diagnostics.LastUpdatedUtc.ToLocalTime().ToString("T"))
+                            </span>
+                        </div>
+                        <div class="small text-body-secondary">ARI base URL: <code>@Model.Diagnostics.BaseUrl</code></div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4" data-dashboard-summary>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="text-body-secondary small text-uppercase">Active calls</div>
+                                <div class="display-6 fw-semibold">@Model.Diagnostics.ActiveCallCount</div>
+                                <div class="small text-body-secondary">Estimated bridged conversations</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="text-body-secondary small text-uppercase">Channels</div>
+                                <div class="display-6 fw-semibold">@Model.Diagnostics.ChannelCount</div>
+                                <div class="small text-body-secondary">@Model.Diagnostics.ConnectedChannelCount connected / @Model.Diagnostics.RingingChannelCount ringing</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="text-body-secondary small text-uppercase">Bridges</div>
+                                <div class="display-6 fw-semibold">@Model.Diagnostics.BridgeCount</div>
+                                <div class="small text-body-secondary">Current media bridge count</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="text-body-secondary small text-uppercase">Oldest live channel</div>
+                                <div class="display-6 fw-semibold">@TimeSpan.FromSeconds(Model.Diagnostics.OldestChannelSeconds).ToString(@"m\:ss")</div>
+                                <div class="small text-body-secondary">Longest active channel age</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h2 class="h5 mb-0">Active calls</h2>
+                                        <div class="small text-body-secondary">Grouped logical calls with provider-tracked hold and mute state plus inferred participant counts.</div>
+                                    </div>
+                                    <span class="badge text-bg-light">@Model.Diagnostics.ActiveCallCount total / @Model.Diagnostics.ChannelCount channel legs</span>
+                                </div>
+                                <div class="table-responsive dashboard-scroll">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Caller</th>
+                                                <th>Direction</th>
+                                                <th>State</th>
+                                                <th>Connected to</th>
+                                                <th>Application</th>
+                                                <th>Legs</th>
+                                                <th>Parties</th>
+                                                <th>Duration</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-dashboard-calls>
+                                            @if (Model.Diagnostics.Calls.Count == 0)
+                                            {
+                                                <tr><td colspan="9" class="text-body-secondary">No active calls.</td></tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var call in Model.Diagnostics.Calls)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="fw-semibold">@(call.CallerName ?? call.CallerNumber ?? call.Key ?? call.PrimaryChannelId)</div>
+                                                            <div class="small text-body-secondary">@call.PrimaryChannelId</div>
+                                                        </td>
+                                                        <td>@call.Direction</td>
+                                                        <td>
+                                                            <div>@call.State</div>
+                                                            @if (!string.IsNullOrWhiteSpace(call.StateDetail))
+                                                            {
+                                                                <div class="small text-body-secondary">@call.StateDetail</div>
+                                                            }
+                                                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                                                @if (call.IsOnHold)
+                                                                {
+                                                                    <span class="badge text-bg-warning">On hold</span>
+                                                                }
+                                                                @if (call.IsMuted)
+                                                                {
+                                                                    <span class="badge text-bg-secondary">Muted</span>
+                                                                }
+                                                                @if (!string.IsNullOrWhiteSpace(call.BridgeType))
+                                                                {
+                                                                    <span class="badge text-bg-info">@call.BridgeType</span>
+                                                                }
+                                                            </div>
+                                                        </td>
+                                                        <td>@(call.ConnectedNumber ?? "-")</td>
+                                                        <td>@(call.Application ?? "-")</td>
+                                                        <td>@call.ChannelCount</td>
+                                                        <td>@call.PartyCount</td>
+                                                        <td>@TimeSpan.FromSeconds(call.DurationSeconds).ToString(@"m\:ss")</td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" data-dashboard-hangup data-channel-id="@call.PrimaryChannelId">
+                                                                Disconnect
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h2 class="h5 mb-0">Active bridges</h2>
+                                    <span class="badge text-bg-light">@Model.Diagnostics.BridgeCount total</span>
+                                </div>
+                                <div class="table-responsive dashboard-scroll">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Bridge</th>
+                                                <th>Type</th>
+                                                <th>Channels</th>
+                                                <th>Duration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-dashboard-bridges>
+                                            @if (Model.Diagnostics.Bridges.Count == 0)
+                                            {
+                                                <tr><td colspan="4" class="text-body-secondary">No active bridges.</td></tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var bridge in Model.Diagnostics.Bridges)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="fw-semibold">@(bridge.Name ?? bridge.Id)</div>
+                                                            <div class="small text-body-secondary">@bridge.Id</div>
+                                                        </td>
+                                                        <td>@(bridge.BridgeType ?? "-")</td>
+                                                        <td>@bridge.ChannelCount</td>
+                                                        <td>@TimeSpan.FromSeconds(bridge.DurationSeconds).ToString(@"m\:ss")</td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mt-1">
+                    <div class="col-xl-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h2 class="h5">Live notifications</h2>
+                                <p class="text-body-secondary small">Connection changes and call-volume shifts show up here without refreshing the page.</p>
+                                <div data-dashboard-notifications>
+                                    @if (!string.IsNullOrWhiteSpace(Model.Diagnostics.ErrorMessage))
+                                    {
+                                        <div class="alert alert-warning py-2 mb-2 small">
+                                            <div class="fw-semibold">@Model.Diagnostics.ErrorMessage</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-body-secondary small">Waiting for live events...</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-8">
+                        <div class="accordion" id="ariRawPayloads">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ariInfo">
+                                        Raw ARI info
+                                    </button>
+                                </h2>
+                                <div id="ariInfo" class="accordion-collapse collapse" data-bs-parent="#ariRawPayloads">
+                                    <div class="accordion-body">
+                                        <pre class="mb-0 p-3 bg-body-tertiary border rounded small dashboard-pre" data-dashboard-info-json>@Model.Diagnostics.InfoJson</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ariChannels">
+                                        Raw ARI channels
+                                    </button>
+                                </h2>
+                                <div id="ariChannels" class="accordion-collapse collapse" data-bs-parent="#ariRawPayloads">
+                                    <div class="accordion-body">
+                                        <pre class="mb-0 p-3 bg-body-tertiary border rounded small dashboard-pre" data-dashboard-channels-json>@Model.Diagnostics.ChannelsJson</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ariBridges">
+                                        Raw ARI bridges
+                                    </button>
+                                </h2>
+                                <div id="ariBridges" class="accordion-collapse collapse" data-bs-parent="#ariRawPayloads">
+                                    <div class="accordion-body">
+                                        <pre class="mb-0 p-3 bg-body-tertiary border rounded small dashboard-pre" data-dashboard-bridges-json>@Model.Diagnostics.BridgesJson</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

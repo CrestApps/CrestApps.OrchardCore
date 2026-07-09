@@ -251,6 +251,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             Direction = CallDirection.Inbound,
             ProviderName = interaction.ProviderName,
             StartedUtc = _clock.UtcNow,
+            Metadata = BuildCallMetadata(interaction),
         };
 
         await _incomingCallDispatcher.DispatchAsync(agent.UserId, call, cancellationToken);
@@ -263,6 +264,45 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         return interaction.TechnicalMetadata.TryGetValue(ServiceAddressMetadataKey, out var value)
             ? value?.ToString()
             : null;
+    }
+
+    private static Dictionary<string, object> BuildCallMetadata(Core.Models.Interaction interaction)
+    {
+        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(interaction.CustomerAddress))
+        {
+            metadata["callerAddress"] = interaction.CustomerAddress;
+        }
+
+        var serviceAddress = ResolveServiceAddress(interaction);
+
+        if (!string.IsNullOrWhiteSpace(serviceAddress))
+        {
+            metadata["calledAddress"] = serviceAddress;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.ProviderName))
+        {
+            metadata["providerName"] = interaction.ProviderName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.ItemId))
+        {
+            metadata["interactionId"] = interaction.ItemId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.ActivityItemId))
+        {
+            metadata["activityItemId"] = interaction.ActivityItemId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.QueueId))
+        {
+            metadata["queueId"] = interaction.QueueId;
+        }
+
+        return metadata;
     }
 
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)

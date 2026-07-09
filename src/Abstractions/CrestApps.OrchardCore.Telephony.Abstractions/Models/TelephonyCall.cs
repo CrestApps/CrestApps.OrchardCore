@@ -50,4 +50,11 @@ public sealed class TelephonyCall
     /// Gets or sets the time, in UTC, when the call started.
     /// </summary>
     public DateTimeOffset? StartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets optional provider-neutral metadata associated with the call.
+    /// Providers and orchestration modules can use this bag to carry routing hints or contextual
+    /// data without extending the shared telephony contracts with provider-specific properties.
+    /// </summary>
+    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
 }

@@ -48,6 +48,21 @@ public class AsteriskSettingsViewModel
     public int TimeoutSeconds { get; set; } = AsteriskConstants.DefaultTimeoutSeconds;
 
     /// <summary>
+    /// Gets or sets the voicemail dialplan context.
+    /// </summary>
+    public string VoicemailContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets the template used to resolve the voicemail dialplan extension.
+    /// </summary>
+    public string VoicemailExtensionTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the voicemail dialplan priority.
+    /// </summary>
+    public int VoicemailPriority { get; set; } = 1;
+
+    /// <summary>
     /// Gets or sets a value indicating whether a password has already been saved.
     /// </summary>
     [BindNever]

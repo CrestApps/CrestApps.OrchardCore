@@ -73,7 +73,7 @@ Contact Center administration is intentionally split into focused menu entries u
 | **Business hours** | Reusable open/closed calendars with time zone, weekly schedule, and holiday dates. Queues and entry points use them to decide whether work should route, hold, overflow, or close. | The Support calendar is open Monday-Friday 08:00-17:00 America/New_York and closed on holidays. |
 | **Campaigns** | Omnichannel CRM grouping and reporting records. Campaigns describe the business initiative; they do not decide routing or media execution. | `July renewal outreach` groups all outbound renewal activities and reports outcomes. |
 | **Channel endpoints** | Omnichannel sender/receiver addresses such as SMS numbers, phone numbers, or email addresses. Contact Center references them but Telephony/provider modules still execute media. | `+1 800 555 0100` is the public support number used by an inbound entry point. |
-| **Entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
+| **Inbound entry points** | Inbound front doors for voice work. They map dialed numbers to queues, apply business-hours behavior, set priority, and define closed-hours handling. | Calls to the support DID route to Tier 1 during business hours and overflow to voicemail after hours. |
 | **Queues** | Waiting rooms for activities. A queue owns priority, SLA threshold, reservation timeout, routing strategy, required skills, business-hours behavior, and overflow. | `Billing Voice` requires the Billing skill, uses longest-idle routing, and overflows to General Support after 10 minutes. |
 | **Skills** | Routeable capabilities assigned by supervisors/administrators. Queues can require skills, and routing filters out agents who do not have them. | A Spanish-language queue requires both `Spanish` and `Billing`. |
 | **Dialer profiles** | Outbound execution policy over existing CRM activities. The profile selects queue, dialing mode, pacing, voice provider, retry, and compliance rules. | A power dialer profile reserves available Billing agents and dials renewal activities within the allowed calling window. |
@@ -197,6 +197,8 @@ POST /api/contact-center/voice/inbound
 ```
 
 The endpoint requires the `Manage interactions` permission. Provider-specific webhooks that validate their own provider signature can instead call `IVoiceContactCenterCallRouter` directly, the same way the Omnichannel SMS webhook handles inbound messages.
+
+For local burst testing, the repository includes the **Asterisk Web** startup sample at `src\Startup\CrestApps.OrchardCore.Asterisk.Web`. It signs in to Orchard, originates one or more Asterisk channels into the configured Stasis application, then forwards the normalized inbound voice events after Asterisk confirms the channels entered Stasis. That lets you exercise queueing, routing, and agent offers with a provider call id that comes from the real Asterisk channel the dashboard is already showing. The sample splits the experience into an **Asterisk Dashboard** page for live ARI telemetry and an **Inbound Simulator** page for burst generation. In that simulator, **To address** is the dialed service address that Contact Center uses to resolve the inbound entry point or queue mapping, while **Caller number seed** only generates distinct caller identities for the burst.
 
 ### Shared disposition for inbound and outbound
 

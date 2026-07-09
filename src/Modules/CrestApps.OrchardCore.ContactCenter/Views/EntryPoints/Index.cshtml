@@ -3,7 +3,7 @@
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<ContactCenterEntryPoint>>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Entry points"])</h1></zone>
+<zone Name="Title"><h1>@RenderTitleSegments(T["Inbound entry points"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">
@@ -19,7 +19,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add entry point"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add inbound entry point"]</a>
                 </div>
             </div>
         </div>

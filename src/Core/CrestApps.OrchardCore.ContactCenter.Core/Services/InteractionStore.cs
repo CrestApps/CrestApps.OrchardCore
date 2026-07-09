@@ -82,6 +82,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId &&
+                index.Status != InteractionStatus.Created &&
                 index.Status != InteractionStatus.Ended &&
                 index.Status != InteractionStatus.Failed,
             collection: ContactCenterConstants.CollectionName)

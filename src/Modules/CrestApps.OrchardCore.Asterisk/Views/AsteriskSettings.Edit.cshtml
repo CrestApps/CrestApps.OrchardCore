@@ -80,6 +80,33 @@
             <span class="hint">@T["How long Asterisk should keep trying to originate the outbound call before it times out."]</span>
         </div>
     </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailContext">
+        <label asp-for="VoicemailContext" class="ocat-label">@T["Voicemail context"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailContext" class="form-control" autocomplete="off" />
+            <span asp-validation-for="VoicemailContext"></span>
+            <span class="hint">@T["Optional. When set together with the voicemail extension template, the soft phone can send inbound calls to this dialplan context for voicemail handling."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailExtensionTemplate">
+        <label asp-for="VoicemailExtensionTemplate" class="ocat-label">@T["Voicemail extension template"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailExtensionTemplate" class="form-control" autocomplete="off" />
+            <span asp-validation-for="VoicemailExtensionTemplate"></span>
+            <span class="hint">@T["Optional. Resolves the dialplan extension used for voicemail routing. The template can reference call metadata tokens such as {{voicemailRecipientUserName}}, {{voicemailRecipientUserId}}, {{calledAddress}}, or {{queueName}}."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailPriority">
+        <label asp-for="VoicemailPriority" class="ocat-label">@T["Voicemail priority"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailPriority" class="form-control" type="number" min="1" />
+            <span asp-validation-for="VoicemailPriority"></span>
+            <span class="hint">@T["The dialplan priority Asterisk should start at when the soft phone routes a call to voicemail."]</span>
+        </div>
+    </div>
 </div>
 
 <script at="Foot">

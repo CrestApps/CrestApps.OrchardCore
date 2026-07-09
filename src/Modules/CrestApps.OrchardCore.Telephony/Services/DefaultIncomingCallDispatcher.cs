@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 
@@ -14,6 +16,8 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
 {
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IEnumerable<IIncomingCallContextProvider> _contextProviders;
+    private readonly ITelephonyInteractionStore _interactionStore;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -21,14 +25,20 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
     /// </summary>
     /// <param name="hubContext">The telephony hub context used to push events to connected clients.</param>
     /// <param name="contextProviders">The registered incoming-call context providers.</param>
+    /// <param name="interactionStore">The telephony interaction store.</param>
+    /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DefaultIncomingCallDispatcher(
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IEnumerable<IIncomingCallContextProvider> contextProviders,
+        ITelephonyInteractionStore interactionStore,
+        IClock clock,
         ILogger<DefaultIncomingCallDispatcher> logger)
     {
         _hubContext = hubContext;
         _contextProviders = contextProviders;
+        _interactionStore = interactionStore;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -59,6 +69,49 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
             Properties = contributionContext.Properties,
         };
 
+        await RecordInteractionAsync(userId, call, cancellationToken);
         await _hubContext.Clients.User(userId).IncomingCall(call, context);
+    }
+
+    private async Task RecordInteractionAsync(string userId, TelephonyCall call, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(call.CallId))
+        {
+            return;
+        }
+
+        var existing = await _interactionStore.FindByCallIdAsync(userId, call.CallId, cancellationToken);
+
+        if (existing is null)
+        {
+            var interaction = new TelephonyInteraction
+            {
+                InteractionId = IdGenerator.GenerateId(),
+                CallId = call.CallId,
+                ProviderName = call.ProviderName,
+                UserId = userId,
+                From = call.From,
+                To = call.To,
+                Direction = call.Direction,
+                Outcome = CallOutcome.InProgress,
+                StartedUtc = call.StartedUtc?.UtcDateTime ?? _clock.UtcNow,
+            };
+
+            await _interactionStore.CreateAsync(interaction, cancellationToken);
+
+            return;
+        }
+
+        existing.ProviderName = call.ProviderName;
+        existing.From = string.IsNullOrEmpty(call.From) ? existing.From : call.From;
+        existing.To = string.IsNullOrEmpty(call.To) ? existing.To : call.To;
+        existing.Direction = call.Direction;
+
+        if (!existing.EndedUtc.HasValue)
+        {
+            existing.Outcome = CallOutcome.InProgress;
+        }
+
+        await _interactionStore.UpdateAsync(existing, cancellationToken);
     }
 }

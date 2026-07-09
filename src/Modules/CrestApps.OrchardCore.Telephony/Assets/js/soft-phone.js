@@ -121,9 +121,13 @@
         var connection = null;
         var currentCall = null;
         var incomingContext = null;
+        var incomingHandled = false;
+        var incomingAcceptPending = false;
+        var incomingExpiryTimer = null;
         var requiresAuthentication = false;
         var isConnected = false;
         var isAvailable = false;
+        var connectionStatusResolved = false;
         var authenticationScheme = null;
         var activeTab = 'keypad';
         var suppressToggleClick = false;
@@ -164,6 +168,40 @@
             });
         }
 
+        function syncViewHeight() {
+            if (!dom.panel || dom.panel.hidden || !dom.keypadView) {
+                return;
+            }
+
+            var previousHidden = dom.keypadView.hidden;
+            var previousPosition = dom.keypadView.style.position;
+            var previousVisibility = dom.keypadView.style.visibility;
+            var previousPointerEvents = dom.keypadView.style.pointerEvents;
+            var previousInset = dom.keypadView.style.inset;
+
+            if (previousHidden) {
+                dom.keypadView.hidden = false;
+                dom.keypadView.style.position = 'absolute';
+                dom.keypadView.style.inset = '0 auto auto 0';
+                dom.keypadView.style.visibility = 'hidden';
+                dom.keypadView.style.pointerEvents = 'none';
+            }
+
+            var height = Math.ceil(dom.keypadView.getBoundingClientRect().height || dom.keypadView.scrollHeight || 0);
+
+            if (previousHidden) {
+                dom.keypadView.hidden = previousHidden;
+                dom.keypadView.style.position = previousPosition;
+                dom.keypadView.style.inset = previousInset;
+                dom.keypadView.style.visibility = previousVisibility;
+                dom.keypadView.style.pointerEvents = previousPointerEvents;
+            }
+
+            if (height > 0) {
+                rootElement.style.setProperty('--telephony-view-height', height + 'px');
+            }
+        }
+
         function activeTabExists() {
             return dom.tabs.some(function (tab) {
                 return tab.getAttribute('data-telephony-tab') === activeTab;
@@ -192,6 +230,20 @@
             var key = stateName.charAt(0).toLowerCase() + stateName.slice(1);
 
             return strings[key] || stateName;
+        }
+
+        function getPeerNumber(call) {
+            if (!call) {
+                return '';
+            }
+
+            var inbound = call.direction === 1 || call.direction === 'Inbound';
+
+            if (inbound) {
+                return call.from || call.to || '';
+            }
+
+            return call.to || call.from || '';
         }
 
         // ---- Layout persistence and dragging ----
@@ -333,6 +385,10 @@
         function restoreLayout() {
             var layout = loadLayout();
 
+            if (typeof layout.activeTab === 'string' && layout.activeTab.length) {
+                activeTab = layout.activeTab;
+            }
+
             if (layout.open && dom.panel) {
                 dom.panel.hidden = false;
             }
@@ -452,8 +508,13 @@
             });
         }
 
+        function persistActiveTab() {
+            saveLayout({ activeTab: activeTab });
+        }
+
         function setActiveTab(tab) {
             activeTab = tab;
+            persistActiveTab();
             render();
 
             if (tab === 'history') {
@@ -467,15 +528,15 @@
 
             var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
             var active = isActive(stateName);
-
-            rootElement.classList.toggle('telephony-soft-phone--in-call', active);
+            var connected = stateName === 'Connected';
+            var liveMedia = connected || stateName === 'OnHold';
 
             if (dom.toggleIcon) {
-                dom.toggleIcon.className = active ? 'fa-solid fa-phone-slash' : 'fa-solid fa-phone';
+                dom.toggleIcon.className = 'fa-solid fa-phone';
             }
 
-            var notAvailable = !isAvailable;
-            var needsConnect = isAvailable && requiresAuthentication && !isConnected;
+            var notAvailable = connectionStatusResolved && !isAvailable;
+            var needsConnect = connectionStatusResolved && isAvailable && requiresAuthentication && !isConnected;
 
             // Unavailable: no provider configured. Keep contributed tabs reachable.
             if (notAvailable && !active) {
@@ -491,6 +552,7 @@
                 show(dom.footer, hasExtensionTabs());
                 updateTabs();
                 setStatus(strings.notReady || 'Not Ready');
+                syncViewHeight();
 
                 return;
             }
@@ -506,6 +568,7 @@
                 show(dom.footer, hasExtensionTabs());
                 updateTabs();
                 setStatus(strings.notConnected || 'Not connected');
+                syncViewHeight();
 
                 return;
             }
@@ -520,24 +583,26 @@
             setStatus(currentCall ? statusTextForState(stateName) : (strings.idle || 'Ready'));
 
             if (dom.peer) {
-                dom.peer.textContent = active && currentCall ? (currentCall.to || currentCall.from || '') : '';
+                dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
             }
 
             show(dom.dial, !active);
-            show(dom.hangup, active && has(CAPABILITIES.Hangup));
+            show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
             show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
             show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
 
             var muted = currentCall && currentCall.isMuted;
-            show(dom.mute, active && !muted && has(CAPABILITIES.Mute));
-            show(dom.unmute, active && muted && has(CAPABILITIES.Mute));
+            show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
+            show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
 
-            show(dom.transfer, active && has(CAPABILITIES.Transfer));
-            show(dom.merge, active && has(CAPABILITIES.Merge));
+            show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer));
+            show(dom.merge, connected && has(CAPABILITIES.Merge));
 
             if (dom.number) {
                 dom.number.disabled = active;
             }
+
+            syncViewHeight();
         }
 
         // ---- Call operations ----
@@ -588,6 +653,19 @@
             return currentCall ? currentCall.callId : null;
         }
 
+        function currentCallReference() {
+            var id = currentCallId();
+
+            if (!id) {
+                return null;
+            }
+
+            return {
+                callId: id,
+                metadata: currentCall && currentCall.metadata ? currentCall.metadata : null
+            };
+        }
+
         function dial() {
             var number = dom.number ? dom.number.value.trim() : '';
 
@@ -605,7 +683,7 @@
                 return;
             }
 
-            activeTab = 'keypad';
+            setActiveTab('keypad');
             togglePanel(true);
 
             if (dom.number) {
@@ -616,42 +694,42 @@
         }
 
         function hangup() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
-            if (id) {
-                invoke('Hangup', { callId: id });
+            if (call) {
+                invoke('Hangup', call);
             }
         }
 
         function hold() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
-            if (id) {
-                invoke('Hold', { callId: id });
+            if (call) {
+                invoke('Hold', call);
             }
         }
 
         function resume() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
-            if (id) {
-                invoke('Resume', { callId: id });
+            if (call) {
+                invoke('Resume', call);
             }
         }
 
         function mute() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
-            if (id) {
-                invoke('Mute', { callId: id });
+            if (call) {
+                invoke('Mute', call);
             }
         }
 
         function unmute() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
-            if (id) {
-                invoke('Unmute', { callId: id });
+            if (call) {
+                invoke('Unmute', call);
             }
         }
 
@@ -717,20 +795,52 @@
             return normalizeState(currentCall.state) === 'Ringing' && inbound;
         }
 
+        function hasBlockingActiveCall() {
+            if (!currentCall) {
+                return false;
+            }
+
+            var stateName = normalizeState(currentCall.state);
+
+            return isActive(stateName) && !isRingingInbound();
+        }
+
+        function getIncomingReservationId(context) {
+            return context && context.properties
+                ? context.properties.reservationId || null
+                : null;
+        }
+
+        function isSameIncomingOffer(call, context) {
+            if (!currentCall || !call) {
+                return false;
+            }
+
+            var currentReservationId = getIncomingReservationId(incomingContext);
+            var nextReservationId = getIncomingReservationId(context);
+
+            return currentCall.callId === call.callId &&
+                (!currentReservationId || !nextReservationId || currentReservationId === nextReservationId);
+        }
+
         function renderIncoming() {
-            var visible = isRingingInbound();
+            var visible = isRingingInbound() && !incomingHandled;
 
             show(dom.incoming, visible);
             rootElement.classList.toggle('telephony-soft-phone--incoming', visible);
 
             if (!visible) {
-                incomingContext = null;
+                clearIncomingExpiryTimer();
+
+                if (!isRingingInbound()) {
+                    incomingContext = null;
+                }
 
                 return;
             }
 
             if (dom.incomingCaller) {
-                dom.incomingCaller.textContent = (currentCall && (currentCall.from || currentCall.to)) || (strings.incomingCall || 'Incoming call');
+                dom.incomingCaller.textContent = getPeerNumber(currentCall) || (strings.incomingCall || 'Incoming call');
             }
 
             var queueText = incomingContext && incomingContext.properties ? incomingContext.properties.queue : '';
@@ -742,6 +852,40 @@
 
             show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail));
             renderIncomingCards();
+            scheduleIncomingExpiry();
+        }
+
+        function clearIncomingExpiryTimer() {
+            if (incomingExpiryTimer) {
+                window.clearTimeout(incomingExpiryTimer);
+                incomingExpiryTimer = null;
+            }
+        }
+
+        function scheduleIncomingExpiry() {
+            clearIncomingExpiryTimer();
+
+            if (!incomingContext || !incomingContext.properties || !incomingContext.properties.expiresUtc) {
+                return;
+            }
+
+            var expiresAt = Date.parse(incomingContext.properties.expiresUtc);
+
+            if (!isFinite(expiresAt)) {
+                return;
+            }
+
+            var remainingMs = expiresAt - Date.now();
+
+            if (remainingMs <= 0) {
+                clearIncomingOffer();
+
+                return;
+            }
+
+            incomingExpiryTimer = window.setTimeout(function () {
+                clearIncomingOffer();
+            }, remainingMs + 250);
         }
 
         function renderIncomingCards() {
@@ -888,6 +1032,8 @@
             // A Contact Center offer: the server-side accept must succeed (accept the reservation and
             // connect the media) before the device answers, so the same live call is never answered here
             // while it is being re-offered to another agent.
+            incomingAcceptPending = true;
+
             postLifecycle('acceptUrl').then(function (result) {
                 if (!result || result.succeeded === false) {
                     showError(strings.offerUnavailable || 'This call is no longer available.');
@@ -898,38 +1044,98 @@
                     return;
                 }
 
+                incomingHandled = true;
+                incomingContext = null;
                 togglePanel(true);
+                render();
 
                 // Only answer on the device when the provider delivers media to the agent's device
                 // (agent-device-native). For server-side ACD the provider bridges the call, so no device
                 // answer is required.
                 if (result.requiresDeviceAnswer !== false && id) {
                     invoke('Answer', { callId: id });
+                } else if (currentCall) {
+                    currentCall.state = 'Connected';
+                    currentCall.isOnHold = false;
+                    render();
                 }
+            }).finally(function () {
+                incomingAcceptPending = false;
             });
         }
 
         function voicemailIncoming() {
-            var id = currentCallId();
+            var call = currentCallReference();
 
             postLifecycle('declineUrl');
 
-            if (id) {
-                invoke('Voicemail', { callId: id });
+            if (call) {
+                invoke('Voicemail', call);
             }
         }
 
         function ignoreIncoming() {
-            var id = currentCallId();
+            var call = currentCallReference();
+            var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
 
-            postLifecycle('declineUrl');
+            if (hasOffer) {
+                postLifecycle('declineUrl').then(function (result) {
+                    if (!result || result.succeeded === false) {
+                        showError(strings.offerUnavailable || 'This call is no longer available.');
 
-            if (id) {
-                invoke('Reject', { callId: id });
-            } else {
-                currentCall = null;
-                render();
+                        return;
+                    }
+
+                    clearIncomingOffer();
+                });
+
+                return;
             }
+
+            if (call) {
+                invoke('Reject', call);
+            }
+            else {
+                clearIncomingOffer();
+            }
+        }
+
+        function setIncomingOffer(call, context) {
+            if (!call) {
+                return;
+            }
+
+            if (hasBlockingActiveCall()) {
+                return;
+            }
+
+            if (incomingHandled && isSameIncomingOffer(call, context)) {
+                return;
+            }
+
+            currentCall = call;
+            incomingContext = context || null;
+            incomingHandled = false;
+            incomingAcceptPending = false;
+            setActiveTab('keypad');
+            render();
+        }
+
+        function clearIncomingOffer(options) {
+            options = options || {};
+            clearIncomingExpiryTimer();
+            incomingContext = null;
+            incomingHandled = false;
+ 
+            if (!options.preservePendingAccept) {
+                incomingAcceptPending = false;
+            }
+
+            if (!options.preserveCurrentCall && currentCall && isRingingInbound()) {
+                currentCall = null;
+            }
+
+            render();
         }
 
         // ---- Connection status and authentication ----
@@ -945,6 +1151,7 @@
                     requiresAuthentication = !!status.requiresAuthentication;
                     isConnected = !!status.isConnected;
                     authenticationScheme = status.authenticationScheme || 'oauth2';
+                    connectionStatusResolved = true;
                     render();
                 }
             }).catch(function () {
@@ -1038,10 +1245,41 @@
             return interaction.outcome === 0 || interaction.outcome === 'InProgress';
         }
 
+        function restoreActiveCall() {
+            if (!connection || currentCall) {
+                return Promise.resolve();
+            }
+
+            return connection.invoke('GetInteractions', 1).then(function (items) {
+                if (!items || !items.length) {
+                    return null;
+                }
+
+                var interaction = items[0];
+
+                if (!interaction || !isInProgress(interaction) || interaction.endedUtc) {
+                    return null;
+                }
+
+                currentCall = {
+                    callId: interaction.callId,
+                    from: interaction.from,
+                    to: interaction.to,
+                    direction: interaction.direction,
+                    state: 'Connected',
+                    providerName: interaction.providerName,
+                    startedUtc: interaction.startedUtc
+                };
+
+                render();
+
+                return currentCall;
+            }).catch(function () { });
+        }
+
         function formatTime(value) {
             try {
                 var date = new Date(value);
-
                 return isNaN(date.getTime()) ? '' : date.toLocaleString();
             } catch (e) {
                 return '';
@@ -1064,7 +1302,7 @@
                 var inbound = isInbound(interaction);
                 var missed = isMissed(interaction);
                 var inProgress = isInProgress(interaction);
-                var icon = inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right';
+                var directionGlyph = inbound ? '\u2199' : '\u2197';
                 var number = inbound ? (interaction.from || '') : (interaction.to || '');
                 var label = missed ? (strings.missed || 'Missed') : (inbound ? (strings.incoming || 'Incoming') : (strings.outgoing || 'Outgoing'));
                 var time = formatTime(interaction.startedUtc);
@@ -1073,11 +1311,10 @@
                     (inProgress ? ' telephony-soft-phone__history-item--active' : '');
 
                 var meta = escapeHtml(label) +
-                    (inProgress ? ' \u2022 ' + escapeHtml(strings.inProgress || 'In progress') : '') +
                     (time ? ' \u2022 ' + escapeHtml(time) : '');
 
                 return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' +
-                    '<span class="telephony-soft-phone__history-dir"><i class="fa-solid ' + icon + '"></i></span>' +
+                    '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' +
                     '<span class="telephony-soft-phone__history-body">' +
                     '<span class="telephony-soft-phone__history-number">' + escapeHtml(number || label) + '</span>' +
                     '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' +
@@ -1089,7 +1326,6 @@
                     var number = item.getAttribute('data-telephony-history-number');
 
                     if (number) {
-                        activeTab = 'keypad';
                         dialNumber(number);
                     }
                 });
@@ -1108,16 +1344,14 @@
 
                 if (normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed') {
                     currentCall = null;
+                    incomingHandled = false;
                 }
 
                 render();
             });
 
             connection.on('IncomingCall', function (call, context) {
-                currentCall = call;
-                incomingContext = context || null;
-                activeTab = 'keypad';
-                render();
+                setIncomingOffer(call, context || null);
             });
 
             connection.on('ReceiveError', function (message) {
@@ -1129,6 +1363,26 @@
             connection.onclose(function () {
                 setStatus(strings.disconnectedHub || 'Disconnected');
             });
+
+            if (typeof connection.onreconnected === 'function') {
+                connection.onreconnected(function () {
+                    showError(null);
+                    return Promise.all([refreshCapabilities(), refreshConnectionStatus()])
+                        .then(function () {
+                            return restoreActiveCall();
+                        })
+                        .then(function () {
+                            if (activeTab === 'history') {
+                                loadHistory();
+                            }
+
+                            render();
+                        })
+                        .catch(function (error) {
+                            showError(error && error.message ? error.message : String(error));
+                        });
+                });
+            }
         }
 
         function connect() {
@@ -1147,9 +1401,14 @@
 
             return connection.start().then(function () {
                 showError(null);
-
                 return Promise.all([refreshCapabilities(), refreshConnectionStatus()]);
             }).then(function () {
+                return restoreActiveCall();
+            }).then(function () {
+                if (activeTab === 'history') {
+                    loadHistory();
+                }
+
                 render();
             }).catch(function (error) {
                 showError(error && error.message ? error.message : String(error));
@@ -1237,7 +1496,10 @@
             attachDrag(dom.toggle, { ignoreButtons: false, suppressClick: true });
 
             window.addEventListener('message', onOAuthMessage);
-            window.addEventListener('resize', restorePosition);
+            window.addEventListener('resize', function () {
+                restorePosition();
+                syncViewHeight();
+            });
         }
 
         bindEvents();
@@ -1263,6 +1525,10 @@
             togglePanel: togglePanel,
             open: function () { togglePanel(true); },
             getCurrentCall: function () { return currentCall; },
+            isIncomingAcceptPending: function () { return incomingAcceptPending; },
+            setIncomingOffer: setIncomingOffer,
+            clearIncomingOffer: clearIncomingOffer,
+            showError: showError,
             getConnection: function () { return connection; },
             started: startPromise
         };

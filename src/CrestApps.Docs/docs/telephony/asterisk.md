@@ -10,7 +10,7 @@ description: Integrate Asterisk as a telephony provider for the Orchard Core sof
 | **Feature Name** | Asterisk |
 | **Feature ID** | `CrestApps.OrchardCore.Asterisk` |
 
-The **Asterisk** module integrates the [Asterisk](https://www.asterisk.org/) platform as a provider for the [Telephony](./) soft phone. It uses the **Asterisk REST Interface (ARI)** over HTTP basic authentication and performs call control server-side, so the browser never needs direct access to Asterisk credentials.
+The **Asterisk** module integrates the [Asterisk](https://www.asterisk.org/) platform as a provider for the [Telephony](./) soft phone. It uses the **Asterisk REST Interface (ARI)** over HTTP basic authentication and performs call control server-side, so the browser never needs direct access to Asterisk credentials. Here, **provider** means the Asterisk backend adapter that the soft phone talks to, not a separate telecom billing provider.
 
 ## Two Asterisk providers
 
@@ -29,12 +29,16 @@ The Asterisk provider currently advertises support for:
 
 - **Dial**
 - **Hang up**
+- **Answer / reject inbound calls**
+- **Send to voicemail** when a voicemail context and extension template are configured
 - **Hold / resume**
 - **Mute / unmute**
+- **Blind transfer** when the endpoint template resolves to a `Local/...@context` dialplan route
 - **Merge**
 - **Send DTMF digits**
 
-It does not currently advertise inbound-call, transfer, or soft-phone voicemail capabilities.
+Voicemail routing still depends on your dialplan design, but the provider can now expose the soft-phone
+voicemail button when you configure a voicemail dialplan target for the integration.
 
 ## Tenant-configured Asterisk settings
 
@@ -50,6 +54,9 @@ Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab unde
 | **Endpoint template** | Optional. Use `{number}` to convert the dialed destination into an Asterisk endpoint, for example `PJSIP/{number}@phones` or `Local/{number}@default`. The admin hint now renders that token literally, so the settings screen remains stable while showing the exact placeholder to enter. When empty, the dialed destination is sent to Asterisk as-is. |
 | **Outbound caller id** | Optional caller identifier presented on outbound calls. |
 | **Dial timeout (seconds)** | How long Asterisk keeps trying to originate the call before timing out. |
+| **Voicemail context** | Optional. The dialplan context Orchard continues a ringing call into when the agent chooses **Send to voicemail**. |
+| **Voicemail extension template** | Optional. Resolves the dialplan extension used for voicemail routing. It can reference provider-neutral call metadata such as `{voicemailRecipientUserName}`, `{voicemailRecipientUserId}`, `{calledAddress}`, or `{queueName}`. |
+| **Voicemail priority** | Optional. The dialplan priority to start at when the provider continues the call to voicemail. |
 
 When you enable **Asterisk** and no default telephony provider is set yet, **Asterisk** becomes the default automatically. When you disable **Asterisk** while it is the default, the default provider is cleared and the soft phone is disabled until another provider is selected.
 
@@ -72,7 +79,10 @@ Use the `OrchardCore:CrestApps:Asterisk:Default` section:
           "Password": "crestapps-dev",
           "ApplicationName": "crestapps-telephony",
           "EndpointTemplate": "Local/{number}@default",
-          "TimeoutSeconds": 30
+          "TimeoutSeconds": 30,
+          "VoicemailContext": "crestapps-voicemail",
+          "VoicemailExtensionTemplate": "{voicemailRecipientUserName}",
+          "VoicemailPriority": 1
         }
       }
     }
@@ -89,6 +99,9 @@ OrchardCore__CrestApps__Asterisk__Default__Password=crestapps-dev
 OrchardCore__CrestApps__Asterisk__Default__ApplicationName=crestapps-telephony
 OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate=Local/{number}@default
 OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds=30
+OrchardCore__CrestApps__Asterisk__Default__VoicemailContext=crestapps-voicemail
+OrchardCore__CrestApps__Asterisk__Default__VoicemailExtensionTemplate={voicemailRecipientUserName}
+OrchardCore__CrestApps__Asterisk__Default__VoicemailPriority=1
 ```
 
 The provider becomes available only when `BaseUrl`, `UserName`, `Password`, and `ApplicationName` are all configured.
@@ -99,12 +112,46 @@ The provider uses ARI endpoints such as:
 
 - `POST /channels` to originate a call
 - `DELETE /channels/{id}` to hang up a call
+- `POST /channels/{id}/answer` to answer an inbound Stasis-managed channel
 - `POST` / `DELETE /channels/{id}/hold` to hold and resume
 - `POST` / `DELETE /channels/{id}/mute?direction=both` to mute and unmute
+- `POST /channels/{id}/continue` to blind-transfer a Stasis-managed Local channel back into the dialplan
+- `POST /channels/{id}/variable` plus `POST /channels/{id}/continue` to push provider-neutral metadata into the channel and route it to the configured voicemail dialplan target
 - `POST /channels/{id}/dtmf` to send digits
 - `POST /bridges` plus `POST /bridges/{id}/addChannel` to merge two calls
 
 Because all requests are issued server-side, the ARI password never reaches the browser.
+
+## Voicemail routing
+
+When an agent clicks **Send to voicemail**, Orchard now sends a provider-neutral metadata bag along
+with the call action. For Contact Center offers that bag includes values such as:
+
+- `voicemailRecipientUserId`
+- `voicemailRecipientUserName`
+- `voicemailRecipientDisplayName`
+- `calledAddress`
+- `callerAddress`
+- `queueId`
+- `queueName`
+
+The Asterisk provider copies those values into channel variables with a `CRESTAPPS_METADATA_`
+prefix and then continues the call into the configured voicemail dialplan target. For example,
+`voicemailRecipientUserName = mike` becomes the channel variable
+`CRESTAPPS_METADATA_VOICEMAILRECIPIENTUSERNAME`.
+
+That lets your dialplan decide how to route voicemail without introducing Asterisk-specific
+properties into the shared telephony contracts. A common pattern is to make the extension template
+match the intended mailbox key:
+
+```text
+VoicemailContext = crestapps-voicemail
+VoicemailExtensionTemplate = {voicemailRecipientUserName}
+VoicemailPriority = 1
+```
+
+Then configure Asterisk to map the extension or the channel variables to the actual mailbox, with a
+fallback when the user-specific mailbox does not exist.
 
 ## Aspire local development
 
@@ -115,4 +162,36 @@ This makes the configuration-backed provider available immediately for local ten
 1. The **Asterisk** module is enabled.
 2. The tenant selects **Default Asterisk** as its default telephony provider.
 
+The bundled local development credentials are:
+
+- **ARI user name**: `crestapps`
+- **ARI password**: `crestapps-dev`
+- **ARI base URL**: `http://localhost:8088/ari/`
+
+Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. `http://localhost:8088/ari/` prompts for the credentials above and can be used to verify that ARI is reachable.
+
+The default Aspire endpoint template uses `Local/{number}@default`, which loops the originated call back into the bundled demo dialplan. That local development path now still **originates through the configured Stasis application**, so the same live channel remains under ARI control for hold, resume, mute, merge, inbound answer/reject, and Local-route blind transfer while the simulated media still stays inside Asterisk.
+
+For inbound routing tests, use the **Asterisk Web** startup sample (`src\Startup\CrestApps.OrchardCore.Asterisk.Web`). It signs in to Orchard, originates one or more Asterisk channels directly into the configured Stasis application, waits for the matching `StasisStart` events, and then forwards the normalized `InboundVoiceEvent` requests to `POST /api/contact-center/voice/inbound` using the live Asterisk channel ids. The sample exposes two pages: **Asterisk Dashboard** for live ARI telemetry and **Inbound Simulator** for burst testing. The dashboard now treats the Asterisk Stasis event stream as the primary update path: when live events arrive, the server immediately refreshes ARI state and pushes the new snapshot to connected browsers over SignalR. A slower 15-second reconciliation refresh remains in place so the dashboard can recover from missed events or transient SignalR disconnects. The dashboard still groups raw local channel legs into logical calls so one Local call is easier to read, shows inferred call direction, surfaces provider-tracked hold and mute state, estimates party counts from bridge membership, and adds a disconnect action so you can simulate caller hangup from the PBX side. Live notifications now sit beside the raw ARI payload drill-down so the active call and bridge tables have more room. In the simulator, **To address** controls which Contact Center entry point or queue mapping the inbound call targets, while **Caller number seed** only changes the generated caller identities.
+
 The bundled local configuration is intended for development and connectivity testing. Production deployments should supply their own ARI credentials, dialplan, endpoints, and media/network configuration.
+
+## Verifying local Asterisk activity
+
+The bundled image does not expose a separate web dashboard for live calls. For local development, the easiest inspection points are the ARI endpoints and the container logs.
+
+### Quick ARI checks
+
+With the default Aspire credentials, these endpoints are useful:
+
+- `GET http://localhost:8088/ari/asterisk/info` confirms that ARI is reachable and authenticated.
+- `GET http://localhost:8088/ari/channels` lists the active channels that Asterisk currently knows about.
+- `GET http://localhost:8088/ari/bridges` lists any active bridges, including merged calls.
+
+If the soft phone dials successfully but `channels` stays empty while the call is active, the originate request is not reaching or being accepted by Asterisk. If the call appears in `channels` but a later action such as hold fails, inspect the Orchard application logs and the Asterisk container logs together to see the ARI response body and the PBX-side reason.
+
+The Telephony SignalR hub now logs the start and completion of each soft-phone action with the authenticated user id, SignalR connection id, the provider call id, and any Contact Center correlation metadata that travelled with the call reference. When an Asterisk call-control action fails after a queued inbound offer is accepted, those hub entries make it easier to confirm whether Orchard is still acting on the original offered channel id or on the latest provider-side call identity.
+
+### What to expect from the bundled local path
+
+The local `Local/{number}@default` endpoint remains useful for keeping the media loop inside Asterisk during development, and the provider now originates those calls directly into the configured Stasis application so ARI events, dashboard telemetry, and the forwarded Contact Center ingress event all describe the same provider call id. Because the same Local loopback call leg stays inside Stasis, the Orchard soft phone can now expose advanced ARI-backed controls there instead of hiding them.

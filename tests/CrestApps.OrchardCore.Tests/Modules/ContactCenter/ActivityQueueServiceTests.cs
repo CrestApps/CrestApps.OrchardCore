@@ -39,6 +39,31 @@ public sealed class ActivityQueueServiceTests
     }
 
     [Fact]
+    public async Task EnqueueAsync_WhenPriorityIsNotProvided_UsesQueueDefaultPriority()
+    {
+        // Arrange
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync((QueueItem)null);
+        queueItemManager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem());
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue { ItemId = "q1", DefaultPriority = InteractionPriority.High });
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var service = CreateService(queueItemManager, queueManager, activityManager, new Mock<IBusinessHoursService>());
+
+        // Act
+        var item = await service.EnqueueAsync("act-1", "q1", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionPriority.High, item.Priority);
+    }
+
+    [Fact]
     public async Task OverflowDueAsync_WhenNoOverflowTarget_ReturnsZero()
     {
         // Arrange

@@ -20,13 +20,23 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
 
     public string LastRequestBody { get; private set; }
 
+    public IList<HttpRequestMessage> Requests { get; } = [];
+
+    public IList<string> RequestBodies { get; } = [];
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;
+        Requests.Add(request);
 
         if (request.Content is not null)
         {
             LastRequestBody = await request.Content.ReadAsStringAsync(cancellationToken);
+            RequestBodies.Add(LastRequestBody);
+        }
+        else
+        {
+            RequestBodies.Add(null);
         }
 
         return new HttpResponseMessage(_statusCode)

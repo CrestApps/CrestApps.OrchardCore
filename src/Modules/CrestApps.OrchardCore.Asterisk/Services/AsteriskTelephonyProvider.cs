@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -42,6 +43,12 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
     /// <inheritdoc/>
     public override LocalizedString Name => S["Asterisk"];
 
+    /// <inheritdoc/>
+    public override TelephonyCapabilities Capabilities
+        => GetCapabilities(
+            _siteService.GetSettings<AsteriskSettings>()?.EndpointTemplate,
+            AsteriskSettingsUtilities.HasVoicemailConfiguration(_siteService.GetSettings<AsteriskSettings>()));
+
     protected override string ProviderName
         => AsteriskConstants.ProviderTechnicalName;
 
@@ -59,6 +66,9 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
             EndpointTemplate = settings.EndpointTemplate,
             OutboundCallerId = settings.OutboundCallerId,
             TimeoutSeconds = settings.TimeoutSeconds,
+            VoicemailContext = settings.VoicemailContext,
+            VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate,
+            VoicemailPriority = settings.VoicemailPriority,
         };
 
         AsteriskSettingsUtilities.ApplyDefaults(new AsteriskConnectionSettingsAdapter(resolved));
@@ -128,6 +138,24 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         {
             get => _settings.TimeoutSeconds;
             set => _settings.TimeoutSeconds = value;
+        }
+
+        public override string VoicemailContext
+        {
+            get => _settings.VoicemailContext;
+            set => _settings.VoicemailContext = value;
+        }
+
+        public override string VoicemailExtensionTemplate
+        {
+            get => _settings.VoicemailExtensionTemplate;
+            set => _settings.VoicemailExtensionTemplate = value;
+        }
+
+        public override int VoicemailPriority
+        {
+            get => _settings.VoicemailPriority;
+            set => _settings.VoicemailPriority = value;
         }
     }
 }

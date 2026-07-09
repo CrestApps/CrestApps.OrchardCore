@@ -94,7 +94,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         </head>
         <body>
             <div id="telephony-soft-phone" data-config='{{configJson}}'>
-                <button type="button" data-telephony-toggle>Phone</button>
+                <button type="button" data-telephony-toggle><i class="fa-solid fa-phone" data-telephony-toggle-icon></i></button>
                 <div data-telephony-panel hidden>
                     <span data-telephony-status>Ready</span>
                     <button type="button" data-telephony-close>Close</button>
@@ -113,6 +113,14 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                             <button type="button" data-telephony-transfer hidden>Transfer</button>
                             <button type="button" data-telephony-merge hidden>Merge</button>
                             <button type="button" data-telephony-hangup hidden>Hangup</button>
+                        </div>
+                        <div data-telephony-incoming hidden>
+                            <div data-telephony-incoming-caller></div>
+                            <div data-telephony-incoming-queue hidden></div>
+                            <div data-telephony-incoming-cards hidden></div>
+                            <button type="button" data-telephony-incoming-answer>Answer</button>
+                            <button type="button" data-telephony-incoming-voicemail hidden>Voicemail</button>
+                            <button type="button" data-telephony-incoming-ignore>Ignore</button>
                         </div>
                         <div data-telephony-view="history" data-telephony-history hidden>
                             <div data-telephony-history-list></div>

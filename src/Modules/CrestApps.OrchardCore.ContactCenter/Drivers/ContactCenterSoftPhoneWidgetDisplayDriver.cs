@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using CrestApps.Core.SignalR.Services;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -19,6 +21,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     private readonly IActivityQueueManager _queueManager;
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
+    private readonly HubRouteManager _hubRouteManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneWidgetDisplayDriver"/> class.
@@ -35,6 +38,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         IAgentProfileManager agentProfileManager,
         IActivityQueueManager queueManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
+        HubRouteManager hubRouteManager,
         IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -42,6 +46,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         _agentProfileManager = agentProfileManager;
         _queueManager = queueManager;
         _optionsProvider = optionsProvider;
+        _hubRouteManager = hubRouteManager;
         _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
     }
 
@@ -72,6 +77,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
 
         var viewModel = new AgentSoftPhoneViewModel
         {
+            HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
             Profile = profile,
             AvailableQueues = [.. queues],
             SelectedQueueIds = profile?.QueueIds ?? [],

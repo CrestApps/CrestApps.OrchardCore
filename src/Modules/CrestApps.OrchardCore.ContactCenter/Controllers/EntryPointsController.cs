@@ -155,7 +155,7 @@ public sealed class EntryPointsController : Controller
         var model = await _manager.NewAsync();
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Entry point"],
+            DisplayName = S["Inbound entry point"],
             Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -179,14 +179,14 @@ public sealed class EntryPointsController : Controller
         var model = await _manager.NewAsync();
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New entry point"],
+            DisplayName = S["New inbound entry point"],
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
-            await _notifier.SuccessAsync(H["A new entry point has been created successfully."]);
+            await _notifier.SuccessAsync(H["A new inbound entry point has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -254,7 +254,7 @@ public sealed class EntryPointsController : Controller
         if (ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
-            await _notifier.SuccessAsync(H["The entry point has been updated successfully."]);
+            await _notifier.SuccessAsync(H["The inbound entry point has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -281,7 +281,7 @@ public sealed class EntryPointsController : Controller
         if (entryPoint is not null)
         {
             await _manager.DeleteAsync(entryPoint);
-            await _notifier.SuccessAsync(H["The entry point has been deleted successfully."]);
+            await _notifier.SuccessAsync(H["The inbound entry point has been deleted successfully."]);
         }
 
         return RedirectToAction(nameof(Index));

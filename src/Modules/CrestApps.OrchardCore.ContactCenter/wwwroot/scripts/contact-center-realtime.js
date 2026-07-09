@@ -80,17 +80,20 @@
             stopHeartbeat();
         });
 
-        connection.start().then(function () {
+        var started = connection.start().then(function () {
             startHeartbeat();
-            loadSnapshot().catch(function () { });
+            return loadSnapshot().catch(function () { });
         }).catch(function (error) {
             if (typeof options.onError === 'function') {
                 options.onError(error);
             }
+
+            throw error;
         });
 
         return {
             connection: connection,
+            started: started,
             getSnapshot: loadSnapshot,
             watchQueue: function (queueId) {
                 return connection.invoke('WatchQueue', queueId);

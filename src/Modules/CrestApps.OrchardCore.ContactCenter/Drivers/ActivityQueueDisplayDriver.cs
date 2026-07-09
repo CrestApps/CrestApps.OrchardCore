@@ -55,6 +55,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             EnableSlaAging = queue.EnableSlaAging,
             SlaThresholdSeconds = queue.SlaThresholdSeconds,
             ReservationTimeoutSeconds = queue.ReservationTimeoutSeconds,
+            UnansweredOfferAction = queue.UnansweredOfferAction,
             RequiredSkills = queue.RequiredSkills,
             InboundChannelEndpointId = queue.InboundChannelEndpointId,
             BusinessHoursCalendarId = queue.BusinessHoursCalendarId,
@@ -77,6 +78,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             model.EnableSlaAging = viewModel.EnableSlaAging;
             model.SlaThresholdSeconds = viewModel.SlaThresholdSeconds;
             model.ReservationTimeoutSeconds = viewModel.ReservationTimeoutSeconds;
+            model.UnansweredOfferAction = viewModel.UnansweredOfferAction;
             model.RequiredSkills = viewModel.RequiredSkills;
             model.SkillOptions = viewModel.SkillOptions;
             model.InboundChannelEndpointId = viewModel.InboundChannelEndpointId;
@@ -111,6 +113,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         queue.EnableSlaAging = model.EnableSlaAging;
         queue.SlaThresholdSeconds = model.SlaThresholdSeconds;
         queue.ReservationTimeoutSeconds = model.ReservationTimeoutSeconds;
+        queue.UnansweredOfferAction = model.UnansweredOfferAction;
         queue.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
         queue.InboundChannelEndpointId = string.IsNullOrWhiteSpace(model.InboundChannelEndpointId)
             ? null

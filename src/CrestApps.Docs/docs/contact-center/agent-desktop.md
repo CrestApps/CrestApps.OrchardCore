@@ -28,7 +28,7 @@ Agents can only receive work once the routing environment exists. Configure thes
 1. **Skills** (*Interaction Center → Skills*) - define the competencies routing can require, for example `Spanish`, `Billing`, or `Tier2`.
 2. **Queues** (*Interaction Center → Queues*) - create a queue per line of business. Choose the routing strategy (longest-idle, round-robin, or least-busy), optional sticky-agent preference, the SLA threshold, the reservation timeout, required skills, and - for inbound voice - the dialed number (DID) that feeds the queue. See [Queues, reservations, and assignment](agents-queues-dialer.md#queues-reservations-and-assignment).
 3. **Business hours** (*Interaction Center → Business hours*) - attach a calendar to a queue so it pauses routing (or overflows) when closed.
-4. **Entry points** (*Interaction Center → Entry points*, Voice feature) - map an inbound DID to a queue with a priority, business-hours gating, and a closed-hours action (hold, voicemail, overflow, or reject).
+4. **Inbound entry points** (*Interaction Center → Inbound entry points*, Voice feature) - map an inbound DID to a queue with a priority, business-hours gating, and a closed-hours action (hold, voicemail, overflow, or reject).
 5. **Agent state reason codes** (*Interaction Center → Agent states*) - define the not-ready presence reasons agents can choose (for example `Lunch`, `Coaching`, `Admin`). These appear in the agent presence menu.
 6. **Campaigns and dispositions** - campaigns and dispositions live in the [Omnichannel](../omnichannel/index.md) **Interaction Center**. Every activity carries a **Subject** whose **Subject Flow** is the single decision controller: it defines the dispositions an agent can choose and the follow-up actions each disposition triggers. See [Subject Flow is the single decision controller](index.md#subject-flow-is-the-single-decision-controller).
 7. **Dialer profiles** (*Interaction Center → Dialer Profiles*, Dialer feature) - for outbound work, tie a campaign's activities to a queue, a dialing mode (manual, preview, power, or progressive), pacing, and compliance rules. See [Dialer](agents-queues-dialer.md#dialer).
@@ -59,7 +59,7 @@ Use this checklist before publishing a new inbound line:
 2. Configure the Subject Flow for that endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.
 3. Create the target queue, set its SLA, reservation timeout, routing strategy, required skills, and overflow queue.
 4. Attach a business-hours calendar when the queue should pause or overflow outside staffed hours.
-5. Create an **Entry point** for the DID. Set the target queue, priority, optional welcome/closed messages, and the closed action: hold, voicemail, overflow, or reject.
+5. Create an **Inbound entry point** for the DID. Set the target queue, priority, optional welcome/closed messages, and the closed action: hold, voicemail, overflow, or reject.
 6. Sign at least one skilled agent in to the queue, then place a test call. The expected path is **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**.
 7. Watch **Live dashboard** while testing. The queue waiting count should increase before assignment, then the selected agent should move from available to reserved/busy/wrap-up as the call progresses.
 
@@ -94,6 +94,19 @@ Open **Interaction Center → My workspace**. This is the screen an agent keeps 
 ### 1. Sign in and set your presence
 
 - **Sign in to queues and campaigns** from the soft phone's **Work** tab. You can only choose queues and campaigns you are allowed to handle.
+- If inbound voice work is already waiting in one of those queues, signing in or switching back to **Available** immediately asks routing to offer the next queued call instead of waiting for another inbound event.
+- The soft-phone **Work** tab now signs you in and out over the Contact Center SignalR hub instead of reloading the page, so queue membership updates stay in-place and the same browser connection immediately joins or leaves the live queue groups.
+- If the browser refreshes or the soft phone reconnects while you are still signed in and available, Contact Center now re-checks those queues again as soon as the soft phone reconnects, so already-waiting calls are re-offered instead of staying parked until the next inbound routing event.
+- If a ringing inbound offer was already assigned to you when the page refreshed, the soft phone now restores that same offer from the active reservation and keeps the ringing modal visible until you accept it, decline it, or the reservation timeout sends it back to routing.
+- New inbound offers now also reopen the soft-phone ringing modal from the live Contact Center hub event as soon as routing assigns them, so agents no longer need a page refresh or reconnect cycle to see the next queued call.
+- If a restart or earlier failure leaves behind a half-cleared voice offer, queued-voice recovery now cancels that orphaned pending reservation before it re-checks waiting calls, so a ghost reservation cannot keep blocking the next inbound assignment.
+- Queue sign-in, sign-out, and reconnect-driven availability recovery now all run the same self-healing pass before routing resumes, so impossible leftovers such as a pending reservation without a live ringing interaction, or an available agent still owning assigned voice work, are reclaimed and re-queued automatically instead of silently blocking the next inbound offer.
+- Once you accept an inbound voice offer, the soft phone now suppresses any duplicate restore of that same ringing reservation and will not show a new inbound modal over an already active call.
+- If the real-time layer revokes the pending offer at the same moment your accept finishes, the soft phone now keeps the accepted call active instead of snapping back to **Ready**, so the ringing modal can disappear without losing the live call card.
+- Queue sign-in no longer eagerly resolves the queued-voice re-offer pipeline while the sign-in postback is being processed, so signing into queues stays responsive even when the Voice feature is enabled.
+- When a timed-out voice offer is re-queued, Contact Center now clears the stale ringing interaction assignment before putting the work back into the queue, so the same agent is not left falsely at capacity for the next inbound offer.
+- Reconnect-driven queued-voice recovery also repairs a stale ringing offer that no longer has an active reservation before it asks routing for the next queued call, so an abandoned old offer cannot keep the agent falsely at capacity forever.
+- Queue sign-in and sign-out now also synchronize the live agent-session membership used by the real-time layer, so a soft-phone sign-out immediately removes the current browser session from the signed-in queue and campaign state instead of waiting for a reconnect.
 - **Set your presence** from the presence button at the top of the workspace. Choose **Available** to receive work, pick a **reason code** (for example *Lunch* or *Coaching*) to go not-ready, or choose **Request break**. A break is granted immediately when nothing is being routed to you; if an offer is already in flight, you finish it and the break is granted automatically afterward.
 
 The top bar also shows a live chip per signed-in queue with its current waiting count, so you can see where the pressure is.
@@ -102,8 +115,8 @@ The top bar also shows a live chip per signed-in queue with its current waiting 
 
 When routing selects you for a piece of work, a **ringing offer card** appears with the customer name (or number), the queue, and a countdown showing how long you have to respond. You have two choices:
 
-- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as DialPad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal coordinate so the call is only answered after the reservation is confirmed - you will never pick up a call that has already been re-offered to someone else.
-- **Decline** - releases the offer so it is immediately re-offered to the next available agent.
+- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as DialPad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal coordinate so the call is only answered after the reservation is confirmed - you will never pick up a call that has already been re-offered to someone else, and the soft-phone incoming modal now uses the same authoritative reservation lookup as the workspace accept flow instead of firing a second raw device answer when the Contact Center server has already accepted the offer. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center now also answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
+- **Decline** - releases the offer so it is immediately re-offered to the next available agent, and the incoming modal no longer follows that reservation decline with a second raw telephony reject against the same call.
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
 
@@ -117,6 +130,8 @@ Once you accept, the **active interaction** panel shows:
 - A **Complete activity** link that opens the same Omnichannel CRM completion page used by manual activities.
 
 Use the soft phone for hold, mute, transfer, and hang-up. The workspace reflects the call state in real time.
+
+The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
 
 ### 4. Complete the activity in the CRM
 
@@ -137,6 +152,7 @@ The **Recent activity** panel lists your most recent interactions with their dir
 ## How it works
 
 - The workspace loads a **state snapshot** from the server and then keeps itself current from the real-time hub's presence, offer, and queue events. It re-reads the authoritative state after you act, so what you see always matches the server.
+- Contact Center domain events are persisted immediately and the handler fan-out runs as deferred outbox work, so slow workflow or real-time projections do not block the soft-phone sign-in or sign-out postback.
 - **Accept** calls a single server-side command that accepts the reservation, tells the voice provider to connect the call to you, and advances the interaction and call session together - one atomic, audited transition rather than several best-effort client actions.
 - **Complete** goes through the source-neutral `IActivityDispositionService`, so dispositions, required-disposition rules, and subject-flow actions behave identically across every channel and source.
 

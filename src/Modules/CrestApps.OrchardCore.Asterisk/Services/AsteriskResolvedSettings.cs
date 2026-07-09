@@ -19,4 +19,10 @@ internal sealed class AsteriskResolvedSettings
     public string OutboundCallerId { get; set; }
 
     public int TimeoutSeconds { get; set; }
+
+    public string VoicemailContext { get; set; }
+
+    public string VoicemailExtensionTemplate { get; set; }
+
+    public int VoicemailPriority { get; set; }
 }

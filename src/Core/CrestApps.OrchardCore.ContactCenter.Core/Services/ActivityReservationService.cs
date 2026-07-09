@@ -2,6 +2,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -15,9 +18,14 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
+    private readonly IActivityQueueManager _queueManager;
+    private readonly IActivityQueueService _queueService;
+    private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly ITelephonyService _telephonyService;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityReservationService"/> class.
@@ -25,23 +33,38 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="reservationManager">The reservation manager.</param>
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
+    /// <param name="queueManager">The queue manager.</param>
+    /// <param name="queueService">The queue service used for dequeue operations.</param>
+    /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="telephonyServices">The optional telephony services used for voice-specific timeout actions.</param>
     /// <param name="clock">The clock used to stamp reservation times.</param>
+    /// <param name="logger">The logger.</param>
     public ActivityReservationService(
         IActivityReservationManager reservationManager,
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
+        IActivityQueueManager queueManager,
+        IActivityQueueService queueService,
+        IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        IEnumerable<ITelephonyService> telephonyServices,
+        IClock clock,
+        ILogger<ActivityReservationService> logger)
     {
         _reservationManager = reservationManager;
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
+        _queueManager = queueManager;
+        _queueService = queueService;
+        _interactionManager = interactionManager;
         _activityManager = activityManager;
         _publisher = publisher;
+        _telephonyService = telephonyServices.FirstOrDefault();
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -206,41 +229,192 @@ public sealed class ActivityReservationService : IActivityReservationService
 
     private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         reservation.Status = status;
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+        var queue = !string.IsNullOrEmpty(reservation.QueueId)
+            ? await _queueManager.FindByIdAsync(reservation.QueueId, cancellationToken)
+            : null;
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+        var configuredUnansweredAction = status == ReservationStatus.Expired
+            ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
+            : UnansweredOfferAction.Requeue;
+        var unansweredAction = configuredUnansweredAction;
+
+        if (unansweredAction is UnansweredOfferAction.Voicemail or UnansweredOfferAction.Reject &&
+            !await ExecuteTimedOutOfferActionAsync(unansweredAction, interaction, queue, agent, cancellationToken))
+        {
+            unansweredAction = UnansweredOfferAction.Requeue;
+        }
+
+        var requeue = unansweredAction == UnansweredOfferAction.Requeue;
 
         if (queueItem is not null)
         {
-            queueItem.Status = QueueItemStatus.Waiting;
             queueItem.ReservationId = null;
             queueItem.AgentId = null;
-            await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
-        }
 
-        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+            if (requeue)
+            {
+                queueItem.Status = QueueItemStatus.Waiting;
+                await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+            }
+            else
+            {
+                queueItem.DequeuedUtc = now;
+                await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
+            }
+        }
 
         if (agent is not null)
         {
-            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceStatus.Available;
+            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
             agent.RequestedPresenceStatus = null;
             agent.ActiveReservationId = null;
-            agent.PresenceChangedUtc = _clock.UtcNow;
+            agent.PresenceChangedUtc = now;
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 
         await UpdateActivityAsync(reservation.ActivityItemId, activity =>
         {
-            activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+            activity.AssignmentStatus = requeue
+                ? ActivityAssignmentStatus.Available
+                : ActivityAssignmentStatus.Released;
             activity.ReservationId = null;
             activity.ReservedById = null;
             activity.ReservedByUsername = null;
             activity.ReservedUtc = null;
             activity.ReservationExpiresUtc = null;
+
+            if (!requeue)
+            {
+                activity.Status = unansweredAction == UnansweredOfferAction.Voicemail
+                    ? ActivityStatus.Completed
+                    : ActivityStatus.Cancelled;
+                activity.CompletedUtc = now;
+            }
         }, cancellationToken);
 
+        if (interaction is not null)
+        {
+            if (requeue)
+            {
+                interaction.Status = InteractionStatus.Created;
+                interaction.AgentId = null;
+            }
+            else
+            {
+                interaction.Status = InteractionStatus.Ended;
+                interaction.EndedUtc ??= now;
+                interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
+            }
+
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
         await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+    }
+
+    private async Task<bool> ExecuteTimedOutOfferActionAsync(
+        UnansweredOfferAction unansweredAction,
+        Interaction interaction,
+        ActivityQueue queue,
+        AgentProfile agent,
+        CancellationToken cancellationToken)
+    {
+        if (interaction is null || string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
+        {
+            _logger.LogWarning(
+                "The unanswered-offer action '{UnansweredOfferAction}' could not run for activity '{ActivityItemId}' because no provider interaction is available.",
+                unansweredAction,
+                interaction?.ActivityItemId);
+
+            return false;
+        }
+
+        if (_telephonyService is null)
+        {
+            _logger.LogWarning(
+                "The unanswered-offer action '{UnansweredOfferAction}' could not run for provider call '{ProviderCallId}' because no telephony service is registered.",
+                unansweredAction,
+                interaction.ProviderInteractionId);
+
+            return false;
+        }
+
+        var call = new CallReference
+        {
+            CallId = interaction.ProviderInteractionId,
+            Metadata = BuildOfferTimeoutMetadata(queue, agent),
+        };
+
+        TelephonyResult result = unansweredAction switch
+        {
+            UnansweredOfferAction.Voicemail => await _telephonyService.SendToVoicemailAsync(call, cancellationToken),
+            UnansweredOfferAction.Reject => await _telephonyService.RejectAsync(call, cancellationToken),
+            _ => null,
+        };
+
+        if (result?.Succeeded == true)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Applied the unanswered-offer action '{UnansweredOfferAction}' to provider call '{ProviderCallId}' for queue '{QueueId}'.",
+                    unansweredAction,
+                    interaction.ProviderInteractionId,
+                    queue?.ItemId);
+            }
+
+            return true;
+        }
+
+        _logger.LogWarning(
+            "The unanswered-offer action '{UnansweredOfferAction}' failed for provider call '{ProviderCallId}' on queue '{QueueId}': {ErrorMessage}",
+            unansweredAction,
+            interaction.ProviderInteractionId,
+            queue?.ItemId,
+            result?.Error ?? "No result was returned.");
+
+        return false;
+    }
+
+    private static Dictionary<string, object> BuildOfferTimeoutMetadata(ActivityQueue queue, AgentProfile agent)
+    {
+        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        if (queue is not null)
+        {
+            metadata["queueId"] = queue.ItemId;
+
+            if (!string.IsNullOrWhiteSpace(queue.Name))
+            {
+                metadata["queueName"] = queue.Name;
+            }
+        }
+
+        if (agent is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(agent.UserId))
+            {
+                metadata["voicemailRecipientUserId"] = agent.UserId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(agent.UserName))
+            {
+                metadata["voicemailRecipientUserName"] = agent.UserName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(agent.DisplayName))
+            {
+                metadata["voicemailRecipientDisplayName"] = agent.DisplayName;
+            }
+        }
+
+        return metadata;
     }
 
     private async Task UpdateActivityAsync(string activityItemId, Action<OmnichannelActivity> mutate, CancellationToken cancellationToken)

@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -17,6 +19,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly IContactCenterEventPublisher _publisher;
@@ -42,6 +45,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IInteractionManager interactionManager,
         IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        ITelephonyProviderResolver telephonyProviderResolver,
         ICallSessionManager callSessionManager,
         IInboundVoiceService inboundVoiceService,
         IContactCenterEventPublisher publisher,
@@ -53,6 +57,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _interactionManager = interactionManager;
         _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
+        _telephonyProviderResolver = telephonyProviderResolver;
         _callSessionManager = callSessionManager;
         _inboundVoiceService = inboundVoiceService;
         _publisher = publisher;
@@ -82,8 +87,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
-        var deliveryModel = provider?.DeliveryModel ?? VoiceProviderDeliveryModel.AgentDeviceNative;
-        var requiresDeviceAnswer = deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative;
+        var hasProvider = provider is not null;
+        var deliveryModel = hasProvider
+            ? provider.DeliveryModel
+            : VoiceProviderDeliveryModel.ServerSideAcd;
+        var requiresDeviceAnswer = hasProvider && deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative;
 
         reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
 
@@ -124,6 +132,37 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 }
 
                 return CallCommandResult.Failure(connectResult.ErrorMessage ?? "The provider could not connect the call to the agent.");
+            }
+        }
+        else if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd)
+        {
+            var telephonyProvider = await _telephonyProviderResolver.GetAsync(interaction.ProviderName);
+
+            if (telephonyProvider is not null)
+            {
+                var answerResult = await telephonyProvider.AnswerAsync(new CallReference
+                {
+                    CallId = interaction.ProviderInteractionId,
+                }, cancellationToken);
+
+                if (!answerResult.Succeeded)
+                {
+                    _logger.LogError(
+                        "The telephony provider '{Provider}' could not answer inbound Contact Center call '{ProviderCallId}' for agent '{AgentId}': {ErrorMessage}.",
+                        interaction.ProviderName,
+                        interaction.ProviderInteractionId,
+                        reservation.AgentId,
+                        answerResult.Error);
+
+                    await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
+                    if (!string.IsNullOrEmpty(reservation.QueueId))
+                    {
+                        await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
+                    }
+
+                    return CallCommandResult.Failure(answerResult.Error ?? "The provider could not answer the call.");
+                }
             }
         }
 

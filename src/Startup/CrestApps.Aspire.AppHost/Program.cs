@@ -88,6 +88,23 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientS
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
+builder.AddProject<Projects.CrestApps_OrchardCore_Asterisk_Web>("AsteriskWeb")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WithHttpsEndpoint(5004, name: "HttpsAsteriskWeb")
+    .WithEnvironment("AsteriskWeb__OrchardBaseUrl", "https://localhost:5001")
+    .WithEnvironment("AsteriskWeb__LoginPath", "/Login")
+    .WithEnvironment("AsteriskWeb__InboundPath", "/api/contact-center/voice/inbound")
+    .WithEnvironment("AsteriskWeb__ProviderName", "Asterisk")
+    .WithEnvironment("AsteriskWeb__AsteriskDestination", "1000")
+    .WithEnvironment("AsteriskWeb__AsteriskBaseUrl", "http://localhost:8088/ari/")
+    .WithEnvironment("AsteriskWeb__AsteriskEndpointTemplate", "Local/{number}@default")
+    .WithEnvironment("AsteriskWeb__AsteriskApplicationName", "crestapps-telephony")
+    .WithEnvironment("AsteriskWeb__AsteriskTimeoutSeconds", "30")
+    .WithEnvironment("AsteriskWeb__SimulationTimeoutSeconds", "45")
+    .WithEnvironment("AsteriskWeb__AsteriskUserName", "crestapps")
+    .WithEnvironment("AsteriskWeb__AsteriskPassword", "crestapps-dev");
+
 var app = builder.Build();
 
 await app.RunAsync();

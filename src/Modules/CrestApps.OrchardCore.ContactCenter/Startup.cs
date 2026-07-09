@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -19,9 +21,11 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -128,6 +132,57 @@ public sealed class AgentsStartup : StartupBase
 
         services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        app.Use(async (context, next) =>
+        {
+            var isLogoutRequest = IsLogoutRequest(context);
+            var userId = isLogoutRequest
+                ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                : null;
+            var logger = isLogoutRequest
+                ? context.RequestServices.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentsStartup>>()
+                : null;
+
+            if (isLogoutRequest)
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Observed Orchard logout request for user '{UserId}'.", userId);
+                }
+            }
+
+            await next();
+
+            if (!isLogoutRequest || string.IsNullOrEmpty(userId) || context.Response.StatusCode >= 400)
+            {
+                return;
+            }
+
+            var presenceManager = context.RequestServices.GetRequiredService<IAgentPresenceManager>();
+            await presenceManager.SignOutAsync(userId, context.RequestAborted);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Completed Contact Center logout synchronization for Orchard user '{UserId}' with response status {StatusCode}.",
+                    userId,
+                    context.Response.StatusCode);
+            }
+        });
+    }
+
+    private static bool IsLogoutRequest(HttpContext httpContext)
+    {
+        if (!HttpMethods.IsPost(httpContext.Request.Method) || httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        return string.Equals(httpContext.Request.Path.Value, "/Users/Account/LogOff", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(httpContext.Request.Path.Value, "/Users/Account/Logout", StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 /// <summary>
@@ -163,6 +218,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IQueueItemManager, QueueItemManager>()
             .AddScoped<IActivityReservationStore, ActivityReservationStore>()
             .AddScoped<IActivityReservationManager, ActivityReservationManager>()
+            .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
             .AddScoped<IActivityReservationService, ActivityReservationService>()
             .AddScoped<IActivityRoutingService, ActivityRoutingService>()
@@ -195,6 +251,7 @@ public sealed class QueuesStartup : StartupBase
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
+        services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
         services.AddNavigationProvider<ContactCenterAdminMenu>();
     }
 }
@@ -287,6 +344,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
+            .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
@@ -296,10 +355,19 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
+            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
 
         services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddVoiceOfferEndpoints()
+            .AddVoiceIngressEndpoint()
+            .AddProviderVoiceWebhookEndpoint();
     }
 }
 
@@ -332,6 +400,10 @@ public sealed class RealTimeStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         HubRouteManager.MapHub<ContactCenterHub>(routes);
+
+        routes
+            .AddAgentWorkspaceEndpoints()
+            .AddSupervisorDashboardEndpoints();
     }
 }
 

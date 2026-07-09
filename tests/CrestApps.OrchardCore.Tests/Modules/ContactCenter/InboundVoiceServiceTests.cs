@@ -165,6 +165,46 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
+    public async Task HandleInboundAsync_WhenEndpointSpecificQueueExists_PrefersItOverGenericQueue()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+
+        harness.ChannelEndpointManager
+            .Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), "+15553334444", It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<OmnichannelChannelEndpoint>(new OmnichannelChannelEndpoint { ItemId = "ep1", Channel = "Phone", Value = "+15553334444" }));
+
+        harness.QueueManager
+            .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new ActivityQueue { ItemId = "q-generic", Enabled = true },
+                new ActivityQueue { ItemId = "q-endpoint", Enabled = true, InboundChannelEndpointId = "ep1" },
+            ]);
+
+        harness.QueueService
+            .Setup(m => m.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi1" });
+
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q-endpoint", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent { ProviderName = "TestProvider", ProviderCallId = "call-1", FromAddress = "+15551112222", ToAddress = "+15553334444" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("q-endpoint", result.QueueId);
+        harness.QueueService.Verify(m => m.EnqueueAsync("act1", "q-endpoint", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Once);
+        harness.QueueService.Verify(m => m.EnqueueAsync("act1", "q-generic", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task OfferNextAsync_WhenReservedAgentCannotBeLoaded_ReleasesReservation()
     {
         // Arrange
