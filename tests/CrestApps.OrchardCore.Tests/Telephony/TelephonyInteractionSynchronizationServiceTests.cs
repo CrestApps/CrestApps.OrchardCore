@@ -54,6 +54,40 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task GetActiveCallAsync_WhenProviderReturnsActiveCall_DoesNotPublishDuplicateStateEvent()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.FindActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var (hubContext, client) = CreateHubContext();
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.Connected,
+                    ProviderName = "provider-1",
+                },
+            });
+
+        // Act
+        var result = await service.GetActiveCallAsync("user-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.Found);
+        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetActiveCallAsync_WhenProviderLookupFails_PreservesInteraction()
     {
         // Arrange
@@ -81,6 +115,42 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.Equal("Provider unavailable.", result.Error);
         store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
         client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetActiveCallAsync_WhenProviderIsNoLongerRegistered_DeletesOrphanedInteraction()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.FindActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        store
+            .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult(),
+            providerRegistered: false);
+
+        // Act
+        var result = await service.GetActiveCallAsync("user-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.Found);
+        store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(
+            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
+                call.CallId == "call-1" &&
+                call.State == CallState.Disconnected)),
+            Times.Once);
     }
 
     [Fact]
@@ -179,7 +249,8 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Mock<ITelephonyInteractionStore> store,
         Mock<IHubContext<TelephonyHub, ITelephonyClient>> hubContext,
         TelephonyCallLookupResult lookup,
-        bool lockAcquired = false)
+        bool lockAcquired = false,
+        bool providerRegistered = true)
     {
         var provider = new Mock<ITelephonyProvider>();
         provider
@@ -187,7 +258,16 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             .Setup(value => value.GetCallStateAsync("call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(lookup);
         var resolver = new Mock<ITelephonyProviderResolver>();
-        resolver.Setup(value => value.GetAsync("provider-1")).ReturnsAsync(provider.Object);
+
+        if (providerRegistered)
+        {
+            resolver.Setup(value => value.GetAsync("provider-1")).ReturnsAsync(provider.Object);
+        }
+        else
+        {
+            resolver.Setup(value => value.GetAsync("provider-1")).ReturnsAsync((ITelephonyProvider)null);
+        }
+
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))

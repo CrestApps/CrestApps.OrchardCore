@@ -15,6 +15,7 @@ namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 public sealed class AsteriskInboundSimulationCoordinator
 {
     private const string RequestVerificationTokenHeaderName = "RequestVerificationToken";
+    private static readonly TimeSpan _forwardTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ConcurrentDictionary<string, PendingSimulation> _pending = new(StringComparer.Ordinal);
     private readonly ILogger _logger;
@@ -106,6 +107,16 @@ public sealed class AsteriskInboundSimulationCoordinator
         try
         {
             pending.Completion.TrySetResult(await ForwardToOrchardAsync(pending, cancellationToken));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "The Asterisk Stasis listener timed out while forwarding simulation {SimulationKey} to Orchard.",
+                key);
+            pending.Completion.TrySetResult(BuildFailureResult(
+                pending,
+                "Timed out forwarding the simulated call to Orchard.",
+                504));
         }
         catch (Exception ex)
         {
@@ -199,8 +210,11 @@ public sealed class AsteriskInboundSimulationCoordinator
             request.Headers.TryAddWithoutValidation(RequestVerificationTokenHeaderName, pending.RequestVerificationToken);
         }
 
-        using var response = await pending.Client.SendAsync(request, cancellationToken);
-        var rawResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCancellation.CancelAfter(_forwardTimeout);
+
+        using var response = await pending.Client.SendAsync(request, timeoutCancellation.Token);
+        var rawResponse = await response.Content.ReadAsStringAsync(timeoutCancellation.Token);
         stopwatch.Stop();
 
         var result = new InboundCallSimulationResult

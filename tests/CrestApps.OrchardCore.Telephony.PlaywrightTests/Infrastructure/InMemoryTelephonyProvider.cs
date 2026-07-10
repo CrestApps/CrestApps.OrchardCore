@@ -14,6 +14,10 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     private TelephonyCall _latestCall;
     private bool _latestCallPublished;
     private int _counter;
+    private int _dialRequestCount;
+    private int _dialDelayMilliseconds;
+    private int _lookupRequestCount;
+    private int _lookupDelayMilliseconds;
 
     public LocalizedString Name => new("InMemory", "InMemory");
 
@@ -34,8 +38,17 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
         }
     }
 
-    public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _dialRequestCount);
+
+        var delayMilliseconds = Volatile.Read(ref _dialDelayMilliseconds);
+
+        if (delayMilliseconds > 0)
+        {
+            await Task.Delay(delayMilliseconds, cancellationToken);
+        }
+
         var call = new TelephonyCall
         {
             CallId = $"call-{Interlocked.Increment(ref _counter)}",
@@ -51,7 +64,7 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
         _latestCall = call;
         _latestCallPublished = false;
 
-        return Task.FromResult(TelephonyResult.Success(call));
+        return TelephonyResult.Success(call);
     }
 
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
@@ -138,25 +151,36 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
         return Task.FromResult(new TelephonyClientCredentials { ProviderName = "InMemory" });
     }
 
-    public Task<TelephonyCallLookupResult> GetCallStateAsync(string callId, CancellationToken cancellationToken = default)
+    public async Task<TelephonyCallLookupResult> GetCallStateAsync(
+        string callId,
+        CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _lookupRequestCount);
+
         if (string.IsNullOrEmpty(callId) ||
             !_latestCallPublished ||
             !_calls.TryGetValue(callId, out var call))
         {
-            return Task.FromResult(new TelephonyCallLookupResult
+            return new TelephonyCallLookupResult
             {
                 Succeeded = true,
                 Found = false,
-            });
+            };
         }
 
-        return Task.FromResult(new TelephonyCallLookupResult
+        var delayMilliseconds = Volatile.Read(ref _lookupDelayMilliseconds);
+
+        if (delayMilliseconds > 0)
+        {
+            await Task.Delay(delayMilliseconds, cancellationToken);
+        }
+
+        return new TelephonyCallLookupResult
         {
             Succeeded = true,
             Found = true,
             Call = call,
-        });
+        };
     }
 
     public TelephonyCall GetLatestCall()
@@ -193,6 +217,26 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
         _latestCallPublished = true;
 
         return _latestCall;
+    }
+
+    public int GetDialRequestCount()
+    {
+        return Volatile.Read(ref _dialRequestCount);
+    }
+
+    public void SetDialDelay(int milliseconds)
+    {
+        Volatile.Write(ref _dialDelayMilliseconds, Math.Max(0, milliseconds));
+    }
+
+    public int GetCallLookupRequestCount()
+    {
+        return Volatile.Read(ref _lookupRequestCount);
+    }
+
+    public void SetCallLookupDelay(int milliseconds)
+    {
+        Volatile.Write(ref _lookupDelayMilliseconds, Math.Max(0, milliseconds));
     }
 
     private Task<TelephonyResult> Update(string callId, Action<TelephonyCall> mutate)

@@ -67,7 +67,11 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             };
         }
 
-        var (lookup, _) = await RefreshInteractionAsync(interaction, notifyUser: true, cancellationToken);
+        var (lookup, _) = await RefreshInteractionAsync(
+            interaction,
+            notifyOrphanRemoval: true,
+            notifyProviderState: false,
+            cancellationToken);
 
         return lookup;
     }
@@ -111,7 +115,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         {
             var (_, interactionChanged) = await RefreshInteractionAsync(
                 interaction,
-                notifyUser: true,
+                notifyOrphanRemoval: true,
+                notifyProviderState: true,
                 cancellationToken);
 
             if (interactionChanged)
@@ -125,7 +130,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
     private async Task<(TelephonyCallLookupResult Lookup, bool Changed)> RefreshInteractionAsync(
         TelephonyInteraction interaction,
-        bool notifyUser,
+        bool notifyOrphanRemoval,
+        bool notifyProviderState,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(interaction.ProviderName) ||
@@ -133,7 +139,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         {
             await RemoveOrphanAsync(
                 interaction,
-                notifyUser,
+                notifyOrphanRemoval,
                 "the interaction does not contain a complete provider identity",
                 cancellationToken);
 
@@ -145,6 +151,21 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         }
 
         var provider = await _providerResolver.GetAsync(interaction.ProviderName);
+
+        if (provider is null)
+        {
+            await RemoveOrphanAsync(
+                interaction,
+                notifyOrphanRemoval,
+                "the interaction's provider is no longer registered or enabled",
+                cancellationToken);
+
+            return (new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = false,
+            }, true);
+        }
 
         if (provider is not ITelephonyCallStateProvider stateProvider)
         {
@@ -196,7 +217,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
             await RemoveOrphanAsync(
                 interaction,
-                notifyUser,
+                notifyOrphanRemoval,
                 "the provider no longer reports the call",
                 cancellationToken);
 
@@ -228,7 +249,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             await _interactionStore.UpdateAsync(interaction, cancellationToken);
         }
 
-        if (notifyUser)
+        if (notifyProviderState)
         {
             await NotifyUserAsync(interaction.UserId, call);
         }

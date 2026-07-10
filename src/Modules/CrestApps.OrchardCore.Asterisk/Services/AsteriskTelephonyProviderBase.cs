@@ -108,9 +108,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 CallId = callId ?? request.To,
                 From = callerId,
                 To = request.To,
-                State = AsteriskSettingsUtilities.IsImmediateConnectionEndpoint(endpoint)
-                    ? CallState.Connected
-                    : CallState.Connecting,
+                State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = ProviderName,
                 StartedUtc = _clock.UtcNow,
@@ -219,6 +217,42 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 callId,
                 AsteriskConstants.MuteStateVariableName,
                 cancellationToken);
+
+            using var verificationResponse = await SendAsync(
+                settings,
+                HttpMethod.Get,
+                $"channels/{Uri.EscapeDataString(callId)}",
+                null,
+                null,
+                cancellationToken);
+
+            if (verificationResponse.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = true,
+                    Found = false,
+                };
+            }
+
+            if (!verificationResponse.IsSuccessStatusCode)
+            {
+                var responseBody = await ReadResponseBodyAsync(verificationResponse, cancellationToken);
+
+                _logger.LogError(
+                    "Asterisk could not verify a call-state lookup for provider {ProviderName}. CallId: {CallId}. Status code: {StatusCode}. Response: {ResponseBody}",
+                    ProviderName,
+                    callId,
+                    verificationResponse.StatusCode,
+                    responseBody);
+
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = false,
+                    Error = S["Asterisk could not query the call state."].Value,
+                };
+            }
+
             var isOnHold = state == CallState.OnHold || holdState == true;
 
             if (isOnHold)

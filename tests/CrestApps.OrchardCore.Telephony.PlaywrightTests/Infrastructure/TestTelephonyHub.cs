@@ -92,6 +92,30 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult((int)_provider.Capabilities);
     }
 
+    public Task<int> GetDialRequestCount()
+    {
+        return Task.FromResult(_provider.GetDialRequestCount());
+    }
+
+    public Task SetDialDelay(int milliseconds)
+    {
+        _provider.SetDialDelay(milliseconds);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<int> GetCallLookupRequestCount()
+    {
+        return Task.FromResult(_provider.GetCallLookupRequestCount());
+    }
+
+    public Task SetCallLookupDelay(int milliseconds)
+    {
+        _provider.SetCallLookupDelay(milliseconds);
+
+        return Task.CompletedTask;
+    }
+
     public Task<TelephonyCallLookupResult> GetActiveCall()
     {
         var call = _provider.GetLatestCall();

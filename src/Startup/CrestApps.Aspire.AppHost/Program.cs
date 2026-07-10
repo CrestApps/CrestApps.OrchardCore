@@ -27,7 +27,8 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
 // .WithReference(redis)
 // .WithReference(ollama)
 // .WaitFor(redis)
-// .WaitFor(asterisk)
+    .WithArgs("--framework", "net10.0")
+    .WaitFor(asterisk)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
     .WithEnvironment((options) =>
     {
@@ -77,25 +78,29 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
+    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
+    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Asterisk_Web>("AsteriskWeb")
+    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
+    .WaitFor(asterisk)
     .WithHttpsEndpoint(5004, name: "HttpsAsteriskWeb")
     .WithEnvironment("AsteriskWeb__OrchardBaseUrl", "https://localhost:5001")
     .WithEnvironment("AsteriskWeb__LoginPath", "/Login")
     .WithEnvironment("AsteriskWeb__InboundPath", "/api/contact-center/voice/inbound")
-    .WithEnvironment("AsteriskWeb__ProviderName", "Asterisk")
+    .WithEnvironment("AsteriskWeb__ProviderName", "Default Asterisk")
     .WithEnvironment("AsteriskWeb__AsteriskDestination", "1000")
     .WithEnvironment("AsteriskWeb__AsteriskBaseUrl", "http://localhost:8088/ari/")
     .WithEnvironment("AsteriskWeb__AsteriskEndpointTemplate", "Local/{number}@default")

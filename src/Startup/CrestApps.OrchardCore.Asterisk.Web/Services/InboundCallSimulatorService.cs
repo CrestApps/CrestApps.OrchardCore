@@ -13,11 +13,15 @@ namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 /// </summary>
 public sealed class InboundCallSimulatorService
 {
+    private static readonly TimeSpan _stasisReconciliationDelay = TimeSpan.FromMilliseconds(250);
+    private const int StasisReconciliationAttempts = 20;
+
     private readonly OrchardSignInClient _signInClient;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AsteriskInboundSimulationCoordinator _coordinator;
     private readonly AsteriskWebOptions _options;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InboundCallSimulatorService"/> class.
@@ -27,18 +31,21 @@ public sealed class InboundCallSimulatorService
     /// <param name="coordinator">The Stasis simulation coordinator.</param>
     /// <param name="options">The configured sample app options.</param>
     /// <param name="timeProvider">The time provider.</param>
+    /// <param name="logger">The logger.</param>
     public InboundCallSimulatorService(
         OrchardSignInClient signInClient,
         IHttpClientFactory httpClientFactory,
         AsteriskInboundSimulationCoordinator coordinator,
         IOptions<AsteriskWebOptions> options,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<InboundCallSimulatorService> logger)
     {
         _signInClient = signInClient;
         _httpClientFactory = httpClientFactory;
         _coordinator = coordinator;
         _options = options.Value;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     /// <summary>
@@ -141,10 +148,140 @@ public sealed class InboundCallSimulatorService
 
         _coordinator.SetOriginatedChannel(simulationKey, origination.ChannelId);
 
-        return await _coordinator.WaitForCompletionAsync(
+        using var reconciliationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var reconciliationTask = ReconcileStasisStartAsync(
             simulationKey,
-            TimeSpan.FromSeconds(Math.Max(10, _options.SimulationTimeoutSeconds)),
-            cancellationToken);
+            origination.ChannelId,
+            reconciliationCancellation.Token);
+
+        try
+        {
+            return await _coordinator.WaitForCompletionAsync(
+                simulationKey,
+                TimeSpan.FromSeconds(Math.Max(10, _options.SimulationTimeoutSeconds)),
+                cancellationToken);
+        }
+        finally
+        {
+            await reconciliationCancellation.CancelAsync();
+
+            try
+            {
+                await reconciliationTask;
+            }
+            catch (OperationCanceledException) when (reconciliationCancellation.IsCancellationRequested)
+            {
+            }
+        }
+    }
+
+    private async Task ReconcileStasisStartAsync(
+        string simulationKey,
+        string channelId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(channelId))
+        {
+            return;
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        AsteriskAriConnectionUtilities.ApplyBasicAuthentication(client, _options);
+
+        for (var attempt = 0; attempt < StasisReconciliationAttempts; attempt++)
+        {
+            await Task.Delay(_stasisReconciliationDelay, cancellationToken);
+
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await client.GetAsync(
+                    $"channels/{Uri.EscapeDataString(channelId)}",
+                    cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Unable to query Asterisk while reconciling inbound simulation {SimulationKey}.",
+                    simulationKey);
+
+                return;
+            }
+
+            using (response)
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    continue;
+                }
+
+                var rawResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!IsMatchingStasisChannel(rawResponse, simulationKey))
+                {
+                    continue;
+                }
+            }
+
+            if (await _coordinator.TryDispatchAsync(simulationKey, channelId, cancellationToken))
+            {
+                _logger.LogWarning(
+                    "Recovered inbound simulation {SimulationKey} from authoritative Asterisk channel state after its StasisStart event was missed.",
+                    simulationKey);
+            }
+
+            return;
+        }
+    }
+
+    private bool IsMatchingStasisChannel(string rawResponse, string simulationKey)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponse))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(rawResponse);
+
+            if (!document.RootElement.TryGetProperty("dialplan", out var dialplan) ||
+                !dialplan.TryGetProperty("app_name", out var applicationName) ||
+                !string.Equals(applicationName.GetString(), "Stasis", StringComparison.OrdinalIgnoreCase) ||
+                !dialplan.TryGetProperty("app_data", out var applicationData))
+            {
+                return false;
+            }
+
+            var appData = applicationData.GetString();
+
+            if (string.IsNullOrWhiteSpace(appData))
+            {
+                return false;
+            }
+
+            var applicationArguments = appData.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            return applicationArguments.Contains(
+                _options.AsteriskApplicationName,
+                StringComparer.Ordinal) &&
+                applicationArguments.Contains(
+                    $"sim:{simulationKey}",
+                    StringComparer.Ordinal);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Asterisk returned an invalid channel payload while reconciling inbound simulation {SimulationKey}.",
+                simulationKey);
+
+            return false;
+        }
     }
 
     private async Task<AsteriskOriginationOutcome> OriginateAsteriskAsync(

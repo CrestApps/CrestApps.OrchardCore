@@ -144,6 +144,8 @@ The admin and frontend chat widgets restore their saved toggle and panel positio
 
 The admin session chat now shows the same compact **Supported formats** note above the input attachment bar that the widgets already expose, so users can see the exact upload extensions allowed for the current profile. Document extensions follow the profile's **Allow session document uploads** setting, and image extensions only appear when **Allow session image uploads** is enabled and a vision deployment is available.
 
+The module packages the upstream CSS source maps for the main chat UI and widget styles alongside the compiled assets, so browser developer tools can resolve `ai-chat.css.map` and `chat-widget.css.map` without 404 warnings.
+
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 
 ### Citations and references

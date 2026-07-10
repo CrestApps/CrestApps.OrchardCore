@@ -38,7 +38,7 @@ public sealed class AsteriskTelephonyProviderTests
     }
 
     [Fact]
-    public async Task DialAsync_WhenUsingLocalEndpoint_ReturnsConnectedStateForLocalSimulation()
+    public async Task DialAsync_WhenUsingLocalEndpoint_ReturnsConnectingUntilProviderEventArrives()
     {
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\":\"call-1\"}");
@@ -50,7 +50,7 @@ public sealed class AsteriskTelephonyProviderTests
         // Assert
         Assert.True(result.Succeeded);
         Assert.NotNull(result.Call);
-        Assert.Equal(CallState.Connected, result.Call.State);
+        Assert.Equal(CallState.Connecting, result.Call.State);
         Assert.Equal(
             $"{BaseUrl}channels?endpoint=Local%2F1000@default&timeout=30&app=crestapps-telephony&callerId=%2B15550000000",
             handler.LastRequest.RequestUri.AbsoluteUri);
@@ -268,7 +268,52 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.NotNull(call);
         Assert.Equal(CallState.OnHold, call.State);
         Assert.True(call.IsMuted);
-        Assert.Equal(3, handler.Requests.Count);
+        Assert.Equal(4, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task GetCallAsync_WhenChannelDisappearsDuringLookup_ReturnsNotFound()
+    {
+        // Arrange
+        var channelRequestCount = 0;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri.AbsoluteUri == $"{BaseUrl}channels/call-1")
+            {
+                channelRequestCount++;
+
+                if (channelRequestCount > 1)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NotFound);
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        """
+                        {
+                          "id": "call-1",
+                          "state": "Up"
+                        }
+                        """),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"value":"false"}"""),
+            };
+        });
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetCallStateAsync("call-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.Found);
+        Assert.Null(result.Call);
+        Assert.Equal(4, handler.Requests.Count);
     }
 
     [Fact]

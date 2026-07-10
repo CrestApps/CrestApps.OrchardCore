@@ -53,7 +53,7 @@ public sealed class SimulatorModel : PageModel
     /// </summary>
     public void OnGet()
     {
-        ApplyDefaults();
+        ApplyDefaults(preferConfiguredValues: true);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public sealed class SimulatorModel : PageModel
     /// <returns>The current page.</returns>
     public async Task<IActionResult> OnPostAsync()
     {
-        ApplyDefaults();
+        ApplyDefaults(preferConfiguredValues: false);
 
         if (!ModelState.IsValid)
         {
@@ -85,38 +85,26 @@ public sealed class SimulatorModel : PageModel
         return Page();
     }
 
-    private void ApplyDefaults()
+    private void ApplyDefaults(bool preferConfiguredValues)
     {
-        Input.OrchardBaseUrl = string.IsNullOrWhiteSpace(Input.OrchardBaseUrl)
-            ? _options.OrchardBaseUrl ?? Input.OrchardBaseUrl
-            : Input.OrchardBaseUrl;
+        Input.OrchardBaseUrl = ResolveDefault(Input.OrchardBaseUrl, _options.OrchardBaseUrl, preferConfiguredValues);
+        Input.LoginPath = ResolveDefault(Input.LoginPath, _options.LoginPath, preferConfiguredValues);
+        Input.InboundPath = ResolveDefault(Input.InboundPath, _options.InboundPath, preferConfiguredValues);
+        Input.ProviderName = ResolveDefault(Input.ProviderName, _options.ProviderName, preferConfiguredValues);
+        Input.AsteriskDestination = ResolveDefault(Input.AsteriskDestination, _options.AsteriskDestination, preferConfiguredValues);
+        Input.ToAddress = ResolveDefault(Input.ToAddress, _options.ToAddress, preferConfiguredValues);
+        Input.CallerNumberSeed = ResolveDefault(Input.CallerNumberSeed, _options.CallerNumberSeed, preferConfiguredValues);
+        Input.CallerNamePrefix = ResolveDefault(Input.CallerNamePrefix, _options.CallerNamePrefix, preferConfiguredValues);
+    }
 
-        Input.LoginPath = string.IsNullOrWhiteSpace(Input.LoginPath)
-            ? _options.LoginPath ?? Input.LoginPath
-            : Input.LoginPath;
+    private static string ResolveDefault(string currentValue, string configuredValue, bool preferConfiguredValue)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredValue) &&
+            (preferConfiguredValue || string.IsNullOrWhiteSpace(currentValue)))
+        {
+            return configuredValue;
+        }
 
-        Input.InboundPath = string.IsNullOrWhiteSpace(Input.InboundPath)
-            ? _options.InboundPath ?? Input.InboundPath
-            : Input.InboundPath;
-
-        Input.ProviderName = string.IsNullOrWhiteSpace(Input.ProviderName)
-            ? _options.ProviderName ?? Input.ProviderName
-            : Input.ProviderName;
-
-        Input.AsteriskDestination = string.IsNullOrWhiteSpace(Input.AsteriskDestination)
-            ? _options.AsteriskDestination ?? Input.AsteriskDestination
-            : Input.AsteriskDestination;
-
-        Input.ToAddress = string.IsNullOrWhiteSpace(Input.ToAddress)
-            ? _options.ToAddress ?? Input.ToAddress
-            : Input.ToAddress;
-
-        Input.CallerNumberSeed = string.IsNullOrWhiteSpace(Input.CallerNumberSeed)
-            ? _options.CallerNumberSeed ?? Input.CallerNumberSeed
-            : Input.CallerNumberSeed;
-
-        Input.CallerNamePrefix = string.IsNullOrWhiteSpace(Input.CallerNamePrefix)
-            ? _options.CallerNamePrefix ?? Input.CallerNamePrefix
-            : Input.CallerNamePrefix;
+        return currentValue;
     }
 }

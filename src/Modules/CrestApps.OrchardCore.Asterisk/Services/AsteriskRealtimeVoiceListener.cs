@@ -4,19 +4,26 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 {
+    private readonly IShellHost _shellHost;
+    private readonly ShellSettings _shellSettings;
     private readonly ILogger<AsteriskRealtimeVoiceListener> _logger;
     private readonly Lock _lock = new();
     private CancellationTokenSource _listenerCancellationTokenSource;
     private Task _listenerTask;
 
-    public AsteriskRealtimeVoiceListener(ILogger<AsteriskRealtimeVoiceListener> logger)
+    public AsteriskRealtimeVoiceListener(
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        ILogger<AsteriskRealtimeVoiceListener> logger)
     {
+        _shellHost = shellHost;
+        _shellSettings = shellSettings;
         _logger = logger;
     }
 
@@ -194,9 +201,9 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
     private async Task ReconcileAsync(string providerName, CancellationToken cancellationToken)
     {
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await ExecuteInTenantScopeAsync(async serviceProvider =>
         {
-            var contactCenterSynchronizationService = scope.ServiceProvider
+            var contactCenterSynchronizationService = serviceProvider
                 .GetServices<IProviderCallStateSynchronizationService>()
                 .FirstOrDefault();
 
@@ -215,7 +222,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 }
             }
 
-            var telephonySynchronizationService = scope.ServiceProvider
+            var telephonySynchronizationService = serviceProvider
                 .GetServices<ITelephonyInteractionSynchronizationService>()
                 .FirstOrDefault();
 
@@ -265,10 +272,18 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 voiceEvent.State);
         }
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await ExecuteInTenantScopeAsync(async serviceProvider =>
         {
-            var dispatcher = scope.ServiceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
+            var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
             await dispatcher.HandleAsync(voiceEvent, cancellationToken);
         });
+    }
+
+    private async Task ExecuteInTenantScopeAsync(Func<IServiceProvider, Task> action)
+    {
+        var scope = await _shellHost.GetScopeAsync(_shellSettings);
+        await scope.UsingAsync(
+            shellScope => action(shellScope.ServiceProvider),
+            activateShell: false);
     }
 }

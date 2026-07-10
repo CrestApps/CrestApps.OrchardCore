@@ -187,7 +187,8 @@ public sealed class OrchardSignInClient
         var normalizedLoginPath = NormalizePath(loginPath);
         var normalizedRequestPath = NormalizePath(requestUri.AbsolutePath);
 
-        return normalizedRequestPath == normalizedLoginPath &&
+        return (normalizedRequestPath == normalizedLoginPath ||
+                normalizedRequestPath.EndsWith(normalizedLoginPath, StringComparison.OrdinalIgnoreCase)) &&
             responseContent.Contains("password", StringComparison.OrdinalIgnoreCase) &&
             responseContent.Contains("<form", StringComparison.OrdinalIgnoreCase);
     }
