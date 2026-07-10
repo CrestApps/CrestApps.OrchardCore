@@ -70,6 +70,8 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
 
         // Act
         await dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken);
+        voiceEvent.EventType = "ChannelDestroyed";
+        await dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(CallOutcome.Completed, interaction.Outcome);

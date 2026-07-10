@@ -58,6 +58,13 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         await page.ClickAsync("[data-telephony-dial]");
 
+        // Assert - the command response alone does not change the call state.
+        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+
+        // Act - publish the provider-authoritative state.
+        await PublishLatestCallStateAsync(page);
+
         // Assert
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
@@ -86,6 +93,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.ClickAsync("[data-telephony-toggle]");
         await page.FillAsync("[data-telephony-number]", "+15551234567");
         await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
         await page.Locator("[data-telephony-hold]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         // Act
@@ -95,6 +103,31 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.Locator("[data-telephony-resume]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
         Assert.Equal("On hold", status.Trim());
+    }
+
+    [Fact]
+    public async Task RemoteProviderDisconnect_ImmediatelyClearsActiveCall()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Act
+        await page.EvaluateAsync(
+            """
+            () => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')
+            """);
+
+        // Assert
+        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
+        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
     }
 
     [Fact]
@@ -242,8 +275,9 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
 
         // Act
         await page.ClickAsync("[data-telephony-incoming-answer]");
+        await PublishCallStateAsync(page, "call-inbound-1", "+15550001000");
 
-        // Assert - once the authoritative accept completes, the call is live.
+        // Assert - once the provider event arrives, the call is live.
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
         Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
@@ -297,6 +331,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
                 window.__completeInboundAccept();
             }
             """);
+        await PublishCallStateAsync(page, "call-inbound-2", "+15550001000");
 
         // Assert
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -315,6 +350,45 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
                 return connection && connection.state === 'Connected';
             }
             """);
+    }
+
+    private static async Task PublishLatestCallStateAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            async () => {
+                const connection = window.telephonySoftPhone.getInstance().getConnection();
+
+                for (let attempt = 0; attempt < 20; attempt++) {
+                    const published = await connection.invoke('PublishLatestCallState');
+
+                    if (published) {
+                        return;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 25));
+                }
+
+                throw new Error('The test provider did not create a call.');
+            }
+            """);
+    }
+
+    private static async Task PublishCallStateAsync(IPage page, string callId, string from)
+    {
+        await page.EvaluateAsync(
+            """
+            ([callId, from]) => window.telephonySoftPhone.getInstance().getConnection().invoke(
+                'PublishCallState',
+                {
+                    callId,
+                    from,
+                    direction: 1,
+                    state: 3,
+                    providerName: 'InMemory'
+                })
+            """,
+            new[] { callId, from });
     }
 
     private static async Task<string> GetConfiguredHeightAsync(IPage page)

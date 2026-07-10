@@ -516,7 +516,7 @@
 
     // ---- Call operations ----
 
-    function applyResult(result) {
+    function applyCommandResult(result) {
       if (!result) {
         return false;
       }
@@ -525,22 +525,50 @@
         return false;
       }
       showError(null);
-      if (result.call) {
-        currentCall = result.call;
-        if (normalizeState(currentCall.state) === 'Disconnected' || normalizeState(currentCall.state) === 'Failed') {
-          currentCall = null;
-        }
+      return true;
+    }
+    function applyActiveCallLookup(result) {
+      if (!result || result.succeeded === false) {
+        return null;
+      }
+      currentCall = result.found === true ? result.call : null;
+      if (currentCall && (normalizeState(currentCall.state) === 'Disconnected' || normalizeState(currentCall.state) === 'Failed')) {
+        currentCall = null;
+      }
+      if (!currentCall) {
+        incomingHandled = false;
       }
       render();
-      return true;
+      return currentCall;
+    }
+    function refreshActiveCall(attempts, retryDelay) {
+      if (!connection) {
+        return Promise.resolve(null);
+      }
+      attempts = attempts || 1;
+      retryDelay = retryDelay || 0;
+      return connection.invoke('GetActiveCall').then(function (result) {
+        if (result && result.succeeded && !result.found && attempts > 1) {
+          return new Promise(function (resolve) {
+            window.setTimeout(resolve, retryDelay);
+          }).then(function () {
+            return refreshActiveCall(attempts - 1, retryDelay);
+          });
+        }
+        return applyActiveCallLookup(result);
+      });
     }
     function invoke(method, payload) {
       if (!connection) {
         return Promise.reject(new Error('Not connected.'));
       }
       return connection.invoke(method, payload).then(function (result) {
-        applyResult(result);
-        return result;
+        applyCommandResult(result);
+        var attempts = method === 'Dial' && result && result.succeeded !== false ? 5 : 1;
+        var retryDelay = attempts > 1 ? 100 : 0;
+        return refreshActiveCall(attempts, retryDelay).then(function () {
+          return result;
+        });
       })["catch"](function (error) {
         showError(error && error.message ? error.message : String(error));
         throw error;
@@ -884,10 +912,6 @@
           invoke('Answer', {
             callId: id
           });
-        } else if (currentCall) {
-          currentCall.state = 'Connected';
-          currentCall.isOnHold = false;
-          render();
         }
       })["finally"](function () {
         incomingAcceptPending = false;
@@ -1043,26 +1067,7 @@
       if (!connection || currentCall) {
         return Promise.resolve();
       }
-      return connection.invoke('GetInteractions', 1).then(function (items) {
-        if (!items || !items.length) {
-          return null;
-        }
-        var interaction = items[0];
-        if (!interaction || !isInProgress(interaction) || interaction.endedUtc) {
-          return null;
-        }
-        currentCall = {
-          callId: interaction.callId,
-          from: interaction.from,
-          to: interaction.to,
-          direction: interaction.direction,
-          state: 'Connected',
-          providerName: interaction.providerName,
-          startedUtc: interaction.startedUtc
-        };
-        render();
-        return currentCall;
-      })["catch"](function () {});
+      return refreshActiveCall()["catch"](function () {});
     }
     function formatTime(value) {
       try {
@@ -1110,7 +1115,7 @@
       }
       connection.on('CallStateChanged', function (call) {
         currentCall = call;
-        if (normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed') {
+        if (!call || normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed') {
           currentCall = null;
           incomingHandled = false;
         }

@@ -60,19 +60,6 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
-        if (!string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
-            await _eventStore.ExistsByIdempotencyKeyAsync(providerEvent.IdempotencyKey, cancellationToken))
-        {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    "Skipping duplicate provider voice event with idempotency key '{IdempotencyKey}'.",
-                    providerEvent.IdempotencyKey);
-            }
-
-            return null;
-        }
-
         var interaction = !string.IsNullOrWhiteSpace(providerEvent.ProviderName)
             ? await _interactionManager.FindByProviderInteractionIdAsync(
                 providerEvent.ProviderName,
@@ -90,6 +77,25 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             }
 
             return null;
+        }
+
+        if (!string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
+            await _eventStore.ExistsByIdempotencyKeyAsync(providerEvent.IdempotencyKey, cancellationToken))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipping duplicate provider voice event with idempotency key '{IdempotencyKey}'.",
+                    providerEvent.IdempotencyKey);
+            }
+
+            return (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
+                ? await _callSessionManager.FindByProviderCallIdAsync(
+                    providerEvent.ProviderName,
+                    providerEvent.ProviderCallId,
+                    cancellationToken)
+                : await _callSessionManager.FindByProviderCallIdAsync(providerEvent.ProviderCallId, cancellationToken))
+                ?? await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
         }
 
         var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
@@ -204,7 +210,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return true;
         }
 
-        return IsTerminalState(session.State) && !IsTerminalState(providerEvent.State);
+        return IsTerminalState(session.State);
     }
 
     private static void ApplyState(CallSession session, Interaction interaction, ContactCenterCallState state, DateTime now)

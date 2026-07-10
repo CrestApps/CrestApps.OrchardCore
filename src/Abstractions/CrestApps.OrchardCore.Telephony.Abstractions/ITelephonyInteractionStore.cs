@@ -24,6 +24,14 @@ public interface ITelephonyInteractionStore
     Task UpdateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes an interaction that no longer exists at the telephony provider.
+    /// </summary>
+    /// <param name="interaction">The interaction to delete.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task DeleteAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the interaction for the given user and provider call identifier.
     /// </summary>
     /// <param name="userId">The user identifier.</param>
@@ -41,6 +49,29 @@ public interface ITelephonyInteractionStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The interaction, or <see langword="null"/> when none matches.</returns>
     Task<TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the most recent in-progress interaction for the given user.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The active interaction, or <see langword="null"/> when none matches.</returns>
+    Task<TelephonyInteraction> FindActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all in-progress interactions that can be reconciled against their providers.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The active interactions.</returns>
+    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all in-progress interactions for the specified provider.
+    /// </summary>
+    /// <param name="providerName">The technical provider name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The active interactions for the provider.</returns>
+    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(string providerName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the most recent interactions for the given user, newest first.

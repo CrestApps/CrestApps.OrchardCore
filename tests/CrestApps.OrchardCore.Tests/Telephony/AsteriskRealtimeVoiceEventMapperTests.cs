@@ -81,4 +81,32 @@ public sealed class AsteriskRealtimeVoiceEventMapperTests
         Assert.Equal("ChannelLeftBridge", voiceEvent.EventType);
         Assert.Equal("bridge-1", voiceEvent.Metadata["bridgeId"]);
     }
+
+    [Fact]
+    public void TryMap_WhenDownChannelLeavesBridge_DoesNotEmitFalseConnectingState()
+    {
+        // Arrange
+        const string payload =
+            """
+            {
+              "type": "ChannelLeftBridge",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "bridge": {
+                "id": "bridge-1"
+              },
+              "channel": {
+                "id": "call-1",
+                "state": "Down"
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.False(mapped);
+        Assert.Null(voiceEvent);
+    }
 }

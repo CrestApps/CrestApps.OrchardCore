@@ -172,11 +172,13 @@ internal static class AsteriskRealtimeVoiceEventMapper
 
         if (string.Equals(eventType, "ChannelLeftBridge", StringComparison.OrdinalIgnoreCase))
         {
-            state = MapChannelState(ReadString(channel, "state"), isTerminalEvent: false);
+            var channelState = ReadString(channel, "state");
+            state = MapChannelState(channelState, isTerminalEvent: false);
 
-            if (state == CallState.Idle)
+            if (state == CallState.Idle ||
+                string.Equals(channelState, "Down", StringComparison.OrdinalIgnoreCase))
             {
-                state = CallState.Connected;
+                return false;
             }
 
             return true;

@@ -78,6 +78,21 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
+        if (interaction.Outcome != CallOutcome.InProgress)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Ignored Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} because telephony interaction {InteractionId} is already terminal.",
+                    voiceEvent.EventType,
+                    voiceEvent.ProviderName,
+                    voiceEvent.CallId,
+                    interaction.InteractionId);
+            }
+
+            return;
+        }
+
         ApplyInteractionState(interaction, voiceEvent);
         await _telephonyInteractionStore.UpdateAsync(interaction, cancellationToken);
         await _hubContext.Clients.User(interaction.UserId).CallStateChanged(BuildTelephonyCall(interaction, voiceEvent));

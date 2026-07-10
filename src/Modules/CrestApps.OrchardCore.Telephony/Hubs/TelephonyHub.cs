@@ -256,6 +256,57 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     }
 
     /// <summary>
+    /// Gets the current user's active call directly from the configured telephony provider.
+    /// </summary>
+    /// <returns>The provider-authoritative call lookup result.</returns>
+    public async Task<TelephonyCallLookupResult> GetActiveCall()
+    {
+        var result = new TelephonyCallLookupResult
+        {
+            Succeeded = false,
+            Found = false,
+            Error = S["Unable to determine the current call state."].Value,
+        };
+        LogHubActionStart("GetActiveCall");
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetActiveCall");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
+
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
+            result = await synchronizationService.GetActiveCallAsync(userId, Context.ConnectionAborted);
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Found={Found}, CallId={CallId}, CallState={CallState}, Error={Error}.",
+                "GetActiveCall",
+                Context.UserIdentifier ?? "(anonymous)",
+                result.Succeeded,
+                result.Found,
+                result.Call?.CallId ?? "(none)",
+                result.Call?.State.ToString() ?? "(none)",
+                result.Error ?? "(none)");
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Gets the capabilities of the configured provider as a bit flag integer value.
     /// </summary>
     /// <returns>The provider capabilities as an integer.</returns>
@@ -329,14 +380,9 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
 
             if (result?.Call is not null)
             {
-                await RecordInteractionAsync(scope.ServiceProvider, result.Call);
+                await RecordInteractionAsync(scope.ServiceProvider, actionName, result.Call);
             }
         });
-
-        if (result?.Call is not null)
-        {
-            await Clients.Caller.CallStateChanged(result.Call);
-        }
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -441,9 +487,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         return requestFactory?.Invoke() ?? "(none)";
     }
 
-    private async Task RecordInteractionAsync(IServiceProvider services, TelephonyCall call)
+    private async Task RecordInteractionAsync(IServiceProvider services, string actionName, TelephonyCall call)
     {
-        if (call is null || string.IsNullOrEmpty(call.CallId))
+        if (!string.Equals(actionName, "Dial", StringComparison.Ordinal) ||
+            call is null ||
+            string.IsNullOrEmpty(call.CallId))
         {
             return;
         }
@@ -456,8 +504,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        var clock = services.GetService<IClock>();
-        var now = clock?.UtcNow ?? DateTime.UtcNow;
+        var clock = services.GetRequiredService<IClock>();
+        var now = clock.UtcNow;
         var userName = Context.GetHttpContext()?.User?.Identity?.Name;
 
         var existing = await store.FindByCallIdAsync(userId, call.CallId, Context.ConnectionAborted);
@@ -488,28 +536,14 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        if (call.State == CallState.Disconnected)
+        if (!string.IsNullOrEmpty(call.To))
         {
-            existing.Outcome = CallOutcome.Completed;
-            existing.EndedUtc = now;
-            existing.DurationSeconds = Math.Max(0, (now - existing.StartedUtc).TotalSeconds);
+            existing.To = call.To;
         }
-        else if (call.State == CallState.Failed)
-        {
-            existing.Outcome = CallOutcome.Failed;
-            existing.EndedUtc = now;
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(call.To))
-            {
-                existing.To = call.To;
-            }
 
-            if (!string.IsNullOrEmpty(call.From))
-            {
-                existing.From = call.From;
-            }
+        if (!string.IsNullOrEmpty(call.From))
+        {
+            existing.From = call.From;
         }
 
         await store.UpdateAsync(existing, Context.ConnectionAborted);

@@ -37,6 +37,16 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
+    public Task DeleteAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        _session.Delete(interaction);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task<TelephonyInteraction> FindByCallIdAsync(string userId, string callId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(callId))
@@ -60,6 +70,50 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         return await _session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == providerName && x.CallId == callId)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyInteraction> FindActiveByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        return await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
+                x.UserId == userId &&
+                x.Outcome == CallOutcome.InProgress)
+            .OrderByDescending(x => x.StartedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(CancellationToken cancellationToken = default)
+    {
+        var interactions = await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.Outcome == CallOutcome.InProgress)
+            .OrderByDescending(x => x.StartedUtc)
+            .ListAsync(cancellationToken);
+
+        return interactions.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(
+        string providerName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        var interactions = await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
+                x.ProviderName == providerName &&
+                x.Outcome == CallOutcome.InProgress)
+            .OrderByDescending(x => x.StartedUtc)
+            .ListAsync(cancellationToken);
+
+        return interactions.ToList();
     }
 
     /// <inheritdoc/>

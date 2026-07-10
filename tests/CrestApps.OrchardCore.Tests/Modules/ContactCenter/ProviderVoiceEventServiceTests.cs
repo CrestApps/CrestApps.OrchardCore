@@ -345,4 +345,119 @@ public sealed class ProviderVoiceEventServiceTests
             value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task IngestAsync_WhenSessionIsAlreadyTerminal_DoesNotRepublishLaterTerminalEvent()
+    {
+        // Arrange
+        var endedUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Ended,
+            EndedUtc = endedUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            EndedUtc = endedUtc,
+            LastProviderEventUtc = endedUtc,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("later-terminal", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        var result = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "later-terminal",
+            OccurredUtc = endedUtc.AddSeconds(1),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(session, result);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenEventIsDuplicate_ReturnsExistingSession()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("duplicate", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        var result = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "duplicate",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(session, result);
+    }
 }
