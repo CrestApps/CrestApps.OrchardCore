@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/js/ai-data-source-editor.js"
+    ],
+    "output": "wwwroot/scripts/ai-data-source-editor.js"
+  }
+]

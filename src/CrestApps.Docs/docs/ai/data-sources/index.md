@@ -18,7 +18,7 @@ Provides AI data source management, knowledge base indexing, and RAG search capa
 
 This module provides AI data source management, knowledge base (KB) indexing, and Retrieval-Augmented Generation (RAG) search capabilities for Orchard Core. It enables any AI provider and orchestrator to leverage structured data sources for contextual AI responses.
 
-- **Data Source Management** — Create and manage AI data sources that connect to search indexes (Elasticsearch, Azure AI Search).
+- **Data Source Management** — Create and manage AI data sources that connect to Orchard-managed search index profiles or external provider-backed sources.
 - **Knowledge Base Indexing** — Automatically chunks, embeds, and indexes source documents into a master AI Knowledge Base index for efficient vector search.
 - **RAG Search Tool** — An AI tool (`DataSourceSearchTool`) that performs vector search against the KB index and injects relevant context into AI conversations.
 - **Early (Preemptive) RAG** — Optionally pre-fetches relevant context before AI completion to reduce latency and improve response quality.
@@ -32,13 +32,24 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 1. **Create a Knowledge Base Index** — In the admin menu go to **Search > Indexing**, click **Add Index**, then select one of:
    - **AI Knowledge Base Index (Elasticsearch)**
    - **AI Knowledge Base Index (Azure AI Search)**
-2. **Add a Data Source** — Configure a data source that maps a source index to the KB index, specifying key/title/content field mappings.
+2. **Add a Data Source** — Click **Add Data Source**, choose a source type from the modal, then configure the shared destination index and field mappings plus any source-specific connection settings.
 3. **Automatic Indexing** — Documents from the source index are chunked, embedded, and stored in the KB index for efficient retrieval.
 4. **AI Integration** — Attach data sources to AI profiles or chat interactions. The RAG tool searches the KB index and provides relevant context to the AI model.
 
-When selecting a **Source Index**, the admin UI excludes internal AI-managed index types such as **AI Documents**, **AI Memory**, and other **Data Source** knowledge-base indexes so only valid source indexes appear in the selector.
+The data source list now follows the deployments-style creation flow. **Add Data Source** opens a modal that lists the available source types. Built-in options include:
 
-The **Source Index** and **Knowledge Base Index** selectors group profiles by the provider's localized display name (for example **Azure AI Search** instead of the internal provider key) so multi-provider setups are easier to scan.
+- **Search Index Profile** — the existing Orchard-managed source-index flow
+- **Elasticsearch** — read directly from an external Elasticsearch index
+- **Azure AI Search** — read directly from an external Azure AI Search index
+- **PostgreSQL** — read directly from a PostgreSQL table
+
+After you choose a source type from the modal, the create screen keeps that source type fixed for the new data source instead of showing it as another editable field. When **Search Index Profile** is selected, the editor shows the Orchard-managed source index picker and excludes internal AI-managed index types such as **AI Documents**, **AI Memory**, and other **Data Source** knowledge-base indexes so only valid source indexes appear in the selector.
+
+The **Source Index** and **Destination Index** selectors group profiles by the provider's localized display name (for example **Azure AI Search** instead of the internal provider key) so multi-provider setups are easier to scan.
+
+The editor shows source-specific inputs first, then the shared **Search Index Profile** section, and finally the shared **Field Mapping** section at the bottom. Only the source-specific section changes between **Search Index Profile**, **Elasticsearch**, **Azure AI Search**, and **PostgreSQL**.
+
+Existing data sources keep working without manual changes. Older records that did not store a source type are treated as **Search Index Profile** sources by default, and the migration backfills that value for persisted data.
 
 ## Configuration
 
@@ -54,12 +65,15 @@ Navigate to **Settings > Artificial Intelligence** to configure global data sour
 
 Each data source can be configured with:
 
-- **Source Index** — The search index to pull documents from.
-- **Knowledge Base Index** — The AI KB index where chunked embeddings are stored.
+- **Source type** — Chosen when you create the data source from the modal and then kept fixed for that mapping.
+- **Source settings** — The source index, external connection, or table details for the selected source type.
+- **Destination Index** — The AI KB index where chunked embeddings are stored.
 - **Title Field** — Maps to the document title in search results.
 - **Content Field** — Maps to the main text content for chunking and embedding.
 - **Key Field** — Maps to the document reference ID for citations.
 - **Filters** — OData filter expressions for scoping search results.
+
+Provider-specific source types can add their own editor sections. The built-in external-source modules use the shared `CrestApps.Core` source descriptors plus Orchard display drivers and source handlers so custom modules can extend the same UI pattern with their own connection fields and runtime readers. For example, the Elasticsearch source now supports both self-managed and Elastic Cloud environments plus multiple authentication modes from the shared Core model.
 
 ## Knowledge Source Behavior
 
@@ -147,6 +161,7 @@ Enable one of the following provider modules to get started:
 
 - `CrestApps.OrchardCore.AI.DataSources.Elasticsearch`
 - `CrestApps.OrchardCore.AI.DataSources.AzureAI`
+- `CrestApps.OrchardCore.AI.DataSources.PostgreSQL`
 
 ## Keeping the AI KB index in sync
 

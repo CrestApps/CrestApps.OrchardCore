@@ -77,6 +77,28 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
         return QueueDocumentIdsAsync(sourceIndexProfileName, documentIds, OrchardAIDataSourceIndexingWorkItem.ForRemoveSourceDocuments, cancellationToken);
     }
 
+    /// <summary>
+    /// Asynchronously performs the queue sync data source documents operation.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public ValueTask QueueSyncDataSourceDocumentsAsync(string dataSourceId, IReadOnlyCollection<string> documentIds, CancellationToken cancellationToken = default)
+    {
+        return QueueDocumentIdsAsync(dataSourceId, documentIds, OrchardAIDataSourceIndexingWorkItem.ForSyncDataSourceDocuments, cancellationToken);
+    }
+
+    /// <summary>
+    /// Asynchronously performs the queue remove data source documents operation.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public ValueTask QueueRemoveDataSourceDocumentsAsync(string dataSourceId, IReadOnlyCollection<string> documentIds, CancellationToken cancellationToken = default)
+    {
+        return QueueDocumentIdsAsync(dataSourceId, documentIds, OrchardAIDataSourceIndexingWorkItem.ForRemoveDataSourceDocuments, cancellationToken);
+    }
+
     private ValueTask QueueDocumentIdsAsync(
         string sourceIndexProfileName,
         IReadOnlyCollection<string> documentIds,
@@ -180,6 +202,12 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
                         break;
                     case OrchardAIDataSourceIndexingWorkItemType.RemoveSourceDocuments:
                         await indexingService.RemoveSourceDocumentsAsync(workItem.SourceIndexProfileName, workItem.DocumentIds);
+                        break;
+                    case OrchardAIDataSourceIndexingWorkItemType.SyncDataSourceDocuments:
+                        await indexingService.SyncDataSourceDocumentsAsync(workItem.DataSourceId, workItem.DocumentIds);
+                        break;
+                    case OrchardAIDataSourceIndexingWorkItemType.RemoveDataSourceDocuments:
+                        await indexingService.RemoveDataSourceDocumentsAsync(workItem.DataSourceId, workItem.DocumentIds);
                         break;
                 }
             }

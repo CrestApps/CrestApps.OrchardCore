@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.Elasticsearch;
@@ -26,7 +26,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         ILogger<DataSourceElasticsearchIndexProfileHandler> logger)
-    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
+        : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

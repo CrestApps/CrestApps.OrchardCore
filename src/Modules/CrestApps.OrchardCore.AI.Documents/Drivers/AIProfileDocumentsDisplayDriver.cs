@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
@@ -204,7 +205,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment);
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment, builder => builder.UseDefaultResilience());
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

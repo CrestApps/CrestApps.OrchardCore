@@ -1,0 +1,215 @@
+(function () {
+    'use strict';
+
+    function updateSections(root) {
+        var sourceTypeInput = root.querySelector('[data-ai-data-source-source-type]');
+
+        if (!sourceTypeInput) {
+            return;
+        }
+
+        var form = root.closest('form') || document;
+        var sourceType = sourceTypeInput.value || 'SearchIndexProfile';
+
+        form.querySelectorAll('[data-ai-data-source-section]').forEach(function (section) {
+            section.hidden = section.getAttribute('data-ai-data-source-section') !== sourceType;
+        });
+    }
+
+    function populateSelect(select, fields, selectedValue, defaultField, placeholder, defaultSuffix) {
+        select.replaceChildren();
+
+        var placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = placeholder;
+        select.appendChild(placeholderOption);
+
+        if (!fields || fields.length === 0) {
+            return;
+        }
+
+        fields.forEach(function (field) {
+            var option = document.createElement('option');
+            option.value = field;
+            option.textContent = defaultField && field === defaultField
+                ? field + ' ' + defaultSuffix
+                : field;
+
+            if (selectedValue && field === selectedValue) {
+                option.selected = true;
+            }
+
+            select.appendChild(option);
+        });
+    }
+
+    function initializeSearchIndexProfile(form) {
+        var section = form.querySelector('[data-ai-data-source-search-index-profile]');
+
+        if (!section || section.getAttribute('data-ai-data-source-search-index-profile-locked') === 'true') {
+            return;
+        }
+
+        var sourceSelect = section.querySelector('[data-ai-data-source-source-index]');
+        var contentSelect = form.querySelector('[data-ai-data-source-content-field]');
+        var titleSelect = form.querySelector('[data-ai-data-source-title-field]');
+        var keySelect = form.querySelector('[data-ai-data-source-key-field]');
+
+        if (!sourceSelect || !contentSelect || !titleSelect || !keySelect) {
+            return;
+        }
+
+        var fieldsUrlBase = section.getAttribute('data-ai-data-source-fields-url-base') || '';
+        var preserveContentField = section.getAttribute('data-ai-data-source-preserve-content-field');
+        var preserveTitleField = section.getAttribute('data-ai-data-source-preserve-title-field');
+        var preserveKeyField = section.getAttribute('data-ai-data-source-preserve-key-field');
+        var selectIndexPlaceholder = section.getAttribute('data-ai-data-source-select-index-placeholder') || 'Select an index first';
+        var contentPlaceholder = section.getAttribute('data-ai-data-source-content-placeholder') || 'Select a content field';
+        var titlePlaceholder = section.getAttribute('data-ai-data-source-title-placeholder') || 'Select a title field (optional)';
+        var keyPlaceholder = section.getAttribute('data-ai-data-source-key-placeholder') || 'Use document ID (_id)';
+        var defaultSuffix = section.getAttribute('data-ai-data-source-default-suffix') || '(Default)';
+
+        function clearFields() {
+            populateSelect(contentSelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
+            populateSelect(titleSelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
+            populateSelect(keySelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
+            contentSelect.disabled = true;
+            titleSelect.disabled = true;
+            keySelect.disabled = true;
+        }
+
+        function loadFields(indexProfileName, selectedContentField, selectedTitleField, selectedKeyField) {
+            contentSelect.disabled = true;
+            titleSelect.disabled = true;
+            keySelect.disabled = true;
+
+            fetch(fieldsUrlBase + encodeURIComponent(indexProfileName))
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to load fields');
+                    }
+
+                    return response.json();
+                })
+                .then(function (data) {
+                    populateSelect(contentSelect, data.fields, selectedContentField || data.suggestedContentField, data.suggestedContentField, contentPlaceholder, defaultSuffix);
+                    populateSelect(titleSelect, data.fields, selectedTitleField || data.suggestedTitleField, data.suggestedTitleField, titlePlaceholder, defaultSuffix);
+                    populateSelect(keySelect, data.fields, selectedKeyField || data.suggestedKeyField, data.suggestedKeyField, keyPlaceholder, defaultSuffix);
+                    contentSelect.disabled = false;
+                    titleSelect.disabled = false;
+                    keySelect.disabled = false;
+                })
+                .catch(function () {
+                    clearFields();
+                });
+        }
+
+        if (sourceSelect.value) {
+            loadFields(sourceSelect.value, preserveContentField, preserveTitleField, preserveKeyField);
+        }
+
+        sourceSelect.addEventListener('change', function () {
+            if (sourceSelect.value) {
+                loadFields(sourceSelect.value, null, null, null);
+                return;
+            }
+
+            clearFields();
+        });
+    }
+
+    function initializeElasticsearch(form) {
+        var section = form.querySelector('[data-ai-data-source-elasticsearch]');
+
+        if (!section) {
+            return;
+        }
+
+        var environmentType = section.querySelector('[data-ai-data-source-elasticsearch-environment-type]');
+        var authenticationType = section.querySelector('[data-ai-data-source-elasticsearch-authentication-type]');
+        var urlSettings = section.querySelector('[data-ai-data-source-elasticsearch-url-settings]');
+        var cloudIdSettings = section.querySelector('[data-ai-data-source-elasticsearch-cloud-id-settings]');
+        var basicAuthSettings = section.querySelector('[data-ai-data-source-elasticsearch-basic-auth-settings]');
+        var apiKeySettings = section.querySelector('[data-ai-data-source-elasticsearch-api-key-settings]');
+        var base64ApiKeySettings = section.querySelector('[data-ai-data-source-elasticsearch-base64-api-key-settings]');
+        var keyIdSettings = section.querySelector('[data-ai-data-source-elasticsearch-key-id-settings]');
+
+        if (!environmentType || !authenticationType || !urlSettings || !cloudIdSettings || !basicAuthSettings || !apiKeySettings || !base64ApiKeySettings || !keyIdSettings) {
+            return;
+        }
+
+        var cloudHostedValue = section.getAttribute('data-ai-data-source-elasticsearch-cloud-hosted-value');
+        var basicValue = section.getAttribute('data-ai-data-source-elasticsearch-basic-value');
+        var apiKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-api-key-value');
+        var base64ApiKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-base64-api-key-value');
+        var keyIdAndKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-key-id-and-key-value');
+
+        function updateVisibility() {
+            var isCloudHosted = environmentType.value === cloudHostedValue;
+            var isBasic = authenticationType.value === basicValue;
+            var isApiKey = authenticationType.value === apiKeyValue;
+            var isBase64ApiKey = authenticationType.value === base64ApiKeyValue;
+            var isKeyIdAndKey = authenticationType.value === keyIdAndKeyValue;
+
+            urlSettings.hidden = isCloudHosted;
+            cloudIdSettings.hidden = !isCloudHosted;
+            basicAuthSettings.hidden = !isBasic;
+            apiKeySettings.hidden = !(isApiKey || isKeyIdAndKey);
+            base64ApiKeySettings.hidden = !isBase64ApiKey;
+            keyIdSettings.hidden = !isKeyIdAndKey;
+        }
+
+        environmentType.addEventListener('change', updateVisibility);
+        authenticationType.addEventListener('change', updateVisibility);
+        updateVisibility();
+    }
+
+    function initializeAzureAiSearch(form) {
+        var section = form.querySelector('[data-ai-data-source-azure-ai-search]');
+
+        if (!section) {
+            return;
+        }
+
+        var authenticationType = section.querySelector('[data-ai-data-source-azure-ai-search-authentication-type]');
+        var apiKeySettings = section.querySelector('[data-ai-data-source-azure-ai-search-api-key-settings]');
+        var identitySettings = section.querySelector('[data-ai-data-source-azure-ai-search-identity-settings]');
+
+        if (!authenticationType || !apiKeySettings || !identitySettings) {
+            return;
+        }
+
+        var apiKeyValue = section.getAttribute('data-ai-data-source-azure-ai-search-api-key-value');
+
+        function updateVisibility() {
+            var isApiKey = authenticationType.value === apiKeyValue;
+            apiKeySettings.hidden = !isApiKey;
+            identitySettings.hidden = isApiKey;
+        }
+
+        authenticationType.addEventListener('change', updateVisibility);
+        updateVisibility();
+    }
+
+    function initialize(root) {
+        var form = root.closest('form') || document;
+        var sourceTypeInput = root.querySelector('[data-ai-data-source-source-type]');
+
+        if (sourceTypeInput) {
+            sourceTypeInput.addEventListener('change', function () {
+                updateSections(root);
+            });
+        }
+
+        updateSections(root);
+        initializeSearchIndexProfile(form);
+        initializeElasticsearch(form);
+        initializeAzureAiSearch(form);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-ai-data-source-editor]').forEach(function (root) {
+            initialize(root);
+        });
+    });
+})();

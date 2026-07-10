@@ -290,7 +290,7 @@ public sealed class NamedRecipeStepHandlerTests
             ItemId = "data-source-1",
         };
 
-        var manager = new Mock<ICatalogManager<AIDataSource>>();
+        var manager = new Mock<ISourceCatalogManager<AIDataSource>>();
         manager.Setup(x => x.FindByIdAsync("data-source-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(dataSource));
         manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))

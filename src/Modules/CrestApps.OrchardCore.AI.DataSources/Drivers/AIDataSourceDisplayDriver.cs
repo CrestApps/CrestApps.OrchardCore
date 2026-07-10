@@ -51,83 +51,58 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        return Initialize<EditAIDataSourceViewModel>("AIDataSourceFields_Edit", async model =>
-        {
-            model.DisplayText = dataSource.DisplayText;
-            model.SourceIndexProfileName = dataSource.SourceIndexProfileName;
-            model.AIKnowledgeBaseIndexProfileName = dataSource.AIKnowledgeBaseIndexProfileName;
-            model.KeyFieldName = dataSource.KeyFieldName;
-            model.TitleFieldName = dataSource.TitleFieldName;
-            model.ContentFieldName = dataSource.ContentFieldName;
-
-            // Lock configuration once both index and master index are set (already created),
-            // but allow editing if either is missing (e.g., migration failure).
-            model.IsLocked = !string.IsNullOrEmpty(dataSource.SourceIndexProfileName) &&
-                !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
-                    !string.IsNullOrEmpty(dataSource.ContentFieldName);
-
-            // Show source indexes from all providers, excluding AI-managed index profiles.
-            var allIndexes = await _indexProfileStore.GetAllAsync();
-
-            var sourceIndexes = allIndexes
-                .Where(i =>
-                    !string.Equals(i.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(i.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
-            model.SourceIndexProfileNames = BuildGroupedIndexProfileItems(sourceIndexes, _indexingOptions);
-
-            // Show ALL master indexes from all providers, grouped by provider.
-            var knowledgeBaseIndexes = allIndexes
-                .Where(i => string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
-            model.AIKnowledgeBaseIndexProfileNames = BuildGroupedIndexProfileItems(knowledgeBaseIndexes, _indexingOptions);
-
-            model.FieldNames ??= [];
-        }).Location("Content:1");
+        return Combine(
+            Initialize<EditAIDataSourceFieldsViewModel>("AIDataSourceFields_Edit", model => PopulateFieldsEditorModelAsync(dataSource, model)).Location("Content:1"),
+            Initialize<EditAIDataSourceSharedViewModel>("AIDataSourceShared_Edit", model => PopulateSharedEditorModelAsync(dataSource, model)).Location("Content:100")
+        );
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        var model = new EditAIDataSourceViewModel();
+        var fieldsModel = new EditAIDataSourceFieldsViewModel();
+        var sharedModel = new EditAIDataSourceSharedViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
+        await context.Updater.TryUpdateModelAsync(fieldsModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(sharedModel, Prefix);
 
-        if (string.IsNullOrEmpty(model.DisplayText))
+        if (string.IsNullOrEmpty(fieldsModel.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The name is required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(fieldsModel.DisplayText), S["The name is required field."]);
         }
 
-        dataSource.DisplayText = model.DisplayText;
-
-        // Allow updating index config if new OR if fields are missing (migration failure recovery).
-        var canUpdateIndex = context.IsNew ||
-            string.IsNullOrEmpty(dataSource.SourceIndexProfileName) ||
-                string.IsNullOrEmpty(dataSource.ContentFieldName) ||
-                    string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName);
-
-        if (canUpdateIndex)
+        if (string.IsNullOrWhiteSpace(sharedModel.AIKnowledgeBaseIndexProfileName))
         {
-            dataSource.SourceIndexProfileName = model.SourceIndexProfileName;
-            dataSource.AIKnowledgeBaseIndexProfileName = model.AIKnowledgeBaseIndexProfileName;
-            dataSource.KeyFieldName = model.KeyFieldName;
-            dataSource.TitleFieldName = model.TitleFieldName;
-            dataSource.ContentFieldName = model.ContentFieldName;
+            context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.AIKnowledgeBaseIndexProfileName), S["The destination index is required."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(sharedModel.ContentFieldName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.ContentFieldName), S["The content field is required."]);
+        }
+
+        dataSource.DisplayText = fieldsModel.DisplayText;
+
+        if (!AIDataSourceDriverHelper.IsConfigurationLocked(dataSource))
+        {
+            dataSource.AIKnowledgeBaseIndexProfileName = sharedModel.AIKnowledgeBaseIndexProfileName;
+            dataSource.KeyFieldName = sharedModel.KeyFieldName;
+            dataSource.TitleFieldName = sharedModel.TitleFieldName;
+            dataSource.ContentFieldName = sharedModel.ContentFieldName;
         }
 
         return Edit(dataSource, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildGroupedIndexProfileItems(
-        IEnumerable<IndexProfile> indexProfiles,
-        IndexingOptions indexingOptions)
+    private IEnumerable<SelectListItem> BuildGroupedIndexProfileItems(IEnumerable<IndexProfile> indexProfiles)
     {
         return indexProfiles
             .GroupBy(profile => profile.ProviderName, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(group => GetProviderDisplayName(group.Key, indexingOptions), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GetProviderDisplayName(group.Key), StringComparer.OrdinalIgnoreCase)
             .SelectMany(group =>
             {
                 var selectListGroup = new SelectListGroup
                 {
-                    Name = GetProviderDisplayName(group.Key, indexingOptions),
+                    Name = GetProviderDisplayName(group.Key),
                 };
 
                 return group
@@ -139,15 +114,57 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             });
     }
 
-    private static string GetProviderDisplayName(string providerName, IndexingOptions indexingOptions)
+    private string GetProviderDisplayName(string providerName)
     {
         if (!string.IsNullOrWhiteSpace(providerName) &&
-            indexingOptions?.Providers.TryGetValue(providerName, out var entry) == true &&
+            _indexingOptions.Providers.TryGetValue(providerName, out var entry) &&
             !string.IsNullOrWhiteSpace(entry.DisplayName.Value))
         {
             return entry.DisplayName.Value;
         }
 
         return providerName ?? string.Empty;
+    }
+
+    private static void PopulateBaseEditorModel(
+        AIDataSource dataSource,
+        out string sourceType,
+        out bool isConfigurationLocked)
+    {
+        sourceType = AIDataSourceDriverHelper.GetSourceType(dataSource);
+        isConfigurationLocked = AIDataSourceDriverHelper.IsConfigurationLocked(dataSource);
+    }
+
+    private static ValueTask PopulateFieldsEditorModelAsync(
+        AIDataSource dataSource,
+        EditAIDataSourceFieldsViewModel model)
+    {
+        PopulateBaseEditorModel(dataSource, out var sourceType, out var isConfigurationLocked);
+
+        model.DisplayText = dataSource.DisplayText;
+        model.SourceType = sourceType;
+        model.IsConfigurationLocked = isConfigurationLocked;
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async ValueTask PopulateSharedEditorModelAsync(
+        AIDataSource dataSource,
+        EditAIDataSourceSharedViewModel model)
+    {
+        PopulateBaseEditorModel(dataSource, out var sourceType, out var isConfigurationLocked);
+
+        model.SourceType = sourceType;
+        model.AIKnowledgeBaseIndexProfileName = dataSource.AIKnowledgeBaseIndexProfileName;
+        model.KeyFieldName = dataSource.KeyFieldName;
+        model.TitleFieldName = dataSource.TitleFieldName;
+        model.ContentFieldName = dataSource.ContentFieldName;
+        model.IsConfigurationLocked = isConfigurationLocked;
+
+        var allIndexes = await _indexProfileStore.GetAllAsync();
+        var knowledgeBaseIndexes = allIndexes
+            .Where(index => string.Equals(index.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
+        model.AIKnowledgeBaseIndexProfileNames = BuildGroupedIndexProfileItems(knowledgeBaseIndexes);
+        model.FieldNames = [];
     }
 }
