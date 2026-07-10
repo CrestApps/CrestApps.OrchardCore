@@ -74,6 +74,43 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task ReserveAsync_WhenAgentAlreadyHasActiveReservation_AbortsWithoutReserving()
+    {
+        // Arrange
+        var reservationManager = new Mock<IActivityReservationManager>();
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1", Status = QueueItemStatus.Waiting });
+
+        var alreadyReservedAgent = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            ActiveReservationId = "r-existing",
+        };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(alreadyReservedAgent);
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        var queueService = new Mock<IActivityQueueService>();
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = CreateService(reservationManager, queueItemManager, agentManager, queueManager, queueService, interactionManager, activityManager, new Mock<IContactCenterEventPublisher>(), new Mock<ITelephonyService>());
+
+        var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
+        var selectedAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available };
+
+        // Act
+        var reservation = await service.ReserveAsync(item, selectedAgent, 30, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        reservationManager.Verify(m => m.CreateAsync(It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ReserveAsync_WhenBreakWasGrantedAfterRoutingDecision_PreservesPendingBreak()
     {
         // Arrange

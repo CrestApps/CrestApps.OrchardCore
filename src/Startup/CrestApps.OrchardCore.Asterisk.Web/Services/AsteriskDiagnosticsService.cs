@@ -444,7 +444,7 @@ public sealed class AsteriskDiagnosticsService
 
         if (hasConnectedLeg)
         {
-            return "Connected";
+            return partyCount >= 3 ? "In conference" : "Connected";
         }
 
         return channels

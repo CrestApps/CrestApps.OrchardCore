@@ -82,6 +82,18 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         queueItem = current;
 
+        // Re-read and re-validate the agent before booking them. Assignment is serialized only by a
+        // per-queue lock, but an agent can belong to several queues; if a concurrent assignment on
+        // another queue already reserved this agent, abort here instead of double-booking the seat.
+        // (This compare-and-set narrows the window; full multi-node safety additionally needs a
+        // per-agent distributed lock around this transition.)
+        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
+
+        if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
+        {
+            return null;
+        }
+
         var now = _clock.UtcNow;
         var reservation = await _reservationManager.NewAsync(cancellationToken: cancellationToken);
         reservation.ActivityItemId = queueItem.ActivityItemId;
@@ -98,8 +110,6 @@ public sealed class ActivityReservationService : IActivityReservationService
         queueItem.ReservationId = reservation.ItemId;
         queueItem.AgentId = agent.ItemId;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
-
-        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
 
         if (!agent.RequestedPresenceStatus.HasValue &&
             agent.PresenceStatus is not AgentPresenceStatus.Available and not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp)

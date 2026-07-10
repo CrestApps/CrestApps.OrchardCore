@@ -152,12 +152,15 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             credentials = await service.GetClientCredentialsAsync(Context.ConnectionAborted);
         });
 
-        _logger.LogInformation(
-            "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, HasCredentials={HasCredentials}.",
-            "GetCredentials",
-            Context.UserIdentifier ?? "(anonymous)",
-            credentials?.ProviderName ?? "(none)",
-            credentials is not null);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, HasCredentials={HasCredentials}.",
+                "GetCredentials",
+                Context.UserIdentifier ?? "(anonymous)",
+                credentials?.ProviderName ?? "(none)",
+                credentials is not null);
+        }
 
         return credentials;
     }
@@ -193,14 +196,17 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             }
         });
 
-        _logger.LogInformation(
-            "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, Available={IsAvailable}, RequiresAuthentication={RequiresAuthentication}, Connected={IsConnected}.",
-            "GetConnectionStatus",
-            Context.UserIdentifier ?? "(anonymous)",
-            status.ProviderName ?? "(none)",
-            status.IsAvailable,
-            status.RequiresAuthentication,
-            status.IsConnected);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, Available={IsAvailable}, RequiresAuthentication={RequiresAuthentication}, Connected={IsConnected}.",
+                "GetConnectionStatus",
+                Context.UserIdentifier ?? "(anonymous)",
+                status.ProviderName ?? "(none)",
+                status.IsAvailable,
+                status.RequiresAuthentication,
+                status.IsConnected);
+        }
 
         return status;
     }
@@ -236,12 +242,15 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             interactions = await store.GetRecentAsync(userId, take, Context.ConnectionAborted);
         });
 
-        _logger.LogInformation(
-            "Telephony hub action {Action} completed for user {UserId}. Requested={RequestedCount}, Returned={ReturnedCount}.",
-            "GetInteractions",
-            Context.UserIdentifier ?? "(anonymous)",
-            take,
-            interactions.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Requested={RequestedCount}, Returned={ReturnedCount}.",
+                "GetInteractions",
+                Context.UserIdentifier ?? "(anonymous)",
+                take,
+                interactions.Count);
+        }
 
         return interactions;
     }
@@ -267,11 +276,14 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             capabilities = await service.GetCapabilitiesAsync(Context.ConnectionAborted);
         });
 
-        _logger.LogInformation(
-            "Telephony hub action {Action} completed for user {UserId}. Capabilities={Capabilities}.",
-            "GetCapabilities",
-            Context.UserIdentifier ?? "(anonymous)",
-            capabilities);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Capabilities={Capabilities}.",
+                "GetCapabilities",
+                Context.UserIdentifier ?? "(anonymous)",
+                capabilities);
+        }
 
         return (int)capabilities;
     }
@@ -326,17 +338,20 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             await Clients.Caller.CallStateChanged(result.Call);
         }
 
-        var completionRequest = BuildLogRequest(requestFactory);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var completionRequest = BuildLogRequest(requestFactory);
 
-        _logger.LogInformation(
-            "Telephony hub action {Action} completed for user {UserId}. Request: {Request}. Succeeded={Succeeded}, Error={Error}, CallId={CallId}, CallState={CallState}.",
-            actionName,
-            Context.UserIdentifier ?? "(anonymous)",
-            completionRequest,
-            result?.Succeeded,
-            result?.Error ?? "(none)",
-            result?.Call?.CallId ?? "(none)",
-            result?.Call?.State.ToString() ?? "(none)");
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Request: {Request}. Succeeded={Succeeded}, Error={Error}, CallId={CallId}, CallState={CallState}.",
+                actionName,
+                Context.UserIdentifier ?? "(anonymous)",
+                completionRequest,
+                result?.Succeeded,
+                result?.Error ?? "(none)",
+                result?.Call?.CallId ?? "(none)",
+                result?.Call?.State.ToString() ?? "(none)");
+        }
 
         return result;
     }
