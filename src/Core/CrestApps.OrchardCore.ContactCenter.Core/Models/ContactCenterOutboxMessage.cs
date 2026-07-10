@@ -4,9 +4,9 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Represents a durable outbox entry that tracks an event whose handler dispatch failed and must be
-/// retried. The interaction event itself remains the immutable audit record; this message carries only
-/// the mutable retry state so a transient handler failure no longer silently drops a domain event.
+/// Represents a durable outbox entry that tracks an event until every registered handler has completed.
+/// The interaction event itself remains the immutable audit record; this message carries the mutable
+/// delivery state so application restarts and transient failures cannot silently drop a domain event.
 /// </summary>
 public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareModel
 {
@@ -39,6 +39,11 @@ public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareM
     /// Gets or sets the message from the last failed dispatch attempt.
     /// </summary>
     public string LastError { get; set; }
+
+    /// <summary>
+    /// Gets or sets the handler type names that have already processed the event successfully.
+    /// </summary>
+    public IList<string> CompletedHandlerTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the UTC time the message was created.

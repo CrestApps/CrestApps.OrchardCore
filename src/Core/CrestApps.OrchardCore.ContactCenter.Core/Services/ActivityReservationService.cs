@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -15,6 +16,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityReservationService : IActivityReservationService
 {
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
@@ -24,6 +28,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyService _telephonyService;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -39,6 +44,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="telephonyServices">The optional telephony services used for voice-specific timeout actions.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
     /// <param name="clock">The clock used to stamp reservation times.</param>
     /// <param name="logger">The logger.</param>
     public ActivityReservationService(
@@ -51,6 +57,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
         IEnumerable<ITelephonyService> telephonyServices,
+        IDistributedLock distributedLock,
         IClock clock,
         ILogger<ActivityReservationService> logger)
     {
@@ -63,6 +70,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         _activityManager = activityManager;
         _publisher = publisher;
         _telephonyService = telephonyServices.FirstOrDefault();
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
     }
@@ -73,6 +81,18 @@ public sealed class ActivityReservationService : IActivityReservationService
         ArgumentNullException.ThrowIfNull(queueItem);
         ArgumentNullException.ThrowIfNull(agent);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetAgentReservationLockKey(agent.ItemId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
         var current = await _queueItemManager.FindByIdAsync(queueItem.ItemId, cancellationToken);
 
         if (current is null || current.Status != QueueItemStatus.Waiting)
@@ -81,12 +101,6 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         queueItem = current;
-
-        // Re-read and re-validate the agent before booking them. Assignment is serialized only by a
-        // per-queue lock, but an agent can belong to several queues; if a concurrent assignment on
-        // another queue already reserved this agent, abort here instead of double-booking the seat.
-        // (This compare-and-set narrows the window; full multi-node safety additionally needs a
-        // per-agent distributed lock around this transition.)
         agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
 
         if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
@@ -146,6 +160,18 @@ public sealed class ActivityReservationService : IActivityReservationService
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
         if (reservation is null || reservation.Status != ReservationStatus.Pending)
@@ -192,6 +218,18 @@ public sealed class ActivityReservationService : IActivityReservationService
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
         if (reservation is null ||
@@ -210,6 +248,18 @@ public sealed class ActivityReservationService : IActivityReservationService
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
         var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
 
         if (reservation is null || reservation.Status != ReservationStatus.Pending)
@@ -225,11 +275,33 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <inheritdoc/>
     public async Task<int> ExpireDueAsync(CancellationToken cancellationToken = default)
     {
-        var expired = await _reservationManager.ListExpiredAsync(_clock.UtcNow, cancellationToken);
+        var now = _clock.UtcNow;
+        var expired = await _reservationManager.ListExpiredAsync(now, cancellationToken);
         var count = 0;
 
-        foreach (var reservation in expired)
+        foreach (var candidate in expired)
         {
+            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+                GetReservationLockKey(candidate.ItemId),
+                _lockTimeout,
+                _lockExpiration);
+
+            if (!locked)
+            {
+                continue;
+            }
+
+            await using var acquiredLock = locker;
+
+            var reservation = await _reservationManager.FindByIdAsync(candidate.ItemId, cancellationToken);
+
+            if (reservation is null ||
+                reservation.Status != ReservationStatus.Pending ||
+                reservation.ExpiresUtc > now)
+            {
+                continue;
+            }
+
             await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
             count++;
         }
@@ -456,5 +528,15 @@ public sealed class ActivityReservationService : IActivityReservationService
             ActorId = reservation.AgentId,
             SourceComponent = ContactCenterConstants.Components.Queues,
         }, cancellationToken);
+    }
+
+    private static string GetAgentReservationLockKey(string agentId)
+    {
+        return $"ContactCenterAgentReservation:{agentId}";
+    }
+
+    private static string GetReservationLockKey(string reservationId)
+    {
+        return $"ContactCenterReservation:{reservationId}";
     }
 }

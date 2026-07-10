@@ -21,6 +21,17 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     }
 
     /// <inheritdoc/>
+    public async Task<ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(eventId);
+
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => index.EventId == eventId,
+            collection: ContactCenterConstants.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<ContactCenterOutboxMessage>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? 100 : maxCount;

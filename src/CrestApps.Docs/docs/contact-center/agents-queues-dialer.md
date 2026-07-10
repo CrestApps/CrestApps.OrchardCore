@@ -64,13 +64,13 @@ Agent capacity is enforced during candidate selection. Each agent profile define
 
 ### Business hours and overflow
 
-A queue can reference a reusable **business-hours calendar** (managed from **Interaction Center → Business hours**). A calendar defines a time zone, a weekly open window per day, and all-day holiday dates. While the calendar reports the queue closed, assignment pauses. The queue's **after-hours action** decides what happens to waiting items: *Hold in queue* keeps them until the queue reopens, and *Overflow* moves them to the configured overflow queue.
+A queue can reference a reusable **business-hours calendar** (managed from **Interaction Center → Business hours**). A calendar defines a time zone, a weekly open window per day, and all-day holiday dates. Weekly windows can cross midnight, and equal opening/closing times represent an enabled 24-hour day. While the calendar reports the queue closed, assignment pauses. The queue's **after-hours action** decides what happens to waiting items: *Hold in queue* keeps them until the queue reopens, and *Overflow* moves them to the configured overflow queue.
 
-Independently of business hours, a queue may set an **overflow queue** and an **overflow-after** threshold. Waiting items that exceed the threshold are moved to the overflow queue so long-waiting work can be picked up by a broader team. Overflow moves run each minute alongside reservation expiry and assignment.
+Independently of business hours, a queue may set an **overflow queue** and an **overflow-after** threshold. Waiting items that exceed the threshold are moved to the overflow queue so long-waiting work can be picked up by a broader team. Contact Center preserves the original enqueue time for SLA aging while separately tracking when the item entered its current queue, so every overflow hop receives its configured dwell time and visited queues cannot form a routing cycle. Overflow moves run each minute alongside reservation expiry and assignment.
 
 A reservation locks the activity for one agent and can be accepted, rejected, canceled, or expired. The CRM activity moves through `Available → Reserved → Assigned`, mirrored on the queue item and agent presence. Canceled reservations always return the item to the queue. The **Reservation timeout (seconds)** setting controls how long an unanswered offer stays reserved, and **Unanswered offer action** controls what happens when that timeout expires: requeue the work, send the live voice call to voicemail, or reject the live voice call. Voicemail and reject are voice-only actions; when there is no live provider call to act on, the system safely falls back to requeueing the work instead of dropping it. A background task expires stale reservations and assigns waiting work every minute.
 
-Assignment is concurrency-safe. Each queue's assignment runs under a per-queue distributed lock, so two nodes — or the reservation-expiry background task running alongside an inbound call — cannot double-assign the same item or reserve the same agent twice.
+Assignment is concurrency-safe. Each queue's assignment runs under a per-queue distributed lock, agent reservation creation runs under a per-agent distributed lock across all queues, and reservation accept/reject/cancel/expiry transitions share a per-reservation lock. Expiry re-reads the reservation after acquiring the lock and releases it only while it is still pending, so an accept racing the expiry sweep cannot requeue a live call.
 
 ## Dialer
 
@@ -95,10 +95,10 @@ Before every attempt, `IDialerEligibilityService` runs and records an auditable 
 - **Destination present** and the **maximum attempt count** has not been reached.
 - **Retry cool-down** - a previous attempt must be older than `RetryDelayMinutes`.
 - **Do-not-call / communication preferences** - the contact's `DoNotCall` opt-out (when *Respect do-not-call and communication preferences* is enabled).
-- **Calling window** - when *Enforce a calling window* is enabled, the contact is only dialed while their local time (from the contact's time zone, or the profile's default time zone) is within the configured start/end hours.
+- **Calling window** - when *Enforce a calling window* is enabled, the contact is only dialed while their local time (from the contact's time zone, or the profile's default time zone) is within the configured start/end hours. Equal start/end hours fail closed instead of silently allowing calls all day.
 - **National do-not-call registries** - any registered `INationalDoNotCallRegistry` (for example the USA FTC or Canada DNCL registries) is scrubbed when *Respect do-not-call* is enabled.
 
-Do-not-call and registry suppressions cancel the activity; calling-window and cool-down suppressions release the reservation and leave the activity available for a later cycle. Full calling-window calendars, abandonment caps, and answering-machine detection are hardened in a later compliance phase.
+Do-not-call, registry, missing-destination, and maximum-attempt suppressions are terminal and remove the queue item so the dialer cannot retry them forever. Calling-window and cool-down suppressions release the reservation and leave the activity available for a later cycle. Terminal provider dial failures also remove the queue item, while retryable failures remain available according to the configured retry policy. Full calling-window calendars, abandonment caps, and answering-machine detection are hardened in a later compliance phase.
 
 ### Callback operations
 

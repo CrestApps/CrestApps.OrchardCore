@@ -16,6 +16,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
 {
     private readonly IDialerEligibilityService _eligibilityService;
     private readonly IActivityReservationService _reservationService;
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IActivityQueueService _queueService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
@@ -28,6 +30,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// </summary>
     /// <param name="eligibilityService">The compliance gate evaluated before every attempt.</param>
     /// <param name="reservationService">The reservation service used to release failed or suppressed attempts.</param>
+    /// <param name="queueItemManager">The queue item manager used to resolve terminal dialer work.</param>
+    /// <param name="queueService">The queue service used to remove terminal dialer work.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
@@ -37,6 +41,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
         IActivityReservationService reservationService,
+        IQueueItemManager queueItemManager,
+        IActivityQueueService queueService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IVoiceContactCenterCallRouter voiceCallRouter,
@@ -46,6 +52,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     {
         _eligibilityService = eligibilityService;
         _reservationService = reservationService;
+        _queueItemManager = queueItemManager;
+        _queueService = queueService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _voiceCallRouter = voiceCallRouter;
@@ -64,7 +72,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (activity is null)
         {
-            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+            await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
 
             return false;
         }
@@ -159,7 +167,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
                 activity.Status = ActivityStatus.Failed;
                 await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
 
-                await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+                await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
 
                 return false;
             }
@@ -176,7 +184,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+            await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
         }
 
         await _publisher.PublishAsync(new InteractionEvent
@@ -206,7 +214,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
         }
 
-        await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+        await CancelReservationAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -237,6 +245,28 @@ public sealed class DialerAttemptService : IDialerAttemptService
         suppressionEvent.SetData(data);
 
         await _publisher.PublishAsync(suppressionEvent, cancellationToken);
+    }
+
+    private async Task CancelReservationAsync(
+        ActivityReservation reservation,
+        bool removeFromQueue,
+        CancellationToken cancellationToken)
+    {
+        await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+
+        if (!removeFromQueue || string.IsNullOrEmpty(reservation.QueueItemId))
+        {
+            return;
+        }
+
+        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is null || queueItem.Status is QueueItemStatus.Completed or QueueItemStatus.Removed)
+        {
+            return;
+        }
+
+        await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
     }
 
     private static ActivityStatus? ResolveSuppressedStatus(DialerSuppressionReason reason)

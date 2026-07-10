@@ -3,15 +3,22 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Dispatches Contact Center domain events to their handlers and guarantees at-least-once delivery: a
-/// handler failure during inline dispatch is captured as a durable outbox message and retried with
-/// exponential back-off until it succeeds or is dead-lettered. Handlers must therefore be idempotent.
+/// Dispatches Contact Center domain events to their handlers and guarantees at-least-once delivery.
+/// Every event is durably enqueued before dispatch and remains pending until all handlers complete or
+/// the message is dead-lettered. Handlers must therefore be idempotent.
 /// </summary>
 public interface IContactCenterOutbox
 {
     /// <summary>
-    /// Runs every registered handler for the event inline. When one or more handlers fail, a durable
-    /// outbox message is scheduled so the event is retried later instead of being silently lost.
+    /// Durably enqueues an event for handler dispatch.
+    /// </summary>
+    /// <param name="interactionEvent">The event to enqueue.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task EnqueueAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs every incomplete registered handler for an already-enqueued event. Successful delivery
+    /// removes the outbox message; failures are retried with exponential back-off.
     /// </summary>
     /// <param name="interactionEvent">The event to dispatch.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -13,10 +14,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ProviderCallStateSynchronizationService : IProviderCallStateSynchronizationService
 {
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+    private const string ReconciliationLockKey = "ContactCenterProviderCallStateReconciliation";
+
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IProviderVoiceEventService _providerVoiceEventService;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -27,6 +33,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     /// <param name="callSessionManager">The call session manager.</param>
     /// <param name="providerVoiceEventService">The provider voice-event ingestion service.</param>
     /// <param name="telephonyProviderResolver">The telephony provider resolver.</param>
+    /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
     /// <param name="clock">The clock used to stamp reconciliation events.</param>
     /// <param name="logger">The logger.</param>
     public ProviderCallStateSynchronizationService(
@@ -34,6 +41,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         ICallSessionManager callSessionManager,
         IProviderVoiceEventService providerVoiceEventService,
         ITelephonyProviderResolver telephonyProviderResolver,
+        IDistributedLock distributedLock,
         IClock clock,
         ILogger<ProviderCallStateSynchronizationService> logger)
     {
@@ -41,6 +49,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         _callSessionManager = callSessionManager;
         _providerVoiceEventService = providerVoiceEventService;
         _telephonyProviderResolver = telephonyProviderResolver;
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
     }
@@ -89,14 +98,44 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         var providerEvent = BuildProviderEvent(interaction, lookup);
         await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
 
-        return await _interactionManager.FindByProviderInteractionIdAsync(interaction.ProviderInteractionId, cancellationToken)
+        return await _interactionManager.FindByProviderInteractionIdAsync(
+            interaction.ProviderName,
+            interaction.ProviderInteractionId,
+            cancellationToken)
             ?? interaction;
     }
 
     /// <inheritdoc/>
     public async Task<int> ReconcileActiveInteractionsAsync(CancellationToken cancellationToken = default)
     {
-        var interactions = await _interactionManager.ListActiveWithProviderCallIdAsync(cancellationToken);
+        return await ReconcileAsync(providerName: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> ReconcileProviderInteractionsAsync(string providerName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        return await ReconcileAsync(providerName, cancellationToken);
+    }
+
+    private async Task<int> ReconcileAsync(string providerName, CancellationToken cancellationToken)
+    {
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            ReconciliationLockKey,
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return 0;
+        }
+
+        await using var acquiredLock = locker;
+
+        var interactions = string.IsNullOrEmpty(providerName)
+            ? await _interactionManager.ListActiveWithProviderCallIdAsync(cancellationToken)
+            : await _interactionManager.ListActiveWithProviderCallIdAsync(providerName, cancellationToken);
         var refreshed = 0;
 
         foreach (var interaction in interactions)

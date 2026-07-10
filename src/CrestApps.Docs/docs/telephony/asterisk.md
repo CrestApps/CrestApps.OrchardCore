@@ -122,6 +122,14 @@ The provider uses ARI endpoints such as:
 
 Because all requests are issued server-side, the ARI password never reaches the browser.
 
+## Real-time call state and recovery
+
+The module keeps a tenant-scoped ARI WebSocket listener for every configured Asterisk provider. Each listener is supervised independently, reconnects with exponential jitter after failure, and runs an immediate provider-scoped reconciliation after connecting. A failed endpoint therefore does not stop healthy provider listeners, and reconnect recovery does not trigger overlapping full-provider sweeps.
+
+ARI events are normalized into provider-authoritative call states and projected through Orchard to connected soft-phone clients without browser polling. Supported dashboard states include **Offered**, **Offering**, **Ringing**, **Connected**, **In conference**, and **On hold**, with hold and mute badges where Asterisk exposes those facts. Bridge-leave, hold/unhold, mute-variable, state-change, hangup, and Stasis lifecycle events update the projection in real time.
+
+Periodic and startup reconciliation query the ARI channel directly. The provider reads the `CRESTAPPS_STATE_ONHOLD` and `CRESTAPPS_STATE_MUTED` channel variables so an `Up` channel is not incorrectly collapsed to a plain connected state after a restart. Unknown ARI channel states fail the lookup instead of being guessed as connected, leaving the prior projection intact until authoritative state is available.
+
 ## Voicemail routing
 
 When an agent clicks **Send to voicemail**, Orchard now sends a provider-neutral metadata bag along

@@ -12,7 +12,37 @@ public sealed class ContactCenterOutboxTests
     private static readonly DateTime _now = new(2026, 6, 30, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task DispatchAsync_WhenAllHandlersSucceed_DoesNotScheduleRetry()
+    public async Task EnqueueAsync_CreatesPendingMessageWithoutDispatchingHandlers()
+    {
+        // Arrange
+        var handler = new Mock<IContactCenterEventHandler>();
+        handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        ContactCenterOutboxMessage created = null;
+        outboxStore
+            .Setup(s => s.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => created = message)
+            .Returns(ValueTask.CompletedTask);
+
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [handler.Object]);
+
+        var interactionEvent = new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.InteractionCreated };
+
+        // Act
+        await outbox.EnqueueAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(created);
+        Assert.Equal("e1", created.EventId);
+        Assert.Equal(OutboxMessageStatus.Pending, created.Status);
+        Assert.Equal(0, created.AttemptCount);
+        Assert.Equal(_now, created.NextAttemptUtc);
+        handler.Verify(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAllHandlersSucceed_RemovesPendingMessage()
     {
         // Arrange
         var handler = new Mock<IContactCenterEventHandler>();
@@ -20,14 +50,14 @@ public sealed class ContactCenterOutboxTests
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [handler.Object]);
-
         var interactionEvent = new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.InteractionCreated };
 
         // Act
         await outbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken);
 
         // Assert
-        outboxStore.Verify(s => s.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        outboxStore.Verify(s => s.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()), Times.Once);
+        outboxStore.Verify(s => s.DeleteAsync(It.Is<ContactCenterOutboxMessage>(message => message.EventId == "e1"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -86,6 +116,56 @@ public sealed class ContactCenterOutboxTests
         // Assert
         Assert.Equal(1, redelivered);
         outboxStore.Verify(s => s.DeleteAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchDueAsync_AfterPartialFailure_RetriesOnlyIncompleteHandlers()
+    {
+        // Arrange
+        var completedHandler = new Mock<IContactCenterEventHandler>();
+        completedHandler
+            .Setup(handler => handler.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var retryingHandler = new Mock<IContactCenterEventHandler>();
+        retryingHandler
+            .SetupSequence(handler => handler.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("transient"))
+            .Returns(Task.CompletedTask);
+        ContactCenterOutboxMessage pending = null;
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => pending = message)
+            .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => [pending]);
+        var interactionEvent = new InteractionEvent
+        {
+            ItemId = "e1",
+            EventType = ContactCenterConstants.Events.InteractionCreated,
+        };
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interactionEvent);
+        var outbox = CreateOutbox(outboxStore, eventStore, [completedHandler.Object, retryingHandler.Object]);
+
+        // Act
+        await outbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken);
+        var processed = await outbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, processed);
+        completedHandler.Verify(
+            handler => handler.HandleAsync(interactionEvent, It.IsAny<CancellationToken>()),
+            Times.Once);
+        retryingHandler.Verify(
+            handler => handler.HandleAsync(interactionEvent, It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        outboxStore.Verify(
+            store => store.DeleteAsync(pending, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

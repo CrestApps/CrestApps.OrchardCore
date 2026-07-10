@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -76,18 +77,31 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
     private async Task RunAsync(IReadOnlyList<AsteriskResolvedSettings> listeners, CancellationToken cancellationToken)
     {
+        if (listeners.Count == 0)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+
+            return;
+        }
+
+        await Task.WhenAll(listeners.Select(listener => RunListenerAsync(listener, cancellationToken)));
+    }
+
+    private async Task RunListenerAsync(AsteriskResolvedSettings settings, CancellationToken cancellationToken)
+    {
+        if (!AsteriskSettingsUtilities.HasRequiredConfiguration(settings))
+        {
+            return;
+        }
+
+        var failureCount = 0;
+
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (listeners.Count == 0)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-
-                continue;
-            }
-
             try
             {
-                await Task.WhenAll(listeners.Select(listener => ListenAsync(listener, cancellationToken)));
+                await ListenAsync(settings, cancellationToken);
+                failureCount = 0;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -95,23 +109,23 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "The Asterisk real-time voice listener failed unexpectedly.");
+                failureCount++;
+
+                _logger.LogError(
+                    ex,
+                    "The Asterisk real-time voice listener for provider {ProviderName} failed unexpectedly.",
+                    settings.ProviderName);
             }
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                await Task.Delay(GetReconnectDelay(failureCount), cancellationToken);
             }
         }
     }
 
     private async Task ListenAsync(AsteriskResolvedSettings settings, CancellationToken cancellationToken)
     {
-        if (!AsteriskSettingsUtilities.HasRequiredConfiguration(settings))
-        {
-            return;
-        }
-
         using var socket = new ClientWebSocket();
         var eventsUri = AsteriskSettingsUtilities.CreateEventsUri(settings);
 
@@ -131,6 +145,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 "Connected the Asterisk real-time voice listener for provider {ProviderName}.",
                 settings.ProviderName);
         }
+
+        await ReconcileAsync(settings.ProviderName, cancellationToken);
 
         var buffer = new byte[8 * 1024];
 
@@ -164,6 +180,42 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
             await DispatchAsync(settings.ProviderName, payload, cancellationToken);
         }
+    }
+
+    private static TimeSpan GetReconnectDelay(int failureCount)
+    {
+        var exponent = Math.Min(Math.Max(failureCount, 0), 5);
+        var seconds = Math.Min(Math.Pow(2, exponent), 30);
+        var jitter = 0.8 + (Random.Shared.NextDouble() * 0.4);
+
+        return TimeSpan.FromSeconds(seconds * jitter);
+    }
+
+    private async Task ReconcileAsync(string providerName, CancellationToken cancellationToken)
+    {
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            var service = scope.ServiceProvider
+                .GetServices<IProviderCallStateSynchronizationService>()
+                .FirstOrDefault();
+
+            if (service is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await service.ReconcileProviderInteractionsAsync(providerName, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Provider-state reconciliation failed after reconnecting the Asterisk real-time listener for provider {ProviderName}.",
+                    providerName);
+            }
+        });
     }
 
     private async Task DispatchAsync(string providerName, string payload, CancellationToken cancellationToken)

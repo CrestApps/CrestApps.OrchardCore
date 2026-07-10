@@ -8,6 +8,8 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.ContentManagement;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -20,6 +22,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter, IInboundVoiceService
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
+    private static readonly TimeSpan _inboundLockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _inboundLockExpiration = TimeSpan.FromMinutes(1);
 
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
@@ -35,6 +39,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEntryPointResolver _entryPointResolver;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
 
     /// <summary>
@@ -54,6 +59,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
     /// <param name="entryPointResolver">The entry point resolver used to route inbound calls by dialed number.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -70,6 +76,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IIncomingCallDispatcher incomingCallDispatcher,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEntryPointResolver entryPointResolver,
+        IDistributedLock distributedLock,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -86,6 +93,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _incomingCallDispatcher = incomingCallDispatcher;
         _voiceProviderResolver = voiceProviderResolver;
         _entryPointResolver = entryPointResolver;
+        _distributedLock = distributedLock;
         _clock = clock;
     }
 
@@ -139,7 +147,70 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
 
+        if (string.IsNullOrWhiteSpace(inboundEvent.ProviderCallId))
+        {
+            return await RouteInboundCoreAsync(inboundEvent, cancellationToken);
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetInboundLockKey(inboundEvent),
+            _inboundLockTimeout,
+            _inboundLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"Inbound call '{inboundEvent.ProviderCallId}' is already being routed.");
+        }
+
+        var releaseDeferred = false;
+
+        try
+        {
+            if (ShellScope.Current is not null)
+            {
+                ShellScope.AddDeferredTask(_ => locker.DisposeAsync().AsTask());
+                releaseDeferred = true;
+            }
+
+            return await RouteInboundCoreAsync(inboundEvent, cancellationToken);
+        }
+        finally
+        {
+            if (!releaseDeferred && locker is not null)
+            {
+                await locker.DisposeAsync();
+            }
+        }
+    }
+
+    private async Task<InboundVoiceRoutingResult> RouteInboundCoreAsync(
+        InboundVoiceEvent inboundEvent,
+        CancellationToken cancellationToken)
+    {
         var result = new InboundVoiceRoutingResult();
+        Interaction existing = null;
+
+        if (!string.IsNullOrWhiteSpace(inboundEvent.ProviderCallId))
+        {
+            existing = !string.IsNullOrWhiteSpace(inboundEvent.ProviderName)
+                ? await _interactionManager.FindByProviderInteractionIdAsync(
+                    inboundEvent.ProviderName,
+                    inboundEvent.ProviderCallId,
+                    cancellationToken)
+                : await _interactionManager.FindByProviderInteractionIdAsync(inboundEvent.ProviderCallId, cancellationToken);
+        }
+
+        if (existing is not null)
+        {
+            result.ActivityItemId = existing.ActivityItemId;
+            result.InteractionId = existing.ItemId;
+            result.QueueId = existing.QueueId;
+            result.Routed = !string.IsNullOrEmpty(existing.AgentId);
+            result.Reason = "The provider call is already tracked by the Contact Center.";
+
+            return result;
+        }
+
         var now = inboundEvent.ReceivedUtc ?? _clock.UtcNow;
         var fromAddress = inboundEvent.FromAddress?.GetCleanedPhoneNumber();
         var serviceAddress = inboundEvent.ToAddress?.GetCleanedPhoneNumber();
@@ -408,6 +479,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         await _interactionManager.CreateAsync(interaction);
 
         return interaction;
+    }
+
+    private static string GetInboundLockKey(InboundVoiceEvent inboundEvent)
+    {
+        return $"ContactCenterInboundVoice:{inboundEvent.ProviderName}:{inboundEvent.ProviderCallId}";
     }
 
     private async Task<ActivityQueue> ResolveQueueAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)

@@ -40,7 +40,7 @@ connects their own DialPad account.
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
 | **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
 | **User id** | The DialPad user id that places outbound calls when **API key** authentication is selected. |
-| **Webhook signing secret** | The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. |
+| **Webhook signing secret** | Required when DialPad Contact Center Voice is enabled. The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. |
 
 DialPad API calls use the environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
@@ -122,8 +122,11 @@ dialing and call transfer.
   webhook is authenticated by the **Webhook signing secret** configured on the DialPad settings screen
   (DialPad signs the payload as an HS256 JWT). New inbound calls create a CRM activity and a voice
   interaction, are queued through the matching entry point, and are offered to an available agent; later
-  events (answered, held, ended) update the interaction and call session. When no signing secret is
-  configured, unsigned JSON webhooks are accepted, which is only recommended for local testing.
+  events (answered, held, muted, recording/conference changes, ended) update the interaction and call
+  session. Missing signing secrets are rejected, and a configured secret that cannot be decrypted returns
+  a service-unavailable response instead of downgrading to unsigned acceptance.
+
+Create the call-event webhook subscription in the DialPad administration portal and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the DialPad subscription automatically, so operators should monitor subscription status and delivery failures in DialPad.
 
 ## Registering the provider in code
 

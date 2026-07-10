@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -165,6 +166,47 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
+    public async Task HandleInboundAsync_WhenProviderCallIsAlreadyTracked_ReturnsExistingInteractionWithoutDuplicatingWork()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.InteractionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("TestProvider", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "interaction-1",
+                ActivityItemId = "activity-1",
+                ProviderInteractionId = "call-1",
+            });
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.Equal("activity-1", result.ActivityItemId);
+        Assert.Equal("interaction-1", result.InteractionId);
+        harness.ActivityManager.Verify(
+            manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.InteractionManager.Verify(
+            manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.QueueService.Verify(
+            service => service.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task HandleInboundAsync_WhenEndpointSpecificQueueExists_PrefersItOverGenericQueue()
     {
         // Arrange
@@ -257,6 +299,15 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IEntryPointResolver> EntryPointResolver { get; } = new();
 
+        public Mock<IDistributedLock> DistributedLock { get; } = new();
+
+        public Harness()
+        {
+            DistributedLock
+                .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+                .ReturnsAsync((null, true));
+        }
+
         public void SetupNoContext()
         {
             ChannelEndpointManager
@@ -300,6 +351,7 @@ public sealed class InboundVoiceServiceTests
                 IncomingCallDispatcher.Object,
                 VoiceProviderResolver.Object,
                 EntryPointResolver.Object,
+                DistributedLock.Object,
                 clock.Object);
         }
     }

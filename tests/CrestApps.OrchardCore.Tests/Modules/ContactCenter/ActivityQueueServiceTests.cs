@@ -36,6 +36,8 @@ public sealed class ActivityQueueServiceTests
         Assert.Equal("user-7", item.StickyAgentUserId);
         Assert.Equal("q1", item.QueueId);
         Assert.Equal(QueueItemStatus.Waiting, item.Status);
+        Assert.Equal(_now, item.EnqueuedUtc);
+        Assert.Equal(_now, item.QueueEnteredUtc);
     }
 
     [Fact]
@@ -99,7 +101,75 @@ public sealed class ActivityQueueServiceTests
         Assert.Equal(1, moved);
         Assert.Equal("q2", overdue.QueueId);
         Assert.Equal("q1", overdue.OverflowedFromQueueId);
+        Assert.Equal(_now.AddSeconds(-60), overdue.EnqueuedUtc);
+        Assert.Equal(_now, overdue.QueueEnteredUtc);
+        Assert.Contains("q1", overdue.OverflowHistory);
         Assert.Equal("q1", fresh.QueueId);
+    }
+
+    [Fact]
+    public async Task OverflowDueAsync_WhenItemRecentlyEnteredCurrentQueue_DoesNotUseOriginalWaitForNextHop()
+    {
+        // Arrange
+        var item = new QueueItem
+        {
+            ItemId = "i1",
+            QueueId = "q2",
+            Status = QueueItemStatus.Waiting,
+            EnqueuedUtc = _now.AddMinutes(-10),
+            QueueEnteredUtc = _now.AddSeconds(-10),
+            OverflowHistory = ["q1"],
+        };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.ListWaitingAsync("q2", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+        var service = CreateService(
+            queueItemManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<IBusinessHoursService>());
+        var queue = new ActivityQueue { ItemId = "q2", OverflowQueueId = "q3", OverflowAfterSeconds = 30 };
+
+        // Act
+        var moved = await service.OverflowDueAsync(queue, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, moved);
+        Assert.Equal("q2", item.QueueId);
+        queueItemManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<QueueItem>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OverflowDueAsync_WhenDestinationWasPreviouslyVisited_DoesNotCreateCycle()
+    {
+        // Arrange
+        var item = new QueueItem
+        {
+            ItemId = "i1",
+            QueueId = "q1",
+            Status = QueueItemStatus.Waiting,
+            EnqueuedUtc = _now.AddSeconds(-60),
+            OverflowHistory = ["q2"],
+        };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+        var service = CreateService(
+            queueItemManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<IBusinessHoursService>());
+        var queue = new ActivityQueue { ItemId = "q1", OverflowQueueId = "q2", OverflowAfterSeconds = 30 };
+
+        // Act
+        var moved = await service.OverflowDueAsync(queue, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, moved);
+        Assert.Equal("q1", item.QueueId);
+        queueItemManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<QueueItem>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

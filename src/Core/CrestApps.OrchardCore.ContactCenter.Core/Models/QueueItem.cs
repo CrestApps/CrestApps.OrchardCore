@@ -46,6 +46,11 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public string OverflowedFromQueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the queue identifiers this item has already visited through overflow routing.
+    /// </summary>
+    public IList<string> OverflowHistory { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the agent assigned to the item.
     /// </summary>
     public string AgentId { get; set; }
@@ -54,6 +59,11 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the UTC time the item entered the queue.
     /// </summary>
     public DateTime EnqueuedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the item entered its current queue.
+    /// </summary>
+    public DateTime QueueEnteredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the item left the queue.

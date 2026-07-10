@@ -33,6 +33,23 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
     }
 
     /// <inheritdoc/>
+    public async Task<CallSession> FindByProviderCallIdAsync(
+        string providerName,
+        string providerCallId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(providerCallId);
+
+        return await Session.Query<CallSession, CallSessionIndex>(
+            index => index.ProviderName == providerName &&
+                index.ProviderCallId == providerCallId,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<CallSession> FindByInteractionIdAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(interactionId);

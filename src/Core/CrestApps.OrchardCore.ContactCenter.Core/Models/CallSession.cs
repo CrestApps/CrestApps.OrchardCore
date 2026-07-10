@@ -98,6 +98,11 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public int ParticipantCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time of the latest provider event applied to this call session.
+    /// </summary>
+    public DateTime? LastProviderEventUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the call session was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

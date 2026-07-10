@@ -229,6 +229,73 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.Equal($"{BaseUrl}channels/call-1/continue?context=voicemail&extension=mike&priority=1", handler.Requests[2].RequestUri.AbsoluteUri);
     }
 
+    [Fact]
+    public async Task GetCallAsync_WhenChannelIsHeldAndMuted_RecoversGranularProviderState()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            var body = request.RequestUri.AbsoluteUri switch
+            {
+                $"{BaseUrl}channels/call-1" =>
+                    """
+                    {
+                      "id": "call-1",
+                      "state": "Up",
+                      "caller": { "number": "+15550001000" },
+                      "connected": { "number": "+15550002000" }
+                    }
+                    """,
+                $"{BaseUrl}channels/call-1/variable?variable=CRESTAPPS_STATE_ONHOLD" => """{"value":"true"}""",
+                $"{BaseUrl}channels/call-1/variable?variable=CRESTAPPS_STATE_MUTED" => """{"value":"true"}""",
+                _ => throw new InvalidOperationException($"Unexpected request: {request.RequestUri}"),
+            };
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body),
+            };
+        });
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetCallStateAsync("call-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(result.Found);
+        var call = result.Call;
+        Assert.NotNull(call);
+        Assert.Equal(CallState.OnHold, call.State);
+        Assert.True(call.IsMuted);
+        Assert.Equal(3, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task GetCallAsync_WhenAriReturnsUnknownChannelState_DoesNotAssumeConnected()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(
+            HttpStatusCode.OK,
+            """
+            {
+              "id": "call-1",
+              "state": "Mystery",
+              "caller": { "number": "+15550001000" },
+              "connected": { "number": "+15550002000" }
+            }
+            """);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetCallStateAsync("call-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Call);
+        Assert.Single(handler.Requests);
+    }
+
     private static AsteriskTelephonyProvider CreateProvider(
         StubHttpMessageHandler handler,
         out IDataProtectionProvider dataProtectionProvider,

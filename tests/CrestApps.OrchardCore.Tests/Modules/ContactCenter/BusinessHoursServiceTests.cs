@@ -90,6 +90,61 @@ public sealed class BusinessHoursServiceTests
         Assert.False(closedLocalEarly);
     }
 
+    [Theory]
+    [InlineData(2026, 1, 5, 23, 0, true)]
+    [InlineData(2026, 1, 6, 2, 0, true)]
+    [InlineData(2026, 1, 6, 7, 0, false)]
+    public void IsOpen_WithOvernightWindow_EvaluatesBothSidesOfMidnight(
+        int year,
+        int month,
+        int day,
+        int hour,
+        int minute,
+        bool expected)
+    {
+        // Arrange
+        var calendar = new BusinessHoursCalendar
+        {
+            ItemId = "cal1",
+            TimeZoneId = "UTC",
+            Enabled = true,
+            WeeklySchedule =
+            [
+                new BusinessHoursDay { Day = DayOfWeek.Monday, IsOpen = true, OpenMinute = 1320, CloseMinute = 360 },
+            ],
+        };
+
+        // Act
+        var open = DefaultBusinessHoursService.IsOpen(
+            calendar,
+            new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Utc));
+
+        // Assert
+        Assert.Equal(expected, open);
+    }
+
+    [Fact]
+    public void IsOpen_WithEqualOpenAndCloseMinutes_TreatsDayAsOpenAllDay()
+    {
+        // Arrange
+        var calendar = new BusinessHoursCalendar
+        {
+            ItemId = "cal1",
+            TimeZoneId = "UTC",
+            Enabled = true,
+            WeeklySchedule =
+            [
+                new BusinessHoursDay { Day = DayOfWeek.Monday, IsOpen = true, OpenMinute = 0, CloseMinute = 0 },
+            ],
+        };
+
+        // Act
+        var open = DefaultBusinessHoursService.IsOpen(calendar, _mondayNoonUtc);
+
+        // Assert
+        Assert.True(open);
+    }
+
     [Fact]
     public async Task IsOpenAsync_WithEmptyCalendarId_ReturnsTrue()
     {

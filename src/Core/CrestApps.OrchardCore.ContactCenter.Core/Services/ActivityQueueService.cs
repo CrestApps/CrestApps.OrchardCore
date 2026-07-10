@@ -65,6 +65,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         item.Status = QueueItemStatus.Waiting;
         item.StickyAgentUserId = activity?.AssignedToId;
         item.EnqueuedUtc = _clock.UtcNow;
+        item.QueueEnteredUtc = item.EnqueuedUtc;
 
         await _queueItemManager.CreateAsync(item, cancellationToken: cancellationToken);
 
@@ -131,17 +132,30 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         foreach (var item in waiting)
         {
+            var queueEnteredUtc = item.QueueEnteredUtc == default
+                ? item.EnqueuedUtc
+                : item.QueueEnteredUtc;
             var overflowDueByWait = queue.OverflowAfterSeconds > 0
-                && (now - item.EnqueuedUtc).TotalSeconds >= queue.OverflowAfterSeconds;
+                && (now - queueEnteredUtc).TotalSeconds >= queue.OverflowAfterSeconds;
 
             if (!closed && !overflowDueByWait)
             {
                 continue;
             }
 
+            if (item.OverflowHistory.Contains(queue.OverflowQueueId, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            if (!item.OverflowHistory.Contains(queue.ItemId, StringComparer.Ordinal))
+            {
+                item.OverflowHistory.Add(queue.ItemId);
+            }
+
             item.OverflowedFromQueueId = queue.ItemId;
             item.QueueId = queue.OverflowQueueId;
-            item.EnqueuedUtc = now;
+            item.QueueEnteredUtc = now;
             await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
 
             await _publisher.PublishAsync(new InteractionEvent

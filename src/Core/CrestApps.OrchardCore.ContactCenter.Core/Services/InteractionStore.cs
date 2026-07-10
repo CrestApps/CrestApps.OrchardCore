@@ -59,6 +59,23 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
+    public async Task<Interaction> FindByProviderInteractionIdAsync(
+        string providerName,
+        string providerInteractionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(providerInteractionId);
+
+        return await Session.Query<Interaction, InteractionIndex>(
+            index => index.ProviderName == providerName &&
+                index.ProviderInteractionId == providerInteractionId,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
         var query = Session.Query<Interaction, InteractionIndex>(
@@ -122,6 +139,23 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     {
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.Status != InteractionStatus.Ended &&
+                index.Status != InteractionStatus.Failed,
+            collection: ContactCenterConstants.CollectionName)
+            .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
+            .OrderByDescending(index => index.CreatedUtc)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
+        string providerName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        return (await Session.Query<Interaction, InteractionIndex>(
+            index => index.ProviderName == providerName &&
+                index.Status != InteractionStatus.Ended &&
                 index.Status != InteractionStatus.Failed,
             collection: ContactCenterConstants.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)

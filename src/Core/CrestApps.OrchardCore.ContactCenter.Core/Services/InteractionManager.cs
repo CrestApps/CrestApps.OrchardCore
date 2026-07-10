@@ -69,6 +69,22 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
+    public async Task<Interaction> FindByProviderInteractionIdAsync(
+        string providerName,
+        string providerInteractionId,
+        CancellationToken cancellationToken = default)
+    {
+        var interaction = await _store.FindByProviderInteractionIdAsync(providerName, providerInteractionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interaction;
+    }
+
+    /// <inheritdoc/>
     public async Task<PageResult<Interaction>> PageByStatusAsync(int page, int pageSize, InteractionStatus status, CancellationToken cancellationToken = default)
     {
         var result = await _store.PageByStatusAsync(page, pageSize, status, cancellationToken);
@@ -117,6 +133,21 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default)
     {
         var interactions = await _store.ListActiveWithProviderCallIdAsync(cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
+        string providerName,
+        CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListActiveWithProviderCallIdAsync(providerName, cancellationToken);
 
         foreach (var interaction in interactions)
         {

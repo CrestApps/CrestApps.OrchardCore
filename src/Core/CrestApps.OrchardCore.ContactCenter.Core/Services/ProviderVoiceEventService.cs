@@ -73,7 +73,12 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
-        var interaction = await _interactionManager.FindByProviderInteractionIdAsync(providerEvent.ProviderCallId, cancellationToken);
+        var interaction = !string.IsNullOrWhiteSpace(providerEvent.ProviderName)
+            ? await _interactionManager.FindByProviderInteractionIdAsync(
+                providerEvent.ProviderName,
+                providerEvent.ProviderCallId,
+                cancellationToken)
+            : await _interactionManager.FindByProviderInteractionIdAsync(providerEvent.ProviderCallId, cancellationToken);
 
         if (interaction is null)
         {
@@ -89,6 +94,24 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
         var session = await EnsureSessionAsync(interaction, providerEvent, now, cancellationToken);
+
+        if (ShouldIgnoreEvent(session, providerEvent, now))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Ignored stale provider voice event '{IdempotencyKey}' for call '{ProviderCallId}'. Current state: {CurrentState}; incoming state: {IncomingState}; last provider event: {LastProviderEventUtc}; incoming event: {OccurredUtc}.",
+                    providerEvent.IdempotencyKey,
+                    providerEvent.ProviderCallId,
+                    session.State,
+                    providerEvent.State,
+                    session.LastProviderEventUtc,
+                    now);
+            }
+
+            return session;
+        }
+
         var previousState = session.State;
         var previousIsMuted = session.IsMuted;
         var previousRecordingState = session.RecordingState;
@@ -97,6 +120,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         ApplyState(session, interaction, providerEvent.State, now);
         ApplyProviderDetails(session, interaction, providerEvent);
+        session.LastProviderEventUtc = now;
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
@@ -124,7 +148,9 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             previousParticipantCount,
             session.ParticipantCount))
         {
-            await PublishAsync(eventType, interaction.ItemId, session.AgentId, providerEvent.IdempotencyKey, cancellationToken);
+            var idempotencyKey = ResolveEventIdempotencyKey(providerEvent.IdempotencyKey, eventType);
+
+            await PublishAsync(eventType, interaction.ItemId, session.AgentId, idempotencyKey, cancellationToken);
         }
 
         return session;
@@ -136,7 +162,12 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var session = await _callSessionManager.FindByProviderCallIdAsync(providerEvent.ProviderCallId, cancellationToken)
+        var session = (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
+            ? await _callSessionManager.FindByProviderCallIdAsync(
+                providerEvent.ProviderName,
+                providerEvent.ProviderCallId,
+                cancellationToken)
+            : await _callSessionManager.FindByProviderCallIdAsync(providerEvent.ProviderCallId, cancellationToken))
             ?? await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
         if (session is not null)
@@ -158,11 +189,22 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         session.RecordingState = interaction.RecordingState;
         session.RecordingReference = interaction.RecordingReference;
         session.CreatedUtc = now;
+        session.LastProviderEventUtc = now;
         await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.CallSessionCreated, interaction.ItemId, session.AgentId, idempotencyKey: null, cancellationToken);
 
         return session;
+    }
+
+    private static bool ShouldIgnoreEvent(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
+    {
+        if (session.LastProviderEventUtc.HasValue && occurredUtc < session.LastProviderEventUtc.Value)
+        {
+            return true;
+        }
+
+        return IsTerminalState(session.State) && !IsTerminalState(providerEvent.State);
     }
 
     private static void ApplyState(CallSession session, Interaction interaction, ContactCenterCallState state, DateTime now)
@@ -385,6 +427,17 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             ContactCenterCallState.Rejected or
             ContactCenterCallState.Canceled or
             ContactCenterCallState.Transferred;
+    }
+
+    private static string ResolveEventIdempotencyKey(string providerEventKey, string eventType)
+    {
+        if (string.IsNullOrEmpty(providerEventKey) ||
+            eventType == ContactCenterConstants.Events.CallSessionUpdated)
+        {
+            return providerEventKey;
+        }
+
+        return $"{providerEventKey}:{eventType}";
     }
 
     private async Task TryBridgeAnsweredOutboundAsync(CallSession session, Interaction interaction, CancellationToken cancellationToken)

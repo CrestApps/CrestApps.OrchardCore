@@ -22,4 +22,12 @@ public interface IProviderCallStateSynchronizationService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of interactions whose provider state was refreshed.</returns>
     Task<int> ReconcileActiveInteractionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reconciles active provider-backed interactions for the specified provider against its current call state.
+    /// </summary>
+    /// <param name="providerName">The provider technical name.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of interactions whose provider state was refreshed.</returns>
+    Task<int> ReconcileProviderInteractionsAsync(string providerName, CancellationToken cancellationToken = default);
 }

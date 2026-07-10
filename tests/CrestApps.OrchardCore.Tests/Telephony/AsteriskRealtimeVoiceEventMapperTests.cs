@@ -43,4 +43,42 @@ public sealed class AsteriskRealtimeVoiceEventMapperTests
         Assert.Equal("ChannelDestroyed", voiceEvent.EventType);
         Assert.Equal("Normal Clearing", voiceEvent.Metadata["causeText"]);
     }
+
+    [Fact]
+    public void TryMap_WhenChannelLeavesBridge_ReturnsUnheldVoiceEvent()
+    {
+        // Arrange
+        const string payload =
+            """
+            {
+              "type": "ChannelLeftBridge",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "bridge": {
+                "id": "bridge-1"
+              },
+              "channel": {
+                "id": "call-1",
+                "state": "Up",
+                "caller": {
+                  "number": "+15550001000"
+                },
+                "connected": {
+                  "number": "+15550002000"
+                }
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.True(mapped);
+        Assert.NotNull(voiceEvent);
+        Assert.Equal(CallState.Connected, voiceEvent.State);
+        Assert.False(voiceEvent.IsOnHold);
+        Assert.Equal("ChannelLeftBridge", voiceEvent.EventType);
+        Assert.Equal("bridge-1", voiceEvent.Metadata["bridgeId"]);
+    }
 }

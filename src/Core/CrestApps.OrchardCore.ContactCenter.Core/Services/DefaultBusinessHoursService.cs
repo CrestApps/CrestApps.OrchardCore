@@ -67,16 +67,56 @@ public sealed class DefaultBusinessHoursService : IBusinessHoursService
             return false;
         }
 
-        var window = calendar.WeeklySchedule?.FirstOrDefault(day => day.Day == local.DayOfWeek);
+        var schedule = calendar.WeeklySchedule;
+        var window = schedule?.FirstOrDefault(day => day.Day == local.DayOfWeek);
+        var minuteOfDay = (local.Hour * 60) + local.Minute;
 
-        if (window is null || !window.IsOpen || window.CloseMinute <= window.OpenMinute)
+        if (IsWithinSameDayWindow(window, minuteOfDay))
+        {
+            return true;
+        }
+
+        var previousDay = local.DayOfWeek == DayOfWeek.Sunday
+            ? DayOfWeek.Saturday
+            : (DayOfWeek)((int)local.DayOfWeek - 1);
+        var previousWindow = schedule?.FirstOrDefault(day => day.Day == previousDay);
+
+        return IsWithinPreviousOvernightWindow(previousWindow, minuteOfDay);
+    }
+
+    private static bool IsWithinSameDayWindow(BusinessHoursDay window, int minuteOfDay)
+    {
+        if (!IsValidWindow(window))
         {
             return false;
         }
 
-        var minuteOfDay = (local.Hour * 60) + local.Minute;
+        if (window.OpenMinute == window.CloseMinute)
+        {
+            return true;
+        }
 
-        return minuteOfDay >= window.OpenMinute && minuteOfDay < window.CloseMinute;
+        if (window.OpenMinute < window.CloseMinute)
+        {
+            return minuteOfDay >= window.OpenMinute && minuteOfDay < window.CloseMinute;
+        }
+
+        return minuteOfDay >= window.OpenMinute;
+    }
+
+    private static bool IsWithinPreviousOvernightWindow(BusinessHoursDay window, int minuteOfDay)
+    {
+        return IsValidWindow(window) &&
+            window.OpenMinute > window.CloseMinute &&
+            minuteOfDay < window.CloseMinute;
+    }
+
+    private static bool IsValidWindow(BusinessHoursDay window)
+    {
+        return window is not null &&
+            window.IsOpen &&
+            window.OpenMinute is >= 0 and <= 1440 &&
+            window.CloseMinute is >= 0 and <= 1440;
     }
 
     private static TimeZoneInfo ResolveTimeZone(string timeZoneId)

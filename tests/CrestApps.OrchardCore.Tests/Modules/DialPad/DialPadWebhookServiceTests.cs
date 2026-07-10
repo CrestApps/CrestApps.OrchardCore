@@ -137,6 +137,39 @@ public sealed class DialPadWebhookServiceTests
         Assert.Equal("connected", providerEvent.Metadata["dialPadState"]);
     }
 
+    [Fact]
+    public async Task ProcessAsync_WhenStateAttributesChange_UsesDifferentIdempotencyKeys()
+    {
+        // Arrange
+        var providerEvents = new List<ProviderVoiceEvent>();
+        var eventService = new Mock<IProviderVoiceEventService>();
+        eventService
+            .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvents.Add(value))
+            .ReturnsAsync(new CallSession { ItemId = "cs1" });
+        var service = CreateService(eventService, new Mock<IVoiceContactCenterCallRouter>());
+
+        // Act
+        await service.ProcessAsync(new DialPadCallEvent
+        {
+            CallId = "c1",
+            State = "connected",
+            Direction = "inbound",
+            IsMuted = false,
+        }, TestContext.Current.CancellationToken);
+        await service.ProcessAsync(new DialPadCallEvent
+        {
+            CallId = "c1",
+            State = "connected",
+            Direction = "inbound",
+            IsMuted = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, providerEvents.Count);
+        Assert.NotEqual(providerEvents[0].IdempotencyKey, providerEvents[1].IdempotencyKey);
+    }
+
     private static DialPadWebhookService CreateService(Mock<IProviderVoiceEventService> eventService, Mock<IVoiceContactCenterCallRouter> router)
     {
         var clock = new Mock<IClock>();

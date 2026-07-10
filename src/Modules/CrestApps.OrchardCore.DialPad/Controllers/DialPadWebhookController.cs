@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -62,7 +63,19 @@ public sealed class DialPadWebhookController : ControllerBase
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync(HttpContext.RequestAborted);
 
-        var secret = UnprotectSecret(settings.WebhookSigningSecret);
+        if (string.IsNullOrEmpty(settings.WebhookSigningSecret))
+        {
+            _logger.LogWarning("Rejected a DialPad webhook because no webhook signing secret is configured.");
+
+            return Unauthorized();
+        }
+
+        if (!TryUnprotectSecret(settings.WebhookSigningSecret, out var secret))
+        {
+            _logger.LogError("Rejected a DialPad webhook because the configured signing secret could not be unprotected.");
+
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
 
         if (!DialPadJwtValidator.TryValidateAndExtract(body, secret, out var payloadJson))
         {
@@ -92,22 +105,20 @@ public sealed class DialPadWebhookController : ControllerBase
         return Ok(new { result = result.ToString() });
     }
 
-    private string UnprotectSecret(string protectedSecret)
+    private bool TryUnprotectSecret(string protectedSecret, out string secret)
     {
-        if (string.IsNullOrEmpty(protectedSecret))
-        {
-            return null;
-        }
+        secret = null;
 
         try
         {
             var protector = _dataProtectionProvider.CreateProtector(DialPadConstants.WebhookProtectorName);
+            secret = protector.Unprotect(protectedSecret);
 
-            return protector.Unprotect(protectedSecret);
+            return !string.IsNullOrEmpty(secret);
         }
         catch (CryptographicException)
         {
-            return null;
+            return false;
         }
     }
 }

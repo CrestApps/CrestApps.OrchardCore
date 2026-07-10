@@ -41,6 +41,22 @@ public sealed class CallSessionManager : CatalogManager<CallSession>, ICallSessi
     }
 
     /// <inheritdoc/>
+    public async Task<CallSession> FindByProviderCallIdAsync(
+        string providerName,
+        string providerCallId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await _store.FindByProviderCallIdAsync(providerName, providerCallId, cancellationToken);
+
+        if (session is not null)
+        {
+            await LoadAsync(session, cancellationToken);
+        }
+
+        return session;
+    }
+
+    /// <inheritdoc/>
     public async Task<CallSession> FindByInteractionIdAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         var session = await _store.FindByInteractionIdAsync(interactionId, cancellationToken);

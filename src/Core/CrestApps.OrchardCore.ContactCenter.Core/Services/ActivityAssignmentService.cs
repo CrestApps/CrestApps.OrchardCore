@@ -134,10 +134,11 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         var agents = await _agentManager.ListAvailableForQueueAsync(queueId, cancellationToken);
 
         var decision = await _routingService.SelectAgentAsync(queue, topItem, agents, cancellationToken);
-        await PublishRoutingDecisionAsync(decision, cancellationToken);
 
         if (!decision.Succeeded || decision.Agent is null)
         {
+            await PublishRoutingDecisionAsync(decision, cancellationToken);
+
             return null;
         }
 
@@ -145,7 +146,17 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             ? queue.ReservationTimeoutSeconds
             : 30;
 
-        return await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
+        var reservation = await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
+
+        if (reservation is null)
+        {
+            decision.Succeeded = false;
+            decision.Reason = "The selected agent or queue item was no longer available when the reservation was created.";
+        }
+
+        await PublishRoutingDecisionAsync(decision, cancellationToken);
+
+        return reservation;
     }
 
     private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)

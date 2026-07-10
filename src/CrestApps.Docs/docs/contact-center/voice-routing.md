@@ -67,11 +67,13 @@ The provider never pushes state directly to the browser. It always comes into Or
 
 `VoiceContactCenterCallRouter` takes the inbound event and:
 
-1. resolves the dialed number (`ToAddress`) to the configured phone channel endpoint
-2. resolves the matching subject flow and optional CRM contact
-3. creates the `OmnichannelActivity`
-4. creates the `Interaction`
-5. resolves the entry-point plan and target queue
+1. acquires a distributed lock scoped to provider name + provider call id
+2. checks for an existing interaction using the same provider-scoped identity
+3. resolves the dialed number (`ToAddress`) to the configured phone channel endpoint
+4. resolves the matching subject flow and optional CRM contact
+5. creates the `OmnichannelActivity`
+6. creates the `Interaction`
+7. resolves the entry-point plan and target queue
 
 At this stage:
 
@@ -238,7 +240,11 @@ That contract carries the authoritative server-side facts Contact Center cares a
 - conference state
 - idempotency key
 
-`ProviderVoiceEventService` ingests those events idempotently and updates the durable interaction/session projection.
+`ProviderVoiceEventService` ingests those events idempotently and updates the durable interaction/session projection. Provider name and call id are queried together so identical call ids from two providers cannot collide. The service rejects stale events, never permits a nonterminal event to reopen a terminal call id, and gives every semantic event derived from one provider delivery its own idempotency key while keeping the base key on `CallSessionUpdated` for replay detection.
+
+### Durable event delivery
+
+Every Contact Center domain event is persisted together with a pending outbox message before handler fan-out begins. Successful handlers are checkpointed individually, so a retry after a partial failure runs only the handlers that did not complete. Pending messages survive tenant/application restarts, retry with exponential backoff, and dead-letter after the configured attempt limit instead of silently disappearing between event persistence and real-time/workflow projection.
 
 ### Provider call-state lookup
 
@@ -310,6 +316,8 @@ This catches cases where:
 - a provider event was delayed
 - a live stream or webhook delivery was missed
 
+Bulk reconciliation is serialized by a distributed lock. A provider live-stream reconnect requests a provider-scoped pass, so reconnecting one Asterisk endpoint does not repeatedly query unrelated providers or overlap another full reconciliation sweep.
+
 ### Re-offer and reconnect recovery
 
 When an agent becomes available again or reconnects, Contact Center can re-check waiting voice work and offer it again. Before it does, the healer/reconciliation path clears impossible leftovers so stale reservations do not block future offers.
@@ -318,20 +326,23 @@ When an agent becomes available again or reconnects, Contact Center can re-check
 
 The current voice flow stays consistent because it combines these protections:
 
-1. **Per-queue distributed locks** prevent double assignment.
-2. **Reservations** make offers explicit and auditable.
-3. **Provider call ids** let Contact Center correlate server truth back to local interactions.
-4. **Idempotent provider-event ingestion** prevents duplicate webhook deliveries from corrupting state.
-5. **Pre-accept provider refresh** stops agents from accepting already-ended calls.
-6. **Ended-offer reconciliation** clears stale queue and agent state immediately.
-7. **Tenant-startup and periodic reconciliation** repair drift after restarts or missed events.
-8. **Server-driven soft-phone projection** keeps the browser as a mirror instead of a source of truth.
+1. **Per-queue, per-agent, and per-reservation distributed locks** prevent double assignment and accept/expiry races.
+2. **Provider-scoped inbound locks and lookups** prevent duplicate work and cross-provider call-id collisions.
+3. **Reservations** make offers explicit and auditable.
+4. **Provider call ids** let Contact Center correlate server truth back to local interactions.
+5. **Ordered, terminal-safe provider-event ingestion** prevents stale or duplicate deliveries from corrupting state.
+6. **Durable per-handler outbox delivery** prevents events from disappearing across handler failures or restarts.
+7. **Pre-accept provider refresh** stops agents from accepting already-ended calls.
+8. **Ended-offer reconciliation** clears stale queue and agent state immediately.
+9. **Tenant-startup, reconnect, and periodic reconciliation** repair drift after restarts or missed events.
+10. **Server-driven soft-phone projection** keeps the browser as a mirror instead of a source of truth.
 
 ## Current limitations and important notes
 
 - `InboundVoiceEvent.ToAddress` must be present for generic inbound routing because the router needs the dialed service address to resolve the entry point or queue.
 - If multiple enabled queues have no explicit inbound mapping, the generic fallback queue resolution intentionally does not guess between them.
 - DialPad currently uses the **agent-device-native** delivery model. Contact Center does not bridge media for it; the provider rings the agent's registered device and later tells Contact Center what really happened.
+- DialPad webhook subscriptions are currently created and monitored in the DialPad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
 - Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
 - Reconciliation currently repairs **known local provider-backed interactions**. It does not yet bootstrap a completely unknown live provider call that never got a local interaction before the restart window.
 

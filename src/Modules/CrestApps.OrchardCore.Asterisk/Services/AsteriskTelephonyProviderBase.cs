@@ -193,19 +193,60 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
             var root = document.RootElement;
             var stateText = ReadString(root, "state");
-            var state = TryMapLookupState(stateText, out var mappedState)
-                ? mappedState
-                : CallState.Connected;
+
+            if (!TryMapLookupState(stateText, out var state))
+            {
+                _logger.LogWarning(
+                    "Asterisk returned an unrecognized channel state '{State}' for provider {ProviderName} call {CallId}; reconciliation was skipped.",
+                    stateText,
+                    ProviderName,
+                    callId);
+
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = false,
+                    Error = S["Asterisk returned an unrecognized call state."].Value,
+                };
+            }
+
+            var holdState = await GetChannelBooleanVariableAsync(
+                settings,
+                callId,
+                AsteriskConstants.HoldStateVariableName,
+                cancellationToken);
+            var muteState = await GetChannelBooleanVariableAsync(
+                settings,
+                callId,
+                AsteriskConstants.MuteStateVariableName,
+                cancellationToken);
+            var isOnHold = state == CallState.OnHold || holdState == true;
+
+            if (isOnHold)
+            {
+                state = CallState.OnHold;
+            }
+
             var call = BuildCall(
                 callId,
                 state,
-                isOnHold: state == CallState.OnHold,
+                isOnHold: isOnHold,
+                isMuted: muteState ?? false,
                 direction: ResolveDirection(ReadString(root, "direction")));
 
             call.From = ReadNestedString(root, "caller", "number");
             call.To = ReadNestedString(root, "connected", "number") ?? ReadNestedString(root, "dialplan", "exten");
             call.StartedUtc = _clock.UtcNow;
             call.Metadata["asteriskState"] = stateText ?? string.Empty;
+
+            if (holdState.HasValue)
+            {
+                call.Metadata["asteriskHoldState"] = holdState.Value;
+            }
+
+            if (muteState.HasValue)
+            {
+                call.Metadata["asteriskMuteState"] = muteState.Value;
+            }
 
             return new TelephonyCallLookupResult
             {
@@ -620,6 +661,57 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         };
 
         return Enum.IsDefined(mapped);
+    }
+
+    private async Task<bool?> GetChannelBooleanVariableAsync(
+        AsteriskResolvedSettings settings,
+        string callId,
+        string variableName,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Get,
+            $"channels/{Uri.EscapeDataString(callId)}/variable",
+            new Dictionary<string, string>
+            {
+                ["variable"] = variableName,
+            },
+            null,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Asterisk could not query channel variable {VariableName} for provider {ProviderName} call {CallId}. Status code: {StatusCode}.",
+                variableName,
+                ProviderName,
+                callId,
+                response.StatusCode);
+
+            return null;
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var value = ReadString(document.RootElement, "value");
+
+        if (bool.TryParse(value, out var parsed))
+        {
+            return parsed;
+        }
+
+        return value switch
+        {
+            "1" => true,
+            "0" => false,
+            _ => null,
+        };
     }
 
     private static CallDirection ResolveDirection(string direction)

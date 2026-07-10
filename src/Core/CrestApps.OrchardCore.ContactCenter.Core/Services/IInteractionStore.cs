@@ -35,6 +35,15 @@ public interface IInteractionStore : ICatalog<Interaction>
     Task<Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the most recent interaction with the specified provider and provider interaction or call identifier.
+    /// </summary>
+    /// <param name="providerName">The provider technical name.</param>
+    /// <param name="providerInteractionId">The provider interaction or call identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The matching interaction, or <see langword="null"/> when none is found.</returns>
+    Task<Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Pages interactions that are currently in the specified status, oldest first.
     /// </summary>
     /// <param name="page">The page number to load.</param>
@@ -76,4 +85,12 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The active provider-backed interactions.</returns>
     Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists active interactions for the specified provider that still carry a provider call identifier.
+    /// </summary>
+    /// <param name="providerName">The provider technical name.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The active provider-backed interactions.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(string providerName, CancellationToken cancellationToken = default);
 }

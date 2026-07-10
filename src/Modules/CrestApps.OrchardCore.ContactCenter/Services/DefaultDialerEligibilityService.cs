@@ -159,6 +159,11 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(_clock.UtcNow, timeZone);
         var hour = localNow.Hour;
 
+        if (startHour == endHour)
+        {
+            return false;
+        }
+
         if (startHour < endHour)
         {
             return hour >= startHour && hour < endHour;

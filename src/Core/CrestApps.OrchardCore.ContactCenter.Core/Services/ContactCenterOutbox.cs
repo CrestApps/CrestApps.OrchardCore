@@ -6,9 +6,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Provides the default <see cref="IContactCenterOutbox"/> implementation. It runs the registered
-/// <see cref="IContactCenterEventHandler"/> instances, and on failure persists a
-/// <see cref="ContactCenterOutboxMessage"/> that a background task redelivers with exponential back-off.
+/// Provides the default <see cref="IContactCenterOutbox"/> implementation. Every event is persisted as a
+/// pending <see cref="ContactCenterOutboxMessage"/> before dispatch. Registered
+/// <see cref="IContactCenterEventHandler"/> instances are tracked individually and incomplete handlers are
+/// redelivered with exponential back-off.
 /// </summary>
 public sealed class ContactCenterOutbox : IContactCenterOutbox
 {
@@ -54,33 +55,29 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     }
 
     /// <inheritdoc/>
+    public async Task EnqueueAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interactionEvent);
+
+        await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task DispatchAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
-        var firstError = await RunHandlersAsync(interactionEvent, cancellationToken);
+        var message = await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
+        var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
 
         if (firstError is null)
         {
+            await _outboxStore.DeleteAsync(message, cancellationToken);
+
             return;
         }
 
-        var now = _clock.UtcNow;
-
-        var message = new ContactCenterOutboxMessage
-        {
-            ItemId = IdGenerator.GenerateId(),
-            EventId = interactionEvent.ItemId,
-            EventType = interactionEvent.EventType,
-            Status = OutboxMessageStatus.Pending,
-            AttemptCount = 1,
-            NextAttemptUtc = now.Add(GetBackoff(1)),
-            LastError = firstError,
-            CreatedUtc = now,
-            ModifiedUtc = now,
-        };
-
-        await _outboxStore.CreateAsync(message, cancellationToken);
+        await ScheduleRetryAsync(message, firstError, cancellationToken);
 
         _logger.LogWarning(
             "Scheduled Contact Center event '{EventType}' ({EventId}) for retry after a handler failure: {Error}",
@@ -114,7 +111,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                 continue;
             }
 
-            var firstError = await RunHandlersAsync(interactionEvent, cancellationToken);
+            var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
 
             if (firstError is null)
             {
@@ -124,41 +121,68 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                 continue;
             }
 
-            message.AttemptCount++;
-            message.LastError = firstError;
-            message.ModifiedUtc = _clock.UtcNow;
-
-            if (message.AttemptCount >= MaxAttempts)
-            {
-                message.Status = OutboxMessageStatus.DeadLettered;
-
-                _logger.LogError(
-                    "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
-                    message.EventType,
-                    message.EventId,
-                    message.AttemptCount,
-                    firstError);
-            }
-            else
-            {
-                message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
-            }
-
-            await _outboxStore.UpdateAsync(message, cancellationToken);
+            await ScheduleRetryAsync(message, firstError, cancellationToken);
         }
 
         return redelivered;
     }
 
-    private async Task<string> RunHandlersAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken)
+    private async Task<ContactCenterOutboxMessage> GetOrCreateMessageAsync(
+        InteractionEvent interactionEvent,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _outboxStore.FindByEventIdAsync(interactionEvent.ItemId, cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var now = _clock.UtcNow;
+        var message = new ContactCenterOutboxMessage
+        {
+            ItemId = IdGenerator.GenerateId(),
+            EventId = interactionEvent.ItemId,
+            EventType = interactionEvent.EventType,
+            Status = OutboxMessageStatus.Pending,
+            NextAttemptUtc = now,
+            CreatedUtc = now,
+            ModifiedUtc = now,
+        };
+
+        await _outboxStore.CreateAsync(message, cancellationToken);
+
+        return message;
+    }
+
+    private async Task<string> RunHandlersAsync(
+        InteractionEvent interactionEvent,
+        ContactCenterOutboxMessage message,
+        CancellationToken cancellationToken)
     {
         string firstError = null;
+        var completedHandlerTypes = message.CompletedHandlerTypes.ToHashSet(StringComparer.Ordinal);
+
+        var handlerIndex = 0;
 
         foreach (var handler in _handlers)
         {
+            var handlerType = $"{handler.GetType().AssemblyQualifiedName ?? handler.GetType().FullName ?? handler.GetType().Name}:{handlerIndex}";
+            handlerIndex++;
+
+            if (completedHandlerTypes.Contains(handlerType))
+            {
+                continue;
+            }
+
             try
             {
                 await handler.HandleAsync(interactionEvent, cancellationToken);
+
+                completedHandlerTypes.Add(handlerType);
+                message.CompletedHandlerTypes = completedHandlerTypes.ToArray();
+                message.ModifiedUtc = _clock.UtcNow;
+                await _outboxStore.UpdateAsync(message, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -174,6 +198,34 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         return firstError;
+    }
+
+    private async Task ScheduleRetryAsync(
+        ContactCenterOutboxMessage message,
+        string error,
+        CancellationToken cancellationToken)
+    {
+        message.AttemptCount++;
+        message.LastError = error;
+        message.ModifiedUtc = _clock.UtcNow;
+
+        if (message.AttemptCount >= MaxAttempts)
+        {
+            message.Status = OutboxMessageStatus.DeadLettered;
+
+            _logger.LogError(
+                "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
+                message.EventType,
+                message.EventId,
+                message.AttemptCount,
+                error);
+        }
+        else
+        {
+            message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
+        }
+
+        await _outboxStore.UpdateAsync(message, cancellationToken);
     }
 
     private async Task DeadLetterAsync(ContactCenterOutboxMessage message, string reason, CancellationToken cancellationToken)

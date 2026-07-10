@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Telephony.Models;
 
@@ -47,7 +49,7 @@ internal static class AsteriskRealtimeVoiceEventMapper
             IsMuted = isMuted,
             IsOnHold = isOnHold,
             OccurredUtc = occurredUtc,
-            IdempotencyKey = BuildIdempotencyKey(providerName, eventType, callId, occurredUtc, metadata),
+            IdempotencyKey = BuildIdempotencyKey(providerName, payload),
             IsConference = TryReadParticipantCount(root, out var participantCount)
                 ? participantCount > 2
                 : null,
@@ -110,17 +112,11 @@ internal static class AsteriskRealtimeVoiceEventMapper
         return metadata;
     }
 
-    private static string BuildIdempotencyKey(
-        string providerName,
-        string eventType,
-        string callId,
-        DateTime? occurredUtc,
-        Dictionary<string, string> metadata)
+    private static string BuildIdempotencyKey(string providerName, string payload)
     {
-        metadata.TryGetValue("bridgeId", out var bridgeId);
-        metadata.TryGetValue("asteriskId", out var asteriskId);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
 
-        return $"{providerName}:{eventType}:{callId}:{occurredUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty}:{bridgeId ?? string.Empty}:{asteriskId ?? string.Empty}";
+        return $"{providerName}:{Convert.ToHexString(hash)}";
     }
 
     private static bool TryResolveChannel(JsonElement root, out JsonElement channel)
@@ -170,6 +166,18 @@ internal static class AsteriskRealtimeVoiceEventMapper
         if (string.Equals(eventType, "ChannelEnteredBridge", StringComparison.OrdinalIgnoreCase))
         {
             state = CallState.Connected;
+
+            return true;
+        }
+
+        if (string.Equals(eventType, "ChannelLeftBridge", StringComparison.OrdinalIgnoreCase))
+        {
+            state = MapChannelState(ReadString(channel, "state"), isTerminalEvent: false);
+
+            if (state == CallState.Idle)
+            {
+                state = CallState.Connected;
+            }
 
             return true;
         }

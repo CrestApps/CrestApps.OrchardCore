@@ -9,11 +9,17 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _responseBody;
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;
 
     public StubHttpMessageHandler(HttpStatusCode statusCode, string responseBody = "")
     {
         _statusCode = statusCode;
         _responseBody = responseBody;
+    }
+
+    public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+    {
+        _responseFactory = responseFactory;
     }
 
     public HttpRequestMessage LastRequest { get; private set; }
@@ -39,7 +45,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
             RequestBodies.Add(null);
         }
 
-        return new HttpResponseMessage(_statusCode)
+        return _responseFactory?.Invoke(request) ?? new HttpResponseMessage(_statusCode)
         {
             Content = new StringContent(_responseBody),
         };

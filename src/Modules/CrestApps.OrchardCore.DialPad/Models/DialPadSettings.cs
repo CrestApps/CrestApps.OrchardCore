@@ -77,7 +77,7 @@ public sealed class DialPadSettings
 
     /// <summary>
     /// Gets or sets the protected secret DialPad uses to sign call-event webhooks (JWT HS256). The value
-    /// is stored encrypted using the data protection provider. When empty, unsigned webhooks are accepted.
+    /// is stored encrypted using the data protection provider. Inbound webhooks are rejected when empty.
     /// </summary>
     public string WebhookSigningSecret { get; set; }
 }

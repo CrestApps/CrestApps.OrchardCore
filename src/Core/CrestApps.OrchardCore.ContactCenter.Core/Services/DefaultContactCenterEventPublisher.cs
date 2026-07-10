@@ -9,9 +9,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IContactCenterEventPublisher"/>. Events are
-/// recorded in the durable interaction event history and then dispatched through <see cref="IContactCenterOutbox"/>,
-/// which runs the registered handlers and guarantees at-least-once delivery by scheduling a durable retry
-/// when a handler fails.
+/// recorded in the durable interaction event history and enqueued through <see cref="IContactCenterOutbox"/>
+/// before handler dispatch so application restarts cannot create an event-delivery gap.
 /// </summary>
 public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPublisher
 {
@@ -79,6 +78,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         }
 
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
+        await _outbox.EnqueueAsync(interactionEvent, cancellationToken);
 
         if (ShellScope.Current is null)
         {

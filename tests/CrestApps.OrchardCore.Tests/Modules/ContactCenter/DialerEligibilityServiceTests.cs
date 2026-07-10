@@ -112,6 +112,25 @@ public sealed class DialerEligibilityServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_WhenCallingWindowStartAndEndAreEqual_SuppressesWindow()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
+        var profile = Profile();
+        profile.EnforceCallingWindow = true;
+        profile.CallingWindowStartHour = 9;
+        profile.CallingWindowEndHour = 9;
+
+        // Act
+        var result = await harness.EvaluateAsync(profile, activity);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.OutsideCallingWindow, result.Reason);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_WhenOnNationalRegistry_SuppressesRegistry()
     {
         // Arrange
