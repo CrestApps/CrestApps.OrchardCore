@@ -3,16 +3,13 @@
 
 @model EditAzureAISearchAIDataSourceViewModel
 
-<div data-ai-data-source-section="AzureAISearch" hidden>
+<div data-ai-data-source-section="AzureAISearch"
+     data-ai-data-source-azure-ai-search
+     data-ai-data-source-azure-ai-search-api-key-value="@AzureAISearchSourceMetadata.ApiKeyAuthenticationType"
+     hidden>
     <fieldset class="ocat-wrapper">
         <legend class="ocat-label">@T["Azure AI Search Connection"]</legend>
         <div class="ocat-end">
-            <div class="mb-3">
-                <label asp-for="Endpoint" class="form-label">@T["Azure AI Search endpoint"]</label>
-                <input asp-for="Endpoint" class="form-control" />
-                <span asp-validation-for="Endpoint" class="text-danger"></span>
-            </div>
-
             <div class="mb-3">
                 <label asp-for="IndexName" class="form-label">@T["Index name"]</label>
                 <input asp-for="IndexName" class="form-control" />
@@ -21,8 +18,14 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label">@T["Azure AI Search endpoint"]</label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
-                <select asp-for="AuthenticationType" class="form-select" id="azure-ai-search-authentication-type">
+                <select asp-for="AuthenticationType" class="form-select" data-ai-data-source-azure-ai-search-authentication-type>
                     <option value="@AzureAISearchSourceMetadata.ApiKeyAuthenticationType">@T["API key"]</option>
                     <option value="@AzureAISearchSourceMetadata.DefaultAuthenticationType">@T["Default credential"]</option>
                     <option value="@AzureAISearchSourceMetadata.ManagedIdentityAuthenticationType">@T["Managed identity"]</option>
@@ -30,7 +33,7 @@
                 <span asp-validation-for="AuthenticationType" class="text-danger"></span>
             </div>
 
-            <div id="azure-ai-search-identity-settings" hidden>
+            <div data-ai-data-source-azure-ai-search-identity-settings hidden>
                 <div class="mb-3">
                     <label asp-for="IdentityClientId" class="form-label">@T["Managed identity client ID"]</label>
                     <input asp-for="IdentityClientId" class="form-control" />
@@ -39,7 +42,7 @@
                 </div>
             </div>
 
-            <div id="azure-ai-search-api-key-settings" hidden>
+            <div data-ai-data-source-azure-ai-search-api-key-settings hidden>
                 <div class="mb-0">
                     <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
                     <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" />
@@ -49,24 +52,3 @@
         </div>
     </fieldset>
 </div>
-
-<script asp-name="ai-data-source-azure-ai-auth" at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var authenticationType = document.getElementById('azure-ai-search-authentication-type');
-        var apiKeySettings = document.getElementById('azure-ai-search-api-key-settings');
-        var identitySettings = document.getElementById('azure-ai-search-identity-settings');
-
-        if (!authenticationType || !apiKeySettings || !identitySettings) {
-            return;
-        }
-
-        function updateVisibility() {
-            var isApiKey = authenticationType.value === '@AzureAISearchSourceMetadata.ApiKeyAuthenticationType';
-            apiKeySettings.hidden = !isApiKey;
-            identitySettings.hidden = isApiKey;
-        }
-
-        authenticationType.addEventListener('change', updateVisibility);
-        updateVisibility();
-    });
-</script>

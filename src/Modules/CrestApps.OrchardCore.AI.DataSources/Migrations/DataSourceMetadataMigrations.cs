@@ -29,7 +29,6 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private const string LegacyKey = "AIProfileDataSourceMetadata";
     private const string LegacySourceMetadataKey = "AIDataSourceSourceMetadata";
     private const string NewKey = nameof(DataSourceMetadata);
-    private const int _batchSize = 50;
     private const string _legacyDocumentTypePrefix =
         "CrestApps.OrchardCore.Models.DictionaryDocument`1[[CrestApps.OrchardCore.AI.Models.AIDataSource, CrestApps.OrchardCore.AI.Abstractions";
     private const string _knowledgeBaseIndexUniqueName = "AI Knowledge Base Warehouse";
@@ -401,12 +400,12 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
     private static async Task BackfillSourceTypesAsync(IServiceProvider serviceProvider)
     {
-        var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
+        var dataSourceManager = serviceProvider.GetRequiredService<ISourceCatalogManager<AIDataSource>>();
         var dataSources = await dataSourceManager.GetAllAsync();
 
         foreach (var dataSource in dataSources)
         {
-            if (!string.IsNullOrWhiteSpace(dataSource.SourceType))
+            if (!string.IsNullOrWhiteSpace(dataSource.Source))
             {
                 continue;
             }
@@ -416,13 +415,13 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             if (dataSource.Properties is not null &&
                 dataSource.Properties.TryGetValue(LegacySourceMetadataKey, out var legacySourceMetadata) &&
                 legacySourceMetadata is JsonObject metadataObject &&
-                metadataObject[nameof(AIDataSource.SourceType)]?.GetValue<string>() is { Length: > 0 } legacySourceType)
+                (metadataObject["SourceType"]?.GetValue<string>() ?? metadataObject[nameof(AIDataSource.Source)]?.GetValue<string>()) is { Length: > 0 } legacySourceType)
             {
                 sourceType = legacySourceType;
                 dataSource.Properties.Remove(LegacySourceMetadataKey);
             }
 
-            dataSource.SourceType = sourceType;
+            dataSource.Source = sourceType;
             await dataSourceManager.UpdateAsync(dataSource);
         }
     }

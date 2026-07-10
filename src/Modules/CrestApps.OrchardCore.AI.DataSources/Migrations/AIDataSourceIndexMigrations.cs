@@ -12,6 +12,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Migrations;
 
@@ -43,7 +44,16 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
 
         ShellScope.AddDeferredTask(scope => ImportLegacyDataSourcesAsync(scope.ServiceProvider));
 
-        return 1;
+        return 2;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIDataSourceIndex>(table => table
+            .AddColumn<string>(nameof(AIDataSourceIndex.Source), column => column.WithLength(128)),
+            collection: _option?.AICollectionName);
+
+        return 2;
     }
 
     private static async Task ImportLegacyDataSourcesAsync(IServiceProvider serviceProvider)
@@ -51,7 +61,7 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
         var store = serviceProvider.GetRequiredService<IStore>();
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var dataSourceStore = serviceProvider.GetRequiredService<IAIDataSourceStore>();
-        var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
+        var dataSourceManager = serviceProvider.GetRequiredService<ISourceCatalogManager<AIDataSource>>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIDataSourceIndexMigrations>>();
         var existingDataSources = (await dataSourceStore.GetAllAsync()).ToDictionary(dataSource => dataSource.ItemId, StringComparer.Ordinal);
 
@@ -109,7 +119,7 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
                     continue;
                 }
 
-                var dataSource = await dataSourceManager.NewAsync(dataSourceObject);
+                var dataSource = await dataSourceManager.NewAsync(AIDataSourceSourceTypes.SearchIndexProfile, dataSourceObject);
                 dataSource.ItemId = itemId;
 
                 var validationResult = await dataSourceManager.ValidateAsync(dataSource);

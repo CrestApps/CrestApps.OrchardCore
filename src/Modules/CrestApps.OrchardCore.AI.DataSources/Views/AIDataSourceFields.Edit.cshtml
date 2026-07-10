@@ -1,75 +1,30 @@
 @using CrestApps.OrchardCore.AI.DataSources.ViewModels
 
-@model EditAIDataSourceViewModel
+@model EditAIDataSourceFieldsViewModel
 
-<div class="ocat-wrapper">
-    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
-    <div class="ocat-end">
-        <input asp-for="DisplayText" class="form-control" />
-        <span asp-validation-for="DisplayText" class="text-danger"></span>
-    </div>
-</div>
-
-@if (Model.IsConfigurationLocked)
-{
+<div data-ai-data-source-editor>
     <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="alert alert-info mb-0">
-                @T["The source type, knowledge base index, and field mappings are locked. Delete this data source and create a new one to change that structure."]
-            </div>
+        <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayText" class="form-control" />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
         </div>
     </div>
-}
 
-<input type="hidden" asp-for="SourceType" id="ai-data-source-source-type" />
-
-<div class="ocat-wrapper">
-    <label asp-for="AIKnowledgeBaseIndexProfileName" class="ocat-label">@T["Knowledge base index"]</label>
-    <div class="ocat-end">
-        @if (Model.IsConfigurationLocked)
-        {
-            <input type="text" class="form-control" value="@Model.AIKnowledgeBaseIndexProfileName" readonly />
-            <input type="hidden" asp-for="AIKnowledgeBaseIndexProfileName" />
-        }
-        else if (Model.AIKnowledgeBaseIndexProfileNames?.Any() == true)
-        {
-            <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.AIKnowledgeBaseIndexProfileNames" class="form-select">
-                <option value="">@T["Select a knowledge base index"]</option>
-            </select>
-            <span class="hint">@T["The knowledge base index used to store document embeddings for vector search."]</span>
-        }
-        else
-        {
-            <div class="alert alert-warning mb-0">
-                @T["No knowledge base indexes are available. Create an AI knowledge base index using the Indexing feature before you can use data sources."]
+    @if (Model.IsConfigurationLocked)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-info mb-0">
+                    @T["The source type, knowledge base index, and field mappings are locked. Delete this data source and create a new one to change that structure."]
+                </div>
             </div>
-        }
-    </div>
+        </div>
+    }
+
+    <input type="hidden" asp-for="SourceType" data-ai-data-source-source-type />
+
+    <span asp-validation-for="SourceType" class="text-danger"></span>
 </div>
 
-<span asp-validation-for="SourceType" class="text-danger"></span>
-
-<script asp-name="ai-data-source-type-toggle" at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var sourceTypeSelect = document.getElementById('ai-data-source-source-type');
-
-        if (!sourceTypeSelect) {
-            return;
-        }
-
-        function updateSections() {
-            var sourceType = sourceTypeSelect.value || 'SearchIndexProfile';
-
-            document.querySelectorAll('[data-ai-data-source-section]').forEach(function (section) {
-                section.hidden = section.getAttribute('data-ai-data-source-section') !== sourceType;
-            });
-
-            document.querySelectorAll('[data-ai-data-source-external-fields]').forEach(function (section) {
-                section.hidden = sourceType === 'SearchIndexProfile';
-            });
-        }
-
-        sourceTypeSelect.addEventListener('change', updateSections);
-        updateSections();
-    });
-</script>
+<script asp-src="~/CrestApps.OrchardCore.AI.DataSources/scripts/ai-data-source-editor.js" at="Foot"></script>

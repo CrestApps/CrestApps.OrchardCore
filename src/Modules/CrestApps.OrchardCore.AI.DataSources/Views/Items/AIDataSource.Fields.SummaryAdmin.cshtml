@@ -4,4 +4,4 @@
 @model ShapeViewModel<AIDataSource>
 
 <h5>@(Model.Value.DisplayText)</h5>
-<div class="text-muted small">@(!string.IsNullOrWhiteSpace(Model.Value.SourceType) ? Model.Value.SourceType : AIDataSourceSourceTypes.SearchIndexProfile)</div>
+<div class="text-muted small">@(!string.IsNullOrWhiteSpace(Model.Value.Source) ? Model.Value.Source : AIDataSourceSourceTypes.SearchIndexProfile)</div>

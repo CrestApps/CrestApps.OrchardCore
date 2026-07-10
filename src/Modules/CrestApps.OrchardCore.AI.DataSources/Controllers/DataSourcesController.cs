@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -31,7 +32,7 @@ public sealed class DataSourcesController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly ICatalogManager<AIDataSource> _dataSourceManager;
+    private readonly ISourceCatalogManager<AIDataSource> _dataSourceManager;
     private readonly IDisplayManager<AIDataSource> _displayManager;
     private readonly IAIDataSourceIndexingQueue _indexingQueue;
     private readonly AIDataSourceSourceOptions _sourceOptions;
@@ -55,7 +56,7 @@ public sealed class DataSourcesController : Controller
     public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        ICatalogManager<AIDataSource> dataSourceManager,
+        ISourceCatalogManager<AIDataSource> dataSourceManager,
         IDisplayManager<AIDataSource> displayManager,
         IAIDataSourceIndexingQueue indexingQueue,
         IOptions<AIDataSourceSourceOptions> sourceOptions,
@@ -175,8 +176,7 @@ public sealed class DataSourcesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var dataSource = await _dataSourceManager.NewAsync();
-        dataSource.SourceType = source.SourceType;
+        var dataSource = await _dataSourceManager.NewAsync(source.SourceType);
 
         var model = new EditCatalogEntryViewModel
         {
@@ -207,8 +207,7 @@ public sealed class DataSourcesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var dataSource = await _dataSourceManager.NewAsync();
-        dataSource.SourceType = source.SourceType;
+        var dataSource = await _dataSourceManager.NewAsync(source.SourceType);
 
         var model = new EditCatalogEntryViewModel
         {

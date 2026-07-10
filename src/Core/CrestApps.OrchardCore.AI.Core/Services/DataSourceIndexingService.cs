@@ -1111,9 +1111,9 @@ public sealed class DataSourceIndexingService
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
-        return string.IsNullOrWhiteSpace(dataSource.SourceType)
+        return string.IsNullOrWhiteSpace(dataSource.Source)
             ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.SourceType;
+            : dataSource.Source;
     }
 
     private static bool HasEmbeddingDeployment(IndexProfile profile)

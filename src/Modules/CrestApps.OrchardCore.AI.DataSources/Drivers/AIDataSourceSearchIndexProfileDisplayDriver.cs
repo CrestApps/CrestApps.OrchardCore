@@ -4,12 +4,14 @@ using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 
@@ -18,17 +20,22 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IndexingOptions _indexingOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIDataSourceSearchIndexProfileDisplayDriver"/> class.
     /// </summary>
     /// <param name="indexProfileStore">The index profile store.</param>
     /// <param name="indexingOptions">The indexing options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceSearchIndexProfileDisplayDriver(
         IIndexProfileStore indexProfileStore,
-        IOptions<IndexingOptions> indexingOptions)
+        IOptions<IndexingOptions> indexingOptions,
+        IStringLocalizer<AIDataSourceSearchIndexProfileDisplayDriver> stringLocalizer)
     {
         _indexProfileStore = indexProfileStore;
         _indexingOptions = indexingOptions.Value;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
@@ -44,9 +51,6 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
         return Initialize<EditAIDataSourceSearchIndexProfileViewModel>("AIDataSourceSearchIndexProfile_Edit", async model =>
         {
             model.SourceIndexProfileName = dataSource.SourceIndexProfileName;
-            model.KeyFieldName = dataSource.KeyFieldName;
-            model.TitleFieldName = dataSource.TitleFieldName;
-            model.ContentFieldName = dataSource.ContentFieldName;
             model.IsConfigurationLocked = AIDataSourceDriverHelper.IsConfigurationLocked(dataSource);
 
             var allIndexes = await _indexProfileStore.GetAllAsync();
@@ -74,12 +78,14 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        if (string.IsNullOrWhiteSpace(model.SourceIndexProfileName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SourceIndexProfileName), S["The source index is required."]);
+        }
+
         if (!AIDataSourceDriverHelper.IsConfigurationLocked(dataSource))
         {
             dataSource.SourceIndexProfileName = model.SourceIndexProfileName;
-            dataSource.KeyFieldName = model.KeyFieldName;
-            dataSource.TitleFieldName = model.TitleFieldName;
-            dataSource.ContentFieldName = model.ContentFieldName;
         }
 
         return Edit(dataSource, context);

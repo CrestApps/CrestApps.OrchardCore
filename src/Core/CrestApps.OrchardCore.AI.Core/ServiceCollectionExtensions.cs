@@ -92,7 +92,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
-            .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>();
+            .AddScoped<ISourceCatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
+            .AddScoped<ICatalogManager<AIDataSource>>(sp => sp.GetRequiredService<ISourceCatalogManager<AIDataSource>>());
 
         return services;
     }

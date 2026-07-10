@@ -213,8 +213,8 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
-        return string.IsNullOrWhiteSpace(dataSource.SourceType)
+        return string.IsNullOrWhiteSpace(dataSource.Source)
             ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.SourceType;
+            : dataSource.Source;
     }
 }

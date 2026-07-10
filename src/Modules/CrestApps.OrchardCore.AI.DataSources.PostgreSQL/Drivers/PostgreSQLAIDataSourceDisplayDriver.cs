@@ -90,8 +90,8 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
     {
         ArgumentNullException.ThrowIfNull(dataSource);
 
-        return string.IsNullOrWhiteSpace(dataSource.SourceType)
+        return string.IsNullOrWhiteSpace(dataSource.Source)
             ? AIDataSourceSourceTypes.SearchIndexProfile
-            : dataSource.SourceType;
+            : dataSource.Source;
     }
 }

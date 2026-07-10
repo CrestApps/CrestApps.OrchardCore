@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -12,7 +11,6 @@ public class EditAIDataSourceSearchIndexProfileViewModel
     /// <summary>
     /// Gets or sets the source index profile name.
     /// </summary>
-    [Required(AllowEmptyStrings = false)]
     public string SourceIndexProfileName { get; set; }
 
     /// <summary>
@@ -28,7 +26,6 @@ public class EditAIDataSourceSearchIndexProfileViewModel
     /// <summary>
     /// Gets or sets the content field name.
     /// </summary>
-    [Required(AllowEmptyStrings = false)]
     public string ContentFieldName { get; set; }
 
     /// <summary>
