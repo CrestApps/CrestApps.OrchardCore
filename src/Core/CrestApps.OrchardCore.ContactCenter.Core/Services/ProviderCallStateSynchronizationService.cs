@@ -64,7 +64,24 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             return interaction;
         }
 
-        var provider = await _telephonyProviderResolver.GetAsync(interaction.ProviderName);
+        var providerName = interaction.ProviderName;
+        var provider = await _telephonyProviderResolver.GetAsync(providerName);
+
+        if (provider is null)
+        {
+            provider = await _telephonyProviderResolver.GetAsync();
+
+            if (provider is not null)
+            {
+                providerName = provider.Name.Name;
+
+                _logger.LogWarning(
+                    "Reconciling interaction '{InteractionId}' through the current default provider '{Provider}' because its stored provider '{StoredProvider}' is no longer registered.",
+                    interaction.ItemId,
+                    providerName,
+                    interaction.ProviderName);
+            }
+        }
 
         if (provider is not ITelephonyCallStateProvider stateProvider)
         {
@@ -95,11 +112,11 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             return interaction;
         }
 
-        var providerEvent = BuildProviderEvent(interaction, lookup);
+        var providerEvent = BuildProviderEvent(interaction, providerName, lookup);
         await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
 
         return await _interactionManager.FindByProviderInteractionIdAsync(
-            interaction.ProviderName,
+            providerName,
             interaction.ProviderInteractionId,
             cancellationToken)
             ?? interaction;
@@ -152,17 +169,20 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         return refreshed;
     }
 
-    private ProviderVoiceEvent BuildProviderEvent(Interaction interaction, TelephonyCallLookupResult lookup)
+    private ProviderVoiceEvent BuildProviderEvent(
+        Interaction interaction,
+        string providerName,
+        TelephonyCallLookupResult lookup)
     {
         if (!lookup.Found)
         {
             return new ProviderVoiceEvent
             {
-                ProviderName = interaction.ProviderName,
+                ProviderName = providerName,
                 ProviderCallId = interaction.ProviderInteractionId,
                 State = ContactCenterCallState.Ended,
                 OccurredUtc = _clock.UtcNow,
-                IdempotencyKey = $"reconcile-missing:{interaction.ProviderName}:{interaction.ProviderInteractionId}:ended",
+                IdempotencyKey = $"reconcile-missing:{providerName}:{interaction.ProviderInteractionId}:ended",
             };
         }
 
@@ -181,13 +201,13 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
         return new ProviderVoiceEvent
         {
-            ProviderName = interaction.ProviderName,
+            ProviderName = providerName,
             ProviderCallId = interaction.ProviderInteractionId,
             State = state,
             FromAddress = call.From,
             ToAddress = call.To,
             OccurredUtc = _clock.UtcNow,
-            IdempotencyKey = $"reconcile:{interaction.ProviderName}:{interaction.ProviderInteractionId}:{state}:{call.IsMuted}:{call.IsOnHold}",
+            IdempotencyKey = $"reconcile:{providerName}:{interaction.ProviderInteractionId}:{state}:{call.IsMuted}:{call.IsOnHold}",
             IsMuted = call.IsMuted,
             Metadata = call.Metadata?
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.Key))

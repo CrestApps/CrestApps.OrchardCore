@@ -1384,6 +1384,10 @@
                         call.callId === currentCall.callId) {
                         currentCall = null;
                         incomingHandled = false;
+                    } else {
+                        refreshActiveCall().catch(function (error) {
+                            showError(error && error.message ? error.message : String(error));
+                        });
                     }
 
                     render();

@@ -150,6 +150,10 @@ After the provider actually changes call state, the provider webhook or provider
 - Contact Center domain events
 - the soft phone through server-side projections
 
+If a persisted interaction references a provider name that is no longer registered, restart and healing reconciliation retry the provider call id through the tenant's current default provider. A confirmed missing call is terminalized and its queue/agent state is released; a call the provider still reports as active remains assigned and is never requeued merely because the agent resets queue membership.
+
+When the browser receives a terminal event for a different call id than the call currently displayed, it immediately asks the server for the provider-authoritative active call. This preserves a genuinely newer call while clearing a stale browser call that no longer exists.
+
 ## Outbound routing flow
 
 ### 1. A dialer profile starts a cycle

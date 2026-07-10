@@ -57,6 +57,54 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task RefreshInteractionAsync_WhenStoredProviderIsMissing_ReconcilesThroughDefaultProvider()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.ProviderName = "stale-provider";
+        ProviderVoiceEvent providerEvent = null;
+        var eventService = new Mock<IProviderVoiceEventService>();
+        eventService
+            .Setup(service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
+            .ReturnsAsync(new CallSession());
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Default Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "interaction-1",
+                ProviderName = "Default Asterisk",
+                ProviderInteractionId = "call-1",
+                Status = InteractionStatus.Ended,
+            });
+        var provider = new Mock<ITelephonyProvider>();
+        provider.SetupGet(value => value.Name)
+            .Returns(new Microsoft.Extensions.Localization.LocalizedString("Default Asterisk", "Default Asterisk"));
+        provider
+            .As<ITelephonyCallStateProvider>()
+            .Setup(value => value.GetCallStateAsync("call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = false,
+            });
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        resolver.Setup(value => value.GetAsync("stale-provider")).ReturnsAsync((ITelephonyProvider)null);
+        resolver.Setup(value => value.GetAsync(null)).ReturnsAsync(provider.Object);
+        var service = CreateService(interactionManager, new Mock<ICallSessionManager>(), eventService, resolver);
+
+        // Act
+        var refreshed = await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, refreshed.Status);
+        Assert.NotNull(providerEvent);
+        Assert.Equal("Default Asterisk", providerEvent.ProviderName);
+        Assert.Equal("reconcile-missing:Default Asterisk:call-1:ended", providerEvent.IdempotencyKey);
+    }
+
+    [Fact]
     public async Task RefreshInteractionAsync_WhenProviderReportsHeldAndMuted_PropagatesGranularState()
     {
         // Arrange
@@ -210,6 +258,16 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             .ReturnsAsync(lookup);
         var resolver = new Mock<ITelephonyProviderResolver>();
         resolver.Setup(value => value.GetAsync("provider-1")).ReturnsAsync(provider.Object);
+
+        return CreateService(interactionManager, callSessionManager, eventService, resolver);
+    }
+
+    private static ProviderCallStateSynchronizationService CreateService(
+        Mock<IInteractionManager> interactionManager,
+        Mock<ICallSessionManager> callSessionManager,
+        Mock<IProviderVoiceEventService> eventService,
+        Mock<ITelephonyProviderResolver> resolver)
+    {
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -19,6 +20,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     private readonly IQueueItemManager _queueItemManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -31,6 +33,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The activity manager.</param>
+    /// <param name="serviceProvider">The service provider used to lazily resolve provider synchronization without a presence-manager cycle.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public AgentWorkStateHealingService(
@@ -40,6 +43,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         IQueueItemManager queueItemManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<AgentWorkStateHealingService> logger)
     {
@@ -49,6 +53,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         _queueItemManager = queueItemManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
     }
@@ -164,6 +169,21 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
             return 0;
         }
 
+        var isProviderBacked = !string.IsNullOrWhiteSpace(interaction.ProviderName) &&
+            !string.IsNullOrWhiteSpace(interaction.ProviderInteractionId);
+
+        if (isProviderBacked)
+        {
+            var previousStatus = interaction.Status;
+            var synchronizationService = _serviceProvider.GetRequiredService<IProviderCallStateSynchronizationService>();
+            interaction = await synchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
+
+            if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+            {
+                return interaction.Status == previousStatus ? 0 : 1;
+            }
+        }
+
         if (interaction.Status == InteractionStatus.Ringing)
         {
             _logger.LogWarning(
@@ -180,6 +200,16 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
             interaction.Status is not (InteractionStatus.Connected or InteractionStatus.Held or InteractionStatus.Transferring or InteractionStatus.Conferenced) ||
             string.IsNullOrWhiteSpace(interaction.QueueId))
         {
+            return 0;
+        }
+
+        if (isProviderBacked)
+        {
+            _logger.LogWarning(
+                "Preserving provider-backed active interaction '{InteractionId}' for agent '{AgentId}' while the agent is being reset or marked available.",
+                interaction.ItemId,
+                agent.ItemId);
+
             return 0;
         }
 

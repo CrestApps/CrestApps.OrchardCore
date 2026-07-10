@@ -218,6 +218,42 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TerminalEventForProviderCall_WhenClientHoldsDifferentStaleCall_RefreshesAndClearsState()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.EvaluateAsync(
+            """
+            async () => {
+                const connection = window.telephonySoftPhone.getInstance().getConnection();
+                await connection.invoke('Dial', { to: '+15551234567' });
+                await connection.invoke(
+                    'PublishCallState',
+                    {
+                        callId: 'stale-contact-center-call',
+                        direction: 1,
+                        state: 3,
+                        providerName: 'InMemory'
+                    });
+            }
+            """);
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Act
+        await page.EvaluateAsync(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('DisconnectLatestCall')");
+
+        // Assert
+        await page.Locator("[data-telephony-dial]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.Null(await page.EvaluateAsync<object>(
+            "() => window.telephonySoftPhone.getInstance().getCurrentCall()"));
+        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+    }
+
+    [Fact]
     public async Task ProviderEventDuringActiveCallRestoration_WinsOverStaleLookup()
     {
         // Arrange

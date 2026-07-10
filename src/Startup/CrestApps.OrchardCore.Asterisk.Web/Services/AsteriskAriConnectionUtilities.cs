@@ -53,6 +53,7 @@ internal static class AsteriskAriConnectionUtilities
             {
                 ["app"] = options.AsteriskApplicationName,
                 ["api_key"] = $"{options.AsteriskUserName}:{options.AsteriskPassword}",
+                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;
