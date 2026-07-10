@@ -240,7 +240,9 @@ That contract carries the authoritative server-side facts Contact Center cares a
 - conference state
 - idempotency key
 
-`ProviderVoiceEventService` ingests those events idempotently and updates the durable interaction/session projection. Provider name and call id are queried together so identical call ids from two providers cannot collide. The service rejects stale events, never permits a nonterminal event to reopen a terminal call id, and gives every semantic event derived from one provider delivery its own idempotency key while keeping the base key on `CallSessionUpdated` for replay detection.
+`ProviderVoiceEventService` ingests those events idempotently and updates the durable interaction/session projection. Provider name and call id are queried together first so identical call ids from two providers cannot collide. If an interaction was stamped with a provider identity that is no longer registered, the service can fall back to the provider call id, canonicalize the stored provider identity to the live event source, and continue terminal projection instead of silently losing the event. The fallback is rejected when the stored provider is still active, preserving provider-scoped ownership when two backends can produce the same call id. The service rejects stale events, never permits a nonterminal event to reopen a terminal call id, and gives every semantic event derived from one provider delivery its own idempotency key while keeping the base key on `CallSessionUpdated` for replay detection.
+
+When an answered inbound call reaches a terminal provider state, Contact Center moves the agent into `WrapUp` and marks the assigned queue item `Completed`. The accepted reservation and CRM activity remain as audit and after-call-work records until the normal disposition/completion flow releases the agent to the requested ready state. Pre-answer terminal calls still follow the abandon path, which removes the queue item, cancels the reservation, releases the CRM assignment, and restores the agent immediately.
 
 ### Durable event delivery
 

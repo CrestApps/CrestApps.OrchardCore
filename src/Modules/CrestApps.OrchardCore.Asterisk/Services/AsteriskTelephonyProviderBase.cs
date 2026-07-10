@@ -302,7 +302,8 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
     }
 
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
-        => ExecuteCallActionAsync(
+    {
+        return ExecuteCallActionAsync(
             call?.CallId,
             HttpMethod.Delete,
             "channels/{callId}",
@@ -311,7 +312,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             () => BuildCall(call?.CallId, CallState.Disconnected, metadata: call?.Metadata),
             S["The call could not be ended."].Value,
             S["A call id is required to end the call."].Value,
-            cancellationToken);
+            cancellationToken,
+            succeedWhenChannelIsMissing: true);
+    }
 
     public Task<TelephonyResult> HoldAsync(CallReference call, CancellationToken cancellationToken = default)
         => ExecuteCallActionAsync(
@@ -635,7 +638,8 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         Func<TelephonyCall> onSuccess,
         string errorMessage,
         string missingCallIdMessage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool succeedWhenChannelIsMissing = false)
     {
         if (string.IsNullOrWhiteSpace(callId))
         {
@@ -657,6 +661,19 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
             if (!response.IsSuccessStatusCode)
             {
+                if (succeedWhenChannelIsMissing && response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Asterisk call action for provider {ProviderName} reached the requested terminal state because channel {CallId} no longer exists.",
+                            ProviderName,
+                            callId);
+                    }
+
+                    return TelephonyResult.Success(onSuccess?.Invoke());
+                }
+
                 var responseBody = await ReadResponseBodyAsync(response, cancellationToken);
 
                 _logger.LogError(

@@ -90,7 +90,7 @@ public sealed class SimulatorModel : PageModel
         Input.OrchardBaseUrl = ResolveDefault(Input.OrchardBaseUrl, _options.OrchardBaseUrl, preferConfiguredValues);
         Input.LoginPath = ResolveDefault(Input.LoginPath, _options.LoginPath, preferConfiguredValues);
         Input.InboundPath = ResolveDefault(Input.InboundPath, _options.InboundPath, preferConfiguredValues);
-        Input.ProviderName = ResolveDefault(Input.ProviderName, _options.ProviderName, preferConfiguredValues);
+        Input.ProviderName = ResolveDefault(Input.ProviderName, _options.ProviderName, preferConfiguredValue: true);
         Input.AsteriskDestination = ResolveDefault(Input.AsteriskDestination, _options.AsteriskDestination, preferConfiguredValues);
         Input.ToAddress = ResolveDefault(Input.ToAddress, _options.ToAddress, preferConfiguredValues);
         Input.CallerNumberSeed = ResolveDefault(Input.CallerNumberSeed, _options.CallerNumberSeed, preferConfiguredValues);

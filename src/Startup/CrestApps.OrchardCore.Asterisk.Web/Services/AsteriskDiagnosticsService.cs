@@ -101,9 +101,15 @@ public sealed class AsteriskDiagnosticsService
 
         try
         {
-            snapshot.InfoJson = await ReadJsonAsync(client, "asterisk/info", cancellationToken);
-            (snapshot.ChannelsJson, snapshot.Channels) = await ReadChannelsAsync(client, cancellationToken);
-            (snapshot.BridgesJson, snapshot.Bridges) = await ReadBridgesAsync(client, cancellationToken);
+            var infoTask = ReadJsonAsync(client, "asterisk/info", cancellationToken);
+            var channelsTask = ReadChannelsAsync(client, cancellationToken);
+            var bridgesTask = ReadBridgesAsync(client, cancellationToken);
+
+            await Task.WhenAll(infoTask, channelsTask, bridgesTask);
+
+            snapshot.InfoJson = await infoTask;
+            (snapshot.ChannelsJson, snapshot.Channels) = await channelsTask;
+            (snapshot.BridgesJson, snapshot.Bridges) = await bridgesTask;
             await EnrichChannelsAsync(client, snapshot.Channels, snapshot.Bridges, cancellationToken);
             snapshot.Calls = BuildCalls(snapshot.Channels, snapshot.Bridges);
             snapshot.ChannelCount = snapshot.Channels.Count;
@@ -322,22 +328,29 @@ public sealed class AsteriskDiagnosticsService
             .GroupBy(entry => entry.ChannelId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var channel in channels)
+        var enrichmentTasks = channels.Select(async channel =>
         {
             if (string.IsNullOrWhiteSpace(channel.Id))
             {
-                continue;
+                return;
             }
 
-            channel.IsOnHold = await ReadBooleanVariableAsync(client, channel.Id, HoldStateVariableName, cancellationToken);
-            channel.IsMuted = await ReadBooleanVariableAsync(client, channel.Id, MuteStateVariableName, cancellationToken);
+            var holdTask = ReadBooleanVariableAsync(client, channel.Id, HoldStateVariableName, cancellationToken);
+            var muteTask = ReadBooleanVariableAsync(client, channel.Id, MuteStateVariableName, cancellationToken);
+
+            await Task.WhenAll(holdTask, muteTask);
+
+            channel.IsOnHold = await holdTask;
+            channel.IsMuted = await muteTask;
 
             if (bridgeMembership.TryGetValue(channel.Id, out var membership))
             {
                 channel.BridgeId = membership.Id;
                 channel.BridgeType = membership.BridgeType;
             }
-        }
+        });
+
+        await Task.WhenAll(enrichmentTasks);
     }
 
     private static int GetPartyCount(

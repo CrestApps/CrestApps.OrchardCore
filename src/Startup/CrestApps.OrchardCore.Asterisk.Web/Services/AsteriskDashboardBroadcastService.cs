@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 /// </summary>
 public sealed class AsteriskDashboardBroadcastService : BackgroundService
 {
-    private static readonly TimeSpan EventCoalescingDelay = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan EventCoalescingDelay = TimeSpan.FromMilliseconds(50);
 
     private readonly AsteriskDiagnosticsService _asteriskDiagnosticsService;
     private readonly IHubContext<AsteriskDashboardHub> _hubContext;

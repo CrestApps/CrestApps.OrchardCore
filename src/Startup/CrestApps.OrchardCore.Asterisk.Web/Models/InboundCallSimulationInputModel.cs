@@ -49,7 +49,7 @@ public sealed class InboundCallSimulationInputModel
     /// </summary>
     [Required]
     [Display(Name = "Provider name")]
-    public string ProviderName { get; set; } = "Asterisk";
+    public string ProviderName { get; set; } = "Default Asterisk";
 
     /// <summary>
     /// Gets or sets the Asterisk extension or destination to dial when the simulator uses the loopback path.

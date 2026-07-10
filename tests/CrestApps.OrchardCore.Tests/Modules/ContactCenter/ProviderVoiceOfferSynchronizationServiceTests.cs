@@ -122,4 +122,143 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_WhenAnsweredCallEnded_CompletesAssignedQueueItem()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            Status = InteractionStatus.Ended,
+            AnsweredUtc = new DateTime(2026, 7, 10, 11, 59, 0, DateTimeKind.Utc),
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            State = ContactCenterCallState.Ended,
+            AnsweredUtc = interaction.AnsweredUtc,
+        };
+        var queueItem = new QueueItem
+        {
+            ItemId = "queue-1",
+            ActivityItemId = "act1",
+            ReservationId = "res-1",
+            Status = QueueItemStatus.Assigned,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager.Setup(m => m.FindByInteractionIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        var agentManager = new Mock<IAgentProfileManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            queueItemManager.Object,
+            reservationManager.Object,
+            agentManager.Object,
+            activityManager.Object,
+            clock.Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        queueItemManager.Verify(
+            m => m.UpdateAsync(
+                It.Is<QueueItem>(value => value.Status == QueueItemStatus.Completed && value.DequeuedUtc.HasValue),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        reservationManager.Verify(
+            m => m.UpdateAsync(It.IsAny<ActivityReservation>(), null, It.IsAny<CancellationToken>()),
+            Times.Never);
+        agentManager.Verify(
+            m => m.UpdateAsync(It.IsAny<AgentProfile>(), null, It.IsAny<CancellationToken>()),
+            Times.Never);
+        activityManager.Verify(
+            m => m.UpdateAsync(It.IsAny<OmnichannelActivity>(), null, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_WhenAnsweredCallTransferred_CompletesAssignedQueueItem()
+    {
+        // Arrange
+        var answeredUtc = new DateTime(2026, 7, 10, 11, 59, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            Status = InteractionStatus.Transferring,
+            AnsweredUtc = answeredUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            State = ContactCenterCallState.Transferred,
+            AnsweredUtc = answeredUtc,
+        };
+        var queueItem = new QueueItem
+        {
+            ItemId = "queue-1",
+            ActivityItemId = "act1",
+            ReservationId = "res-1",
+            Status = QueueItemStatus.Assigned,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager.Setup(m => m.FindByInteractionIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            queueItemManager.Object,
+            new Mock<IActivityReservationManager>().Object,
+            new Mock<IAgentProfileManager>().Object,
+            new Mock<IOmnichannelActivityManager>().Object,
+            clock.Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        queueItemManager.Verify(
+            m => m.UpdateAsync(
+                It.Is<QueueItem>(value => value.Status == QueueItemStatus.Completed && value.DequeuedUtc.HasValue),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

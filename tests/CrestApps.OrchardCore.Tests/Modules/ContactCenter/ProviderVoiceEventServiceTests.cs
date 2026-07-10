@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -10,6 +11,141 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ProviderVoiceEventServiceTests
 {
+    [Fact]
+    public async Task IngestAsync_WhenProviderNameChanged_FallsBackByCallIdAndCanonicalizesStoredProvider()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "Asterisk",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = new DateTime(2026, 7, 10, 14, 59, 0, DateTimeKind.Utc),
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Asterisk",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            State = ContactCenterCallState.Connected,
+            AnsweredUtc = interaction.AnsweredUtc,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Default Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("Default Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("ended-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            presenceManager.Object,
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "Default Asterisk",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "ended-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Default Asterisk", interaction.ProviderName);
+        Assert.Equal("Default Asterisk", session.ProviderName);
+        Assert.Equal(InteractionStatus.Ended, interaction.Status);
+        Assert.Equal(ContactCenterCallState.Ended, session.State);
+        presenceManager.Verify(
+            manager => manager.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenCallIdBelongsToAnotherActiveProvider_DoesNotCanonicalizeInteraction()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "shared-call-id",
+            Status = InteractionStatus.Connected,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderB", "shared-call-id", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("shared-call-id", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var telephonyProviderResolver = new Mock<ITelephonyProviderResolver>();
+        telephonyProviderResolver
+            .Setup(resolver => resolver.GetAsync("ProviderA"))
+            .ReturnsAsync(new Mock<ITelephonyProvider>().Object);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            telephonyProviderResolver.Object,
+            new Mock<IInteractionEventStore>().Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        var result = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderB",
+            ProviderCallId = "shared-call-id",
+            State = ContactCenterCallState.Ended,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(result);
+        Assert.Equal("ProviderA", interaction.ProviderName);
+        Assert.Equal(InteractionStatus.Connected, interaction.Status);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task IngestAsync_WithMuteAndRecordingChanges_PublishesDetailedEvents()
     {
@@ -66,6 +202,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             voiceProviderResolver.Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             publisher.Object,
             presenceManager.Object,
@@ -162,6 +299,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             voiceProviderResolver.Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             publisher.Object,
             presenceManager.Object,
@@ -246,6 +384,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             publisher,
             new Mock<IAgentPresenceManager>().Object,
@@ -317,6 +456,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
@@ -384,6 +524,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
@@ -442,6 +583,7 @@ public sealed class ProviderVoiceEventServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,

@@ -4,8 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 /// <summary>
-/// Clears stale queue and reservation state when provider truth reports that an offered voice call ended
-/// before it was actually answered.
+/// Reconciles queue and reservation state when provider truth reports that a voice call ended.
 /// </summary>
 public sealed class ContactCenterVoiceOfferReconciliationHandler : IContactCenterEventHandler
 {

@@ -51,7 +51,8 @@
 
                     <div class="col-md-6">
                         <label asp-for="Input.ProviderName" class="form-label"></label>
-                        <input asp-for="Input.ProviderName" class="form-control" />
+                        <input asp-for="Input.ProviderName" class="form-control" readonly />
+                        <div class="form-text">The simulator uses the configured Asterisk provider identity so ARI events and Contact Center interactions remain correlated.</div>
                         <span asp-validation-for="Input.ProviderName" class="text-danger"></span>
                     </div>
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -13,6 +14,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IAgentPresenceManager _presenceManager;
@@ -25,6 +27,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="callSessionManager">The call session manager.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to bridge answered outbound calls.</param>
+    /// <param name="telephonyProviderResolver">The telephony provider resolver used to protect provider-scoped call identities.</param>
     /// <param name="eventStore">The interaction event store used to de-duplicate provider events.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="presenceManager">The presence manager used to move agents into wrap-up after handled calls end.</param>
@@ -34,6 +37,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        ITelephonyProviderResolver telephonyProviderResolver,
         IInteractionEventStore eventStore,
         IContactCenterEventPublisher publisher,
         IAgentPresenceManager presenceManager,
@@ -43,6 +47,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _voiceProviderResolver = voiceProviderResolver;
+        _telephonyProviderResolver = telephonyProviderResolver;
         _eventStore = eventStore;
         _publisher = publisher;
         _presenceManager = presenceManager;
@@ -60,12 +65,22 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
-        var interaction = !string.IsNullOrWhiteSpace(providerEvent.ProviderName)
-            ? await _interactionManager.FindByProviderInteractionIdAsync(
+        Interaction interaction = null;
+        var matchedByCallIdOnly = false;
+
+        if (!string.IsNullOrWhiteSpace(providerEvent.ProviderName))
+        {
+            interaction = await _interactionManager.FindByProviderInteractionIdAsync(
                 providerEvent.ProviderName,
                 providerEvent.ProviderCallId,
-                cancellationToken)
-            : await _interactionManager.FindByProviderInteractionIdAsync(providerEvent.ProviderCallId, cancellationToken);
+                cancellationToken);
+        }
+
+        if (interaction is null)
+        {
+            interaction = await _interactionManager.FindByProviderInteractionIdAsync(providerEvent.ProviderCallId, cancellationToken);
+            matchedByCallIdOnly = interaction is not null;
+        }
 
         if (interaction is null)
         {
@@ -77,6 +92,34 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             }
 
             return null;
+        }
+
+        if (matchedByCallIdOnly &&
+            !string.IsNullOrWhiteSpace(providerEvent.ProviderName) &&
+            !string.IsNullOrWhiteSpace(interaction.ProviderName) &&
+            !string.Equals(interaction.ProviderName, providerEvent.ProviderName, StringComparison.Ordinal) &&
+            (_voiceProviderResolver.Get(interaction.ProviderName) is not null ||
+                await _telephonyProviderResolver.GetAsync(interaction.ProviderName) is not null))
+        {
+            _logger.LogWarning(
+                "Ignored provider voice event for call '{ProviderCallId}' from provider '{ProviderName}' because the call id matched an interaction owned by active provider '{StoredProviderName}'.",
+                providerEvent.ProviderCallId,
+                providerEvent.ProviderName,
+                interaction.ProviderName);
+
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerEvent.ProviderName) &&
+            !string.Equals(interaction.ProviderName, providerEvent.ProviderName, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Provider voice event for call '{ProviderCallId}' used provider '{ProviderName}', but the matching interaction was stored as '{StoredProviderName}'. Canonicalizing the interaction to the event provider.",
+                providerEvent.ProviderCallId,
+                providerEvent.ProviderName,
+                interaction.ProviderName);
+
+            interaction.ProviderName = providerEvent.ProviderName;
         }
 
         if (!string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
@@ -279,6 +322,12 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private static void ApplyProviderDetails(CallSession session, Interaction interaction, ProviderVoiceEvent providerEvent)
     {
+        if (!string.IsNullOrWhiteSpace(providerEvent.ProviderName))
+        {
+            session.ProviderName = providerEvent.ProviderName;
+            interaction.ProviderName = providerEvent.ProviderName;
+        }
+
         if (!string.IsNullOrWhiteSpace(providerEvent.FromAddress))
         {
             session.FromAddress = providerEvent.FromAddress;

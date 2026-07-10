@@ -125,6 +125,25 @@ public sealed class AsteriskTelephonyProviderTests
     }
 
     [Fact]
+    public async Task HangupAsync_WhenChannelAlreadyMissing_ReturnsDisconnectedSuccess()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.NotFound, """{"message":"Channel not found"}""");
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.HangupAsync(
+            new CallReference { CallId = "call-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Call);
+        Assert.Equal(CallState.Disconnected, result.Call.State);
+        Assert.Equal($"{BaseUrl}channels/call-1", handler.LastRequest.RequestUri.AbsoluteUri);
+    }
+
+    [Fact]
     public void Capabilities_WhenUsingLocalLoopback_KeepAdvancedActionsEnabled()
     {
         // Arrange

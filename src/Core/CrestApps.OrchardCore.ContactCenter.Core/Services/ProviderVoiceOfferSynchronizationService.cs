@@ -8,8 +8,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Releases stale routing state when provider truth reports that a queued or offered call ended before it
-/// was actually answered.
+/// Reconciles routing state when provider truth reports that a queued, offered, or assigned call ended.
 /// </summary>
 public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOfferSynchronizationService
 {
@@ -65,19 +64,29 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             return;
         }
 
-        if (interaction.Status is not InteractionStatus.Ended and not InteractionStatus.Failed)
-        {
-            return;
-        }
-
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
-        if (interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true)
+        if (interaction.Status is not InteractionStatus.Ended and not InteractionStatus.Failed &&
+            !IsTerminalState(session?.State))
         {
             return;
         }
 
+        var wasAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
         var queueItem = await _queueItemManager.FindByActivityIdAsync(interaction.ActivityItemId, cancellationToken);
+
+        if (wasAnswered)
+        {
+            if (queueItem?.Status == QueueItemStatus.Assigned)
+            {
+                queueItem.Status = QueueItemStatus.Completed;
+                queueItem.DequeuedUtc = _clock.UtcNow;
+                await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+            }
+
+            return;
+        }
+
         ActivityReservation reservation = null;
 
         if (!string.IsNullOrWhiteSpace(queueItem?.ReservationId))
@@ -148,5 +157,15 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         activity.ReservedUtc = null;
         activity.ReservationExpiresUtc = null;
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+    }
+
+    private static bool IsTerminalState(ContactCenterCallState? state)
+    {
+        return state is ContactCenterCallState.Ended or
+            ContactCenterCallState.Failed or
+            ContactCenterCallState.NoAnswer or
+            ContactCenterCallState.Rejected or
+            ContactCenterCallState.Canceled or
+            ContactCenterCallState.Transferred;
     }
 }
