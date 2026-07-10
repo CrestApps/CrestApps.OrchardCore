@@ -18,7 +18,7 @@
     });
   }
   function populateSelect(select, fields, selectedValue, defaultField, placeholder, defaultSuffix) {
-    select.innerHTML = '';
+    select.replaceChildren();
     var placeholderOption = document.createElement('option');
     placeholderOption.value = '';
     placeholderOption.textContent = placeholder;
@@ -58,9 +58,9 @@
     var keyPlaceholder = section.getAttribute('data-ai-data-source-key-placeholder') || 'Use document ID (_id)';
     var defaultSuffix = section.getAttribute('data-ai-data-source-default-suffix') || '(Default)';
     function clearFields() {
-      contentSelect.innerHTML = '<option value="">' + selectIndexPlaceholder + '</option>';
-      titleSelect.innerHTML = '<option value="">' + selectIndexPlaceholder + '</option>';
-      keySelect.innerHTML = '<option value="">' + selectIndexPlaceholder + '</option>';
+      populateSelect(contentSelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
+      populateSelect(titleSelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
+      populateSelect(keySelect, [], null, null, selectIndexPlaceholder, defaultSuffix);
       contentSelect.disabled = true;
       titleSelect.disabled = true;
       keySelect.disabled = true;
