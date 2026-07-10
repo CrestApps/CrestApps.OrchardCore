@@ -115,7 +115,7 @@ The top bar also shows a live chip per signed-in queue with its current waiting 
 
 When routing selects you for a piece of work, a **ringing offer card** appears with the customer name (or number), the queue, and a countdown showing how long you have to respond. You have two choices:
 
-- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as DialPad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal coordinate so the call is only answered after the reservation is confirmed - you will never pick up a call that has already been re-offered to someone else, and the soft-phone incoming modal now uses the same authoritative reservation lookup as the workspace accept flow instead of firing a second raw device answer when the Contact Center server has already accepted the offer. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center now also answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
+- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as DialPad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal now revalidate the current provider call state before accept and do not mark the interaction connected until the provider's authoritative event says it is connected. That means you do not get stuck on a call the server already ended while the offer was in flight. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center still answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
 - **Decline** - releases the offer so it is immediately re-offered to the next available agent, and the incoming modal no longer follows that reservation decline with a second raw telephony reject against the same call.
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
@@ -132,6 +132,10 @@ Once you accept, the **active interaction** panel shows:
 Use the soft phone for hold, mute, transfer, and hang-up. The workspace reflects the call state in real time.
 
 The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
+
+When Contact Center owns the assigned voice interaction, server-side call-session changes now flow back into the Telephony soft phone in real time, so provider-side disconnects, failed calls, transfers, hold/resume, mute/unmute, and other normalized call-state changes immediately update the live call card and the persisted **Recent** history instead of waiting for the next browser reconnect.
+
+Contact Center also runs a provider-truth reconciliation pass when the tenant activates and on a periodic safety cadence. If Orchard Core restarts during busy hours, persisted ringing or active interactions are revalidated against the telephony server before routing resumes, and a pre-connect offer that already ended on the provider side is removed from the queue instead of being re-offered as a ghost call.
 
 ### 4. Complete the activity in the CRM
 
@@ -153,7 +157,7 @@ The **Recent activity** panel lists your most recent interactions with their dir
 
 - The workspace loads a **state snapshot** from the server and then keeps itself current from the real-time hub's presence, offer, and queue events. It re-reads the authoritative state after you act, so what you see always matches the server.
 - Contact Center domain events are persisted immediately and the handler fan-out runs as deferred outbox work, so slow workflow or real-time projections do not block the soft-phone sign-in or sign-out postback.
-- **Accept** calls a single server-side command that accepts the reservation, tells the voice provider to connect the call to you, and advances the interaction and call session together - one atomic, audited transition rather than several best-effort client actions.
+- **Accept** calls a single server-side command that accepts the reservation, revalidates the provider's current call state, tells the voice provider to connect the call when needed, and advances the interaction and call session only when the provider truth supports that transition.
 - **Complete** goes through the source-neutral `IActivityDispositionService`, so dispositions, required-disposition rules, and subject-flow actions behave identically across every channel and source.
 
 ## Permissions and roles

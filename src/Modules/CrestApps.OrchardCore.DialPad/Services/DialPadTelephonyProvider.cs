@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -18,7 +19,7 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// API key and per-user OAuth 2.0 authentication. All call control happens server-side, so the soft
 /// phone client never talks to DialPad directly.
 /// </summary>
-public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider
+public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -172,6 +173,103 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             _logger.LogError(ex, "An error occurred while placing a DialPad call.");
 
             return TelephonyResult.Failed(S["DialPad could not place the call. Error: {0}", ex.Message].Value);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyCallLookupResult> GetCallStateAsync(string callId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(callId))
+        {
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = S["A call id is required to query the call state."].Value,
+            };
+        }
+
+        var settings = await GetResolvedSettingsAsync();
+
+        if (!IsConfigured(settings))
+        {
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = NotConfigured().Error,
+            };
+        }
+
+        var bearerToken = await GetBearerTokenAsync(settings, cancellationToken);
+
+        if (string.IsNullOrEmpty(bearerToken))
+        {
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = NotConnected().Error,
+            };
+        }
+
+        try
+        {
+            var client = CreateClient(settings, bearerToken);
+            using var response = await client.GetAsync($"call/{Uri.EscapeDataString(callId)}", cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = true,
+                    Found = false,
+                };
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("DialPad rejected a call-state lookup for call {CallId} with status code {StatusCode}.", callId, response.StatusCode);
+
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = false,
+                    Error = S["DialPad could not query the call state."].Value,
+                };
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            var stateText = ReadString(root, "status") ?? ReadString(root, "state");
+            var state = TryMapLookupState(stateText, out var mappedState)
+                ? mappedState
+                : CallState.Connected;
+            var call = BuildCall(
+                callId,
+                state,
+                isMuted: ReadBoolean(root, "is_muted"),
+                isOnHold: state == CallState.OnHold,
+                direction: ResolveDirection(ReadString(root, "direction")));
+
+            call.From = ReadString(root, "external_number") ?? ReadString(root, "from");
+            call.To = ReadString(root, "target") ?? ReadString(root, "internal_number") ?? ReadString(root, "to");
+            call.StartedUtc = ReadDateTimeOffset(root, "date_started") ?? ReadDateTimeOffset(root, "date_connected");
+            call.Metadata["dialPadStatus"] = stateText ?? string.Empty;
+
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = call,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while querying the DialPad call state for call {CallId}.", callId);
+
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = S["DialPad could not query the call state."].Value,
+            };
         }
     }
 
@@ -600,6 +698,77 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             Direction = direction,
             ProviderName = DialPadConstants.ProviderTechnicalName,
         };
+    }
+
+    private static bool TryMapLookupState(string state, out CallState mapped)
+    {
+        mapped = state?.Trim().ToLowerInvariant() switch
+        {
+            "calling" or "dialing" or "connecting" or "preanswer" => CallState.Connecting,
+            "ringing" => CallState.Ringing,
+            "connected" or "active" => CallState.Connected,
+            "hold" or "on_hold" or "parked" => CallState.OnHold,
+            "hangup" or "ended" or "disconnected" or "completed" or "voicemail" => CallState.Disconnected,
+            "missed" or "no_answer" or "noanswer" => CallState.Failed,
+            "rejected" or "declined" or "busy" => CallState.Failed,
+            "canceled" or "cancelled" or "abandoned" => CallState.Disconnected,
+            _ => (CallState)(-1),
+        };
+
+        return Enum.IsDefined(mapped);
+    }
+
+    private static CallDirection ResolveDirection(string direction)
+    {
+        return string.Equals(direction?.Trim(), "inbound", StringComparison.OrdinalIgnoreCase)
+            ? CallDirection.Inbound
+            : CallDirection.Outbound;
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+
+    private static bool ReadBoolean(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return false;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => false,
+        };
+    }
+
+    private static DateTimeOffset? ReadDateTimeOffset(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == JsonValueKind.String &&
+            DateTimeOffset.TryParse(value.GetString(), out var parsed))
+        {
+            return parsed;
+        }
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var unixValue))
+        {
+            return unixValue > 100_000_000_000
+                ? DateTimeOffset.FromUnixTimeMilliseconds(unixValue)
+                : DateTimeOffset.FromUnixTimeSeconds(unixValue);
+        }
+
+        return null;
     }
 
     private static DialPadAuthenticationType GetEffectiveAuthenticationType(DialPadSettings settings)

@@ -33,7 +33,7 @@ TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolve
 ```
 
 - **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts:
-  `ITelephonyProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`,
+  `ITelephonyProvider`, `ITelephonyCallStateProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`,
   `ITelephonyAuthenticationProvider`, `ITelephonyAuthenticationService`, `ITelephonyUserTokenStore`,
   `ITelephonyInteractionStore`, the request/response and interaction models,
   `TelephonyProviderOptions`, `TelephonySettings`, and `TelephonyPermissions`.
@@ -42,6 +42,8 @@ TelephonyHub  ──►  ITelephonyService  ──►  ITelephonyProviderResolve
   implementations, the site settings, and the soft phone widget.
 - A **provider module** (such as DialPad or Asterisk) implements `ITelephonyProvider` and registers itself as a
   selectable provider.
+
+If you are building another provider, see [Custom Telephony and Contact Center Providers](custom-providers.md).
 
 ## The provider contract
 
@@ -69,6 +71,22 @@ Each provider also advertises the operations it supports through the `Capabiliti
 Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
 `TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange
 routing hints or contextual data for scenarios such as voicemail routing.
+
+## Provider event normalization
+
+Modern soft-phone behavior depends on more than keypad actions. Provider integrations should normalize live provider events into the Contact Center voice-event pipeline so the server becomes the source of truth for:
+
+- call lifecycle transitions
+- hold and resume
+- mute and unmute
+- recording lifecycle
+- conference and participant-count changes
+
+The normalized provider contract is `ProviderVoiceEvent`. Providers that can emit richer details should populate those fields and let Contact Center project the resulting state back to the soft phone instead of trying to update the browser directly.
+
+When a provider also implements `ITelephonyCallStateProvider`, Contact Center can query the provider's current server truth for an individual call during authoritative offer accept, tenant-startup recovery, and periodic reconciliation. That keeps queued and assigned work aligned with the telephony backend even across short Orchard Core restarts.
+
+The built-in Asterisk provider now also keeps a tenant-scoped ARI event-stream listener open inside the Orchard shell lifecycle. Server-side Asterisk hangups, hold changes, and other mapped channel events are normalized on the server, written back to persisted telephony history, and pushed through the Telephony hub so a plain soft-phone call does not stay stuck on a stale client-side state after the PBX changes it externally.
 
 ## SignalR hub
 
@@ -146,7 +164,7 @@ The widget's footer is a tab bar that switches the panel between built-in and co
 
 The history is read from the hub's `GetInteractions` method and is backed by the persisted
 interaction store described below, so it survives page reloads and is available independently of the
-provider. Inbound calls are now persisted as soon as they are offered, so the **Recent** tab shows inbound and outbound history instead of only calls placed from the keypad. When the latest interaction is still in progress, the soft phone now restores that active call on reconnect or page reload so agents do not lose the connected-call state just because the page refreshed. The widget also keeps the **Keypad** tab's natural height as the shared body height for **Recent** and contributed tabs such as Contact Center **Work**, so switching tabs does not resize the panel unless the user moves it. When a non-keypad tab needs more room than that shared height, it scrolls within the panel instead of clipping its contents.
+provider. Inbound calls are now persisted as soon as they are offered, so the **Recent** tab shows inbound and outbound history instead of only calls placed from the keypad. When the latest interaction is still in progress, the soft phone now restores that active call on reconnect or page reload so agents do not lose the connected-call state just because the page refreshed. When Contact Center owns the voice interaction, normalized server-side call-session changes now also upsert that same telephony history and push a `CallStateChanged` event back through the Telephony hub, so provider-driven disconnects, hold/resume changes, mute/unmute updates, and other server-side lifecycle changes clear or update the live soft-phone state immediately. Provider-side Asterisk ARI events now do the same for plain Telephony calls, so a server-initiated disconnect updates the active soft phone and closes the persisted in-progress record before the next page reload can resurrect it. The widget also keeps the **Keypad** tab's natural height as the shared body height for **Recent** and contributed tabs such as Contact Center **Work**, so switching tabs does not resize the panel unless the user moves it. When a non-keypad tab needs more room than that shared height, it scrolls within the panel instead of clipping its contents.
 
 ## Incoming calls
 

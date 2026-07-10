@@ -50,6 +50,35 @@ public sealed class ProviderVoiceEvent
     public string IdempotencyKey { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the provider reports the call as muted.
+    /// When <see langword="null"/>, the event does not change the current mute state.
+    /// </summary>
+    public bool? IsMuted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-reported recording state.
+    /// When <see langword="null"/>, the event does not change the current recording state.
+    /// </summary>
+    public RecordingState? RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider recording reference for the session, when recording is active or retained.
+    /// </summary>
+    public string RecordingReference { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider reports the call as a conference or
+    /// multi-party session. When <see langword="null"/>, the event does not change the current conference flag.
+    /// </summary>
+    public bool? IsConference { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of active participants the provider reports for the session.
+    /// When <see langword="null"/>, the event does not change the current participant count.
+    /// </summary>
+    public int? ParticipantCount { get; set; }
+
+    /// <summary>
     /// Gets or sets additional provider metadata to retain for troubleshooting.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

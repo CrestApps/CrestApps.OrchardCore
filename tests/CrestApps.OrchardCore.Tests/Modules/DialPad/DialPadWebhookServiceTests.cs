@@ -98,6 +98,45 @@ public sealed class DialPadWebhookServiceTests
         eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task ProcessAsync_WithRicherProviderDetails_PassesNormalizedDetailsToEventService()
+    {
+        // Arrange
+        ProviderVoiceEvent providerEvent = null;
+        var eventService = new Mock<IProviderVoiceEventService>();
+        eventService.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
+            .ReturnsAsync(new CallSession { ItemId = "cs1" });
+
+        var router = new Mock<IVoiceContactCenterCallRouter>();
+        var service = CreateService(eventService, router);
+
+        var callEvent = new DialPadCallEvent
+        {
+            CallId = "c1",
+            State = "connected",
+            Direction = "inbound",
+            IsMuted = true,
+            RecordingState = "paused",
+            RecordingId = "rec-1",
+            IsConference = true,
+            ParticipantCount = 3,
+        };
+
+        // Act
+        var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(DialPadWebhookResult.Updated, result);
+        Assert.NotNull(providerEvent);
+        Assert.True(providerEvent.IsMuted);
+        Assert.Equal(RecordingState.Paused, providerEvent.RecordingState);
+        Assert.Equal("rec-1", providerEvent.RecordingReference);
+        Assert.True(providerEvent.IsConference);
+        Assert.Equal(3, providerEvent.ParticipantCount);
+        Assert.Equal("connected", providerEvent.Metadata["dialPadState"]);
+    }
+
     private static DialPadWebhookService CreateService(Mock<IProviderVoiceEventService> eventService, Mock<IVoiceContactCenterCallRouter> router)
     {
         var clock = new Mock<IClock>();

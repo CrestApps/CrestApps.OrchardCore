@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -13,11 +14,8 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
-internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
+internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyCallStateProvider
 {
-    private const string HoldStateVariableName = "CRESTAPPS_STATE_ONHOLD";
-    private const string MuteStateVariableName = "CRESTAPPS_STATE_MUTED";
-
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -132,6 +130,102 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
         }
     }
 
+    public async Task<TelephonyCallLookupResult> GetCallStateAsync(string callId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(callId))
+        {
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = S["A call id is required to query the call state."].Value,
+            };
+        }
+
+        var settings = await GetResolvedSettingsAsync(cancellationToken);
+
+        if (!IsConfigured(settings))
+        {
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = NotConfigured().Error,
+            };
+        }
+
+        try
+        {
+            using var response = await SendAsync(
+                settings,
+                HttpMethod.Get,
+                $"channels/{Uri.EscapeDataString(callId)}",
+                null,
+                null,
+                cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = true,
+                    Found = false,
+                };
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await ReadResponseBodyAsync(response, cancellationToken);
+
+                _logger.LogError(
+                    "Asterisk rejected a call-state lookup for provider {ProviderName}. CallId: {CallId}. Status code: {StatusCode}. Response: {ResponseBody}",
+                    ProviderName,
+                    callId,
+                    response.StatusCode,
+                    responseBody);
+
+                return new TelephonyCallLookupResult
+                {
+                    Succeeded = false,
+                    Error = S["Asterisk could not query the call state."].Value,
+                };
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            var stateText = ReadString(root, "state");
+            var state = TryMapLookupState(stateText, out var mappedState)
+                ? mappedState
+                : CallState.Connected;
+            var call = BuildCall(
+                callId,
+                state,
+                isOnHold: state == CallState.OnHold,
+                direction: ResolveDirection(ReadString(root, "direction")));
+
+            call.From = ReadNestedString(root, "caller", "number");
+            call.To = ReadNestedString(root, "connected", "number") ?? ReadNestedString(root, "dialplan", "exten");
+            call.StartedUtc = _clock.UtcNow;
+            call.Metadata["asteriskState"] = stateText ?? string.Empty;
+
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = call,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while querying the Asterisk call state for provider {ProviderName}.", ProviderName);
+
+            return new TelephonyCallLookupResult
+            {
+                Succeeded = false,
+                Error = S["Asterisk could not query the call state."].Value,
+            };
+        }
+    }
+
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
         => ExecuteCallActionAsync(
             call?.CallId,
@@ -150,7 +244,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Post,
             "channels/{callId}/hold",
             null,
-            new Dictionary<string, string> { [HoldStateVariableName] = bool.TrueString },
+            new Dictionary<string, string> { [AsteriskConstants.HoldStateVariableName] = bool.TrueString },
             () => BuildCall(call?.CallId, CallState.OnHold, isOnHold: true, metadata: call?.Metadata),
             S["The call could not be placed on hold."].Value,
             S["A call id is required to hold the call."].Value,
@@ -162,7 +256,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Delete,
             "channels/{callId}/hold",
             null,
-            new Dictionary<string, string> { [HoldStateVariableName] = bool.FalseString },
+            new Dictionary<string, string> { [AsteriskConstants.HoldStateVariableName] = bool.FalseString },
             () => BuildCall(call?.CallId, CallState.Connected, metadata: call?.Metadata),
             S["The call could not be resumed."].Value,
             S["A call id is required to resume the call."].Value,
@@ -174,7 +268,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Post,
             "channels/{callId}/mute",
             new Dictionary<string, string> { ["direction"] = "both" },
-            new Dictionary<string, string> { [MuteStateVariableName] = bool.TrueString },
+            new Dictionary<string, string> { [AsteriskConstants.MuteStateVariableName] = bool.TrueString },
             () => BuildCall(call?.CallId, CallState.Connected, isMuted: true, metadata: call?.Metadata),
             S["The call could not be muted."].Value,
             S["A call id is required to mute the call."].Value,
@@ -186,7 +280,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
             HttpMethod.Delete,
             "channels/{callId}/mute",
             new Dictionary<string, string> { ["direction"] = "both" },
-            new Dictionary<string, string> { [MuteStateVariableName] = bool.FalseString },
+            new Dictionary<string, string> { [AsteriskConstants.MuteStateVariableName] = bool.FalseString },
             () => BuildCall(call?.CallId, CallState.Connected, metadata: call?.Metadata),
             S["The call could not be unmuted."].Value,
             S["A call id is required to unmute the call."].Value,
@@ -510,6 +604,46 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider
 
             return TelephonyResult.Failed(errorMessage);
         }
+    }
+
+    private static bool TryMapLookupState(string state, out CallState mapped)
+    {
+        mapped = state?.Trim().ToLowerInvariant() switch
+        {
+            "down" or "dialing" or "reserved" or "offhook" or "pre-ring" => CallState.Connecting,
+            "ring" or "ringing" => CallState.Ringing,
+            "up" or "connected" => CallState.Connected,
+            "hold" or "held" => CallState.OnHold,
+            "hungup" or "destroyed" or "disconnected" => CallState.Disconnected,
+            "busy" => CallState.Failed,
+            _ => (CallState)(-1),
+        };
+
+        return Enum.IsDefined(mapped);
+    }
+
+    private static CallDirection ResolveDirection(string direction)
+    {
+        return string.Equals(direction?.Trim(), "inbound", StringComparison.OrdinalIgnoreCase)
+            ? CallDirection.Inbound
+            : CallDirection.Outbound;
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+
+    private static string ReadNestedString(JsonElement element, string propertyName, string nestedPropertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) &&
+            value.ValueKind == JsonValueKind.Object &&
+            value.TryGetProperty(nestedPropertyName, out var nestedValue) &&
+            nestedValue.ValueKind == JsonValueKind.String
+            ? nestedValue.GetString()
+            : null;
     }
 
     private HttpClient CreateClient(AsteriskResolvedSettings settings)

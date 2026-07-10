@@ -21,11 +21,6 @@ namespace CrestApps.OrchardCore.DialPad.Controllers;
 [Feature(DialPadConstants.Feature.Dialer)]
 public sealed class DialPadWebhookController : ControllerBase
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly IDialPadWebhookService _webhookService;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -80,7 +75,7 @@ public sealed class DialPadWebhookController : ControllerBase
 
         try
         {
-            callEvent = JsonSerializer.Deserialize<DialPadCallEvent>(payloadJson, _jsonOptions);
+            callEvent = JsonSerializer.Deserialize<DialPadCallEvent>(payloadJson, DialPadJsonSerializerOptions.Default);
         }
         catch (JsonException)
         {

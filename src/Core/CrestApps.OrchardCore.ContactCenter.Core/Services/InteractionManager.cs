@@ -112,4 +112,17 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
 
         return interactions;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListActiveWithProviderCallIdAsync(cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
+    }
 }

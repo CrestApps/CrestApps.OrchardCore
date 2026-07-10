@@ -89,8 +89,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
         var session = await EnsureSessionAsync(interaction, providerEvent, now, cancellationToken);
+        var previousState = session.State;
+        var previousIsMuted = session.IsMuted;
+        var previousRecordingState = session.RecordingState;
+        var previousIsConference = session.IsConference;
+        var previousParticipantCount = session.ParticipantCount;
 
         ApplyState(session, interaction, providerEvent.State, now);
+        ApplyProviderDetails(session, interaction, providerEvent);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
@@ -99,12 +105,27 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             await TryBridgeAnsweredOutboundAsync(session, interaction, cancellationToken);
         }
-        else if (IsTerminalState(providerEvent.State) && !string.IsNullOrEmpty(session.AgentId))
+        else if (IsTerminalState(providerEvent.State) &&
+            !string.IsNullOrEmpty(session.AgentId) &&
+            (session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue))
         {
             await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
         }
 
-        await PublishAsync(ResolveEventType(providerEvent.State), interaction.ItemId, session.AgentId, providerEvent.IdempotencyKey, cancellationToken);
+        foreach (var eventType in ResolveEventTypes(
+            previousState,
+            session.State,
+            previousIsMuted,
+            session.IsMuted,
+            previousRecordingState,
+            session.RecordingState,
+            previousIsConference,
+            session.IsConference,
+            previousParticipantCount,
+            session.ParticipantCount))
+        {
+            await PublishAsync(eventType, interaction.ItemId, session.AgentId, providerEvent.IdempotencyKey, cancellationToken);
+        }
 
         return session;
     }
@@ -134,6 +155,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         session.FromAddress = providerEvent.FromAddress ?? interaction.CustomerAddress;
         session.ToAddress = providerEvent.ToAddress;
         session.State = providerEvent.State;
+        session.RecordingState = interaction.RecordingState;
+        session.RecordingReference = interaction.RecordingReference;
         session.CreatedUtc = now;
         await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
@@ -145,6 +168,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private static void ApplyState(CallSession session, Interaction interaction, ContactCenterCallState state, DateTime now)
     {
         session.State = state;
+        session.IsMuted = state is ContactCenterCallState.Ended or
+            ContactCenterCallState.Failed or
+            ContactCenterCallState.NoAnswer or
+            ContactCenterCallState.Rejected or
+            ContactCenterCallState.Canceled or
+            ContactCenterCallState.Transferred
+            ? false
+            : session.IsMuted;
 
         switch (state)
         {
@@ -198,6 +229,54 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
     }
 
+    private static void ApplyProviderDetails(CallSession session, Interaction interaction, ProviderVoiceEvent providerEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(providerEvent.FromAddress))
+        {
+            session.FromAddress = providerEvent.FromAddress;
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress))
+        {
+            session.ToAddress = providerEvent.ToAddress;
+        }
+
+        if (providerEvent.IsMuted.HasValue)
+        {
+            session.IsMuted = providerEvent.IsMuted.Value;
+        }
+
+        if (providerEvent.RecordingState.HasValue)
+        {
+            session.RecordingState = providerEvent.RecordingState.Value;
+            interaction.RecordingState = providerEvent.RecordingState.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerEvent.RecordingReference))
+        {
+            session.RecordingReference = providerEvent.RecordingReference;
+            interaction.RecordingReference = providerEvent.RecordingReference;
+        }
+
+        if (providerEvent.IsConference.HasValue)
+        {
+            session.IsConference = providerEvent.IsConference.Value;
+        }
+
+        if (providerEvent.ParticipantCount.HasValue)
+        {
+            session.ParticipantCount = Math.Max(0, providerEvent.ParticipantCount.Value);
+        }
+
+        if (providerEvent.Metadata.Count > 0)
+        {
+            foreach (var entry in providerEvent.Metadata)
+            {
+                session.Metadata[entry.Key] = entry.Value;
+            }
+        }
+    }
+
     private static InteractionStatus MapInteractionStatus(ContactCenterCallState state)
     {
         return state switch
@@ -218,17 +297,83 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         };
     }
 
-    private static string ResolveEventType(ContactCenterCallState state)
+    private static List<string> ResolveEventTypes(
+        ContactCenterCallState previousState,
+        ContactCenterCallState currentState,
+        bool previousIsMuted,
+        bool currentIsMuted,
+        RecordingState previousRecordingState,
+        RecordingState currentRecordingState,
+        bool previousIsConference,
+        bool currentIsConference,
+        int previousParticipantCount,
+        int currentParticipantCount)
     {
-        return state switch
+        var eventTypes = new List<string>
         {
-            ContactCenterCallState.Connected => ContactCenterConstants.Events.CallConnected,
-            ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled => ContactCenterConstants.Events.CallEnded,
-            _ => ContactCenterConstants.Events.CallSessionUpdated,
+            ContactCenterConstants.Events.CallSessionUpdated,
+        };
+
+        if (currentState == ContactCenterCallState.Connected && previousState != ContactCenterCallState.Connected)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallConnected);
+        }
+
+        if (currentState == ContactCenterCallState.OnHold && previousState != ContactCenterCallState.OnHold)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallHeld);
+        }
+
+        if (previousState == ContactCenterCallState.OnHold && currentState == ContactCenterCallState.Connected)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallResumed);
+        }
+
+        if (currentIsMuted && !previousIsMuted)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallMuted);
+        }
+
+        if (!currentIsMuted && previousIsMuted)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallUnmuted);
+        }
+
+        if (currentRecordingState != previousRecordingState)
+        {
+            eventTypes.AddRange(ResolveRecordingEvents(previousRecordingState, currentRecordingState));
+        }
+
+        if (currentIsConference != previousIsConference || currentParticipantCount != previousParticipantCount)
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallConferenceChanged);
+        }
+
+        if (IsTerminalState(currentState) && !IsTerminalState(previousState))
+        {
+            eventTypes.Add(ContactCenterConstants.Events.CallEnded);
+        }
+
+        return eventTypes;
+    }
+
+    private static string[] ResolveRecordingEvents(
+        RecordingState previousState,
+        RecordingState currentState)
+    {
+        if (currentState == previousState)
+        {
+            return [];
+        }
+
+        return currentState switch
+        {
+            RecordingState.Recording when previousState == RecordingState.Paused
+                => [ContactCenterConstants.Events.RecordingResumed],
+            RecordingState.Recording => [ContactCenterConstants.Events.RecordingStarted],
+            RecordingState.Paused => [ContactCenterConstants.Events.RecordingPaused],
+            RecordingState.Stopped => [ContactCenterConstants.Events.RecordingStopped],
+            _ => [],
         };
     }
 

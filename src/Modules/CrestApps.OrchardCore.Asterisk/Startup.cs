@@ -38,5 +38,10 @@ public sealed class Startup : StartupBase
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>();
+
+        services
+            .AddSingleton<AsteriskRealtimeVoiceListener>()
+            .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
+            .AddScoped<IModularTenantEvents, AsteriskRealtimeVoiceTenantEvents>();
     }
 }

@@ -50,6 +50,19 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
+    public async Task<TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(providerName) || string.IsNullOrEmpty(callId))
+        {
+            return null;
+        }
+
+        return await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == providerName && x.CallId == callId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<TelephonyInteraction>> GetRecentAsync(string userId, int count, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId))

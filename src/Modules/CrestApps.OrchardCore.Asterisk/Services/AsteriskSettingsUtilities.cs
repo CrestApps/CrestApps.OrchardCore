@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Asterisk.Models;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
@@ -26,10 +27,40 @@ internal static class AsteriskSettingsUtilities
             : 1;
     }
 
+    public static void ApplyDefaults(AsteriskResolvedSettings settings)
+    {
+        settings.ApplicationName = string.IsNullOrWhiteSpace(settings.ApplicationName)
+            ? AsteriskConstants.DefaultApplicationName
+            : settings.ApplicationName.Trim();
+
+        settings.TimeoutSeconds = settings.TimeoutSeconds > 0
+            ? settings.TimeoutSeconds
+            : AsteriskConstants.DefaultTimeoutSeconds;
+
+        settings.BaseUrl = NormalizeBaseUrl(settings.BaseUrl);
+        settings.UserName = settings.UserName?.Trim();
+        settings.Password = settings.Password?.Trim();
+        settings.EndpointTemplate = settings.EndpointTemplate?.Trim();
+        settings.OutboundCallerId = settings.OutboundCallerId?.Trim();
+        settings.VoicemailContext = settings.VoicemailContext?.Trim();
+        settings.VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate?.Trim();
+        settings.VoicemailPriority = settings.VoicemailPriority > 0
+            ? settings.VoicemailPriority
+            : 1;
+    }
+
     public static bool HasRequiredConfiguration(AsteriskConnectionSettings settings, string password)
         => !string.IsNullOrWhiteSpace(settings.BaseUrl) &&
             !string.IsNullOrWhiteSpace(settings.UserName) &&
             !string.IsNullOrWhiteSpace(password) &&
+            !string.IsNullOrWhiteSpace(settings.ApplicationName);
+
+    public static bool HasRequiredConfiguration(AsteriskResolvedSettings settings)
+        => settings is not null &&
+            settings.IsEnabled &&
+            !string.IsNullOrWhiteSpace(settings.BaseUrl) &&
+            !string.IsNullOrWhiteSpace(settings.UserName) &&
+            !string.IsNullOrWhiteSpace(settings.Password) &&
             !string.IsNullOrWhiteSpace(settings.ApplicationName);
 
     public static string ResolveEndpoint(string endpointTemplate, string destination)
@@ -114,6 +145,33 @@ internal static class AsteriskSettingsUtilities
         builder.Path = path;
 
         return builder.Uri.ToString();
+    }
+
+    public static Uri CreateEventsUri(AsteriskResolvedSettings settings)
+    {
+        if (settings is null || string.IsNullOrWhiteSpace(settings.BaseUrl))
+        {
+            return null;
+        }
+
+        var baseUri = new Uri(NormalizeBaseUrl(settings.BaseUrl), UriKind.Absolute);
+        var builder = new UriBuilder(baseUri)
+        {
+            Scheme = string.Equals(baseUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                ? "wss"
+                : "ws",
+            Path = $"{baseUri.AbsolutePath.TrimEnd('/')}/events",
+        };
+
+        builder.Query = QueryHelpers.AddQueryString(
+            string.Empty,
+            new Dictionary<string, string>
+            {
+                ["app"] = settings.ApplicationName,
+                ["api_key"] = $"{settings.UserName}:{settings.Password}",
+            }).TrimStart('?');
+
+        return builder.Uri;
     }
 
     public static string ToInvariantString(int value)

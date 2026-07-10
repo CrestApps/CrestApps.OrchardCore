@@ -337,20 +337,25 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
+            .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
+            .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
-            .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>();
+            .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
+            .AddScoped<IModularTenantEvents, ContactCenterVoiceTenantEvents>();
 
         services
             .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
@@ -360,6 +365,7 @@ public sealed class VoiceStartup : StartupBase
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
 
         services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+        services.AddSingleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -22,6 +22,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IInboundVoiceService _inboundVoiceService;
+    private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -34,8 +35,10 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="interactionManager">The interaction manager used to advance the interaction.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to connect media.</param>
+    /// <param name="telephonyProviderResolver">The telephony provider resolver used for server-side answer operations.</param>
     /// <param name="callSessionManager">The call session manager used to project the voice session.</param>
     /// <param name="inboundVoiceService">The inbound voice service used to re-offer a declined call.</param>
+    /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
@@ -48,6 +51,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         ITelephonyProviderResolver telephonyProviderResolver,
         ICallSessionManager callSessionManager,
         IInboundVoiceService inboundVoiceService,
+        IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
         IContactCenterEventPublisher publisher,
         IClock clock,
         ILogger<ContactCenterCallCommandService> logger)
@@ -60,6 +64,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _telephonyProviderResolver = telephonyProviderResolver;
         _callSessionManager = callSessionManager;
         _inboundVoiceService = inboundVoiceService;
+        _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
         _publisher = publisher;
         _clock = clock;
         _logger = logger;
@@ -85,13 +90,22 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("No interaction is linked to the offered activity.");
         }
 
+        interaction = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
+
+        if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+        {
+            return CallCommandResult.Failure("The offer is no longer available.");
+        }
+
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
         var hasProvider = provider is not null;
         var deliveryModel = hasProvider
             ? provider.DeliveryModel
             : VoiceProviderDeliveryModel.ServerSideAcd;
-        var requiresDeviceAnswer = hasProvider && deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative;
+        var requiresDeviceAnswer = hasProvider &&
+            deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative &&
+            interaction.Status != InteractionStatus.Connected;
 
         reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
 
@@ -168,17 +182,40 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         var now = _clock.UtcNow;
 
-        interaction.Status = InteractionStatus.Connected;
-        interaction.StartedUtc ??= now;
-        interaction.AnsweredUtc = now;
         interaction.AgentId = reservation.AgentId;
         interaction.QueueId ??= reservation.QueueId;
+
+        if (deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative && interaction.Status != InteractionStatus.Connected)
+        {
+            interaction.Status = InteractionStatus.Ringing;
+            interaction.StartedUtc ??= now;
+        }
+        else
+        {
+            interaction.Status = InteractionStatus.Connected;
+            interaction.StartedUtc ??= now;
+            interaction.AnsweredUtc ??= now;
+        }
+
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        var session = await EnsureConnectedSessionAsync(interaction, reservation, deliveryModel, now, cancellationToken);
+        var session = await EnsureSessionAsync(
+            interaction,
+            reservation,
+            deliveryModel,
+            interaction.Status == InteractionStatus.Connected
+                ? ContactCenterCallState.Connected
+                : ContactCenterCallState.Ringing,
+            interaction.Status == InteractionStatus.Connected,
+            now,
+            cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.OfferAccepted, interaction.ItemId, reservation.AgentId, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, reservation.AgentId, cancellationToken);
+
+        if (deliveryModel != VoiceProviderDeliveryModel.AgentDeviceNative)
+        {
+            await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, reservation.AgentId, cancellationToken);
+        }
 
         return new CallCommandResult
         {
@@ -244,10 +281,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         return reservation;
     }
 
-    private async Task<CallSession> EnsureConnectedSessionAsync(
+    private async Task<CallSession> EnsureSessionAsync(
         Interaction interaction,
         ActivityReservation reservation,
         VoiceProviderDeliveryModel deliveryModel,
+        ContactCenterCallState state,
+        bool answered,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -265,10 +304,15 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             session.FromAddress = interaction.CustomerAddress;
             session.QueueId = reservation.QueueId;
             session.AgentId = reservation.AgentId;
-            session.State = ContactCenterCallState.Connected;
+            session.State = state;
             session.CreatedUtc = now;
             session.StartedUtc = now;
-            session.AnsweredUtc = now;
+
+            if (answered)
+            {
+                session.AnsweredUtc = now;
+            }
+
             await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
             await PublishAsync(ContactCenterConstants.Events.CallSessionCreated, interaction.ItemId, reservation.AgentId, cancellationToken);
@@ -276,10 +320,15 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return session;
         }
 
-        session.State = ContactCenterCallState.Connected;
+        session.State = state;
         session.AgentId = reservation.AgentId;
         session.StartedUtc ??= now;
-        session.AnsweredUtc ??= now;
+
+        if (answered)
+        {
+            session.AnsweredUtc ??= now;
+        }
+
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
         return session;

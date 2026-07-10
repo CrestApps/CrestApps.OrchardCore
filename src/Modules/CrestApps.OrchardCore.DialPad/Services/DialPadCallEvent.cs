@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace CrestApps.OrchardCore.DialPad.Services;
 
 /// <summary>
@@ -10,48 +8,66 @@ public sealed class DialPadCallEvent
     /// <summary>
     /// Gets or sets the DialPad call identifier.
     /// </summary>
-    [JsonPropertyName("call_id")]
     public string CallId { get; set; }
 
     /// <summary>
     /// Gets or sets the DialPad call state (for example ringing, connected, hangup).
     /// </summary>
-    [JsonPropertyName("state")]
     public string State { get; set; }
 
     /// <summary>
     /// Gets or sets the call direction (inbound or outbound).
     /// </summary>
-    [JsonPropertyName("direction")]
     public string Direction { get; set; }
 
     /// <summary>
     /// Gets or sets the external party number (the customer number).
     /// </summary>
-    [JsonPropertyName("external_number")]
     public string ExternalNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the internal number the call was placed to (the dialed DID for inbound calls).
     /// </summary>
-    [JsonPropertyName("internal_number")]
     public string InternalNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the target number, used as a fallback for the dialed DID.
     /// </summary>
-    [JsonPropertyName("target")]
     public string Target { get; set; }
 
     /// <summary>
     /// Gets or sets the contact display name supplied by DialPad, when available.
     /// </summary>
-    [JsonPropertyName("contact_name")]
     public string ContactName { get; set; }
 
     /// <summary>
     /// Gets or sets the epoch milliseconds the event occurred.
     /// </summary>
-    [JsonPropertyName("event_timestamp")]
     public long? EventTimestamp { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether DialPad reports the call as muted.
+    /// </summary>
+    public bool? IsMuted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-reported recording state, when present.
+    /// </summary>
+    public string RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recording identifier, when the provider includes one.
+    /// </summary>
+    public string RecordingId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider reports the call as a conference or
+    /// multi-party session.
+    /// </summary>
+    public bool? IsConference { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of active participants reported by the provider.
+    /// </summary>
+    public int? ParticipantCount { get; set; }
 }

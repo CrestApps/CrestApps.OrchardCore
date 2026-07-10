@@ -33,6 +33,16 @@ public interface ITelephonyInteractionStore
     Task<TelephonyInteraction> FindByCallIdAsync(string userId, string callId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the interaction for the given provider and provider call identifier, regardless of the
+    /// current user's connection state.
+    /// </summary>
+    /// <param name="providerName">The technical provider name.</param>
+    /// <param name="callId">The provider-specific call identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The interaction, or <see langword="null"/> when none matches.</returns>
+    Task<TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the most recent interactions for the given user, newest first.
     /// </summary>
     /// <param name="userId">The user identifier.</param>

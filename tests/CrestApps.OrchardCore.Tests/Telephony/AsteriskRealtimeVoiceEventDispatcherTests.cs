@@ -1,0 +1,129 @@
+using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Hubs;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Tests.Telephony;
+
+public sealed class AsteriskRealtimeVoiceEventDispatcherTests
+{
+    [Fact]
+    public async Task HandleAsync_WhenPlainTelephonyInteractionMatches_EndsInteraction_AndPushesDisconnectedState()
+    {
+        // Arrange
+        var store = new Mock<ITelephonyInteractionStore>();
+        var providerVoiceEventService = new Mock<IProviderVoiceEventService>();
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
+        var clients = new Mock<IHubClients<ITelephonyClient>>();
+        var client = new Mock<ITelephonyClient>();
+        var clock = new Mock<IClock>();
+        var startedUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var endedUtc = new DateTime(2026, 7, 10, 15, 3, 0, DateTimeKind.Utc);
+        var interaction = new TelephonyInteraction
+        {
+            InteractionId = "interaction-1",
+            CallId = "call-1",
+            ProviderName = "Asterisk",
+            UserId = "user-1",
+            UserName = "mike",
+            From = "+15550001000",
+            To = "+15550002000",
+            Direction = CallDirection.Outbound,
+            Outcome = CallOutcome.InProgress,
+            StartedUtc = startedUtc,
+        };
+
+        providerVoiceEventService
+            .Setup(service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        store
+            .Setup(value => value.FindByProviderCallIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
+        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clock.SetupGet(value => value.UtcNow).Returns(endedUtc);
+
+        var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
+            [providerVoiceEventService.Object],
+            store.Object,
+            hubContext.Object,
+            clock.Object,
+            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance);
+        var voiceEvent = new AsteriskRealtimeVoiceEvent
+        {
+            ProviderName = "Asterisk",
+            CallId = "call-1",
+            EventType = "ChannelDestroyed",
+            State = CallState.Disconnected,
+            FromAddress = "+15550001000",
+            ToAddress = "+15550002000",
+            OccurredUtc = endedUtc,
+        };
+
+        // Act
+        await dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(CallOutcome.Completed, interaction.Outcome);
+        Assert.Equal(endedUtc, interaction.EndedUtc);
+        Assert.Equal(180, interaction.DurationSeconds);
+
+        store.Verify(value => value.UpdateAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(
+            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
+                call.CallId == "call-1" &&
+                call.State == CallState.Disconnected &&
+                call.Direction == CallDirection.Outbound)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenContactCenterOwnsCall_SkipsDirectSoftPhoneProjection()
+    {
+        // Arrange
+        var store = new Mock<ITelephonyInteractionStore>();
+        var providerVoiceEventService = new Mock<IProviderVoiceEventService>();
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
+        var clock = new Mock<IClock>();
+        providerVoiceEventService
+            .Setup(service => service.IngestAsync(It.Is<ProviderVoiceEvent>(value =>
+                    value.ProviderCallId == "call-1" &&
+                    value.State == ContactCenterCallState.Ended),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession
+            {
+                ItemId = "session-1",
+                ProviderCallId = "call-1",
+                ProviderName = "Asterisk",
+            });
+
+        var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
+            [providerVoiceEventService.Object],
+            store.Object,
+            hubContext.Object,
+            clock.Object,
+            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance);
+        var voiceEvent = new AsteriskRealtimeVoiceEvent
+        {
+            ProviderName = "Asterisk",
+            CallId = "call-1",
+            EventType = "ChannelDestroyed",
+            State = CallState.Disconnected,
+        };
+
+        // Act
+        await dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        store.Verify(value => value.FindByProviderCallIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        hubContext.VerifyGet(value => value.Clients, Times.Never);
+    }
+}

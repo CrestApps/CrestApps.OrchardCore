@@ -56,6 +56,17 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             ToAddress = toAddress,
             OccurredUtc = occurredUtc,
             IdempotencyKey = $"{callEvent.CallId}:{callEvent.State}:{callEvent.EventTimestamp}",
+            IsMuted = callEvent.IsMuted,
+            RecordingState = TryMapRecordingState(callEvent.RecordingState, out var recordingState)
+                ? recordingState
+                : null,
+            RecordingReference = callEvent.RecordingId,
+            IsConference = callEvent.IsConference,
+            ParticipantCount = callEvent.ParticipantCount,
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["dialPadState"] = callEvent.State ?? string.Empty,
+            },
         };
 
         var session = await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
@@ -107,6 +118,20 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             "canceled" or "cancelled" or "abandoned" => ContactCenterCallState.Canceled,
             "transferred" => ContactCenterCallState.Transferred,
             _ => (ContactCenterCallState)(-1),
+        };
+
+        return Enum.IsDefined(mapped);
+    }
+
+    private static bool TryMapRecordingState(string state, out RecordingState mapped)
+    {
+        mapped = state?.Trim().ToLowerInvariant() switch
+        {
+            "recording" or "started" or "active" => RecordingState.Recording,
+            "paused" => RecordingState.Paused,
+            "stopped" or "completed" => RecordingState.Stopped,
+            "none" or "not_recording" => RecordingState.None,
+            _ => (RecordingState)(-1),
         };
 
         return Enum.IsDefined(mapped);

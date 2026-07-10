@@ -112,6 +112,8 @@ A small client helper (`contact-center-realtime` script resource, depending on t
 
 The [agent desktop and supervisor dashboard](agent-desktop.md) build directly on this layer.
 
+For a technical deep dive into the live voice paths, see [Inbound and Outbound Voice Routing Architecture](voice-routing.md).
+
 ## Domain events and reliable dispatch
 
 Everything the Contact Center does is recorded as an immutable `InteractionEvent` in a durable, ordered event log, and published through `IContactCenterEventPublisher`. Handlers (`IContactCenterEventHandler`) react to those events — for example the real-time projection that broadcasts presence, offers, and queue depth — without being coupled to the component that raised the event.

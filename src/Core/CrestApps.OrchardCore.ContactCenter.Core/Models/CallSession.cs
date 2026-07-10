@@ -72,6 +72,32 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public bool IsOnHold { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the provider reports the call as muted.
+    /// </summary>
+    public bool IsMuted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-reported recording state for the call.
+    /// </summary>
+    public RecordingState RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider recording reference for the call, when one exists.
+    /// </summary>
+    public string RecordingReference { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider reports the call as a conference or
+    /// multi-party session.
+    /// </summary>
+    public bool IsConference { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of active participants the provider reports for the call.
+    /// </summary>
+    public int ParticipantCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the call session was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

@@ -116,4 +116,16 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<Interaction, InteractionIndex>(
+            index => index.Status != InteractionStatus.Ended &&
+                index.Status != InteractionStatus.Failed,
+            collection: ContactCenterConstants.CollectionName)
+            .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
+            .OrderByDescending(index => index.CreatedUtc)
+            .ListAsync(cancellationToken)).ToArray();
+    }
 }

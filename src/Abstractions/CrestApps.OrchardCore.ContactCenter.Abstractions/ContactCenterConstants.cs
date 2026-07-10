@@ -274,6 +274,31 @@ public static class ContactCenterConstants
         public const string CallConnected = "CallConnected";
 
         /// <summary>
+        /// Raised when a live call is placed on hold.
+        /// </summary>
+        public const string CallHeld = "CallHeld";
+
+        /// <summary>
+        /// Raised when a live call resumes from hold.
+        /// </summary>
+        public const string CallResumed = "CallResumed";
+
+        /// <summary>
+        /// Raised when a live call is muted.
+        /// </summary>
+        public const string CallMuted = "CallMuted";
+
+        /// <summary>
+        /// Raised when a live call is unmuted.
+        /// </summary>
+        public const string CallUnmuted = "CallUnmuted";
+
+        /// <summary>
+        /// Raised when a provider reports a conference or participant topology change for a call.
+        /// </summary>
+        public const string CallConferenceChanged = "CallConferenceChanged";
+
+        /// <summary>
         /// Raised when a call session ends.
         /// </summary>
         public const string CallEnded = "CallEnded";

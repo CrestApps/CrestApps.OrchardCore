@@ -33,15 +33,15 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.True(result.Succeeded);
         Assert.True(result.RequiresDeviceAnswer);
         Assert.Equal("int1", result.InteractionId);
-        Assert.Equal(InteractionStatus.Connected, harness.Interaction.Status);
-        Assert.Equal(_now, harness.Interaction.AnsweredUtc);
+        Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
+        Assert.Null(harness.Interaction.AnsweredUtc);
 
         harness.Provider.Verify(
             p => p.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         harness.CallSessionManager.Verify(
-            m => m.CreateAsync(It.Is<CallSession>(s => s.State == ContactCenterCallState.Connected), It.IsAny<CancellationToken>()),
+            m => m.CreateAsync(It.Is<CallSession>(s => s.State == ContactCenterCallState.Ringing && !s.AnsweredUtc.HasValue), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -206,6 +206,35 @@ public sealed class ContactCenterCallCommandServiceTests
     }
 
     [Fact]
+    public async Task AcceptInboundOfferAsync_WhenProviderTruthAlreadyEnded_ReturnsFailureWithoutAcceptingReservation()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.ProviderCallStateSynchronizationService
+            .Setup(s => s.RefreshInteractionAsync(It.IsAny<Interaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                harness.Interaction.Status = InteractionStatus.Ended;
+
+                return harness.Interaction;
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("The offer is no longer available.", result.Reason);
+        harness.ReservationService.Verify(
+            s => s.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DeclineInboundOfferAsync_RejectsAndReoffersQueue()
     {
         // Arrange
@@ -242,6 +271,8 @@ public sealed class ContactCenterCallCommandServiceTests
         public Mock<ICallSessionManager> CallSessionManager { get; } = new();
 
         public Mock<IInboundVoiceService> InboundVoiceService { get; } = new();
+
+        public Mock<IProviderCallStateSynchronizationService> ProviderCallStateSynchronizationService { get; } = new();
 
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new();
 
@@ -282,6 +313,10 @@ public sealed class ContactCenterCallCommandServiceTests
             AgentManager
                 .Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent" });
+
+            ProviderCallStateSynchronizationService
+                .Setup(s => s.RefreshInteractionAsync(Interaction, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Interaction);
         }
 
         public void SetupProvider(VoiceProviderDeliveryModel deliveryModel, ContactCenterVoiceProviderCapabilities capabilities)
@@ -346,6 +381,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 TelephonyProviderResolver.Object,
                 CallSessionManager.Object,
                 InboundVoiceService.Object,
+                ProviderCallStateSynchronizationService.Object,
                 Publisher.Object,
                 clock.Object,
                 logger.Object);

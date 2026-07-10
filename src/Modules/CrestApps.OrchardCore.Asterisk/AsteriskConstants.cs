@@ -36,6 +36,16 @@ public static class AsteriskConstants
     public const int DefaultTimeoutSeconds = 30;
 
     /// <summary>
+    /// The channel variable used to mirror the hold state back through ARI events.
+    /// </summary>
+    public const string HoldStateVariableName = "CRESTAPPS_STATE_ONHOLD";
+
+    /// <summary>
+    /// The channel variable used to mirror the mute state back through ARI events.
+    /// </summary>
+    public const string MuteStateVariableName = "CRESTAPPS_STATE_MUTED";
+
+    /// <summary>
     /// The shell configuration section used for the configuration-backed default provider.
     /// </summary>
     public const string DefaultConfigurationSectionPath = "CrestApps:Asterisk:Default";

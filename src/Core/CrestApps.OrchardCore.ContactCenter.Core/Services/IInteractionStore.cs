@@ -68,4 +68,12 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent's most recent interactions.</returns>
     Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists active interactions that still carry a provider call identifier and therefore can be
+    /// revalidated against the telephony server.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The active provider-backed interactions.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default);
 }

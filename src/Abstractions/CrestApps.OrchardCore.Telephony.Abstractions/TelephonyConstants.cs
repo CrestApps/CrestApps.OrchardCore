@@ -64,10 +64,5 @@ public static class TelephonyConstants
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
 
-        /// <summary>
-        /// The legacy identifier of the soft phone feature.
-        /// </summary>
-        [Obsolete("Use SoftPhone instead.")]
-        public const string SoftPhoneWidget = SoftPhone;
     }
 }
