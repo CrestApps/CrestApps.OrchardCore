@@ -155,6 +155,21 @@ public sealed class OmnichannelActivity : CatalogItem
     public string CompletedByUsername { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the activity was purged.
+    /// </summary>
+    public DateTime? PurgedAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user who purged the activity.
+    /// </summary>
+    public string PurgedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the user who purged the activity.
+    /// </summary>
+    public string PurgedByUsername { get; set; }
+
+    /// <summary>
     /// Gets or sets the disposition id.
     /// </summary>
     public string DispositionId { get; set; }

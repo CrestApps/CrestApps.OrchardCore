@@ -53,6 +53,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
+
         services.AddCatalogs()
             .AddCatalogManagers();
 
@@ -171,7 +173,6 @@ public sealed class Startup : StartupBase
 
         services
             .AddIndexProvider<OmnichannelContactIndexProvider>()
-            .AddIndexProvider<OmnichannelContactPhoneIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();

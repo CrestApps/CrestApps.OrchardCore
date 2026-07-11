@@ -591,7 +591,15 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        ActivityPurgeHelper.Purge(activity);
+        var purgedAtUtc = _clock.UtcNow;
+        var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var purgedByUsername = User.Identity?.Name;
+
+        ActivityPurgeHelper.Purge(
+            activity,
+            purgedAtUtc,
+            purgedById,
+            purgedByUsername);
         await _omnichannelActivityManager.UpdateAsync(activity);
         await _notifier.SuccessAsync(H["The activity has been purged successfully."]);
 
@@ -803,7 +811,15 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.Purge:
-                processedCount = await BulkPurgeAsync(activities);
+                var purgedAtUtc = _clock.UtcNow;
+                var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var purgedByUsername = User.Identity?.Name;
+
+                processedCount = await BulkPurgeAsync(
+                    activities,
+                    purgedAtUtc,
+                    purgedById,
+                    purgedByUsername);
                 break;
 
             case BulkActivityAction.SetInstructions:
@@ -917,13 +933,17 @@ public sealed class ActivitiesController : Controller
         return processedCount;
     }
 
-    private async Task<int> BulkPurgeAsync(List<OmnichannelActivity> activities)
+    private async Task<int> BulkPurgeAsync(
+        List<OmnichannelActivity> activities,
+        DateTime purgedAtUtc,
+        string purgedById,
+        string purgedByUsername)
     {
         var processedCount = 0;
 
         foreach (var activity in activities)
         {
-            ActivityPurgeHelper.Purge(activity);
+            ActivityPurgeHelper.Purge(activity, purgedAtUtc, purgedById, purgedByUsername);
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }

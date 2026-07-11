@@ -154,8 +154,8 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
         if (hasPhoneFilter)
         {
             var actContactCol = nameof(OmnichannelActivityIndex.ContactContentItemId);
-            var phoneTable = context.TableNameConvention.GetIndexTable(typeof(OmnichannelContactPhoneIndex));
-            var contactItemIdCol = nameof(OmnichannelContactPhoneIndex.ContentItemId);
+            var phoneTable = context.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex));
+            var contactItemIdCol = nameof(OmnichannelContactIndex.ContentItemId);
 
             builder.Join(
                 JoinType.Inner,
@@ -168,7 +168,7 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
                 ContactPhoneAlias,
                 actAlias);
 
-            var latestCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactPhoneIndex.Latest))}";
+            var latestCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.Latest))}";
             builder.Parameters["@PhoneLatest"] = true;
             builder.WhereAnd($"{latestCol} = @PhoneLatest");
 
@@ -179,11 +179,11 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             else
             {
                 var cellColumnName = searchTerm.IsE164
-                    ? nameof(OmnichannelContactPhoneIndex.E164PrimaryCellPhoneNumber)
-                    : nameof(OmnichannelContactPhoneIndex.NationalPrimaryCellPhoneNumber);
+                    ? nameof(OmnichannelContactIndex.NormalizedPrimaryCellPhoneNumber)
+                    : nameof(OmnichannelContactIndex.NationalPrimaryCellPhoneNumber);
                 var homeColumnName = searchTerm.IsE164
-                    ? nameof(OmnichannelContactPhoneIndex.E164PrimaryHomePhoneNumber)
-                    : nameof(OmnichannelContactPhoneIndex.NationalPrimaryHomePhoneNumber);
+                    ? nameof(OmnichannelContactIndex.NormalizedPrimaryHomePhoneNumber)
+                    : nameof(OmnichannelContactIndex.NationalPrimaryHomePhoneNumber);
                 var cellCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(cellColumnName)}";
                 var homeCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(homeColumnName)}";
                 var comparison = filter.PhoneNumberMatchType == PhoneNumberMatchType.Exact ? "=" : "LIKE";
@@ -210,8 +210,12 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
                 ContactAlias,
                 actAlias);
 
+            var latestCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.Latest))}";
             var tzCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.TimeZoneId))}";
             var placeholders = new string[filter.TimeZoneIds.Length];
+
+            builder.Parameters["@TimeZoneLatest"] = true;
+            builder.WhereAnd($"{latestCol} = @TimeZoneLatest");
 
             for (var i = 0; i < filter.TimeZoneIds.Length; i++)
             {

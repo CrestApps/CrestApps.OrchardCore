@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 /// </summary>
 public sealed class OmnichannelContactsMigrations : DataMigration
 {
+    private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
     private const int ReindexBatchSize = 100;
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -48,7 +49,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     }
 
     /// <summary>
-    /// Creates a new async.
+    /// Creates the omnichannel contact definition and final version-aware contact index.
     /// </summary>
     public async Task<int> CreateAsync()
     {
@@ -58,19 +59,10 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .WithDescription("Provides a way to configure a content type to act as an omnichannel contact record.")
         );
 
-        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
-            .Column<string>("ContentItemId", column => column.WithLength(26))
-            .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
-            .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
-            .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
-            .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
-            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
-            .Column<string>("TimeZoneId", column => column.WithLength(64))
-        );
+        await CreateContactIndexTableAsync();
+        await CreateContactIndexIndexesAsync();
 
-        await CreatePhoneIndexTableAsync();
-
-        return 7;
+        return 8;
     }
 
     /// <summary>
@@ -167,70 +159,125 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     }
 
     /// <summary>
-    /// Adds the version-aware contact phone search index.
+    /// Upgrades tenants at version 6 directly to the final version-aware contact index.
     /// </summary>
     public async Task<int> UpdateFrom6Async()
     {
-        await CreatePhoneIndexTableAsync();
-        ShellScope.AddDeferredTask(ReindexContactSearchVersionsAsync);
+        await EnsureDefaultContactIndexTableAsync();
+        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
-        return 7;
+        return 8;
     }
 
-    private async Task CreatePhoneIndexTableAsync()
+    /// <summary>
+    /// Merges the version-aware phone search fields into the shared contact index for tenants already at version 7.
+    /// </summary>
+    public async Task<int> UpdateFrom7Async()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
-            .Column<string>("ContentItemId", column => column.WithLength(26))
-            .Column<bool>("Published")
-            .Column<bool>("Latest")
-            .Column<string>("E164PrimaryCellPhoneNumber", column => column.WithLength(50))
-            .Column<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
-            .Column<string>("E164PrimaryHomePhoneNumber", column => column.WithLength(50))
-            .Column<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
-        );
+        await EnsureDefaultContactIndexTableAsync();
+        await DropLegacyPhoneIndexTableAsync();
+        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        return 8;
+    }
+
+    private async Task CreateContactIndexTableAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("TimeZoneId", column => column.WithLength(64))
+        );
+    }
+
+    private async Task CreateContactIndexIndexesAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_DocumentId",
+                "IDX_OmnichannelContactIndex_DocumentId",
                 "DocumentId",
                 "ContentItemId")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_ContentItemLatest",
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryCellPhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryCellPhoneNumber")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_NormalizedPrimaryHomePhoneNumber",
+                "DocumentId",
+                "NormalizedPrimaryHomePhoneNumber")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelContactIndex_TimeZoneId",
+                "DocumentId",
+                "TimeZoneId")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OCIndex_ContentItemLatest",
                 "ContentItemId",
                 "Latest")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_E164Cell",
-                "E164PrimaryCellPhoneNumber",
+                "IDX_OCIndex_ContentItemPublished",
+                "ContentItemId",
+                "Published")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OCIndex_E164Cell",
+                "NormalizedPrimaryCellPhoneNumber",
                 "Published",
                 "Latest")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_NationalCell",
+                "IDX_OCIndex_NationalCell",
                 "NationalPrimaryCellPhoneNumber",
                 "Published",
                 "Latest")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_E164Home",
-                "E164PrimaryHomePhoneNumber",
+                "IDX_OCIndex_E164Home",
+                "NormalizedPrimaryHomePhoneNumber",
                 "Published",
                 "Latest")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCPhone_NationalHome",
+                "IDX_OCIndex_NationalHome",
                 "NationalPrimaryHomePhoneNumber",
+                "Published",
+                "Latest")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+            .CreateIndex(
+                "IDX_OCIndex_TimeZoneVersion",
+                "TimeZoneId",
                 "Published",
                 "Latest")
         );
@@ -242,19 +289,33 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
         try
         {
-            await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
-                .Column<string>("ContentItemId", column => column.WithLength(26))
-                .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
-                .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
-                .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
-                .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
-                .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
-                .Column<string>("TimeZoneId", column => column.WithLength(64))
-            );
+            await CreateContactIndexTableAsync();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The default-collection OmnichannelContactIndex table may already exist.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'Published' column may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'Latest' column may already exist on the default-collection OmnichannelContactIndex table.");
         }
 
         try
@@ -271,12 +332,34 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         try
         {
             await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.AddColumn<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'NationalPrimaryCellPhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
             );
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The 'NormalizedPrimaryHomePhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.AddColumn<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'NationalPrimaryHomePhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
         }
 
         try
@@ -344,6 +427,140 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The 'IDX_OmnichannelContactIndex_TimeZoneId' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_ContentItemLatest",
+                    "ContentItemId",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_ContentItemLatest' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_ContentItemPublished",
+                    "ContentItemId",
+                    "Published")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_ContentItemPublished' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_E164Cell",
+                    "NormalizedPrimaryCellPhoneNumber",
+                    "Published",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_E164Cell' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_NationalCell",
+                    "NationalPrimaryCellPhoneNumber",
+                    "Published",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_NationalCell' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_E164Home",
+                    "NormalizedPrimaryHomePhoneNumber",
+                    "Published",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_E164Home' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_NationalHome",
+                    "NationalPrimaryHomePhoneNumber",
+                    "Published",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_NationalHome' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
+                .CreateIndex(
+                    "IDX_OCIndex_TimeZoneVersion",
+                    "TimeZoneId",
+                    "Published",
+                    "Latest")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_TimeZoneVersion' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+    }
+
+    private async Task DropLegacyPhoneIndexTableAsync()
+    {
+        var dialect = _store.Configuration.SqlDialect;
+        var table = $"{_store.Configuration.TablePrefix}{LegacyPhoneIndexTableName}";
+        var quotedTable = dialect.QuoteForTableName(table, _store.Configuration.Schema);
+
+        try
+        {
+            await using var connection = _dbConnectionAccessor.CreateConnection();
+            await connection.OpenAsync();
+            await connection.ExecuteAsync($"drop table {quotedTable}");
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Dropped the obsolete default-collection contact phone index table '{TableName}'.",
+                    table);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    ex,
+                    "The obsolete default-collection contact phone index table '{TableName}' was not dropped because it was unavailable or already removed.",
+                    table);
+            }
         }
     }
 
@@ -436,7 +653,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         }
     }
 
-    private static async Task ReindexContactSearchVersionsAsync(ShellScope scope)
+    private static async Task ReindexContactVersionsAsync(ShellScope scope)
     {
         var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<OmnichannelContactsMigrations>>();
@@ -481,7 +698,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
-                "Reindexed {ReindexedCount} published or latest omnichannel contact content item version(s) for phone search.",
+                "Reindexed {ReindexedCount} published or latest omnichannel contact content item version(s) after upgrading the shared contact index.",
                 reindexedCount);
         }
     }

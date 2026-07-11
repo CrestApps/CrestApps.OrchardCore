@@ -216,8 +216,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 else
                 {
                     var phoneQuery = batch.OnlyPublishedLeads
-                        ? readonlySession.QueryIndex<OmnichannelContactPhoneIndex>(index => index.Published)
-                        : readonlySession.QueryIndex<OmnichannelContactPhoneIndex>(index => index.Latest);
+                        ? readonlySession.QueryIndex<OmnichannelContactIndex>(index => index.Published)
+                        : readonlySession.QueryIndex<OmnichannelContactIndex>(index => index.Latest);
 
                     phoneQuery = ApplyPhoneFilter(phoneQuery, searchTerm, batch.PhoneNumberMatchType);
 
@@ -228,8 +228,12 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (hasTimeZoneFilter)
             {
-                var tzContacts = await readonlySession.QueryIndex<OmnichannelContactIndex>(
-                    index => index.TimeZoneId.IsIn(batch.TimeZoneIds))
+                var timeZoneQuery = batch.OnlyPublishedLeads
+                    ? readonlySession.QueryIndex<OmnichannelContactIndex>(index => index.Published)
+                    : readonlySession.QueryIndex<OmnichannelContactIndex>(index => index.Latest);
+
+                var tzContacts = await timeZoneQuery
+                    .Where(index => index.TimeZoneId.IsIn(batch.TimeZoneIds))
                     .ListAsync(cancellationToken);
 
                 timeZoneIds = tzContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -487,8 +491,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         await _session.SaveChangesAsync(cancellationToken);
     }
 
-    private static IQueryIndex<OmnichannelContactPhoneIndex> ApplyPhoneFilter(
-        IQueryIndex<OmnichannelContactPhoneIndex> query,
+    private static IQueryIndex<OmnichannelContactIndex> ApplyPhoneFilter(
+        IQueryIndex<OmnichannelContactIndex> query,
         PhoneNumberSearchTerm searchTerm,
         PhoneNumberMatchType matchType)
     {
@@ -497,17 +501,17 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             return matchType switch
             {
                 PhoneNumberMatchType.Exact => query.Where(index =>
-                    index.E164PrimaryCellPhoneNumber == searchTerm.Value ||
-                    index.E164PrimaryHomePhoneNumber == searchTerm.Value),
+                    index.NormalizedPrimaryCellPhoneNumber == searchTerm.Value ||
+                    index.NormalizedPrimaryHomePhoneNumber == searchTerm.Value),
                 PhoneNumberMatchType.BeginsWith => query.Where(index =>
-                    index.E164PrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
+                    index.NormalizedPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
                 PhoneNumberMatchType.EndsWith => query.Where(index =>
-                    index.E164PrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
+                    index.NormalizedPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
                 PhoneNumberMatchType.Contains => query.Where(index =>
-                    index.E164PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.Contains(searchTerm.Value)),
+                    index.NormalizedPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
                 _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
             };
         }

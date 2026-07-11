@@ -247,7 +247,7 @@ Navigate to **Interaction Center** -> **Activities** to review scheduled omnicha
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
-Users with the **Purge activity** permission see a **Purge** button on each scheduled activity in a contact profile. Purging is irreversible, changes the activity status to `Purged`, and clears any reservation state. The same permission is required for the bulk **Purge** action on the Manage Activities page; **Manage activities** implies **Purge activity**.
+Users with the **Purge activity** permission see a **Purge** button on each scheduled activity in a contact profile. Purging is irreversible, changes the activity status to `Purged`, records the UTC purge time and current user's identifier and username for auditing, and clears any reservation state while preserving assignment. The same permission is required for the bulk **Purge** action on the Manage Activities page; every activity in one bulk operation records the same purge time and actor, and **Manage activities** implies **Purge activity**.
 
 ### Phone number search
 
@@ -256,6 +256,8 @@ Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin se
 - Input that does not begin with `+` is reduced to digits and matched against the national number, so values such as `702499`, `(702) 499`, or `702-499` are accepted.
 - Input whose trimmed value begins with `+` is matched against the E.164 value. The plus sign is a literal format indicator, not a wildcard.
 - **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Inventory and Manage Activities.
+
+Content Admin evaluates the displayed content version. Load Inventory uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
 
 Content Admin supports these named search terms:
 

@@ -25,12 +25,12 @@ public sealed class OmnichannelContactPhoneContentsAdminListFilterProviderTests
         var provider = new OmnichannelContactPhoneContentsAdminListFilterProvider();
         provider.Build(builder);
 
-        Expression<Func<OmnichannelContactPhoneIndex, bool>> predicate = null;
-        var indexedQuery = new Mock<IQuery<ContentItem, OmnichannelContactPhoneIndex>>();
+        Expression<Func<OmnichannelContactIndex, bool>> predicate = null;
+        var indexedQuery = new Mock<IQuery<ContentItem, OmnichannelContactIndex>>();
         var query = new Mock<IQuery<ContentItem>>();
         query
-            .Setup(x => x.With<OmnichannelContactPhoneIndex>(It.IsAny<Expression<Func<OmnichannelContactPhoneIndex, bool>>>()))
-            .Callback<Expression<Func<OmnichannelContactPhoneIndex, bool>>>(value => predicate = value)
+            .Setup(x => x.With<OmnichannelContactIndex>(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
+            .Callback<Expression<Func<OmnichannelContactIndex, bool>>>(value => predicate = value)
             .Returns(indexedQuery.Object);
 
         var matchingIndex = CreateIndex(nationalNumber, e164Number);
@@ -45,17 +45,17 @@ public sealed class OmnichannelContactPhoneContentsAdminListFilterProviderTests
         Assert.False(predicate.Compile()(nonMatchingIndex));
     }
 
-    private static OmnichannelContactPhoneIndex CreateIndex(
+    private static OmnichannelContactIndex CreateIndex(
         string nationalNumber,
         string e164Number)
     {
-        return new OmnichannelContactPhoneIndex
+        return new OmnichannelContactIndex
         {
             ContentItemId = "contact-id",
             NationalPrimaryCellPhoneNumber = nationalNumber,
             NationalPrimaryHomePhoneNumber = string.Empty,
-            E164PrimaryCellPhoneNumber = e164Number,
-            E164PrimaryHomePhoneNumber = string.Empty,
+            NormalizedPrimaryCellPhoneNumber = e164Number,
+            NormalizedPrimaryHomePhoneNumber = string.Empty,
         };
     }
 }

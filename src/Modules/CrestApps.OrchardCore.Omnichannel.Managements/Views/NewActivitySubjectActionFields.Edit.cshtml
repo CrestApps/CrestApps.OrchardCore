@@ -40,7 +40,13 @@
 <div class="ocat-wrapper">
     <label asp-for="AssignmentType" class="ocat-label">@T["Assignment type"]</label>
     <div class="ocat-end">
-        <select asp-for="AssignmentType" class="form-select">
+        <select asp-for="AssignmentType"
+                class="form-select"
+                data-subject-action-assignment-toggle
+                data-assignment-target-id="@specificOwnerContainerId"
+                data-assignment-specific-owner-value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)"
+                aria-controls="@specificOwnerContainerId"
+                aria-expanded="@(Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner ? "true" : "false")">
             <option value="@nameof(SubjectActionOwnerAssignmentType.SameOwner)">@T["Same owner"]</option>
             <option value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">@T["Specific owner"]</option>
         </select>
@@ -85,22 +91,4 @@
     </div>
 </div>
 
-<script at="Foot">
-(() => {
-    const assignmentTypeSelect = document.getElementById('@Html.IdFor(m => m.AssignmentType)');
-    const specificOwnerContainer = document.getElementById('@specificOwnerContainerId');
-
-    if (!assignmentTypeSelect || !specificOwnerContainer) {
-        return;
-    }
-
-    const toggle = () => {
-        const isSpecificOwner = assignmentTypeSelect.value === '@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)';
-
-        specificOwnerContainer.classList.toggle('d-none', !isSpecificOwner);
-    };
-
-    assignmentTypeSelect.addEventListener('change', toggle);
-    toggle();
-})();
-</script>
+<script asp-name="subject-action-assignment-toggle" at="Foot"></script>

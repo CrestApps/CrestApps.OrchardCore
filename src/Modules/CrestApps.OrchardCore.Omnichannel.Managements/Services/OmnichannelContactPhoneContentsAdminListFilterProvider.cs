@@ -29,41 +29,41 @@ internal sealed class OmnichannelContactPhoneContentsAdminListFilterProvider : I
     {
         if (!PhoneNumberSearchTerm.TryParse(value, out var searchTerm))
         {
-            return query.With<OmnichannelContactPhoneIndex>(index => index.ContentItemId == string.Empty);
+            return query.With<OmnichannelContactIndex>(index => index.ContentItemId == string.Empty);
         }
 
         if (searchTerm.IsE164)
         {
             return matchType switch
             {
-                PhoneNumberMatchType.Exact => query.With<OmnichannelContactPhoneIndex>(index =>
-                    index.E164PrimaryCellPhoneNumber == searchTerm.Value ||
-                    index.E164PrimaryHomePhoneNumber == searchTerm.Value),
-                PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactPhoneIndex>(index =>
-                    index.E164PrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
-                PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactPhoneIndex>(index =>
-                    index.E164PrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
-                PhoneNumberMatchType.Contains => query.With<OmnichannelContactPhoneIndex>(index =>
-                    index.E164PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                    index.E164PrimaryHomePhoneNumber.Contains(searchTerm.Value)),
+                PhoneNumberMatchType.Exact => query.With<OmnichannelContactIndex>(index =>
+                    index.NormalizedPrimaryCellPhoneNumber == searchTerm.Value ||
+                    index.NormalizedPrimaryHomePhoneNumber == searchTerm.Value),
+                PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactIndex>(index =>
+                    index.NormalizedPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
+                PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactIndex>(index =>
+                    index.NormalizedPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
+                PhoneNumberMatchType.Contains => query.With<OmnichannelContactIndex>(index =>
+                    index.NormalizedPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
+                    index.NormalizedPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
                 _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
             };
         }
 
         return matchType switch
         {
-            PhoneNumberMatchType.Exact => query.With<OmnichannelContactPhoneIndex>(index =>
+            PhoneNumberMatchType.Exact => query.With<OmnichannelContactIndex>(index =>
                 index.NationalPrimaryCellPhoneNumber == searchTerm.Value ||
                 index.NationalPrimaryHomePhoneNumber == searchTerm.Value),
-            PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactPhoneIndex>(index =>
+            PhoneNumberMatchType.BeginsWith => query.With<OmnichannelContactIndex>(index =>
                 index.NationalPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
                 index.NationalPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
-            PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactPhoneIndex>(index =>
+            PhoneNumberMatchType.EndsWith => query.With<OmnichannelContactIndex>(index =>
                 index.NationalPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
                 index.NationalPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
-            PhoneNumberMatchType.Contains => query.With<OmnichannelContactPhoneIndex>(index =>
+            PhoneNumberMatchType.Contains => query.With<OmnichannelContactIndex>(index =>
                 index.NationalPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
                 index.NationalPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
             _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),

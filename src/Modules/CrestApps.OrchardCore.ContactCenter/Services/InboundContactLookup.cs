@@ -45,11 +45,13 @@ public sealed class InboundContactLookup : IInboundContactLookup
         var numbers = new[] { normalized };
 
         var cellMatches = await _session
-            .QueryIndex<OmnichannelContactIndex>(index => index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers))
+            .QueryIndex<OmnichannelContactIndex>(index =>
+                index.Published && index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers))
             .ListAsync(cancellationToken);
 
         var homeMatches = await _session
-            .QueryIndex<OmnichannelContactIndex>(index => index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers))
+            .QueryIndex<OmnichannelContactIndex>(index =>
+                index.Published && index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers))
             .ListAsync(cancellationToken);
 
         var ids = new List<string>();
