@@ -84,18 +84,16 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
     private void SetPrimaryCellPhoneNumber(OmnichannelContactIndex index, PhoneField field)
     {
-        index.PrimaryCellPhoneNumber = Truncate(field.PhoneNumber, 50);
         index.NormalizedPrimaryCellPhoneNumber = NormalizeToE164(field);
-        index.NationalPrimaryCellPhoneNumber = NormalizeNationalNumber(
+        index.PrimaryCellPhoneNumber = NormalizeNationalNumber(
             field,
             index.NormalizedPrimaryCellPhoneNumber);
     }
 
     private void SetPrimaryHomePhoneNumber(OmnichannelContactIndex index, PhoneField field)
     {
-        index.PrimaryHomePhoneNumber = Truncate(field.PhoneNumber, 50);
         index.NormalizedPrimaryHomePhoneNumber = NormalizeToE164(field);
-        index.NationalPrimaryHomePhoneNumber = NormalizeNationalNumber(
+        index.PrimaryHomePhoneNumber = NormalizeNationalNumber(
             field,
             index.NormalizedPrimaryHomePhoneNumber);
     }

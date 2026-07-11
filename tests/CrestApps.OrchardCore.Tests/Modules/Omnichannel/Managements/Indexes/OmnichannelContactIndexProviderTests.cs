@@ -36,12 +36,10 @@ public sealed class OmnichannelContactIndexProviderTests
         Assert.False(index.Latest);
         Assert.Equal("America/Los_Angeles", index.TimeZoneId);
         Assert.Equal("lead@example.com", index.PrimaryEmailAddress);
-        Assert.Equal("(702) 499-3350", index.PrimaryCellPhoneNumber);
+        Assert.Equal("7024993350", index.PrimaryCellPhoneNumber);
         Assert.Equal("+17024993350", index.NormalizedPrimaryCellPhoneNumber);
-        Assert.Equal("7024993350", index.NationalPrimaryCellPhoneNumber);
-        Assert.Equal("+12125550123", index.PrimaryHomePhoneNumber);
+        Assert.Equal("2125550123", index.PrimaryHomePhoneNumber);
         Assert.Equal("+12125550123", index.NormalizedPrimaryHomePhoneNumber);
-        Assert.Equal("2125550123", index.NationalPrimaryHomePhoneNumber);
     }
 
     [Fact]
@@ -63,7 +61,7 @@ public sealed class OmnichannelContactIndexProviderTests
         Assert.False(index.Published);
         Assert.True(index.Latest);
         Assert.Equal("+17024993350", index.NormalizedPrimaryCellPhoneNumber);
-        Assert.Equal("7024993350", index.NationalPrimaryCellPhoneNumber);
+        Assert.Equal("7024993350", index.PrimaryCellPhoneNumber);
     }
 
     [Fact]
@@ -83,7 +81,7 @@ public sealed class OmnichannelContactIndexProviderTests
         // Assert
         Assert.NotNull(index);
         Assert.Null(index.NormalizedPrimaryCellPhoneNumber);
-        Assert.Equal("7024993350", index.NationalPrimaryCellPhoneNumber);
+        Assert.Equal("7024993350", index.PrimaryCellPhoneNumber);
     }
 
     [Fact]
@@ -103,7 +101,7 @@ public sealed class OmnichannelContactIndexProviderTests
         // Assert
         Assert.NotNull(index);
         Assert.Equal("+999123456", index.NormalizedPrimaryCellPhoneNumber);
-        Assert.Equal("999123456", index.NationalPrimaryCellPhoneNumber);
+        Assert.Equal("999123456", index.PrimaryCellPhoneNumber);
     }
 
     [Fact]

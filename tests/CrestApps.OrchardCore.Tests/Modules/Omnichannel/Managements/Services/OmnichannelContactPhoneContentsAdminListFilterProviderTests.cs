@@ -52,8 +52,8 @@ public sealed class OmnichannelContactPhoneContentsAdminListFilterProviderTests
         return new OmnichannelContactIndex
         {
             ContentItemId = "contact-id",
-            NationalPrimaryCellPhoneNumber = nationalNumber,
-            NationalPrimaryHomePhoneNumber = string.Empty,
+            PrimaryCellPhoneNumber = nationalNumber,
+            PrimaryHomePhoneNumber = string.Empty,
             NormalizedPrimaryCellPhoneNumber = e164Number,
             NormalizedPrimaryHomePhoneNumber = string.Empty,
         };

@@ -62,7 +62,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await CreateContactIndexTableAsync();
         await CreateContactIndexIndexesAsync();
 
-        return 8;
+        return 9;
     }
 
     /// <summary>
@@ -166,7 +166,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await EnsureDefaultContactIndexTableAsync();
         ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
-        return 8;
+        return 9;
     }
 
     /// <summary>
@@ -178,7 +178,19 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await DropLegacyPhoneIndexTableAsync();
         ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
-        return 8;
+        return 9;
+    }
+
+    /// <summary>
+    /// Reuses the primary phone columns for national digits and removes the redundant national-number columns.
+    /// </summary>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await EnsureDefaultContactIndexTableAsync();
+        await RemoveRedundantNationalPhoneColumnsAsync();
+        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
+
+        return 9;
     }
 
     private async Task CreateContactIndexTableAsync()
@@ -189,10 +201,8 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
             .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
-            .Column<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
-            .Column<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
             .Column<string>("TimeZoneId", column => column.WithLength(64))
         );
@@ -252,8 +262,8 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCIndex_NationalCell",
-                "NationalPrimaryCellPhoneNumber",
+                "IDX_OCIndex_PrimaryCell",
+                "PrimaryCellPhoneNumber",
                 "Published",
                 "Latest")
         );
@@ -268,8 +278,8 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex(
-                "IDX_OCIndex_NationalHome",
-                "NationalPrimaryHomePhoneNumber",
+                "IDX_OCIndex_PrimaryHome",
+                "PrimaryHomePhoneNumber",
                 "Published",
                 "Latest")
         );
@@ -332,34 +342,12 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         try
         {
             await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
-                table.AddColumn<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "The 'NationalPrimaryCellPhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
-        }
-
-        try
-        {
-            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
             );
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The 'NormalizedPrimaryHomePhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
-        }
-
-        try
-        {
-            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
-                table.AddColumn<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "The 'NationalPrimaryHomePhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
         }
 
         try
@@ -476,15 +464,15 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         {
             await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
                 .CreateIndex(
-                    "IDX_OCIndex_NationalCell",
-                    "NationalPrimaryCellPhoneNumber",
+                    "IDX_OCIndex_PrimaryCell",
+                    "PrimaryCellPhoneNumber",
                     "Published",
                     "Latest")
             );
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "The 'IDX_OCIndex_NationalCell' index may already exist on the default-collection OmnichannelContactIndex table.");
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_PrimaryCell' index may already exist on the default-collection OmnichannelContactIndex table.");
         }
 
         try
@@ -506,15 +494,15 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         {
             await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
                 .CreateIndex(
-                    "IDX_OCIndex_NationalHome",
-                    "NationalPrimaryHomePhoneNumber",
+                    "IDX_OCIndex_PrimaryHome",
+                    "PrimaryHomePhoneNumber",
                     "Published",
                     "Latest")
             );
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "The 'IDX_OCIndex_NationalHome' index may already exist on the default-collection OmnichannelContactIndex table.");
+            _logger.LogWarning(ex, "The 'IDX_OCIndex_PrimaryHome' index may already exist on the default-collection OmnichannelContactIndex table.");
         }
 
         try
@@ -530,6 +518,53 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "The 'IDX_OCIndex_TimeZoneVersion' index may already exist on the default-collection OmnichannelContactIndex table.");
+        }
+    }
+
+    private async Task RemoveRedundantNationalPhoneColumnsAsync()
+    {
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.DropIndex("IDX_OCIndex_NationalCell")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The obsolete 'IDX_OCIndex_NationalCell' index may already be removed.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.DropIndex("IDX_OCIndex_NationalHome")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The obsolete 'IDX_OCIndex_NationalHome' index may already be removed.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.DropColumn("NationalPrimaryCellPhoneNumber")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The obsolete 'NationalPrimaryCellPhoneNumber' column may already be removed.");
+        }
+
+        try
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.DropColumn("NationalPrimaryHomePhoneNumber")
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The obsolete 'NationalPrimaryHomePhoneNumber' column may already be removed.");
         }
     }
 

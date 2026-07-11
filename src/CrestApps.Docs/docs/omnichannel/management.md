@@ -259,6 +259,8 @@ Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin se
 
 Content Admin evaluates the displayed content version. Load Inventory uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
 
+The shared contact index stores primary Cell and Home numbers as national digits for national searches, while the corresponding normalized values remain in E.164 format.
+
 Content Admin supports these named search terms:
 
 | Term | Match behavior | Example |

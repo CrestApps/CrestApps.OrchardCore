@@ -28,7 +28,7 @@ public sealed class OmnichannelContactIndex : MapIndex
     public string TimeZoneId { get; set; }
 
     /// <summary>
-    /// Gets or sets the primary cell phone number.
+    /// Gets or sets the primary cell phone number as national digits.
     /// </summary>
     public string PrimaryCellPhoneNumber { get; set; }
 
@@ -38,12 +38,7 @@ public sealed class OmnichannelContactIndex : MapIndex
     public string NormalizedPrimaryCellPhoneNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the primary cell phone number as national digits.
-    /// </summary>
-    public string NationalPrimaryCellPhoneNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets the primary home phone number.
+    /// Gets or sets the primary home phone number as national digits.
     /// </summary>
     public string PrimaryHomePhoneNumber { get; set; }
 
@@ -51,11 +46,6 @@ public sealed class OmnichannelContactIndex : MapIndex
     /// Gets or sets the normalized primary home phone number in E.164 format.
     /// </summary>
     public string NormalizedPrimaryHomePhoneNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets the primary home phone number as national digits.
-    /// </summary>
-    public string NationalPrimaryHomePhoneNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the primary email address.

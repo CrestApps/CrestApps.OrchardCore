@@ -519,17 +519,17 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         return matchType switch
         {
             PhoneNumberMatchType.Exact => query.Where(index =>
-                index.NationalPrimaryCellPhoneNumber == searchTerm.Value ||
-                index.NationalPrimaryHomePhoneNumber == searchTerm.Value),
+                index.PrimaryCellPhoneNumber == searchTerm.Value ||
+                index.PrimaryHomePhoneNumber == searchTerm.Value),
             PhoneNumberMatchType.BeginsWith => query.Where(index =>
-                index.NationalPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
-                index.NationalPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
+                index.PrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
+                index.PrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
             PhoneNumberMatchType.EndsWith => query.Where(index =>
-                index.NationalPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
-                index.NationalPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
+                index.PrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
+                index.PrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
             PhoneNumberMatchType.Contains => query.Where(index =>
-                index.NationalPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
-                index.NationalPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
+                index.PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
+                index.PrimaryHomePhoneNumber.Contains(searchTerm.Value)),
             _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
         };
     }

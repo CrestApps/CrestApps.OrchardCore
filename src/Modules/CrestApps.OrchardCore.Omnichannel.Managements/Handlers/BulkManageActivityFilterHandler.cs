@@ -180,10 +180,10 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             {
                 var cellColumnName = searchTerm.IsE164
                     ? nameof(OmnichannelContactIndex.NormalizedPrimaryCellPhoneNumber)
-                    : nameof(OmnichannelContactIndex.NationalPrimaryCellPhoneNumber);
+                    : nameof(OmnichannelContactIndex.PrimaryCellPhoneNumber);
                 var homeColumnName = searchTerm.IsE164
                     ? nameof(OmnichannelContactIndex.NormalizedPrimaryHomePhoneNumber)
-                    : nameof(OmnichannelContactIndex.NationalPrimaryHomePhoneNumber);
+                    : nameof(OmnichannelContactIndex.PrimaryHomePhoneNumber);
                 var cellCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(cellColumnName)}";
                 var homeCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(homeColumnName)}";
                 var comparison = filter.PhoneNumberMatchType == PhoneNumberMatchType.Exact ? "=" : "LIKE";
