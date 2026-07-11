@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
@@ -338,7 +339,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         return;
                     }
 
-                    var client = await clientFactory.CreateChatClientAsync(deployment);
+                    var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
 
                     var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
 

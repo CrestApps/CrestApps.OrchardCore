@@ -1,0 +1,54 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels
+
+@model EditAzureAISearchAIDataSourceViewModel
+
+<div data-ai-data-source-section="AzureAISearch"
+     data-ai-data-source-azure-ai-search
+     data-ai-data-source-azure-ai-search-api-key-value="@AzureAISearchSourceMetadata.ApiKeyAuthenticationType"
+     hidden>
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["Azure AI Search Connection"]</legend>
+        <div class="ocat-end">
+            <div class="mb-3">
+                <label asp-for="IndexName" class="form-label">@T["Index name"]</label>
+                <input asp-for="IndexName" class="form-control" />
+                <span asp-validation-for="IndexName" class="text-danger"></span>
+                <span class="hint">@T["The Azure AI Search index name on the remote service."]</span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label">@T["Azure AI Search endpoint"]</label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
+                <select asp-for="AuthenticationType" class="form-select" data-ai-data-source-azure-ai-search-authentication-type>
+                    <option value="@AzureAISearchSourceMetadata.ApiKeyAuthenticationType">@T["API key"]</option>
+                    <option value="@AzureAISearchSourceMetadata.DefaultAuthenticationType">@T["Default credential"]</option>
+                    <option value="@AzureAISearchSourceMetadata.ManagedIdentityAuthenticationType">@T["Managed identity"]</option>
+                </select>
+                <span asp-validation-for="AuthenticationType" class="text-danger"></span>
+            </div>
+
+            <div data-ai-data-source-azure-ai-search-identity-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="IdentityClientId" class="form-label">@T["Managed identity client ID"]</label>
+                    <input asp-for="IdentityClientId" class="form-control" />
+                    <span asp-validation-for="IdentityClientId" class="text-danger"></span>
+                    <span class="hint">@T["Optional for default credential and managed identity authentication."]</span>
+                </div>
+            </div>
+
+            <div data-ai-data-source-azure-ai-search-api-key-settings hidden>
+                <div class="mb-0">
+                    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+                    <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" />
+                    <span asp-validation-for="ApiKey" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+</div>

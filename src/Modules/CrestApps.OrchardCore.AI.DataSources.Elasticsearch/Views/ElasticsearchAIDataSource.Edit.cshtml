@@ -1,0 +1,109 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels
+
+@model EditElasticsearchAIDataSourceViewModel
+
+<div data-ai-data-source-section="Elasticsearch"
+     data-ai-data-source-elasticsearch
+     data-ai-data-source-elasticsearch-cloud-hosted-value="@ElasticsearchSourceMetadata.CloudHostedEnvironmentType"
+     data-ai-data-source-elasticsearch-basic-value="@ElasticsearchSourceMetadata.BasicAuthenticationType"
+     data-ai-data-source-elasticsearch-api-key-value="@ElasticsearchSourceMetadata.ApiKeyAuthenticationType"
+     data-ai-data-source-elasticsearch-base64-api-key-value="@ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType"
+     data-ai-data-source-elasticsearch-key-id-and-key-value="@ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType"
+     hidden>
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["Elasticsearch Connection"]</legend>
+        <div class="ocat-end">
+            <div class="mb-3">
+                <label asp-for="IndexName" class="form-label">@T["Index name"]</label>
+                <input asp-for="IndexName" class="form-control" />
+                <span asp-validation-for="IndexName" class="text-danger"></span>
+                <span class="hint">@T["The Elasticsearch index name on the remote server."]</span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="EnvironmentType" class="form-label">@T["Environment type"]</label>
+                <select asp-for="EnvironmentType" class="form-select" data-ai-data-source-elasticsearch-environment-type>
+                    <option value="@ElasticsearchSourceMetadata.SelfManagedEnvironmentType">@T["Self-managed"]</option>
+                    <option value="@ElasticsearchSourceMetadata.CloudHostedEnvironmentType">@T["Cloud-hosted"]</option>
+                </select>
+                <span asp-validation-for="EnvironmentType" class="text-danger"></span>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-url-settings>
+                <div class="mb-3">
+                    <label asp-for="Url" class="form-label">@T["Elasticsearch URL"]</label>
+                    <input asp-for="Url" class="form-control" placeholder="https://" />
+                    <span asp-validation-for="Url" class="text-danger"></span>
+                    <span class="hint">@T["Required for self-managed clusters or endpoint-based hosted deployments."]</span>
+                </div>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-cloud-id-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="CloudId" class="form-label">@T["Elastic Cloud ID"]</label>
+                    <input asp-for="CloudId" class="form-control" />
+                    <span asp-validation-for="CloudId" class="text-danger"></span>
+                    <span class="hint">@T["Required for Elastic Cloud hosted deployments."]</span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
+                <select asp-for="AuthenticationType" class="form-select" data-ai-data-source-elasticsearch-authentication-type>
+                    <option value="@ElasticsearchSourceMetadata.NoneAuthenticationType">@T["None"]</option>
+                    <option value="@ElasticsearchSourceMetadata.BasicAuthenticationType">@T["Basic"]</option>
+                    <option value="@ElasticsearchSourceMetadata.ApiKeyAuthenticationType">@T["API key"]</option>
+                    <option value="@ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType">@T["Base64 API key"]</option>
+                    <option value="@ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType">@T["Key ID and key"]</option>
+                </select>
+                <span asp-validation-for="AuthenticationType" class="text-danger"></span>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-basic-auth-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="Username" class="form-label">@T["Username"]</label>
+                    <input asp-for="Username" class="form-control" />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">@T["Password"]</label>
+                    <input asp-for="Password" class="form-control" type="password" placeholder="@(Model.HasPassword ? T["Leave empty to keep the saved password"].Value : string.Empty)" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-api-key-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+                    <input asp-for="ApiKey" class="form-control" type="password" placeholder="@(Model.HasApiKey ? T["Leave empty to keep the saved API key"].Value : string.Empty)" />
+                    <span asp-validation-for="ApiKey" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-base64-api-key-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="Base64ApiKey" class="form-label">@T["Base64 API key"]</label>
+                    <input asp-for="Base64ApiKey" class="form-control" type="password" placeholder="@(Model.HasBase64ApiKey ? T["Leave empty to keep the saved base64 API key"].Value : string.Empty)" />
+                    <span asp-validation-for="Base64ApiKey" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div data-ai-data-source-elasticsearch-key-id-settings hidden>
+                <div class="mb-3">
+                    <label asp-for="ApiKeyId" class="form-label">@T["API key ID"]</label>
+                    <input asp-for="ApiKeyId" class="form-control" />
+                    <span asp-validation-for="ApiKeyId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-0">
+                <label asp-for="CertificateFingerprint" class="form-label">@T["Certificate fingerprint"]</label>
+                <input asp-for="CertificateFingerprint" class="form-control" />
+                <span asp-validation-for="CertificateFingerprint" class="text-danger"></span>
+                <span class="hint">@T["Optional TLS certificate fingerprint for trusted server validation."]</span>
+            </div>
+        </div>
+    </fieldset>
+</div>

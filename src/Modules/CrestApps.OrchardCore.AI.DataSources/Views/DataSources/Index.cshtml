@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListCatalogEntryViewModel<CatalogEntryViewModel<AIDataSource>>
+@model ListSourceModelViewModel<AIDataSourceSourceDescriptor, CatalogEntryViewModel<AIDataSource>>
 
 <zone Name="Title" Entry>
     <h1>@RenderTitleSegments(T["AI Data Sources"])</h1>
@@ -26,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" asp-route-area="CrestApps.OrchardCore.AI.DataSources" asp-controller="DataSources" asp-action="Create">@T["Add Data Source"]</a>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddDataSource">@T["Add Data Source"]</button>
                 </div>
             </div>
         </div>
@@ -98,5 +98,50 @@
         @T["Your search returned no results."]
     </div>
 </form>
+
+<!-- Modal -->
+<div class="modal fade" id="modalAddDataSource" tabindex="-1" role="dialog" aria-labelledby="available-source-types-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-source-types-title">@T["Available Source Types"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!(Model.Sources?.Any() ?? false))
+                {
+                    <p class="p-3 mb-2 bg-warning text-white">@T["No available source types at the moment."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var source in Model.Sources)
+                        {
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h4>@source.DisplayName</h4>
+                                        <p class="hint">@source.Description</p>
+                                    </div>
+
+                                    <div class="card-footer text-muted text-sm-end">
+                                        <a class="btn btn-primary btn-sm"
+                                           asp-route-area="CrestApps.OrchardCore.AI.DataSources"
+                                           asp-route-controller="DataSources"
+                                           asp-route-action="Create"
+                                           asp-route-sourceType="@source.SourceType">@T["Add"]</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script asp-name="list-management-ui" at="Foot"></script>

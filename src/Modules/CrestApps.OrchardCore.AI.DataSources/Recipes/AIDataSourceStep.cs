@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -12,7 +12,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIDataSource";
 
-    private readonly ICatalogManager<AIDataSource> _dataManager;
+    private readonly ISourceCatalogManager<AIDataSource> _dataManager;
 
     internal readonly IStringLocalizer S;
 
@@ -22,7 +22,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
     /// <param name="dataManager">The data manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceStep(
-        ICatalogManager<AIDataSource> dataManager,
+        ISourceCatalogManager<AIDataSource> dataManager,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
     : base(StepKey)
     {

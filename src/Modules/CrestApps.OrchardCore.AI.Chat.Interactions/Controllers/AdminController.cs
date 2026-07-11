@@ -88,19 +88,30 @@ public sealed class AdminController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var queryContext = new ChatInteractionQueryContext
-        {
-            Name = options.Search,
-            Sorted = true,
-        };
+        var interactions = await _interactionManager.GetAllAsync();
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
         {
-            // User cannot view all interactions.
-            queryContext.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            interactions = interactions
+                .Where(interaction => string.Equals(interaction.OwnerId, userId, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
         }
 
-        var result = await _interactionManager.PageAsync(pager.Page, pager.PageSize, queryContext);
+        if (!string.IsNullOrWhiteSpace(options.Search))
+        {
+            interactions = interactions
+                .Where(interaction => (interaction.Title ?? string.Empty).Contains(options.Search, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        var orderedInteractions = interactions
+            .OrderByDescending(interaction => interaction.ModifiedUtc ?? interaction.CreatedUtc)
+            .ThenByDescending(interaction => interaction.CreatedUtc)
+            .ToArray();
+        var skip = (pager.Page - 1) * pager.PageSize;
+        var pagedInteractions = orderedInteractions.Skip(skip).Take(pager.PageSize).ToArray();
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -114,11 +125,11 @@ public sealed class AdminController : Controller
         {
             Models = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, orderedInteractions.Length, routeData),
         };
 
         // Build display shapes for each interaction
-        viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
+        viewModel.Models = (await Task.WhenAll(pagedInteractions.Select(async model =>
         new CatalogEntryViewModel<ChatInteraction>
         {
             Model = model,

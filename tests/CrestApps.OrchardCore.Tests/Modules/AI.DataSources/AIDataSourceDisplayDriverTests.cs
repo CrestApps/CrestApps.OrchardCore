@@ -1,6 +1,9 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using Moq;
+using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 
@@ -11,10 +14,16 @@ public sealed class AIDataSourceDisplayDriverTests
     [Fact]
     public void BuildGroupedIndexProfileItems_UsesLocalizedProviderDisplayNames()
     {
-        var method = GetBuildGroupedIndexProfileItemsMethod();
         var indexingOptions = new IndexingOptions();
         indexingOptions.AddIndexingProvider("azureai", provider => provider.DisplayName = new LocalizedString("Azure AI Search", "Azure AI Search"));
         indexingOptions.AddIndexingProvider("elasticsearch", provider => provider.DisplayName = new LocalizedString("Elasticsearch", "Elasticsearch"));
+        var type = GetAIDataSourceDisplayDriverType();
+        var driver = Activator.CreateInstance(
+            type,
+            Mock.Of<IIndexProfileStore>(),
+            Options.Create(indexingOptions),
+            null)!;
+        var method = GetBuildGroupedIndexProfileItemsMethod(type);
 
         var indexProfiles = new[]
         {
@@ -22,7 +31,7 @@ public sealed class AIDataSourceDisplayDriverTests
             new IndexProfile { Name = "content-elastic", ProviderName = "elasticsearch" },
         };
 
-        var items = (IEnumerable<SelectListItem>)method.Invoke(null, [indexProfiles, indexingOptions])!;
+        var items = (IEnumerable<SelectListItem>)method.Invoke(driver, [indexProfiles])!;
         var groupedItems = items.ToList();
 
         Assert.Collection(groupedItems,
@@ -38,11 +47,14 @@ public sealed class AIDataSourceDisplayDriverTests
             });
     }
 
-    private static MethodInfo GetBuildGroupedIndexProfileItemsMethod()
+    private static Type GetAIDataSourceDisplayDriverType()
     {
-        var type = typeof(CrestApps.OrchardCore.AI.DataSources.Startup).Assembly
+        return typeof(CrestApps.OrchardCore.AI.DataSources.Startup).Assembly
             .GetType("CrestApps.OrchardCore.AI.DataSources.Drivers.AIDataSourceDisplayDriver", throwOnError: true)!;
+    }
 
-        return type.GetMethod("BuildGroupedIndexProfileItems", BindingFlags.NonPublic | BindingFlags.Static)!;
+    private static MethodInfo GetBuildGroupedIndexProfileItemsMethod(Type type)
+    {
+        return type.GetMethod("BuildGroupedIndexProfileItems", BindingFlags.NonPublic | BindingFlags.Instance)!;
     }
 }

@@ -36,6 +36,8 @@ public static class AIConstants
 
         public const string DataSourceAzureAI = "CrestApps.OrchardCore.AI.DataSources.AzureAI";
 
+        public const string DataSourcePostgreSQL = "CrestApps.OrchardCore.AI.DataSources.PostgreSQL";
+
         public const string DataSourceMongoDB = "CrestApps.OrchardCore.AI.DataSources.MongoDB";
 
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";

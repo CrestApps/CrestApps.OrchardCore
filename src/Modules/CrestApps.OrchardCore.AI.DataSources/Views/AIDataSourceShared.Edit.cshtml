@@ -1,0 +1,118 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model EditAIDataSourceSharedViewModel
+
+<fieldset class="ocat-wrapper">
+    <legend class="ocat-label">@T["Search Index Profile"]</legend>
+    <div class="ocat-end">
+        @if (Model.IsConfigurationLocked)
+        {
+            <input type="text" class="form-control" value="@Model.AIKnowledgeBaseIndexProfileName" readonly />
+            <input type="hidden" asp-for="AIKnowledgeBaseIndexProfileName" />
+        }
+        else if (Model.AIKnowledgeBaseIndexProfileNames?.Any() == true)
+        {
+            <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label">@T["Destination index"]</label>
+            <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.AIKnowledgeBaseIndexProfileNames" class="form-select">
+                <option value="">@T["Select a destination index"]</option>
+            </select>
+            <span class="hint">@T["The destination index used to store document embeddings for vector search."]</span>
+        }
+        else
+        {
+            <div class="alert alert-warning mb-0">
+                @T["No destination indexes are available. Create an AI knowledge base index using the Indexing feature before you can use data sources."]
+            </div>
+        }
+    </div>
+</fieldset>
+
+<fieldset class="ocat-wrapper">
+    <legend class="ocat-label">@T["Field Mapping"]</legend>
+    <div class="ocat-end">
+        <div class="mb-3">
+            <label asp-for="ContentFieldName" class="form-label">@T["Content field"]</label>
+            @if (Model.IsConfigurationLocked)
+            {
+                <input type="text" class="form-control" value="@Model.ContentFieldName" readonly />
+                <input type="hidden" asp-for="ContentFieldName" />
+            }
+            else if (string.Equals(Model.SourceType, AIDataSourceSourceTypes.SearchIndexProfile, StringComparison.OrdinalIgnoreCase))
+            {
+                <select asp-for="ContentFieldName" class="form-select field-mapping-select" data-ai-data-source-content-field disabled>
+                    <option value="">@T["Select an index first"]</option>
+                    @if (Model.FieldNames?.Any() == true)
+                    {
+                        @foreach (var field in Model.FieldNames)
+                        {
+                            <option value="@field.Value" selected="@(field.Value == Model.ContentFieldName)">@field.Text</option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <input asp-for="ContentFieldName" class="form-control" />
+            }
+            <span asp-validation-for="ContentFieldName" class="text-danger"></span>
+            <span class="hint">@T["The source field that maps to the document content (text)."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="TitleFieldName" class="form-label">@T["Title field"]</label>
+            @if (Model.IsConfigurationLocked)
+            {
+                <input type="text" class="form-control" value="@Model.TitleFieldName" readonly />
+                <input type="hidden" asp-for="TitleFieldName" />
+            }
+            else if (string.Equals(Model.SourceType, AIDataSourceSourceTypes.SearchIndexProfile, StringComparison.OrdinalIgnoreCase))
+            {
+                <select asp-for="TitleFieldName" class="form-select field-mapping-select" data-ai-data-source-title-field disabled>
+                    <option value="">@T["Select an index first"]</option>
+                    @if (Model.FieldNames?.Any() == true)
+                    {
+                        @foreach (var field in Model.FieldNames)
+                        {
+                            <option value="@field.Value" selected="@(field.Value == Model.TitleFieldName)">@field.Text</option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <input asp-for="TitleFieldName" class="form-control" />
+            }
+            <span asp-validation-for="TitleFieldName" class="text-danger"></span>
+            <span class="hint">@T["The source field that maps to the document title (optional)."]</span>
+        </div>
+
+        <div class="mb-0">
+            <label asp-for="KeyFieldName" class="form-label">@T["Key field"]</label>
+            @if (Model.IsConfigurationLocked)
+            {
+                <input type="text" class="form-control" value="@Model.KeyFieldName" readonly />
+                <input type="hidden" asp-for="KeyFieldName" />
+            }
+            else if (string.Equals(Model.SourceType, AIDataSourceSourceTypes.SearchIndexProfile, StringComparison.OrdinalIgnoreCase))
+            {
+                <select asp-for="KeyFieldName" class="form-select field-mapping-select" data-ai-data-source-key-field disabled>
+                    <option value="">@T["Select an index first"]</option>
+                    @if (Model.FieldNames?.Any() == true)
+                    {
+                        @foreach (var field in Model.FieldNames)
+                        {
+                            <option value="@field.Value" selected="@(field.Value == Model.KeyFieldName)">@field.Text</option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <input asp-for="KeyFieldName" class="form-control" />
+            }
+            <span asp-validation-for="KeyFieldName" class="text-danger"></span>
+            <span class="hint">@T["The source field used as the document reference ID in citations. Leave empty only when the source type can supply a stable native document ID."]</span>
+        </div>
+    </div>
+</fieldset>

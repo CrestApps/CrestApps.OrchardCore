@@ -6,4 +6,6 @@ internal enum OrchardAIDataSourceIndexingWorkItemType
     DeleteDataSource,
     SyncSourceDocuments,
     RemoveSourceDocuments,
+    SyncDataSourceDocuments,
+    RemoveDataSourceDocuments,
 }
