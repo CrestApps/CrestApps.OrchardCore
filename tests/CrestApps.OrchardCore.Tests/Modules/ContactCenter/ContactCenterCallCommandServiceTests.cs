@@ -126,6 +126,40 @@ public sealed class ContactCenterCallCommandServiceTests
     }
 
     [Fact]
+    public async Task AcceptInboundOfferAsync_WhenAnswerFailsAndProviderConfirmsCallGone_RemovesOfferInsteadOfCanceling()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupAcceptedReservation();
+        harness.SetupInteraction();
+        harness.SetupTelephonyProviderAnswer(TelephonyResult.Failed("The channel does not exist."));
+
+        // The pre-answer refresh still sees the call as active so the agent accepts and the answer is
+        // attempted; the answer then fails and the follow-up refresh reports the call as terminal, so the
+        // offer must be reconciled (removed and the agent released) rather than merely canceling a pending
+        // reservation.
+        var endedInteraction = new Interaction { ItemId = "int1", Status = InteractionStatus.Ended };
+        harness.ProviderCallStateSynchronizationService
+            .SetupSequence(s => s.RefreshInteractionAsync(harness.Interaction, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(harness.Interaction)
+            .ReturnsAsync(endedInteraction);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        harness.OfferSynchronizationService.Verify(
+            s => s.ReconcileEndedOfferAsync("int1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            s => s.CancelAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task AcceptInboundOfferAsync_WhenProviderConnectFails_DoesNotConnectInteraction()
     {
         // Arrange
@@ -274,6 +308,8 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public Mock<IProviderCallStateSynchronizationService> ProviderCallStateSynchronizationService { get; } = new();
 
+        public Mock<IProviderVoiceOfferSynchronizationService> OfferSynchronizationService { get; } = new();
+
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new();
 
         public Mock<IContactCenterVoiceProvider> Provider { get; } = new();
@@ -382,6 +418,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 CallSessionManager.Object,
                 InboundVoiceService.Object,
                 ProviderCallStateSynchronizationService.Object,
+                OfferSynchronizationService.Object,
                 Publisher.Object,
                 clock.Object,
                 logger.Object);

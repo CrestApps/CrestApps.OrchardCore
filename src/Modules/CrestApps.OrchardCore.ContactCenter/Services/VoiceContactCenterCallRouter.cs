@@ -22,6 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter, IInboundVoiceService
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
+    private const int MaxOfferAttempts = 25;
     private static readonly TimeSpan _inboundLockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _inboundLockExpiration = TimeSpan.FromMinutes(1);
 
@@ -39,6 +40,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEntryPointResolver _entryPointResolver;
+    private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
+    private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
 
@@ -59,6 +62,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
     /// <param name="entryPointResolver">The entry point resolver used to route inbound calls by dialed number.</param>
+    /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service used to confirm a queued call still exists before it is offered.</param>
+    /// <param name="offerSynchronizationService">The offer synchronization service used to remove queued calls that no longer exist on the provider.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
@@ -76,6 +81,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IIncomingCallDispatcher incomingCallDispatcher,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEntryPointResolver entryPointResolver,
+        IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
+        IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
         IClock clock)
     {
@@ -93,6 +100,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _incomingCallDispatcher = incomingCallDispatcher;
         _voiceProviderResolver = voiceProviderResolver;
         _entryPointResolver = entryPointResolver;
+        _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
+        _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
         _clock = clock;
     }
@@ -283,51 +292,72 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        var reservation = await _assignmentService.AssignNextAsync(queueId, cancellationToken);
-
-        if (reservation is null)
+        // Offer the next viable queued call. The telephony provider is the source of truth, so any queued
+        // call whose provider channel no longer exists is removed instead of being offered. Skipping such
+        // "zombie" calls prevents an agent from being reserved for a call they can never answer or hang up,
+        // which would otherwise leave them stuck and unable to receive new inbound calls. The loop is bounded
+        // to avoid spinning if reservations keep failing for unrelated reasons.
+        for (var attempt = 0; attempt < MaxOfferAttempts; attempt++)
         {
-            return null;
+            var reservation = await _assignmentService.AssignNextAsync(queueId, cancellationToken);
+
+            if (reservation is null)
+            {
+                return null;
+            }
+
+            var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+            if (agent is null || string.IsNullOrEmpty(agent.UserId))
+            {
+                await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
+                return null;
+            }
+
+            var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+
+            if (interaction is null)
+            {
+                await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
+                return null;
+            }
+
+            interaction = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
+
+            if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+            {
+                // Provider truth reports the call no longer exists. Remove it from the queue and release the
+                // reservation and agent so the dead call is never offered again, then try the next call.
+                await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
+
+                continue;
+            }
+
+            interaction.Status = InteractionStatus.Ringing;
+            interaction.AgentId = agent.ItemId;
+            interaction.QueueId = reservation.QueueId;
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+            var call = new TelephonyCall
+            {
+                CallId = interaction.ProviderInteractionId,
+                From = interaction.CustomerAddress,
+                To = ResolveServiceAddress(interaction),
+                State = CallState.Ringing,
+                Direction = CallDirection.Inbound,
+                ProviderName = interaction.ProviderName,
+                StartedUtc = _clock.UtcNow,
+                Metadata = BuildCallMetadata(interaction),
+            };
+
+            await _incomingCallDispatcher.DispatchAsync(agent.UserId, call, cancellationToken);
+
+            return agent.UserId;
         }
 
-        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
-
-        if (agent is null || string.IsNullOrEmpty(agent.UserId))
-        {
-            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
-
-            return null;
-        }
-
-        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
-
-        if (interaction is null)
-        {
-            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
-
-            return null;
-        }
-
-        interaction.Status = InteractionStatus.Ringing;
-        interaction.AgentId = agent.ItemId;
-        interaction.QueueId = reservation.QueueId;
-        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-
-        var call = new TelephonyCall
-        {
-            CallId = interaction.ProviderInteractionId,
-            From = interaction.CustomerAddress,
-            To = ResolveServiceAddress(interaction),
-            State = CallState.Ringing,
-            Direction = CallDirection.Inbound,
-            ProviderName = interaction.ProviderName,
-            StartedUtc = _clock.UtcNow,
-            Metadata = BuildCallMetadata(interaction),
-        };
-
-        await _incomingCallDispatcher.DispatchAsync(agent.UserId, call, cancellationToken);
-
-        return agent.UserId;
+        return null;
     }
 
     private static string ResolveServiceAddress(Core.Models.Interaction interaction)

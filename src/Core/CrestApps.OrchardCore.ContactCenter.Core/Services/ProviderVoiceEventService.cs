@@ -234,7 +234,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         session.QueueId = interaction.QueueId;
         session.FromAddress = providerEvent.FromAddress ?? interaction.CustomerAddress;
         session.ToAddress = providerEvent.ToAddress;
-        session.State = providerEvent.State;
+
+        // Seed the freshly created session with the interaction's pre-event state instead of the incoming
+        // provider state. When the very first observed provider state is terminal (for example, a
+        // reconciliation sweep that discovers the call no longer exists on the provider), this preserves a
+        // real non-terminal -> terminal transition so the CallEnded event is still published and queue,
+        // reservation, and agent cleanup runs. Without this seed the session would be created already
+        // terminal, ResolveEventTypes would see no transition, and the offer would never be released.
+        session.State = ResolveInitialSessionState(interaction);
         session.RecordingState = interaction.RecordingState;
         session.RecordingReference = interaction.RecordingReference;
         session.CreatedUtc = now;
@@ -391,6 +398,18 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             ContactCenterCallState.Rejected => InteractionStatus.Failed,
             ContactCenterCallState.Canceled => InteractionStatus.Failed,
             _ => InteractionStatus.Created,
+        };
+    }
+
+    private static ContactCenterCallState ResolveInitialSessionState(Interaction interaction)
+    {
+        return interaction.Status switch
+        {
+            InteractionStatus.Connected => ContactCenterCallState.Connected,
+            InteractionStatus.Held => ContactCenterCallState.OnHold,
+            InteractionStatus.Transferring => ContactCenterCallState.Connected,
+            InteractionStatus.Conferenced => ContactCenterCallState.Connected,
+            _ => ContactCenterCallState.Ringing,
         };
     }
 

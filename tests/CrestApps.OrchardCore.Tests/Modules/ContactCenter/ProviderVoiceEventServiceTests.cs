@@ -602,4 +602,77 @@ public sealed class ProviderVoiceEventServiceTests
         // Assert
         Assert.Same(session, result);
     }
+
+    [Fact]
+    public async Task IngestAsync_WhenFirstObservedEventForNewSessionIsTerminal_PublishesCallEnded()
+    {
+        // Arrange
+        // Reconciliation discovers that a queued (never answered) call no longer exists on the provider and
+        // emits a terminal event before any session was ever created. The service must still record a real
+        // non-terminal -> terminal transition so CallEnded is published and the offer cleanup runs.
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            Status = InteractionStatus.Ringing,
+        };
+        var publishedEvents = new List<InteractionEvent>();
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        callSessionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession());
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvents.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "ended-new-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, interaction.Status);
+        Assert.Contains(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
+    }
 }

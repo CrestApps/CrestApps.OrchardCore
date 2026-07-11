@@ -23,6 +23,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly ICallSessionManager _callSessionManager;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
+    private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -39,6 +40,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="callSessionManager">The call session manager used to project the voice session.</param>
     /// <param name="inboundVoiceService">The inbound voice service used to re-offer a declined call.</param>
     /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service.</param>
+    /// <param name="offerSynchronizationService">The offer synchronization service used to release a queued call whose media can no longer be connected because it no longer exists on the provider.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
@@ -52,6 +54,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         ICallSessionManager callSessionManager,
         IInboundVoiceService inboundVoiceService,
         IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
+        IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IContactCenterEventPublisher publisher,
         IClock clock,
         ILogger<ContactCenterCallCommandService> logger)
@@ -65,6 +68,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _callSessionManager = callSessionManager;
         _inboundVoiceService = inboundVoiceService;
         _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
+        _offerSynchronizationService = offerSynchronizationService;
         _publisher = publisher;
         _clock = clock;
         _logger = logger;
@@ -138,12 +142,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                     connectResult.ErrorCode,
                     connectResult.ErrorMessage);
 
-                await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
-
-                if (!string.IsNullOrEmpty(reservation.QueueId))
-                {
-                    await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
-                }
+                await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
 
                 return CallCommandResult.Failure(connectResult.ErrorMessage ?? "The provider could not connect the call to the agent.");
             }
@@ -168,12 +167,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                         reservation.AgentId,
                         answerResult.Error);
 
-                    await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
-
-                    if (!string.IsNullOrEmpty(reservation.QueueId))
-                    {
-                        await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
-                    }
+                    await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
 
                     return CallCommandResult.Failure(answerResult.Error ?? "The provider could not answer the call.");
                 }
@@ -255,6 +249,32 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         }
 
         return CallCommandResult.Success("The offer was declined and re-offered.", requiresDeviceAnswer: false);
+    }
+
+    private async Task HandleMediaConnectFailureAsync(
+        ActivityReservation reservation,
+        Interaction interaction,
+        CancellationToken cancellationToken)
+    {
+        // The provider could not connect or answer the accepted call. Ask the provider for the authoritative
+        // call state: if the call no longer exists, remove it from the queue and release both the reservation
+        // and the agent so the dead call is never re-offered and the agent can receive new calls. Only when
+        // the call still exists on the provider do we treat this as a transient failure and re-offer it.
+        var refreshed = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
+
+        if (refreshed.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+        {
+            await _offerSynchronizationService.ReconcileEndedOfferAsync(refreshed.ItemId, cancellationToken);
+        }
+        else
+        {
+            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
+        }
+
+        if (!string.IsNullOrEmpty(reservation.QueueId))
+        {
+            await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
+        }
     }
 
     private async Task<ActivityReservation> FindAuthorizedPendingReservationAsync(

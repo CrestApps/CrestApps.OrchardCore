@@ -105,9 +105,13 @@ This is the single-writer boundary for queue assignment.
 `VoiceContactCenterCallRouter.OfferNextAsync()` turns the pending reservation into a ringing offer:
 
 1. loads the reserved agent and linked interaction
-2. moves the interaction to `Ringing`
-3. builds a telephony `TelephonyCall`
-4. dispatches it through `IIncomingCallDispatcher`
+2. refreshes the interaction from **provider truth** before offering it
+3. if the provider confirms the call no longer exists, removes it from the queue and releases the reservation and agent (via `ProviderVoiceOfferSynchronizationService.ReconcileEndedOfferAsync`), then moves on to the next queued call instead of offering a dead call
+4. moves a still-live interaction to `Ringing`
+5. builds a telephony `TelephonyCall`
+6. dispatches it through `IIncomingCallDispatcher`
+
+Because a queued call is validated against provider truth at offer time, a "zombie" interaction whose provider channel has already disappeared can never be offered to an agent. This prevents the agent from being reserved for a call they can neither answer nor hang up, which would otherwise leave them stuck and unable to receive new inbound calls.
 
 The Telephony module then:
 
@@ -127,9 +131,10 @@ The workspace and the soft-phone incoming modal both call the same authoritative
 3. rejects the accept immediately if the provider already ended the call
 4. accepts the reservation
 5. connects media if the provider uses a server-side ACD model
-6. leaves device-native providers in `Ringing` until the provider later reports `Connected`
-7. creates or updates the `CallSession`
-8. publishes Contact Center events such as `OfferAccepted`
+6. if the media connect or answer fails, re-checks provider truth: when the provider confirms the call is gone, the offer is reconciled (removed from the queue and the agent released via `ReconcileEndedOfferAsync`) instead of leaving the accepted reservation stuck; only a still-live call is re-offered
+7. leaves device-native providers in `Ringing` until the provider later reports `Connected`
+8. creates or updates the `CallSession`
+9. publishes Contact Center events such as `OfferAccepted`
 
 This is why the UI does not get to decide that the call is connected just because the user clicked **Accept**.
 
@@ -274,6 +279,8 @@ If provider truth says a ringing call ended before it was actually answered, `Pr
 - activity assignment metadata
 
 That prevents abandoned or already-ended calls from being re-offered as ghost work.
+
+Ended-offer reconciliation only runs when a real non-terminal → terminal transition is observed. When a reconciliation sweep discovers a call that already disappeared on the provider **before any call session was ever recorded**, `ProviderVoiceEventService` seeds the newly created session with the interaction's pre-event (non-terminal) state rather than the incoming terminal state. This preserves the non-terminal → terminal transition so the `CallEnded` event is still published and the ended-offer cleanup runs; without the seed the session would be created already-terminal and the cleanup would silently never fire, leaving the interaction stuck in the queue.
 
 ### Soft-phone projection stays server-driven
 
