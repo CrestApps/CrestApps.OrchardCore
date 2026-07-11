@@ -126,7 +126,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
                             <h2 class="h5 mb-1">Last burst</h2>
-                            <p class="text-body-secondary mb-0">@Model.SuccessfulCount succeeded, @Model.RoutedCount routed to an agent.</p>
+                            <p class="text-body-secondary mb-0">@Model.SuccessfulCount succeeded, @Model.RoutedCount offered to an agent, @Model.QueuedCount waiting in a queue.</p>
                         </div>
                     </div>
 
@@ -158,7 +158,13 @@
                                             <div class="small text-body-secondary">@result.DurationMilliseconds ms</div>
                                         </td>
                                         <td>
-                                            <div class="fw-semibold">@(result.Routed == true ? "Offered" : "Queued / rejected")</div>
+                                            <div class="fw-semibold">
+                                                @(result.Routed == true
+                                                    ? "Offered"
+                                                    : result.Queued == true
+                                                        ? "Waiting in queue"
+                                                        : "Not queued")
+                                            </div>
                                             <div class="small text-body-secondary">@result.Reason</div>
                                             @if (!string.IsNullOrEmpty(result.AgentUserId))
                                             {

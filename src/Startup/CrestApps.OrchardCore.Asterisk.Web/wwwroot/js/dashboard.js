@@ -80,6 +80,7 @@
         var config = parseConfig(root);
         var notifications = [];
         var current = config.initialSnapshot || null;
+        var fallbackPollingTimer = null;
 
         var refs = {
             statusBadge: root.querySelector('[data-dashboard-status]'),
@@ -289,6 +290,26 @@
                 .catch(function () { });
         }
 
+        function startFallbackPolling() {
+            if (fallbackPollingTimer) {
+                return;
+            }
+
+            fetchSnapshot();
+            fallbackPollingTimer = window.setInterval(
+                fetchSnapshot,
+                Math.max((config.reconciliationSeconds || 15) * 1000, 5000));
+        }
+
+        function stopFallbackPolling() {
+            if (!fallbackPollingTimer) {
+                return;
+            }
+
+            window.clearInterval(fallbackPollingTimer);
+            fallbackPollingTimer = null;
+        }
+
         function disconnectChannel(channelId) {
             if (!channelId) {
                 return Promise.resolve();
@@ -332,15 +353,34 @@
                 applySnapshot(snapshot);
             });
 
+            connection.onreconnecting(function () {
+                pushNotification('SignalR disconnected; reconciliation polling is active until it reconnects.', 'warning');
+                startFallbackPolling();
+            });
+
+            connection.onreconnected(function () {
+                stopFallbackPolling();
+                pushNotification('SignalR reconnected to the Asterisk event stream.', 'success');
+                fetchSnapshot();
+            });
+
+            connection.onclose(function () {
+                pushNotification('SignalR closed; reconciliation polling remains active.', 'warning');
+                startFallbackPolling();
+            });
+
             connection.start()
-                .then(fetchSnapshot)
+                .then(function () {
+                    stopFallbackPolling();
+                    return fetchSnapshot();
+                })
                 .catch(function () {
                     pushNotification('SignalR could not connect; falling back to reconciliation polling.', 'warning');
-                    fetchSnapshot();
+                    startFallbackPolling();
                 });
         } else {
             pushNotification('SignalR is unavailable; showing reconciliation polling only.', 'warning');
-            fetchSnapshot();
+            startFallbackPolling();
         }
 
         if (current) {
@@ -348,7 +388,6 @@
             renderNotifications();
         }
 
-        window.setInterval(fetchSnapshot, Math.max((config.reconciliationSeconds || 15) * 1000, 5000));
     }
 
     function boot() {

@@ -245,6 +245,11 @@ public sealed class AsteriskInboundSimulationCoordinator
                 result.Routed = routed.GetBoolean();
             }
 
+            if (root.TryGetProperty("queued", out var queued))
+            {
+                result.Queued = queued.GetBoolean();
+            }
+
             if (root.TryGetProperty("interactionId", out var interactionId))
             {
                 result.InteractionId = interactionId.GetString();

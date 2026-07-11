@@ -56,8 +56,59 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
+        var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is not null && _agentWorkStateHealingService is not null)
+        {
+            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
+        }
+
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-            GetSignInLockKey(userId),
+            AgentProfileLock.GetKey(userId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{userId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is null)
+        {
+            profile = await _agentManager.NewAsync(cancellationToken: cancellationToken);
+            profile.UserId = userId;
+            profile.Name = userId;
+        }
+
+        profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
+        profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
+        profile.PresenceStatus = AgentPresenceStatus.Available;
+        profile.RequestedPresenceStatus = null;
+        profile.PresenceChangedUtc = _clock.UtcNow;
+        profile.ActiveReservationId = null;
+
+        await SaveAsync(profile, cancellationToken);
+        await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
+
+        return profile;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentProfile> UpdateMembershipsAsync(
+        string userId,
+        IEnumerable<string> queueIds,
+        IEnumerable<string> campaignIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
             _signInLockExpiration);
 
@@ -72,24 +123,13 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         if (profile is null)
         {
-            profile = await _agentManager.NewAsync(cancellationToken: cancellationToken);
-            profile.UserId = userId;
-            profile.Name = userId;
-        }
-        else if (_agentWorkStateHealingService is not null)
-        {
-            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
-            profile = await _agentManager.FindByIdAsync(profile.ItemId, cancellationToken) ?? profile;
+            return null;
         }
 
         profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
         profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
-        profile.PresenceStatus = AgentPresenceStatus.Available;
-        profile.RequestedPresenceStatus = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
-        profile.ActiveReservationId = null;
 
-        await SaveAsync(profile, cancellationToken);
+        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
 
@@ -126,7 +166,25 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         if (_agentWorkStateHealingService is not null)
         {
             await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
-            profile = await _agentManager.FindByIdAsync(profile.ItemId, cancellationToken) ?? profile;
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(userId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{userId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
         }
 
         profile.PresenceStatus = AgentPresenceStatus.Offline;
@@ -169,7 +227,27 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             // provider-backed calls are preserved by the healer, so a genuine in-progress call still defers the
             // change as before.
             await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
-            profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken) ?? profile;
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(userId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{userId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is null)
+        {
+            profile = await _agentManager.NewAsync(cancellationToken: cancellationToken);
+            profile.UserId = userId;
+            profile.Name = userId;
         }
 
         if (status == AgentPresenceStatus.RequestBreak)
@@ -213,6 +291,25 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(profile.UserId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{profile.UserId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
         profile.PresenceStatus = AgentPresenceStatus.WrapUp;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
@@ -229,6 +326,25 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
         var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(profile.UserId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{profile.UserId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
 
         if (profile is null)
         {
@@ -303,8 +419,4 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         }, cancellationToken);
     }
 
-    private static string GetSignInLockKey(string userId)
-    {
-        return $"ContactCenterAgentSignIn:{userId}";
-    }
 }

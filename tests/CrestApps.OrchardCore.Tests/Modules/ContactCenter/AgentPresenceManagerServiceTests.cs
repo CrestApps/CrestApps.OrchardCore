@@ -63,6 +63,49 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task UpdateMembershipsAsync_PreservesPresenceAndActiveReservation()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            RequestedPresenceStatus = AgentPresenceStatus.Break,
+            ActiveReservationId = "r1",
+            QueueIds = ["q1", "q2"],
+            CampaignIds = ["c1"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.UpdateMembershipsAsync(
+            "u1",
+            ["q2"],
+            ["c1"],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Reserved, profile.PresenceStatus);
+        Assert.Equal(AgentPresenceStatus.Break, profile.RequestedPresenceStatus);
+        Assert.Equal("r1", profile.ActiveReservationId);
+        Assert.Equal(["q2"], profile.QueueIds);
+        Assert.Equal(["c1"], profile.CampaignIds);
+    }
+
+    [Fact]
     public async Task SignOutAsync_ClearsMembershipAndSetsOffline()
     {
         // Arrange

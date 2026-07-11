@@ -15,6 +15,10 @@
      data-contact-center-hub-url="@viewModel.HubUrl"
      data-contact-center-signed-in-text="@T["Signed in"]"
      data-contact-center-offline-text="@T["Offline"]"
+     data-contact-center-selection-required="@T["Select at least one queue or campaign before signing in."]"
+     data-contact-center-queue-text="@T["Queue"]"
+     data-contact-center-campaign-text="@T["Campaign"]"
+     data-contact-center-sign-out-item-text="@T["Sign out"]"
      data-contact-center-sync-url="@Url.Action("SyncQueuedVoiceWork", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
      data-contact-center-current-offer-url="@Url.Action("CurrentIncomingOffer", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
      hidden>
@@ -24,6 +28,8 @@
            @(viewModel.IsSignedIn ? T["Signed in"] : T["Offline"])
        </span>
     </div>
+
+    <div class="alert alert-danger py-2 small" data-contact-center-membership-error hidden></div>
 
     <div data-contact-center-sign-in-panel hidden="@viewModel.IsSignedIn">
        <form asp-action="SignIn" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-sign-in-form>
@@ -54,9 +60,26 @@
     </div>
 
     <div data-contact-center-sign-out-panel hidden="@(!viewModel.IsSignedIn)">
+       <div class="list-group list-group-flush mb-2" data-contact-center-membership-list>
+           @foreach (var queue in viewModel.AvailableQueues.Where(queue => viewModel.SelectedQueueIds.Contains(queue.ItemId)))
+           {
+               <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">
+                   <span class="small"><span class="text-body-secondary">@T["Queue"]:</span> @queue.Name</span>
+                   <button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="queue" data-membership-id="@queue.ItemId">@T["Sign out"]</button>
+               </div>
+           }
+           @foreach (var campaign in viewModel.CampaignOptions.Where(campaign => viewModel.SelectedCampaignIds.Contains(campaign.Value)))
+           {
+               <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">
+                   <span class="small"><span class="text-body-secondary">@T["Campaign"]:</span> @campaign.Text</span>
+                   <button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="campaign" data-membership-id="@campaign.Value">@T["Sign out"]</button>
+               </div>
+           }
+       </div>
+
        <form asp-action="SignOutAgent" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-sign-out-form>
            <input type="hidden" name="returnUrl" value="@returnUrl" />
-           <button type="submit" class="btn btn-sm btn-secondary w-100" data-contact-center-sign-out-button>@T["Sign out"]</button>
+           <button type="submit" class="btn btn-sm btn-secondary w-100" data-contact-center-sign-out-button>@T["Sign out of all"]</button>
        </form>
     </div>
 </div>

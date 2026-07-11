@@ -229,12 +229,15 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
             var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
             var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
+            var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
 
-            await presenceManager.SignInAsync(
-                userId,
-                ContactCenterFormHelpers.NormalizeList(queueIds),
-                ContactCenterFormHelpers.NormalizeList(campaignIds),
-                Context.ConnectionAborted);
+            if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
+            {
+                throw new HubException("Select at least one queue or campaign before signing in.");
+            }
+
+            await presenceManager.SignInAsync(userId, normalizedQueueIds, normalizedCampaignIds, Context.ConnectionAborted);
 
             snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
@@ -261,6 +264,50 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
 
             await presenceManager.SignOutAsync(userId, Context.ConnectionAborted);
+
+            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
+        });
+
+        return snapshot;
+    }
+
+    /// <summary>
+    /// Updates the current agent's queue and campaign memberships without changing their presence or active work.
+    /// </summary>
+    /// <param name="queueIds">The queues to remain signed in to.</param>
+    /// <param name="campaignIds">The campaigns to remain signed in to.</param>
+    /// <returns>The updated agent snapshot.</returns>
+    public async Task<AgentDesktopSnapshot> UpdateMemberships(IList<string> queueIds, IList<string> campaignIds)
+    {
+        var userId = EnsureUserId();
+        AgentDesktopSnapshot snapshot = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
+            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
+            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
+            var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
+
+            if (normalizedQueueIds.Count == 0 && normalizedCampaignIds.Count == 0)
+            {
+                throw new HubException("Use sign out to leave the final queue or campaign.");
+            }
+
+            var profile = await presenceManager.UpdateMembershipsAsync(
+                userId,
+                normalizedQueueIds,
+                normalizedCampaignIds,
+                Context.ConnectionAborted);
+
+            if (profile is null)
+            {
+                throw new HubException("Sign in before changing queue or campaign memberships.");
+            }
 
             snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);

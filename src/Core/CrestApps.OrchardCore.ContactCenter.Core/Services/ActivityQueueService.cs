@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -16,6 +17,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly ISession _session;
     private readonly IClock _clock;
 
     /// <summary>
@@ -26,6 +28,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="businessHours">The business-hours service used to evaluate after-hours overflow.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
     /// <param name="clock">The clock used to stamp queue times.</param>
     public ActivityQueueService(
         IQueueItemManager queueItemManager,
@@ -33,6 +36,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IOmnichannelActivityManager activityManager,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
+        ISession session,
         IClock clock)
     {
         _queueItemManager = queueItemManager;
@@ -40,6 +44,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _activityManager = activityManager;
         _businessHours = businessHours;
         _publisher = publisher;
+        _session = session;
         _clock = clock;
     }
 
@@ -74,6 +79,8 @@ public sealed class ActivityQueueService : IActivityQueueService
             activity.AssignmentStatus = ActivityAssignmentStatus.Available;
             await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
         }
+
+        await _session.SaveChangesAsync(cancellationToken);
 
         await _publisher.PublishAsync(new InteractionEvent
         {

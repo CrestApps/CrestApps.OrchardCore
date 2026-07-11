@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 internal static class SupervisorDashboardEndpoints
 {
-    private const int MaxAgents = 200;
+    private const int AgentPageSize = 200;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
@@ -59,11 +59,15 @@ internal static class SupervisorDashboardEndpoints
             ServerTimeUtc = now,
         };
 
+        var agents = await ListAgentsAsync(agentManager, httpContext.RequestAborted);
         var queues = await queueManager.ListEnabledAsync(httpContext.RequestAborted);
 
         foreach (var queue in queues)
         {
             var waiting = await queueItemManager.ListWaitingAsync(queue.ItemId, httpContext.RequestAborted);
+            var signedInAgents = agents
+                .Where(agent => agent.QueueIds.Contains(queue.ItemId, StringComparer.OrdinalIgnoreCase))
+                .ToArray();
             var longestWaitSeconds = 0;
             var slaBreachCount = 0;
 
@@ -83,6 +87,10 @@ internal static class SupervisorDashboardEndpoints
                 Id = queue.ItemId,
                 Name = queue.Name,
                 WaitingCount = waiting.Count,
+                SignedInAgentCount = signedInAgents.Length,
+                AvailableAgentCount = signedInAgents.Count(agent => agent.PresenceStatus == AgentPresenceStatus.Available),
+                BusyAgentCount = signedInAgents.Count(agent => agent.PresenceStatus is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp),
+                NotReadyAgentCount = signedInAgents.Count(agent => agent.PresenceStatus is not AgentPresenceStatus.Available and not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp),
                 LongestWaitSeconds = longestWaitSeconds,
                 SlaBreachCount = slaBreachCount,
                 SlaThresholdSeconds = queue.SlaThresholdSeconds,
@@ -91,9 +99,7 @@ internal static class SupervisorDashboardEndpoints
             model.TotalWaiting += waiting.Count;
         }
 
-        var agents = await agentManager.PageAsync(1, MaxAgents, new QueryContext(), httpContext.RequestAborted);
-
-        foreach (var agent in agents.Entries)
+        foreach (var agent in agents)
         {
             var activeInteractions = await interactionManager.CountActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
             var activeInteraction = await interactionManager.FindActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
@@ -117,6 +123,27 @@ internal static class SupervisorDashboardEndpoints
         }
 
         return TypedResults.Ok(model);
+    }
+
+    private static async Task<IReadOnlyCollection<AgentProfile>> ListAgentsAsync(
+        IAgentProfileManager agentManager,
+        CancellationToken cancellationToken)
+    {
+        var agents = new List<AgentProfile>();
+        var page = 1;
+
+        while (true)
+        {
+            var result = await agentManager.PageAsync(page, AgentPageSize, new QueryContext(), cancellationToken);
+            agents.AddRange(result.Entries);
+
+            if (result.Entries.Count < AgentPageSize)
+            {
+                return agents;
+            }
+
+            page++;
+        }
     }
 
     private static async Task<IResult> HandleEngageAsync(

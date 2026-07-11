@@ -32,6 +32,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IContentManager _contentManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IActivityQueueManager _queueManager;
+    private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueService _queueService;
     private readonly IActivityAssignmentService _assignmentService;
     private readonly IActivityReservationService _reservationService;
@@ -54,6 +55,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="contentManager">The content manager used to create the subject and load contacts.</param>
     /// <param name="interactionManager">The interaction manager used to record communication history.</param>
     /// <param name="queueManager">The queue manager used to resolve the inbound queue.</param>
+    /// <param name="queueItemManager">The queue item manager used to determine the current queue state of an existing call.</param>
     /// <param name="queueService">The queue service used to enqueue the activity.</param>
     /// <param name="assignmentService">The assignment service used to reserve an available agent.</param>
     /// <param name="reservationService">The reservation service used to release invalid offers.</param>
@@ -73,6 +75,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IContentManager contentManager,
         IInteractionManager interactionManager,
         IActivityQueueManager queueManager,
+        IQueueItemManager queueItemManager,
         IActivityQueueService queueService,
         IActivityAssignmentService assignmentService,
         IActivityReservationService reservationService,
@@ -92,6 +95,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _contentManager = contentManager;
         _interactionManager = interactionManager;
         _queueManager = queueManager;
+        _queueItemManager = queueItemManager;
         _queueService = queueService;
         _assignmentService = assignmentService;
         _reservationService = reservationService;
@@ -211,10 +215,16 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         if (existing is not null)
         {
+            var queueItem = !string.IsNullOrEmpty(existing.ActivityItemId)
+                ? await _queueItemManager.FindByActivityIdAsync(existing.ActivityItemId, cancellationToken)
+                : null;
+
             result.ActivityItemId = existing.ActivityItemId;
             result.InteractionId = existing.ItemId;
-            result.QueueId = existing.QueueId;
-            result.Routed = !string.IsNullOrEmpty(existing.AgentId);
+            result.QueueId = queueItem?.QueueId ?? existing.QueueId;
+            result.Routed = !string.IsNullOrEmpty(existing.AgentId) ||
+                queueItem?.Status is QueueItemStatus.Reserved or QueueItemStatus.Assigned;
+            result.Queued = queueItem?.Status == QueueItemStatus.Waiting;
             result.Reason = "The provider call is already tracked by the Contact Center.";
 
             return result;
@@ -270,17 +280,19 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         var priority = plan is not null ? plan.Priority : (InteractionPriority?)null;
 
         await _queueService.EnqueueAsync(activity.ItemId, queue.ItemId, priority, cancellationToken);
+        result.Queued = true;
 
         var agentUserId = await OfferNextAsync(queue.ItemId, cancellationToken);
 
         if (string.IsNullOrEmpty(agentUserId))
         {
-            result.Reason = "The call was queued; no agent is currently available.";
+            result.Reason = "The call is waiting in the queue for the next eligible agent.";
 
             return result;
         }
 
         result.Routed = true;
+        result.Queued = false;
         result.AgentUserId = agentUserId;
         result.Reason = "Offered to an available agent.";
 

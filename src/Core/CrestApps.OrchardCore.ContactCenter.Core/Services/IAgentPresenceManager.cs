@@ -19,6 +19,16 @@ public interface IAgentPresenceManager
     Task<AgentProfile> SignInAsync(string userId, IEnumerable<string> queueIds, IEnumerable<string> campaignIds, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the queues and campaigns for an already-signed-in agent without changing their presence or active work.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="queueIds">The queues to remain signed in to.</param>
+    /// <param name="campaignIds">The dialer campaigns to remain signed in to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The updated agent profile, or <see langword="null"/> when no profile exists.</returns>
+    Task<AgentProfile> UpdateMembershipsAsync(string userId, IEnumerable<string> queueIds, IEnumerable<string> campaignIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Signs the agent out and takes them offline.
     /// </summary>
     /// <param name="userId">The Orchard user identifier.</param>

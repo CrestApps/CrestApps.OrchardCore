@@ -21,6 +21,26 @@ public sealed class SupervisorQueueViewModel
     public int WaitingCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of agents currently signed in to the queue.
+    /// </summary>
+    public int SignedInAgentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of signed-in agents currently available for new work.
+    /// </summary>
+    public int AvailableAgentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of signed-in agents currently reserved, busy, or completing after-call work.
+    /// </summary>
+    public int BusyAgentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of signed-in agents currently in another not-ready state.
+    /// </summary>
+    public int NotReadyAgentCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the longest current wait time in the queue, in seconds.
     /// </summary>
     public int LongestWaitSeconds { get; set; }

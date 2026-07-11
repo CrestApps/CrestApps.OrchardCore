@@ -58,8 +58,15 @@ public sealed class AgentSoftPhoneController : Controller
             return Forbid();
         }
 
+        var queues = ContactCenterFormHelpers.NormalizeList(selectedQueueIds);
         var campaigns = ContactCenterFormHelpers.NormalizeList(selectedCampaignIds);
-        await _presenceManager.SignInAsync(GetUserId(), selectedQueueIds ?? [], campaigns);
+
+        if (queues.Count == 0 && campaigns.Count == 0)
+        {
+            return BadRequest("Select at least one queue or campaign before signing in.");
+        }
+
+        await _presenceManager.SignInAsync(GetUserId(), queues, campaigns);
 
         return RedirectToReturnLocation(returnUrl);
     }

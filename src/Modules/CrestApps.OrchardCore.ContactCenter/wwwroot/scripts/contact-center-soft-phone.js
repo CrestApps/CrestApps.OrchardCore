@@ -32,6 +32,13 @@
             .map(function (option) { return option.value; });
     }
 
+    function escapeHtml(value) {
+        var node = document.createElement('div');
+        node.textContent = value == null ? '' : String(value);
+
+        return node.innerHTML;
+    }
+
     function applySelectedValues(select, values) {
         if (!select) {
             return;
@@ -62,10 +69,75 @@
         });
     }
 
+    function showMembershipError(root, api, message) {
+        var error = root && root.querySelector('[data-contact-center-membership-error]');
+
+        if (error) {
+            error.textContent = message || '';
+            error.hidden = !message;
+        }
+
+        if (message && api && typeof api.showError === 'function') {
+            api.showError(message);
+        }
+    }
+
+    function getOptionText(select, value) {
+        if (!select) {
+            return value;
+        }
+
+        var option = Array.prototype.find.call(select.options, function (candidate) {
+            return candidate.value === String(value);
+        });
+
+        return option ? option.text : value;
+    }
+
+    function renderMembershipList(root, snapshot, queueSelect, campaignSelect) {
+        var list = root.querySelector('[data-contact-center-membership-list]');
+
+        if (!list) {
+            return;
+        }
+
+        var queueText = root.getAttribute('data-contact-center-queue-text') || 'Queue';
+        var campaignText = root.getAttribute('data-contact-center-campaign-text') || 'Campaign';
+        var signOutText = root.getAttribute('data-contact-center-sign-out-item-text') || 'Sign out';
+        var memberships = [];
+
+        (snapshot.queueIds || []).forEach(function (queueId) {
+            memberships.push({
+                kind: 'queue',
+                id: queueId,
+                type: queueText,
+                name: getOptionText(queueSelect, queueId)
+            });
+        });
+
+        (snapshot.campaignIds || []).forEach(function (campaignId) {
+            memberships.push({
+                kind: 'campaign',
+                id: campaignId,
+                type: campaignText,
+                name: getOptionText(campaignSelect, campaignId)
+            });
+        });
+
+        list.innerHTML = memberships.map(function (membership) {
+            return '<div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">' +
+                '<span class="small"><span class="text-body-secondary">' + escapeHtml(membership.type) + ':</span> ' + escapeHtml(membership.name) + '</span>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="' + escapeHtml(membership.kind) + '" data-membership-id="' + escapeHtml(membership.id) + '">' + escapeHtml(signOutText) + '</button>' +
+            '</div>';
+        }).join('');
+    }
+
     function updateMembershipUi(root, snapshot) {
         if (!root || !snapshot) {
             return;
         }
+
+        root.__contactCenterMembershipSnapshot = snapshot;
 
         var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
         var signedInText = root.getAttribute('data-contact-center-signed-in-text') || 'Signed in';
@@ -92,6 +164,8 @@
 
         applySelectedValues(queueSelect, snapshot.queueIds || []);
         applySelectedValues(campaignSelect, snapshot.campaignIds || []);
+        renderMembershipList(root, snapshot, queueSelect, campaignSelect);
+        showMembershipError(root, null, null);
         refreshPickers(root);
     }
 
@@ -186,23 +260,35 @@
 
         if (signInForm) {
             signInForm.addEventListener('submit', function (event) {
+                var queueIds = getSelectedValues(queueSelect);
+                var campaignIds = getSelectedValues(campaignSelect);
+
+                if (!queueIds.length && !campaignIds.length) {
+                    event.preventDefault();
+                    showMembershipError(
+                        root,
+                        api,
+                        root.getAttribute('data-contact-center-selection-required') || 'Select at least one queue or campaign before signing in.');
+
+                    return;
+                }
+
                 if (!client) {
                     return;
                 }
 
                 event.preventDefault();
                 setBusy(root, true);
+                showMembershipError(root, null, null);
 
-                invokeHub(client, 'SignIn', getSelectedValues(queueSelect), getSelectedValues(campaignSelect))
+                invokeHub(client, 'SignIn', queueIds, campaignIds)
                     .then(function (snapshot) {
                         updateMembershipUi(root, snapshot);
 
                         return recoverSoftPhoneState(root, api, client);
                     })
                     .catch(function (error) {
-                        if (api && typeof api.showError === 'function') {
-                            api.showError(error && error.message ? error.message : String(error));
-                        }
+                        showMembershipError(root, api, error && error.message ? error.message : String(error));
                     })
                     .finally(function () {
                         setBusy(root, false);
@@ -218,6 +304,7 @@
 
                 event.preventDefault();
                 setBusy(root, true);
+                showMembershipError(root, null, null);
 
                 invokeHub(client, 'SignOut')
                     .then(function (snapshot) {
@@ -228,15 +315,56 @@
                         }
                     })
                     .catch(function (error) {
-                        if (api && typeof api.showError === 'function') {
-                            api.showError(error && error.message ? error.message : String(error));
-                        }
+                        showMembershipError(root, api, error && error.message ? error.message : String(error));
                     })
                     .finally(function () {
                         setBusy(root, false);
                     });
             });
         }
+
+        root.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-contact-center-membership-sign-out]');
+
+            if (!button || !client) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var snapshot = root.__contactCenterMembershipSnapshot || {
+                queueIds: getSelectedValues(queueSelect),
+                campaignIds: getSelectedValues(campaignSelect)
+            };
+            var kind = button.getAttribute('data-membership-kind');
+            var membershipId = button.getAttribute('data-membership-id');
+            var queueIds = (snapshot.queueIds || []).filter(function (queueId) {
+                return kind !== 'queue' || queueId !== membershipId;
+            });
+            var campaignIds = (snapshot.campaignIds || []).filter(function (campaignId) {
+                return kind !== 'campaign' || campaignId !== membershipId;
+            });
+            var method = queueIds.length || campaignIds.length ? 'UpdateMemberships' : 'SignOut';
+            var args = method === 'UpdateMemberships' ? [queueIds, campaignIds] : [];
+
+            setBusy(root, true);
+            showMembershipError(root, null, null);
+
+            invokeHub.apply(null, [client, method].concat(args))
+                .then(function (updatedSnapshot) {
+                    updateMembershipUi(root, updatedSnapshot);
+
+                    if (method === 'SignOut' && api && typeof api.clearIncomingOffer === 'function') {
+                        api.clearIncomingOffer();
+                    }
+                })
+                .catch(function (error) {
+                    showMembershipError(root, api, error && error.message ? error.message : String(error));
+                })
+                .finally(function () {
+                    setBusy(root, false);
+                });
+        });
     }
 
     function wireSoftPhone(root, api) {

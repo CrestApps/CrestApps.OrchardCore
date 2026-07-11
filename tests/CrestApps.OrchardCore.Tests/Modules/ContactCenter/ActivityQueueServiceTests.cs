@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -63,6 +65,47 @@ public sealed class ActivityQueueServiceTests
 
         // Assert
         Assert.Equal(InteractionPriority.High, item.Priority);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_FlushesQueuedWorkBeforePublishingTheQueueEvent()
+    {
+        // Arrange
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync((QueueItem)null);
+        queueItemManager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem());
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityQueue { ItemId = "q1" });
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var session = new Mock<ISession>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var sequence = new MockSequence();
+        session.InSequence(sequence)
+            .Setup(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        publisher.InSequence(sequence)
+            .Setup(p => p.PublishAsync(
+                It.Is<InteractionEvent>(interactionEvent => interactionEvent.EventType == ContactCenterConstants.Events.QueueItemAdded),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            queueItemManager,
+            queueManager,
+            activityManager,
+            new Mock<IBusinessHoursService>(),
+            session,
+            publisher);
+
+        // Act
+        await service.EnqueueAsync("act-1", "q1", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        publisher.VerifyAll();
     }
 
     [Fact]
@@ -208,17 +251,22 @@ public sealed class ActivityQueueServiceTests
         Mock<IQueueItemManager> queueItemManager,
         Mock<IActivityQueueManager> queueManager,
         Mock<IOmnichannelActivityManager> activityManager,
-        Mock<IBusinessHoursService> businessHours)
+        Mock<IBusinessHoursService> businessHours,
+        Mock<ISession> session = null,
+        Mock<IContactCenterEventPublisher> publisher = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
+        session ??= new Mock<ISession>();
+        publisher ??= new Mock<IContactCenterEventPublisher>();
 
         return new ActivityQueueService(
             queueItemManager.Object,
             queueManager.Object,
             activityManager.Object,
             businessHours.Object,
-            new Mock<IContactCenterEventPublisher>().Object,
+            publisher.Object,
+            session.Object,
             clock.Object);
     }
 }

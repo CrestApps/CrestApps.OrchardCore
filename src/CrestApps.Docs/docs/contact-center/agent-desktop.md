@@ -44,7 +44,7 @@ Open **Interaction Center → Live dashboard**. The dashboard connects to the re
 It shows three sections:
 
 - **Summary metrics** - total items waiting across all queues, the number of available agents, the total agent count, and the queue count.
-- **Queue tiles** - one tile per enabled queue showing the waiting count, the longest current wait, and the number of items that have breached the queue's SLA threshold. Tiles turn amber as waits approach the SLA and red once items breach it, so hotspots stand out at a glance.
+- **Queue tiles** - one tile per enabled queue showing the waiting count, signed-in agents, available agents, busy/reserved/wrap-up agents, other not-ready agents, the longest current wait, and the number of items that have breached the queue's SLA threshold. Tiles turn amber as waits approach the SLA and red once items breach it, so managers can compare demand and staffing at a glance.
 - **Agent board** - every agent with a live presence dot (available, busy, wrap-up, break, and so on), their current reason, and how many interactions they are handling.
 
 Use it to spot a backing-up queue, an SLA breach, or too few available agents, and then rebalance staffing, adjust queue priorities, or open a campaign.
@@ -94,6 +94,8 @@ Open **Interaction Center → My workspace**. This is the screen an agent keeps 
 ### 1. Sign in and set your presence
 
 - **Sign in to queues and campaigns** from the soft phone's **Work** tab. You can only choose queues and campaigns you are allowed to handle.
+- Select at least one queue or campaign before signing in. The Work tab shows an inline error when nothing is selected.
+- After sign-in, the Work tab lists every queue and campaign you are signed in to. Use the individual **Sign out** action to leave one membership while remaining signed in to the others, or **Sign out of all** to leave every membership.
 - If inbound voice work is already waiting in one of those queues, signing in or switching back to **Available** immediately asks routing to offer the next queued call instead of waiting for another inbound event.
 - The soft-phone **Work** tab now signs you in and out over the Contact Center SignalR hub instead of reloading the page, so queue membership updates stay in-place and the same browser connection immediately joins or leaves the live queue groups.
 - If the browser refreshes or the soft phone reconnects while you are still signed in and available, Contact Center now re-checks those queues again as soon as the soft phone reconnects, so already-waiting calls are re-offered instead of staying parked until the next inbound routing event.

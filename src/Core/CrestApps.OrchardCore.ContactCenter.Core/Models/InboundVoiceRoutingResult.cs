@@ -11,6 +11,11 @@ public sealed class InboundVoiceRoutingResult
     public bool Routed { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the inbound call is waiting in a Contact Center queue.
+    /// </summary>
+    public bool Queued { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the interaction created for the inbound call.
     /// </summary>
     public string InteractionId { get; set; }

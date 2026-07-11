@@ -51,6 +51,11 @@ public sealed class InboundCallSimulationResult
     public bool? Routed { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the call is waiting in a Contact Center queue.
+    /// </summary>
+    public bool? Queued { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction identifier created for the simulated call.
     /// </summary>
     public string InteractionId { get; set; }

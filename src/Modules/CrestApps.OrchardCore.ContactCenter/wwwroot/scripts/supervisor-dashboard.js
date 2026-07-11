@@ -124,6 +124,10 @@
                 return '<div class="' + cls + '">' +
                     '<div class="cc-tile__name">' + escapeHtml(queue.name) + '</div>' +
                     '<div class="cc-tile__row"><span>' + escapeHtml(label('waiting', 'Waiting')) + '</span><span class="cc-strong">' + queue.waitingCount + '</span></div>' +
+                    '<div class="cc-tile__row"><span>' + escapeHtml(label('signedIn', 'Signed-in agents')) + '</span><span class="cc-strong">' + queue.signedInAgentCount + '</span></div>' +
+                    '<div class="cc-tile__row"><span>' + escapeHtml(label('available', 'Available agents')) + '</span><span class="cc-strong">' + queue.availableAgentCount + '</span></div>' +
+                    '<div class="cc-tile__row"><span>' + escapeHtml(label('busy', 'Busy agents')) + '</span><span class="cc-strong">' + queue.busyAgentCount + '</span></div>' +
+                    '<div class="cc-tile__row"><span>' + escapeHtml(label('notReady', 'Not-ready agents')) + '</span><span class="cc-strong">' + queue.notReadyAgentCount + '</span></div>' +
                     '<div class="cc-tile__row"><span>' + escapeHtml(label('longestWait', 'Longest wait')) + '</span><span class="cc-strong">' + formatWait(queue.longestWaitSeconds) + '</span></div>' +
                     '<div class="cc-tile__row"><span>' + escapeHtml(label('slaBreaches', 'SLA breaches')) + '</span><span class="cc-strong">' + queue.slaBreachCount + '</span></div>' +
                 '</div>';

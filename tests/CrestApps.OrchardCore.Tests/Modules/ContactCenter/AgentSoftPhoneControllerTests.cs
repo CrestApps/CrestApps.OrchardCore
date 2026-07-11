@@ -74,11 +74,35 @@ public sealed class AgentSoftPhoneControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
-    private static AgentSoftPhoneController CreateController(bool isAuthorized)
+    [Fact]
+    public async Task SignIn_WhenNoQueueOrCampaignIsSelected_ReturnsBadRequest()
+    {
+        // Arrange
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        var controller = CreateController(true, presenceManager.Object);
+
+        // Act
+        var result = await controller.SignIn([], [], "/Admin");
+
+        // Assert
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Select at least one queue or campaign before signing in.", badRequest.Value);
+        presenceManager.Verify(
+            manager => manager.SignInAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static AgentSoftPhoneController CreateController(
+        bool isAuthorized,
+        IAgentPresenceManager presenceManager = null)
     {
         var authorizationService = new TestAuthorizationService(isAuthorized);
         var controller = new AgentSoftPhoneController(
-            Mock.Of<IAgentPresenceManager>(),
+            presenceManager ?? Mock.Of<IAgentPresenceManager>(),
             authorizationService,
             NullLogger<AgentSoftPhoneController>.Instance)
         {

@@ -44,6 +44,8 @@ Queues can require one or more skills. Agents must have every required skill ass
 
 A **queue** holds activities waiting for an agent, with a default priority, an SLA threshold, required skills, an optional inbound channel endpoint mapping, a reservation timeout, a routing policy, an optional business-hours calendar, and optional overflow settings. Activities enter a queue as **queue items**; the system pairs the highest-priority, oldest waiting item with an eligible available agent signed in to that queue and creates a short-lived **reservation**.
 
+If no eligible agent is available when an activity enters the queue, the activity remains durable waiting work; it is not rejected merely because no agent is immediately available. Signing in, returning to **Available**, the assignment background task, or another routing trigger can offer it later. Business-hours, overflow, reservation-timeout, voicemail, and rejection policies determine when waiting work should move or end.
+
 Routing is strategy-based. The strategy chain first rejects agents that do not have every required queue skill, then rejects agents that are already handling their maximum number of concurrent interactions, then applies the queue's selected scoring strategy. Each assignment publishes an auditable routing-decision event that records the queue item, selected agent, candidate scores, and reasons, so later supervisor and analytics features can explain why work was offered to an agent.
 
 ### Routing policy

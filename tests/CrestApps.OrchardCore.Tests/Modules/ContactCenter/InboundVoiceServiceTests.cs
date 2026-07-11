@@ -90,6 +90,7 @@ public sealed class InboundVoiceServiceTests
 
         // Assert
         Assert.True(result.Routed);
+        Assert.False(result.Queued);
         Assert.Equal("u1", result.AgentUserId);
         Assert.Equal("act1", result.ActivityItemId);
         Assert.Equal("q1", result.QueueId);
@@ -161,7 +162,9 @@ public sealed class InboundVoiceServiceTests
 
         // Assert
         Assert.False(result.Routed);
+        Assert.True(result.Queued);
         Assert.Equal("q1", result.QueueId);
+        Assert.Equal("The call is waiting in the queue for the next eligible agent.", result.Reason);
         harness.IncomingCallDispatcher.Verify(d => d.DispatchAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -177,6 +180,15 @@ public sealed class InboundVoiceServiceTests
                 ItemId = "interaction-1",
                 ActivityItemId = "activity-1",
                 ProviderInteractionId = "call-1",
+                QueueId = "queue-1",
+            });
+        harness.QueueItemManager
+            .Setup(manager => manager.FindByActivityIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ActivityItemId = "activity-1",
+                QueueId = "queue-1",
+                Status = QueueItemStatus.Removed,
             });
         var service = harness.CreateService();
 
@@ -193,6 +205,7 @@ public sealed class InboundVoiceServiceTests
 
         // Assert
         Assert.False(result.Routed);
+        Assert.False(result.Queued);
         Assert.Equal("activity-1", result.ActivityItemId);
         Assert.Equal("interaction-1", result.InteractionId);
         harness.ActivityManager.Verify(
@@ -335,6 +348,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IActivityQueueManager> QueueManager { get; } = new();
 
+        public Mock<IQueueItemManager> QueueItemManager { get; } = new();
+
         public Mock<IActivityQueueService> QueueService { get; } = new();
 
         public Mock<IActivityAssignmentService> AssignmentService { get; } = new();
@@ -403,6 +418,7 @@ public sealed class InboundVoiceServiceTests
                 ContentManager.Object,
                 InteractionManager.Object,
                 QueueManager.Object,
+                QueueItemManager.Object,
                 QueueService.Object,
                 AssignmentService.Object,
                 ReservationService.Object,

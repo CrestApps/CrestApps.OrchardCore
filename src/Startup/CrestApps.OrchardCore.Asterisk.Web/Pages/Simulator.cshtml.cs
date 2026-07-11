@@ -49,6 +49,11 @@ public sealed class SimulatorModel : PageModel
     public int RoutedCount => Results.Count(result => result.Routed == true);
 
     /// <summary>
+    /// Gets how many requests are waiting in a Contact Center queue.
+    /// </summary>
+    public int QueuedCount => Results.Count(result => result.Queued == true);
+
+    /// <summary>
     /// Initializes the page with configuration-backed defaults.
     /// </summary>
     public void OnGet()
