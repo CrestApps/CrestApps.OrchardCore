@@ -48,6 +48,7 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
             {
                 model.SubjectContentType = metadata.SubjectContentType;
                 model.UrgencyLevel = metadata.UrgencyLevel;
+                model.AssignmentType = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName);
                 model.NormalizedUserName = metadata.NormalizedUserName;
                 model.DefaultScheduleHours = metadata.DefaultScheduleHours;
 
@@ -98,17 +99,36 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var normalizedUserName = model.NormalizedUserName?.Trim();
+
         if (!string.IsNullOrWhiteSpace(model.SubjectContentType) &&
             await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before it can be used by a New Activity action."]);
         }
 
+        if (model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner)
+        {
+            if (string.IsNullOrWhiteSpace(normalizedUserName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["A user is required when the assignment type is Specific owner."]);
+            }
+            else if (await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync() is null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["The selected user does not exist."]);
+            }
+        }
+        else
+        {
+            normalizedUserName = null;
+        }
+
         action.Put(new NewActivityActionMetadata
         {
             SubjectContentType = model.SubjectContentType,
             UrgencyLevel = model.UrgencyLevel,
-            NormalizedUserName = model.NormalizedUserName?.Trim(),
+            AssignmentType = model.AssignmentType,
+            NormalizedUserName = normalizedUserName,
             DefaultScheduleHours = model.DefaultScheduleHours,
         });
 

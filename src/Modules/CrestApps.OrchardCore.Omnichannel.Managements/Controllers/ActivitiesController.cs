@@ -563,6 +563,42 @@ public sealed class ActivitiesController : Controller
     }
 
     /// <summary>
+    /// Purges a scheduled activity from a contact profile.
+    /// </summary>
+    /// <param name="contentItemId">The contact content item identifier.</param>
+    /// <param name="id">The activity identifier.</param>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("omnichannel/activities/purge/{contentItemId}/{id}")]
+    public async Task<IActionResult> Purge(string contentItemId, string id)
+    {
+        var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        var activity = await _omnichannelActivityManager.FindByIdAsync(id);
+
+        if (!IsContactScheduledActivity(activity, contact.ContentItemId))
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.PurgeActivity, activity))
+        {
+            return Forbid();
+        }
+
+        ActivityPurgeHelper.Purge(activity);
+        await _omnichannelActivityManager.UpdateAsync(activity);
+        await _notifier.SuccessAsync(H["The activity has been purged successfully."]);
+
+        return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
+    }
+
+    /// <summary>
     /// Displays the bulk manage activities page.
     /// </summary>
     /// <param name="options">The filter options.</param>
@@ -694,7 +730,11 @@ public sealed class ActivitiesController : Controller
         PagerParameters pagerParameters,
         [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
+        var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
+            ? OmnichannelConstants.Permissions.PurgeActivity
+            : OmnichannelConstants.Permissions.ManageActivities;
+
+        if (!await _authorizationService.AuthorizeAsync(User, requiredPermission))
         {
             return Forbid();
         }
@@ -883,8 +923,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var activity in activities)
         {
-            activity.Status = ActivityStatus.Purged;
-            ClearReservationState(activity);
+            ActivityPurgeHelper.Purge(activity);
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }
@@ -1093,6 +1132,14 @@ public sealed class ActivitiesController : Controller
     {
         return activity is not null &&
             activity.Status is ActivityStatus.NotStated or ActivityStatus.Scheduled or ActivityStatus.Pending or ActivityStatus.AwaitingAgentResponse or ActivityStatus.Failed or ActivityStatus.Cancelled;
+    }
+
+    private static bool IsContactScheduledActivity(OmnichannelActivity activity, string contactContentItemId)
+    {
+        return activity is not null &&
+            activity.Status == ActivityStatus.NotStated &&
+            activity.InteractionType == ActivityInteractionType.Manual &&
+            string.Equals(activity.ContactContentItemId, contactContentItemId, StringComparison.Ordinal);
     }
 
     private static void ResetAssignment(OmnichannelActivity activity)

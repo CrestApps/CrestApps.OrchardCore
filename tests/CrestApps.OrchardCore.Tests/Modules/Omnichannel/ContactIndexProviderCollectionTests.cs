@@ -21,6 +21,22 @@ public sealed class ContactIndexProviderCollectionTests
     }
 
     [Fact]
+    public void OmnichannelContactPhoneIndexProvider_ShouldUseDefaultCollection()
+    {
+        // Arrange
+        var provider = CreateProvider(
+            typeof(CrestApps.OrchardCore.Omnichannel.Managements.Startup).Assembly,
+            "CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactPhoneIndexProvider",
+            [new CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService()]);
+
+        // Act
+        var collectionName = GetCollectionName(provider);
+
+        // Assert
+        Assert.True(string.IsNullOrEmpty(collectionName));
+    }
+
+    [Fact]
     public void OmnichannelContactCommunicationPreferenceIndexProvider_ShouldUseDefaultCollection()
     {
         // Arrange

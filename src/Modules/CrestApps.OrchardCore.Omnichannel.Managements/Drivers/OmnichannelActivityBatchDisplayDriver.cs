@@ -181,6 +181,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.PhoneNumberMatchTypes =
             [
+                new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
                 new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
@@ -319,9 +320,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
         }
 
-        if (!string.IsNullOrEmpty(model.PhoneNumber) && !model.PhoneNumber.TrimStart().StartsWith('+'))
+        if (!string.IsNullOrWhiteSpace(model.PhoneNumber) &&
+            !PhoneNumberSearchTerm.TryParse(model.PhoneNumber, out _))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must contain at least one digit."]);
         }
 
         batch.DisplayText = model.DisplayText?.Trim();

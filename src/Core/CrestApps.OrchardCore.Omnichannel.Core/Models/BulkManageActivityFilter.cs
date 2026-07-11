@@ -96,14 +96,14 @@ public sealed class BulkManageActivityFilter : Entity
 
     /// <summary>
     /// Gets or sets the phone number to search for in contact records.
-    /// The value should be in E.164 format (e.g., +17025551234).
+    /// A leading plus sign searches E.164 values; otherwise, the national number is searched.
     /// </summary>
     public string PhoneNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the match type for the phone number filter.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter contacts by.

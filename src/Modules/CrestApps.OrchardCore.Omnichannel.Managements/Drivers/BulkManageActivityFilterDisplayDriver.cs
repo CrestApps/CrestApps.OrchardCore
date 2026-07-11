@@ -138,6 +138,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
             model.PhoneNumberMatchTypes =
             [
+                new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
                 new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
@@ -202,9 +203,10 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.DoNotCallFrom = null;
         filter.DoNotCallTo = null;
 
-        if (!string.IsNullOrEmpty(filter.PhoneNumber) && !filter.PhoneNumber.StartsWith('+'))
+        if (!string.IsNullOrWhiteSpace(filter.PhoneNumber) &&
+            !PhoneNumberSearchTerm.TryParse(filter.PhoneNumber, out _))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must contain at least one digit."]);
         }
 
         if (!string.IsNullOrEmpty(model.ContactIsPublished) && bool.TryParse(model.ContactIsPublished, out var isPublished))

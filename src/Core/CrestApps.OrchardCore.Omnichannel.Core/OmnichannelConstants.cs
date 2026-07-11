@@ -147,6 +147,11 @@ public static class OmnichannelConstants
         public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");
 
         /// <summary>
+        /// Gets the permission to purge an activity.
+        /// </summary>
+        public readonly static Permission PurgeActivity = new("PurgeActivity", "Purge activity", [ManageActivities]);
+
+        /// <summary>
         /// Gets the permission to manage activity batches.
         /// </summary>
         public readonly static Permission ManageActivityBatches = new("ManageActivityBatches", "Manage activity batches");

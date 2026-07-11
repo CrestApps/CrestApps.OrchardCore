@@ -208,21 +208,22 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (hasPhoneFilter)
             {
-                var phoneQuery = batch.PhoneNumberMatchType switch
+                if (!PhoneNumberSearchTerm.TryParse(batch.PhoneNumber, out var searchTerm))
                 {
-                    PhoneNumberMatchType.Exact => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                        index.NormalizedPrimaryCellPhoneNumber == batch.PhoneNumber ||
-                        index.NormalizedPrimaryHomePhoneNumber == batch.PhoneNumber),
-                    PhoneNumberMatchType.EndsWith => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                        index.NormalizedPrimaryCellPhoneNumber.EndsWith(batch.PhoneNumber) ||
-                        index.NormalizedPrimaryHomePhoneNumber.EndsWith(batch.PhoneNumber)),
-                    _ => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                        index.NormalizedPrimaryCellPhoneNumber.StartsWith(batch.PhoneNumber) ||
-                        index.NormalizedPrimaryHomePhoneNumber.StartsWith(batch.PhoneNumber)),
-                };
+                    phoneIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    _logger.LogWarning("The phone number filter for activity batch '{BatchId}' does not contain any digits.", batch.ItemId);
+                }
+                else
+                {
+                    var phoneQuery = batch.OnlyPublishedLeads
+                        ? readonlySession.QueryIndex<OmnichannelContactPhoneIndex>(index => index.Published)
+                        : readonlySession.QueryIndex<OmnichannelContactPhoneIndex>(index => index.Latest);
 
-                var phoneContacts = await phoneQuery.ListAsync(cancellationToken);
-                phoneIds = phoneContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    phoneQuery = ApplyPhoneFilter(phoneQuery, searchTerm, batch.PhoneNumberMatchType);
+
+                    var phoneContacts = await phoneQuery.ListAsync(cancellationToken);
+                    phoneIds = phoneContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
             }
 
             if (hasTimeZoneFilter)
@@ -484,6 +485,49 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         await _catalog.UpdateAsync(batch, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+    }
+
+    private static IQueryIndex<OmnichannelContactPhoneIndex> ApplyPhoneFilter(
+        IQueryIndex<OmnichannelContactPhoneIndex> query,
+        PhoneNumberSearchTerm searchTerm,
+        PhoneNumberMatchType matchType)
+    {
+        if (searchTerm.IsE164)
+        {
+            return matchType switch
+            {
+                PhoneNumberMatchType.Exact => query.Where(index =>
+                    index.E164PrimaryCellPhoneNumber == searchTerm.Value ||
+                    index.E164PrimaryHomePhoneNumber == searchTerm.Value),
+                PhoneNumberMatchType.BeginsWith => query.Where(index =>
+                    index.E164PrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
+                    index.E164PrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
+                PhoneNumberMatchType.EndsWith => query.Where(index =>
+                    index.E164PrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
+                    index.E164PrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
+                PhoneNumberMatchType.Contains => query.Where(index =>
+                    index.E164PrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
+                    index.E164PrimaryHomePhoneNumber.Contains(searchTerm.Value)),
+                _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
+            };
+        }
+
+        return matchType switch
+        {
+            PhoneNumberMatchType.Exact => query.Where(index =>
+                index.NationalPrimaryCellPhoneNumber == searchTerm.Value ||
+                index.NationalPrimaryHomePhoneNumber == searchTerm.Value),
+            PhoneNumberMatchType.BeginsWith => query.Where(index =>
+                index.NationalPrimaryCellPhoneNumber.StartsWith(searchTerm.Value) ||
+                index.NationalPrimaryHomePhoneNumber.StartsWith(searchTerm.Value)),
+            PhoneNumberMatchType.EndsWith => query.Where(index =>
+                index.NationalPrimaryCellPhoneNumber.EndsWith(searchTerm.Value) ||
+                index.NationalPrimaryHomePhoneNumber.EndsWith(searchTerm.Value)),
+            PhoneNumberMatchType.Contains => query.Where(index =>
+                index.NationalPrimaryCellPhoneNumber.Contains(searchTerm.Value) ||
+                index.NationalPrimaryHomePhoneNumber.Contains(searchTerm.Value)),
+            _ => throw new ArgumentOutOfRangeException(nameof(matchType), matchType, "Unsupported phone number match type."),
+        };
     }
 
     private static bool TryGetActivityBatchSource(string source, ActivityBatchSourceOptions options, out ActivityBatchSourceEntry sourceEntry)

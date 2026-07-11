@@ -26,6 +26,7 @@ using OrchardCore.Modules.Manifest;
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
+        "OrchardCore.Contents",
         "OrchardCore.Flows",
         "OrchardCore.Users",
         TimeZonesConstants.Features.Area,

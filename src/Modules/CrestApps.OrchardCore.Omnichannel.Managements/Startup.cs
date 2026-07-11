@@ -27,6 +27,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Contents.Services;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
@@ -170,7 +171,10 @@ public sealed class Startup : StartupBase
 
         services
             .AddIndexProvider<OmnichannelContactIndexProvider>()
+            .AddIndexProvider<OmnichannelContactPhoneIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
 
         services.AddDataMigration<ContactMethodMigrations>();
 

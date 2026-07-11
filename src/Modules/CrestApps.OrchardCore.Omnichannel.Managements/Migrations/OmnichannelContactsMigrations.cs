@@ -68,7 +68,9 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .Column<string>("TimeZoneId", column => column.WithLength(64))
         );
 
-        return 6;
+        await CreatePhoneIndexTableAsync();
+
+        return 7;
     }
 
     /// <summary>
@@ -162,6 +164,76 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         ShellScope.AddDeferredTask(ReindexPublishedContactsAsync);
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the version-aware contact phone search index.
+    /// </summary>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await CreatePhoneIndexTableAsync();
+        ShellScope.AddDeferredTask(ReindexContactSearchVersionsAsync);
+
+        return 7;
+    }
+
+    private async Task CreatePhoneIndexTableAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<bool>("Published")
+            .Column<bool>("Latest")
+            .Column<string>("E164PrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("NationalPrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("E164PrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("NationalPrimaryHomePhoneNumber", column => column.WithLength(50))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_DocumentId",
+                "DocumentId",
+                "ContentItemId")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_ContentItemLatest",
+                "ContentItemId",
+                "Latest")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_E164Cell",
+                "E164PrimaryCellPhoneNumber",
+                "Published",
+                "Latest")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_NationalCell",
+                "NationalPrimaryCellPhoneNumber",
+                "Published",
+                "Latest")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_E164Home",
+                "E164PrimaryHomePhoneNumber",
+                "Published",
+                "Latest")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneIndex>(table => table
+            .CreateIndex(
+                "IDX_OCPhone_NationalHome",
+                "NationalPrimaryHomePhoneNumber",
+                "Published",
+                "Latest")
+        );
     }
 
     private async Task EnsureDefaultContactIndexTableAsync()
@@ -360,6 +432,56 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         {
             logger.LogInformation(
                 "Reindexed {ReindexedCount} published omnichannel contact content item(s) after repairing the default contact index table.",
+                reindexedCount);
+        }
+    }
+
+    private static async Task ReindexContactSearchVersionsAsync(ShellScope scope)
+    {
+        var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<OmnichannelContactsMigrations>>();
+        var store = scope.ServiceProvider.GetRequiredService<IStore>();
+        var contentTypes = await GetContentTypesWithOmnichannelContactPartAsync(contentDefinitionManager);
+
+        if (contentTypes.Length == 0)
+        {
+            return;
+        }
+
+        var documentId = 0L;
+        var reindexedCount = 0;
+
+        while (true)
+        {
+            await using var session = store.CreateSession();
+
+            var batch = await session.Query<ContentItem, ContentItemIndex>(index =>
+                (index.Published || index.Latest) &&
+                index.ContentType.IsIn(contentTypes) &&
+                index.DocumentId > documentId)
+                .OrderBy(index => index.DocumentId)
+                .Take(ReindexBatchSize)
+                .ListAsync();
+
+            if (!batch.Any())
+            {
+                break;
+            }
+
+            foreach (var contentItem in batch)
+            {
+                documentId = Math.Max(documentId, contentItem.Id);
+                await session.SaveAsync(contentItem);
+                reindexedCount++;
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Reindexed {ReindexedCount} published or latest omnichannel contact content item version(s) for phone search.",
                 reindexedCount);
         }
     }

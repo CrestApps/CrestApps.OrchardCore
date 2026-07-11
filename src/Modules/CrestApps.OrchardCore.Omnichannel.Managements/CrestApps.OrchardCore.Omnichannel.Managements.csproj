@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ContentFields" />

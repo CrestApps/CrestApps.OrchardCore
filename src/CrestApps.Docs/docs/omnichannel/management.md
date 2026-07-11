@@ -68,8 +68,13 @@ Each subject can have multiple actions per disposition, and each action has its 
 | Type | Description |
 |------|-------------|
 | **Finish** | Completes the task. No additional actions are taken. |
-| **Try Again** | Creates a retry activity with the same details and an incremented attempt count. Configurable parameters: max attempts, urgency level, assigned user, default schedule hours. |
-| **New Activity** | Creates a brand new activity, optionally targeting a different subject type. The new activity resolves its campaign, interaction type, and channel settings from the target subject flow. |
+| **Try Again** | Creates a retry activity with the same details and an incremented attempt count. Configurable parameters include max attempts, urgency level, owner assignment, and default schedule hours. |
+| **New Activity** | Creates a brand new activity, optionally targeting a different subject type. The new activity resolves its campaign, interaction type, and channel settings from the target subject flow and supports configurable owner assignment. |
+
+Actions that create follow-up activities expose an **Assignment type**:
+
+- **Same owner** assigns the follow-up activity to the user who completes the current activity.
+- **Specific owner** displays a required user selector and assigns the follow-up activity to that selected user.
 
 **Communication preferences:** Every action type can optionally set Do-Not-Call, Do-Not-SMS, Do-Not-Email, and Do-Not-Chat flags on the contact when executed.
 
@@ -183,7 +188,7 @@ After saving the subject flow, click **Manage Flow** from the `Subject Flows` li
 
 1. Click **Add Action**.
 2. Select an action type (**Finish**, **Try Again**, or **New Activity**).
-3. Choose a disposition and configure the action parameters.
+3. Choose a disposition and configure the action parameters. For **Try Again** and **New Activity**, choose **Same owner** or **Specific owner**.
 4. Repeat to add multiple actions per disposition or for different dispositions.
 
 **Example setup:**
@@ -208,7 +213,7 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
    - Select subject type
    - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
    - Assign users when the selected source requires assignment.
-   - Optionally set lead created range, phone number, time zone, and last activity filters
+   - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
 The inventory load runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
@@ -242,6 +247,27 @@ Navigate to **Interaction Center** -> **Activities** to review scheduled omnicha
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
+Users with the **Purge activity** permission see a **Purge** button on each scheduled activity in a contact profile. Purging is irreversible, changes the activity status to `Purged`, and clears any reservation state. The same permission is required for the bulk **Purge** action on the Manage Activities page; **Manage activities** implies **Purge activity**.
+
+### Phone number search
+
+Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods.
+
+- Input that does not begin with `+` is reduced to digits and matched against the national number, so values such as `702499`, `(702) 499`, or `702-499` are accepted.
+- Input whose trimmed value begins with `+` is matched against the E.164 value. The plus sign is a literal format indicator, not a wildcard.
+- **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Inventory and Manage Activities.
+
+Content Admin supports these named search terms:
+
+| Term | Match behavior | Example |
+|------|----------------|---------|
+| `phone:` | Contains | `phone:702499` |
+| `phone-exact:` | Exact match | `phone-exact:7024993350` |
+| `phone-starts:` | Begins with | `phone-starts:+1702` |
+| `phone-ends:` | Ends with | `phone-ends:3350` |
+
+National-number searches can match contacts from more than one country. Use a leading `+` when the country calling code must be part of the search.
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one.
@@ -261,6 +287,8 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Filter | Type | Description |
 |--------|------|-------------|
 | Contact status | Select | Filter by published or unpublished contacts |
+| Phone number | Text | Search primary Cell and Home numbers using national-number fragments or a leading `+` for E.164 |
+| Phone match type | Select | Contains, exact match, begins with, or ends with |
 
 #### Activity Filters
 

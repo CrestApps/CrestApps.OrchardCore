@@ -108,9 +108,6 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             CampaignId = activity.CampaignId,
             Instructions = activity.Instructions,
             Attempts = activity.Attempts + 1,
-            AssignedToId = activity.CompletedById,
-            AssignedToUsername = activity.CompletedByUsername,
-            AssignedToUtc = now,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
             CreatedUtc = now,
@@ -122,7 +119,16 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         nextAttempt.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
 
-        await ResolveAssigneeAsync(nextAttempt, metadata.NormalizedUserName);
+        if (!await TryAssignOwnerAsync(
+            nextAttempt,
+            action,
+            metadata.AssignmentType,
+            metadata.NormalizedUserName,
+            activity,
+            now))
+        {
+            return;
+        }
 
         await _session.SaveAsync(nextAttempt, collection: OmnichannelConstants.CollectionName);
     }
@@ -155,9 +161,6 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             CampaignId = activity.CampaignId,
             Instructions = null,
             Attempts = 1,
-            AssignedToId = activity.CompletedById,
-            AssignedToUsername = activity.CompletedByUsername,
-            AssignedToUtc = now,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
             CreatedUtc = now,
@@ -165,6 +168,19 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel,
             Status = ActivityStatus.NotStated,
         };
+
+        newActivity.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
+
+        if (!await TryAssignOwnerAsync(
+            newActivity,
+            action,
+            metadata.AssignmentType,
+            metadata.NormalizedUserName,
+            activity,
+            now))
+        {
+            return;
+        }
 
         newActivity.Subject = await _contentManager.NewAsync(targetSubjectContentType);
 
@@ -175,10 +191,6 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             newActivity.ChannelEndpointId = flowSettings.ChannelEndpointId ?? activity.ChannelEndpointId;
             newActivity.CampaignId = flowSettings.CampaignId ?? activity.CampaignId;
         }
-
-        newActivity.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
-
-        await ResolveAssigneeAsync(newActivity, metadata.NormalizedUserName);
 
         if (context.Contact is not null)
         {
@@ -249,19 +261,57 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         return _clock.UtcNow.AddDays(1);
     }
 
-    private async Task ResolveAssigneeAsync(OmnichannelActivity activity, string normalizedUserName)
+    private async Task<bool> TryAssignOwnerAsync(
+        OmnichannelActivity followUpActivity,
+        SubjectAction action,
+        SubjectActionOwnerAssignmentType assignmentType,
+        string normalizedUserName,
+        OmnichannelActivity completedActivity,
+        DateTime assignedToUtc)
     {
-        if (string.IsNullOrEmpty(normalizedUserName))
+        var effectiveAssignmentType = SubjectActionOwnerAssignmentTypeResolver.Resolve(assignmentType, normalizedUserName);
+
+        if (effectiveAssignmentType == SubjectActionOwnerAssignmentType.SameOwner)
         {
-            return;
+            AssignOwner(
+                followUpActivity,
+                completedActivity.CompletedById,
+                completedActivity.CompletedByUsername,
+                assignedToUtc);
+
+            return true;
         }
 
         var owner = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
 
-        if (owner is not null)
+        if (owner is null)
         {
-            activity.AssignedToId = owner.UserId;
-            activity.AssignedToUsername = owner.UserName;
+            _logger.LogWarning(
+                "The configured specific owner {NormalizedUserName} for subject action {SubjectActionId} was not found. Skipping follow-up activity creation.",
+                normalizedUserName,
+                action.ItemId);
+
+            return false;
+        }
+
+        AssignOwner(followUpActivity, owner.UserId, owner.UserName, assignedToUtc);
+
+        return true;
+    }
+
+    private static void AssignOwner(
+        OmnichannelActivity activity,
+        string ownerId,
+        string ownerName,
+        DateTime assignedToUtc)
+    {
+        activity.AssignedToId = ownerId;
+        activity.AssignedToUsername = ownerName;
+
+        if (!string.IsNullOrWhiteSpace(ownerId) || !string.IsNullOrWhiteSpace(ownerName))
+        {
+            activity.AssignedToUtc = assignedToUtc;
+            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
         }
     }
 }

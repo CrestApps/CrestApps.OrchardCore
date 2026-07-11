@@ -97,7 +97,7 @@ public class BulkManageActivityFilterViewModel
     /// <summary>
     /// Gets or sets the phone number match type.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter contacts by.
