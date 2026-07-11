@@ -51,4 +51,17 @@ public sealed class ActivityReservationManager : CatalogManager<ActivityReservat
 
         return reservation;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
+    {
+        var reservations = await _store.ListActiveByActivityAsync(activityItemId, cancellationToken);
+
+        foreach (var reservation in reservations)
+        {
+            await LoadAsync(reservation, cancellationToken);
+        }
+
+        return reservations;
+    }
 }

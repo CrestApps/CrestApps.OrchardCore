@@ -75,6 +75,21 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         var wasAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
         var queueItem = await _queueItemManager.FindByActivityIdAsync(interaction.ActivityItemId, cancellationToken);
 
+        // Cancel every lingering reservation bound to this activity. Reject/re-offer cycles can accumulate
+        // multiple accepted reservations for the same activity, and leaving them behind keeps an agent's
+        // ActiveReservationId pointing at dead work, which blocks all future offers.
+        var reservations = await _reservationManager.ListActiveByActivityAsync(interaction.ActivityItemId, cancellationToken);
+        var canceledReservationIds = new HashSet<string>(StringComparer.Ordinal);
+        string reservationAgentId = null;
+
+        foreach (var reservation in reservations)
+        {
+            reservationAgentId ??= reservation.AgentId;
+            reservation.Status = ReservationStatus.Canceled;
+            await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
+            canceledReservationIds.Add(reservation.ItemId);
+        }
+
         if (wasAnswered)
         {
             if (queueItem?.Status == QueueItemStatus.Assigned)
@@ -84,14 +99,14 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
 
+            // The wrap-up cascade owns the agent's presence transition for answered calls, but still clear a
+            // dangling reservation pointer so the agent is not blocked from receiving the next offer.
+            await ClearStaleReservationPointerAsync(
+                session?.AgentId ?? interaction.AgentId ?? reservationAgentId,
+                canceledReservationIds,
+                cancellationToken);
+
             return;
-        }
-
-        ActivityReservation reservation = null;
-
-        if (!string.IsNullOrWhiteSpace(queueItem?.ReservationId))
-        {
-            reservation = await _reservationManager.FindByIdAsync(queueItem.ReservationId, cancellationToken);
         }
 
         if (_logger.IsEnabled(LogLevel.Warning))
@@ -109,13 +124,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
         }
 
-        if (reservation is not null && reservation.Status is ReservationStatus.Pending or ReservationStatus.Accepted)
-        {
-            reservation.Status = ReservationStatus.Canceled;
-            await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
-        }
-
-        var agentId = reservation?.AgentId ?? session?.AgentId ?? interaction.AgentId;
+        var agentId = reservationAgentId ?? session?.AgentId ?? interaction.AgentId;
 
         if (!string.IsNullOrWhiteSpace(agentId))
         {
@@ -123,8 +132,8 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
 
             if (agent is not null)
             {
-                if (!string.IsNullOrWhiteSpace(reservation?.ItemId) &&
-                    string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal))
+                if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
+                    canceledReservationIds.Contains(agent.ActiveReservationId))
                 {
                     agent.ActiveReservationId = null;
                 }
@@ -157,6 +166,29 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         activity.ReservedUtc = null;
         activity.ReservationExpiresUtc = null;
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+    }
+
+    private async Task ClearStaleReservationPointerAsync(
+        string agentId,
+        HashSet<string> canceledReservationIds,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(agentId) || canceledReservationIds.Count == 0)
+        {
+            return;
+        }
+
+        var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (agent is null ||
+            string.IsNullOrWhiteSpace(agent.ActiveReservationId) ||
+            !canceledReservationIds.Contains(agent.ActiveReservationId))
+        {
+            return;
+        }
+
+        agent.ActiveReservationId = null;
+        await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
     }
 
     private static bool IsTerminalState(ContactCenterCallState? state)

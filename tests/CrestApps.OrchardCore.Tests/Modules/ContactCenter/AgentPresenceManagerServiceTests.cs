@@ -300,6 +300,88 @@ public sealed class AgentPresenceManagerServiceTests
         healer.Verify(manager => manager.HealForResetAsync("a1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task SetPresenceAsync_WhenStuckBusyWithoutLiveCall_HealsThenBecomesAvailable()
+    {
+        // Arrange
+        var stuck = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "r1",
+        };
+        var healed = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+            ActiveReservationId = null,
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.SetupSequence(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stuck)
+            .ReturnsAsync(healed);
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(healed);
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        healer.Setup(h => h.HealForResetAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, "Ready", TestContext.Current.CancellationToken);
+
+        // Assert
+        healer.Verify(h => h.HealForResetAsync("a1", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(AgentPresenceStatus.Available, profile.PresenceStatus);
+        Assert.Null(profile.RequestedPresenceStatus);
+    }
+
+    [Fact]
+    public async Task SetPresenceAsync_WhenBusyWithLiveCall_DefersAvailabilityAfterHealing()
+    {
+        // Arrange
+        var stuck = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "r1",
+        };
+        var stillBusy = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "r1",
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.SetupSequence(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stuck)
+            .ReturnsAsync(stillBusy);
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(stillBusy);
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        healer.Setup(h => h.HealForResetAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(0);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        healer.Verify(h => h.HealForResetAsync("a1", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(AgentPresenceStatus.Busy, profile.PresenceStatus);
+        Assert.Equal(AgentPresenceStatus.Available, profile.RequestedPresenceStatus);
+    }
+
     private static Mock<IDistributedLock> CreateDistributedLock()
     {
         var distributedLock = new Mock<IDistributedLock>();

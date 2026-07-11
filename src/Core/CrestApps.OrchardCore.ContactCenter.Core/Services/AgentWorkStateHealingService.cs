@@ -186,6 +186,24 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
 
         if (interaction.Status == InteractionStatus.Ringing)
         {
+            if (isProviderBacked)
+            {
+                // Provider truth did not confirm this call ended, so it is either still ringing on the provider
+                // or the provider was momentarily unreachable. Never requeue a provider-backed call from here:
+                // requeuing would either yank a live ringing call away from the agent or resurrect a dead call
+                // in an endless offer loop. The periodic provider-truth reconciliation releases it once the
+                // provider confirms the call no longer exists.
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Leaving provider-backed ringing interaction '{InteractionId}' for agent '{AgentId}' under provider control; reconciliation releases it once the provider confirms it ended.",
+                        interaction.ItemId,
+                        agent.ItemId);
+                }
+
+                return 0;
+            }
+
             _logger.LogWarning(
                 "Clearing stale ringing interaction '{InteractionId}' for agent '{AgentId}' because no active reservation remains.",
                 interaction.ItemId,

@@ -23,4 +23,12 @@ public interface IActivityReservationManager : ICatalogManager<ActivityReservati
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The pending reservation, or <see langword="null"/> when none exists.</returns>
     Task<ActivityReservation> FindPendingByAgentAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the non-terminal (pending or accepted) reservations bound to the specified activity.
+    /// </summary>
+    /// <param name="activityItemId">The activity identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The pending and accepted reservations for the activity.</returns>
+    Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default);
 }

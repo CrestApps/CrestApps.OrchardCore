@@ -161,6 +161,16 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.UserId = userId;
             profile.Name = userId;
         }
+        else if (_agentWorkStateHealingService is not null && !CanApplyPresenceNow(profile))
+        {
+            // The agent is parked in an on-call presence state (Reserved/Busy/WrapUp or holding a reservation).
+            // Reconcile against provider truth before deferring the requested change so a call that no longer
+            // exists on the provider cannot leave the agent stuck and unable to return to a ready state. Live
+            // provider-backed calls are preserved by the healer, so a genuine in-progress call still defers the
+            // change as before.
+            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
+            profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken) ?? profile;
+        }
 
         if (status == AgentPresenceStatus.RequestBreak)
         {

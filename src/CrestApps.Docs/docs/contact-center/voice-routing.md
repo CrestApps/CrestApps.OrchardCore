@@ -274,11 +274,11 @@ That lookup is used for:
 If provider truth says a ringing call ended before it was actually answered, `ProviderVoiceOfferSynchronizationService` clears the stale routing state:
 
 - queue item
-- reservation
+- **every** non-terminal (pending or accepted) reservation bound to the activity, not only the one referenced by the queue item
 - agent active reservation/presence
 - activity assignment metadata
 
-That prevents abandoned or already-ended calls from being re-offered as ghost work.
+That prevents abandoned or already-ended calls from being re-offered as ghost work. Reject/re-offer cycles can accumulate more than one accepted reservation for the same activity, so the reconciler cancels **all** of them and clears the agent's active-reservation pointer whenever it referenced one of the cancelled reservations. This also runs for calls that were already answered: the wrap-up cascade still owns the agent's presence transition, but any lingering reservation pointer is cleared so the agent is never blocked from receiving the next offer.
 
 Ended-offer reconciliation only runs when a real non-terminal → terminal transition is observed. When a reconciliation sweep discovers a call that already disappeared on the provider **before any call session was ever recorded**, `ProviderVoiceEventService` seeds the newly created session with the interaction's pre-event (non-terminal) state rather than the incoming terminal state. This preserves the non-terminal → terminal transition so the `CallEnded` event is still published and the ended-offer cleanup runs; without the seed the session would be created already-terminal and the cleanup would silently never fire, leaving the interaction stuck in the queue.
 
@@ -331,9 +331,15 @@ This catches cases where:
 
 Bulk reconciliation is serialized by a distributed lock. A provider live-stream reconnect requests a provider-scoped pass, so reconnecting one Asterisk endpoint does not repeatedly query unrelated providers or overlap another full reconciliation sweep.
 
+The Asterisk live event listener is hardened so a single bad event can never silence the stream. Each received event is dispatched in isolation: a malformed payload, an unroutable event, or a transient tenant-scope failure while the shell is reloading is logged and skipped instead of tearing down the WebSocket and forcing a reconnect storm. The listener also subscribes to **all** application events (`subscribeAll`), so every channel state change reaches provider-truth ingest rather than only the events for channels the app happens to own. Any event genuinely missed during a reconnect is still repaired by the periodic sweep above.
+
 ### Re-offer and reconnect recovery
 
 When an agent becomes available again or reconnects, Contact Center can re-check waiting voice work and offer it again. Before it does, the healer/reconciliation path clears impossible leftovers so stale reservations do not block future offers.
+
+The healer never requeues a **provider-backed ringing** interaction on its own. Requeuing one would either yank a genuinely live ringing call away from the agent or resurrect a dead call in an endless offer loop, so a provider-backed ringing interaction is always left under provider control and released only when provider truth confirms it ended. Only non-provider-backed ringing work (which has no authoritative source to consult) is requeued locally.
+
+Manual presence changes are also self-healing. If an agent is parked in an on-call presence state (Reserved/Busy/WrapUp or still holding a reservation) and asks to return to a ready state, `AgentPresenceManagerService` first reconciles the agent against provider truth. A call that no longer exists on the provider is released so the requested change applies immediately; a genuinely live provider-backed call is preserved and the change is deferred as before. This stops an agent from being stuck as **Busy** and unable to go **Available** after a call that already disappeared on the provider.
 
 ## Why the current implementation is resilient
 

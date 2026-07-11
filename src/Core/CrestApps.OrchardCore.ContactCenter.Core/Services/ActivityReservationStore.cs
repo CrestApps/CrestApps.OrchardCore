@@ -42,4 +42,18 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
             collection: ContactCenterConstants.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+
+        var reservations = await Session.Query<ActivityReservation, ActivityReservationIndex>(
+            index => index.ActivityItemId == activityItemId &&
+                (index.Status == ReservationStatus.Pending || index.Status == ReservationStatus.Accepted),
+            collection: ContactCenterConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return reservations.ToArray();
+    }
 }

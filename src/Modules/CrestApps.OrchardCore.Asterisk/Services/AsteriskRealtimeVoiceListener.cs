@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
@@ -186,7 +187,24 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
             var payload = Encoding.UTF8.GetString(message.ToArray());
 
-            await DispatchAsync(settings.ProviderName, payload, cancellationToken);
+            // A single malformed or unroutable event, or a transient tenant-scope failure while the shell is
+            // reloading, must never tear down the live event stream. Isolate each dispatch so the socket keeps
+            // receiving; any missed state change is still reconciled by the periodic provider-truth sweep.
+            try
+            {
+                await DispatchAsync(settings.ProviderName, payload, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
+                    settings.ProviderName);
+            }
         }
     }
 
@@ -281,7 +299,33 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
     private async Task ExecuteInTenantScopeAsync(Func<IServiceProvider, Task> action)
     {
-        var scope = await _shellHost.GetScopeAsync(_shellSettings);
+        // The listener is a tenant singleton whose captured shell settings can point at a shell that is being
+        // reloaded or disposed. Acquiring a scope or resolving services from a half-built shell throws
+        // ArgumentNullException for a null service provider, so guard every step and skip gracefully rather
+        // than letting the failure bubble up and tear down the WebSocket receive loop.
+        ShellScope scope;
+
+        try
+        {
+            scope = await _shellHost.GetScopeAsync(_shellSettings);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Skipped an Asterisk real-time dispatch because a tenant scope could not be acquired; the shell may be reloading.");
+
+            return;
+        }
+
+        if (scope?.ServiceProvider is null)
+        {
+            _logger.LogWarning(
+                "Skipped an Asterisk real-time dispatch because the tenant scope service provider was unavailable; the shell may be reloading.");
+
+            return;
+        }
+
         await scope.UsingAsync(
             shellScope => action(shellScope.ServiceProvider),
             activateShell: false);

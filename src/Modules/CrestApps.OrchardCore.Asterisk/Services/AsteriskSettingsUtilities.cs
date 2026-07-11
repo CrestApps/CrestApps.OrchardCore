@@ -169,6 +169,7 @@ internal static class AsteriskSettingsUtilities
             {
                 ["app"] = settings.ApplicationName,
                 ["api_key"] = $"{settings.UserName}:{settings.Password}",
+                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;
