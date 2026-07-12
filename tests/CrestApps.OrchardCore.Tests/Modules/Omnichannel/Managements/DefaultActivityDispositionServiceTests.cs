@@ -28,8 +28,9 @@ public sealed class DefaultActivityDispositionServiceTests
             .Setup(m => m.GetAsync("c1", It.IsAny<VersionOptions>()))
             .ReturnsAsync(new ContentItem { ContentType = "Customer" });
         var executor = new Mock<ISubjectActionExecutor>();
+        var handler = new Mock<IActivityDispositionHandler>();
 
-        var service = CreateService(activityManager, dispositionsCatalog, contentManager, executor);
+        var service = CreateService(activityManager, dispositionsCatalog, contentManager, executor, handlers: [handler.Object]);
 
         // Act
         var result = await service.ApplyAsync(
@@ -44,6 +45,9 @@ public sealed class DefaultActivityDispositionServiceTests
 
         executor.Verify(
             e => e.ExecuteAsync(It.Is<SubjectActionExecutionContext>(context => context.Activity == activity && context.Disposition.Name == "Sale"), It.IsAny<CancellationToken>()),
+            Times.Once);
+        handler.Verify(
+            h => h.DispositionedAsync(It.Is<ActivityDispositionRequest>(request => request.Activity == activity), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -127,7 +131,8 @@ public sealed class DefaultActivityDispositionServiceTests
         Mock<INamedCatalog<OmnichannelDisposition>> dispositionsCatalog,
         Mock<IContentManager> contentManager,
         Mock<ISubjectActionExecutor> executor,
-        Mock<ISubjectFlowSettingsService> flowSettingsService = null)
+        Mock<ISubjectFlowSettingsService> flowSettingsService = null,
+        IEnumerable<IActivityDispositionHandler> handlers = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -138,6 +143,7 @@ public sealed class DefaultActivityDispositionServiceTests
             contentManager.Object,
             executor.Object,
             (flowSettingsService ?? new Mock<ISubjectFlowSettingsService>()).Object,
+            handlers ?? [],
             clock.Object);
     }
 }

@@ -316,6 +316,34 @@ public sealed class ActivityReservationService : IActivityReservationService
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is not null &&
+            !string.IsNullOrWhiteSpace(queueItem.ReservationId) &&
+            !string.Equals(queueItem.ReservationId, reservation.ItemId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Skipped releasing expired reservation '{ReservationId}' for activity '{ActivityItemId}' because queue item '{QueueItemId}' is now owned by newer reservation '{CurrentReservationId}'.",
+                reservation.ItemId,
+                reservation.ActivityItemId,
+                queueItem.ItemId,
+                queueItem.ReservationId);
+
+            var obsoleteAgent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+            if (obsoleteAgent is not null &&
+                string.Equals(obsoleteAgent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal))
+            {
+                obsoleteAgent.PresenceStatus = obsoleteAgent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(obsoleteAgent);
+                obsoleteAgent.RequestedPresenceStatus = null;
+                obsoleteAgent.ActiveReservationId = null;
+                obsoleteAgent.PresenceChangedUtc = now;
+                await _agentManager.UpdateAsync(obsoleteAgent, cancellationToken: cancellationToken);
+                await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+            }
+
+            return;
+        }
+
         var queue = !string.IsNullOrEmpty(reservation.QueueId)
             ? await _queueManager.FindByIdAsync(reservation.QueueId, cancellationToken)
             : null;

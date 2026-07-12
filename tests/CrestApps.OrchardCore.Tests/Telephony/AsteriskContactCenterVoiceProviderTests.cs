@@ -1,0 +1,89 @@
+using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Localization;
+using Moq;
+
+namespace CrestApps.OrchardCore.Tests.Telephony;
+
+public sealed class AsteriskContactCenterVoiceProviderTests
+{
+    [Fact]
+    public async Task DialAsync_WhenAsteriskProviderSucceeds_ReturnsProviderCallId()
+    {
+        // Arrange
+        var telephonyProvider = new Mock<ITelephonyProvider>();
+        telephonyProvider
+            .Setup(provider => provider.DialAsync(
+                It.Is<DialRequest>(request => request.To == "+15551234567" && request.From == "+15550001000"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = "call-1",
+            }));
+
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        resolver
+            .Setup(provider => provider.GetAsync(AsteriskConstants.ProviderTechnicalName))
+            .ReturnsAsync(telephonyProvider.Object);
+
+        var service = CreateService(resolver);
+
+        // Act
+        var result = await service.DialAsync(new ContactCenterDialRequest
+        {
+            Destination = "+15551234567",
+            CallerId = "+15550001000",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("call-1", result.ProviderCallId);
+        Assert.Equal(AsteriskConstants.ProviderTechnicalName, result.ProviderName);
+    }
+
+    [Fact]
+    public async Task DialAsync_WhenTenantProviderIsUnavailable_UsesDefaultAsteriskProvider()
+    {
+        // Arrange
+        var telephonyProvider = new Mock<ITelephonyProvider>();
+        telephonyProvider
+            .Setup(provider => provider.DialAsync(It.IsAny<DialRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = "default-call",
+            }));
+
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        resolver
+            .Setup(provider => provider.GetAsync(AsteriskConstants.ProviderTechnicalName))
+            .ReturnsAsync((ITelephonyProvider)null);
+        resolver
+            .Setup(provider => provider.GetAsync(AsteriskConstants.DefaultProviderTechnicalName))
+            .ReturnsAsync(telephonyProvider.Object);
+
+        var service = CreateService(resolver);
+
+        // Act
+        var result = await service.DialAsync(new ContactCenterDialRequest
+        {
+            Destination = "+15551234567",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("default-call", result.ProviderCallId);
+        Assert.Equal(AsteriskConstants.DefaultProviderTechnicalName, result.ProviderName);
+    }
+
+    private static AsteriskContactCenterVoiceProvider CreateService(Mock<ITelephonyProviderResolver> resolver)
+    {
+        var localizer = new Mock<IStringLocalizer<AsteriskContactCenterVoiceProvider>>();
+        localizer.Setup(localizer => localizer["Asterisk"])
+            .Returns(new LocalizedString("Asterisk", "Asterisk"));
+
+        return new AsteriskContactCenterVoiceProvider(resolver.Object, localizer.Object);
+    }
+}

@@ -199,7 +199,9 @@ public sealed class AISubjectFlowStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>();
+        services
+            .AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>()
+            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>();
     }
 }
 

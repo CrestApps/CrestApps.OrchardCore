@@ -267,6 +267,76 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task ExpireDueAsync_WhenQueueItemHasNewerReservation_DoesNotResetCurrentOffer()
+    {
+        // Arrange
+        var reservation = new ActivityReservation
+        {
+            ItemId = "r-old",
+            QueueItemId = "qi-1",
+            AgentId = "a1",
+            ActivityItemId = "act-1",
+            Status = ReservationStatus.Pending,
+            ExpiresUtc = _now.AddSeconds(-1),
+        };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.FindByIdAsync("r-old", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+
+        var queueItem = new QueueItem
+        {
+            ItemId = "qi-1",
+            ActivityItemId = "act-1",
+            Status = QueueItemStatus.Reserved,
+            ReservationId = "r-new",
+            AgentId = "a2",
+        };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+
+        var agent = new AgentProfile
+        {
+            ItemId = "a1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            ActiveReservationId = "r-old",
+        };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            interactionManager,
+            activityManager,
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>());
+
+        // Act
+        var count = await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, count);
+        Assert.Equal(ReservationStatus.Expired, reservation.Status);
+        Assert.Equal(QueueItemStatus.Reserved, queueItem.Status);
+        Assert.Equal("r-new", queueItem.ReservationId);
+        Assert.Equal(AgentPresenceStatus.Offline, agent.PresenceStatus);
+        Assert.Null(agent.ActiveReservationId);
+        agentManager.Verify(
+            manager => manager.UpdateAsync(agent, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        interactionManager.Verify(
+            manager => manager.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        activityManager.Verify(
+            manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ExpireDueAsync_WhenRequeueing_ClearsStaleRingingAssignmentFromInteraction()
     {
         // Arrange

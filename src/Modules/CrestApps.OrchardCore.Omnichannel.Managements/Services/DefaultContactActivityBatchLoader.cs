@@ -135,6 +135,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         }
 
         DialerProfile dialerProfile = null;
+        IActivityQueueService activityQueueService = null;
 
         if (string.Equals(sourceEntry.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
@@ -149,8 +150,9 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             }
 
             var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
+            activityQueueService = _serviceProvider.GetService<IActivityQueueService>();
 
-            if (dialerProfileManager is null)
+            if (dialerProfileManager is null || activityQueueService is null)
             {
                 batch.Status = OmnichannelActivityBatchStatus.New;
 
@@ -476,6 +478,15 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 await _activityManager.CreateAsync(activity, cancellationToken);
                 await _session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+
+                if (dialerProfile is not null)
+                {
+                    await activityQueueService.EnqueueAsync(
+                        activity.ItemId,
+                        dialerProfile.QueueId,
+                        priority: null,
+                        cancellationToken);
+                }
             }
 
             await _catalog.UpdateAsync(batch, cancellationToken);

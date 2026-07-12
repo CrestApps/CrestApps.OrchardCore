@@ -71,20 +71,6 @@
             </div>
         </div>
 
-        @if (string.Equals(Model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="AIProfileId" class="ocat-label">@T["AI profile"]</label>
-                <div class="ocat-end">
-                    <select asp-for="AIProfileId" asp-items="Model.AIProfiles" class="form-select">
-                        <option value="">@T["Use subject flow profile"]</option>
-                    </select>
-                    <span asp-validation-for="AIProfileId" class="text-danger"></span>
-                    <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown. The selected profile is stored on each loaded activity and starts automated SMS conversations."]</span>
-                </div>
-            </div>
-        }
-
         @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
             <div class="ocat-wrapper">

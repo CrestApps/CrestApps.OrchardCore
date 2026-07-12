@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -173,6 +174,44 @@ public sealed class ActivityAssignmentServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task AssignQueueAsync_AfterReservation_PersistsBeforeQueryingForMoreWork()
+    {
+        // Arrange
+        var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .SetupSequence(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([topItem])
+            .ReturnsAsync([]);
+
+        var agent = new AgentProfile { ItemId = "a1" };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([agent]);
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue { ItemId = "q1", Enabled = true, ReservationTimeoutSeconds = 30 });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(s => s.ReserveAsync(topItem, agent, 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1" });
+
+        var session = new Mock<ISession>();
+        var service = CreateService(queueItemManager, agentManager, queueManager, reservationService, CreateDistributedLock(locked: true), session);
+
+        // Act
+        var assigned = await service.AssignQueueAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, assigned);
+        session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static ActivityAssignmentService CreateService(
         Mock<IQueueItemManager> queueItemManager,
         Mock<IAgentProfileManager> agentManager,
@@ -197,7 +236,8 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IAgentProfileManager> agentManager,
         Mock<IActivityQueueManager> queueManager,
         Mock<IActivityReservationService> reservationService,
-        Mock<IDistributedLock> distributedLock)
+        Mock<IDistributedLock> distributedLock,
+        Mock<ISession> session = null)
     {
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours
@@ -216,6 +256,7 @@ public sealed class ActivityAssignmentServiceTests
             businessHours.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
+            (session ?? new Mock<ISession>()).Object,
             clock.Object,
             NullLogger<ActivityAssignmentService>.Instance);
     }

@@ -28,7 +28,7 @@
 
 <div class="row g-4">
     <div class="col-12">
-        <div class="card shadow-sm" data-asterisk-dashboard data-config='@JsonSerializer.Serialize(dashboardConfig)'>
+        <div class="card shadow-sm" data-asterisk-dashboard data-config='@JsonSerializer.Serialize(dashboardConfig, new JsonSerializerOptions(JsonSerializerDefaults.Web))'>
             <div class="card-body">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
                     <div>
@@ -97,7 +97,7 @@
                                         <h2 class="h5 mb-0">Active calls</h2>
                                         <div class="small text-body-secondary">Grouped logical calls with provider-tracked hold and mute state plus inferred participant counts.</div>
                                     </div>
-                                    <span class="badge text-bg-light">@Model.Diagnostics.ActiveCallCount total / @Model.Diagnostics.ChannelCount channel legs</span>
+                                    <span class="badge text-bg-light" data-dashboard-call-count>@Model.Diagnostics.ActiveCallCount total / @Model.Diagnostics.ChannelCount channel legs</span>
                                 </div>
                                 <div class="table-responsive dashboard-scroll">
                                     <table class="table table-sm align-middle mb-0">
@@ -173,7 +173,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h2 class="h5 mb-0">Active bridges</h2>
-                                    <span class="badge text-bg-light">@Model.Diagnostics.BridgeCount total</span>
+                                    <span class="badge text-bg-light" data-dashboard-bridge-count>@Model.Diagnostics.BridgeCount total</span>
                                 </div>
                                 <div class="table-responsive dashboard-scroll">
                                     <table class="table table-sm align-middle mb-0">

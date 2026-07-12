@@ -173,11 +173,7 @@ public sealed class ActivitiesController : Controller
         {
             var contact = contacts.FirstOrDefault(x => x.ContentItemId == entry.ContactContentItemId);
 
-            if (!contentTypeDefinitions.TryGetValue(entry.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.SubjectContentType);
-                contentTypeDefinitions[entry.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(entry.SubjectContentType, entry.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(entry, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
 
@@ -273,11 +269,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var scheduledActivity in scheduledResults.Entries)
         {
-            if (!contentTypeDefinitions.TryGetValue(scheduledActivity.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(scheduledActivity.SubjectContentType);
-                contentTypeDefinitions[scheduledActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(scheduledActivity.SubjectContentType, scheduledActivity.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(scheduledActivity, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == scheduledActivity.AssignedToId);
 
@@ -290,11 +282,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var completedActivity in completedResults.Entries)
         {
-            if (!contentTypeDefinitions.TryGetValue(completedActivity.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(completedActivity.SubjectContentType);
-                contentTypeDefinitions[completedActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(completedActivity.SubjectContentType, completedActivity.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(completedActivity, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == completedActivity.CompletedById);
 
@@ -416,13 +404,20 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false),
-            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         return View(model);
@@ -449,17 +444,27 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false),
-            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            activity.Subject = subject;
+            if (subject is not null)
+            {
+                activity.Subject = subject;
+            }
 
             await _omnichannelActivityManager.UpdateAsync(activity);
 
@@ -492,13 +497,20 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
-            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
@@ -526,19 +538,29 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
             Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
-            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)
         {
             // Disposition the activity through the source-neutral path so the configured subject flow runs.
-            activity.Subject = subject;
+            if (subject is not null)
+            {
+                activity.Subject = subject;
+            }
 
             var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
             {
@@ -664,11 +686,7 @@ public sealed class ActivitiesController : Controller
         {
             var contact = contacts.FirstOrDefault(x => x.ContentItemId == entry.ContactContentItemId);
 
-            if (!contentTypeDefinitions.TryGetValue(entry.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.SubjectContentType);
-                contentTypeDefinitions[entry.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(entry.SubjectContentType, entry.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(entry, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
             var container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user);
@@ -698,6 +716,27 @@ public sealed class ActivitiesController : Controller
         model.BulkActions = bulkActionsShape.Content;
 
         return View(model);
+    }
+
+    private async Task<ContentTypeDefinition> GetSubjectContentTypeDefinitionAsync(
+        OmnichannelActivity activity,
+        Dictionary<string, ContentTypeDefinition> contentTypeDefinitions)
+    {
+        var subjectContentType = activity.SubjectContentType;
+
+        if (string.IsNullOrEmpty(subjectContentType))
+        {
+            return new ContentTypeDefinition(nameof(OmnichannelActivity), activity.Kind.ToString());
+        }
+
+        if (!contentTypeDefinitions.TryGetValue(subjectContentType, out var contentTypeDefinition))
+        {
+            contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType)
+                ?? new ContentTypeDefinition(subjectContentType, subjectContentType);
+            contentTypeDefinitions[subjectContentType] = contentTypeDefinition;
+        }
+
+        return contentTypeDefinition;
     }
 
     /// <summary>

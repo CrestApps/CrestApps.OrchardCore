@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -124,6 +125,7 @@ internal static class AgentWorkspaceEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IAgentPresenceManager presenceManager,
+        IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -139,6 +141,16 @@ internal static class AgentWorkspaceEndpoints
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         await presenceManager.SetPresenceAsync(userId, request.Status, request.Reason, httpContext.RequestAborted);
 
+        if (request.Status == AgentPresenceStatus.Available)
+        {
+            var queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
+
+            if (queuedVoiceWorkOfferService is not null)
+            {
+                await queuedVoiceWorkOfferService.OfferForUserAsync(userId, httpContext.RequestAborted);
+            }
+        }
+
         return TypedResults.Ok();
     }
 
@@ -147,7 +159,6 @@ internal static class AgentWorkspaceEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IAgentProfileManager agentManager,
-        IAgentPresenceManager presenceManager,
         IOmnichannelActivityManager activityManager,
         IInteractionManager interactionManager,
         IActivityDispositionService dispositionService,
@@ -202,11 +213,6 @@ internal static class AgentWorkspaceEndpoints
             ActorId = userId,
             ActorDisplayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userManager, displayNameProvider, httpContext.RequestAborted),
         }, httpContext.RequestAborted);
-
-        if (result.Succeeded)
-        {
-            await presenceManager.CompleteWorkAsync(profile.ItemId, httpContext.RequestAborted);
-        }
 
         return TypedResults.Ok(new
         {

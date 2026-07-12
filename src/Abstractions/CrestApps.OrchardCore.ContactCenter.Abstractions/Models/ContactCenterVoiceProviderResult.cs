@@ -16,6 +16,11 @@ public sealed class ContactCenterVoiceProviderResult
     public string ProviderCallId { get; set; }
 
     /// <summary>
+    /// Gets or sets the technical name of the provider that executed the operation.
+    /// </summary>
+    public string ProviderName { get; set; }
+
+    /// <summary>
     /// Gets or sets the provider error code when the operation failed.
     /// </summary>
     public string ErrorCode { get; set; }

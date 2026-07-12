@@ -54,7 +54,7 @@ public sealed class DialerAttemptServiceTests
         reservationService
             .Setup(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);
-        var voiceCallRouter = CreateVoiceCallRouter(Success("call1"));
+        var voiceCallRouter = CreateVoiceCallRouter(Success("call1", "Default Asterisk"));
         var service = CreateService(
             EligibleGate(),
             reservationService,
@@ -68,6 +68,7 @@ public sealed class DialerAttemptServiceTests
         // Assert
         Assert.True(started);
         Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Equal("Default Asterisk", interaction.ProviderName);
         Assert.Equal(ActivityStatus.Dialing, activity.Status);
         reservationService.Verify(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -265,12 +266,13 @@ public sealed class DialerAttemptServiceTests
             new Mock<ILogger<DialerAttemptService>>().Object);
     }
 
-    private static ContactCenterVoiceProviderResult Success(string providerCallId)
+    private static ContactCenterVoiceProviderResult Success(string providerCallId, string providerName = null)
     {
         return new ContactCenterVoiceProviderResult
         {
             Succeeded = true,
             ProviderCallId = providerCallId,
+            ProviderName = providerName,
         };
     }
 

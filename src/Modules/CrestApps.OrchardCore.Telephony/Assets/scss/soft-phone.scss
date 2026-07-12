@@ -90,12 +90,9 @@
         display: flex;
         align-items: flex-start;
         gap: 0.6rem;
-        min-height: var(--telephony-view-height);
-        max-height: var(--telephony-view-height);
         margin: 0.85rem;
         padding: 0.75rem 0.85rem;
         font-size: 0.8rem;
-        overflow-y: auto;
 
         i {
             flex: 0 0 auto;
@@ -260,6 +257,11 @@
 
         &::placeholder {
             color: var(--bs-secondary-color, #6c757d);
+            opacity: 1;
+        }
+
+        &:disabled {
+            background-color: var(--bs-secondary-bg, #e9ecef);
             opacity: 1;
         }
     }

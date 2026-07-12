@@ -274,7 +274,7 @@ National-number searches can match contacts from more than one country. Use a le
 
 ## Bulk Activity Management
 
-The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one.
+The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.
 
 ### Accessing the page
 

@@ -145,6 +145,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
         var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
         {
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
             OmnichannelCampaign campaign = null;
 
             if (!string.IsNullOrWhiteSpace(activity.CampaignId))
@@ -154,8 +155,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (campaign is null)
             {
-                var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
-
                 if (flowSettings is not null && !string.IsNullOrWhiteSpace(flowSettings.CampaignId))
                 {
                     campaign = await _campaignsCatalog.FindByIdAsync(flowSettings.CampaignId);
@@ -198,6 +197,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.Dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
             model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;
+            model.RequireDisposition = flowSettings?.RequireDisposition ?? false;
             model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
             model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
             model.UrgencyLevel = activity.UrgencyLevel;
@@ -230,9 +230,14 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             await context.Updater.TryUpdateModelAsync(processModel, Prefix);
 
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
+
             if (string.IsNullOrEmpty(processModel.DispositionId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The Disposition field is required."]);
+                if (flowSettings?.RequireDisposition == true)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The Disposition field is required."]);
+                }
             }
             else
             {

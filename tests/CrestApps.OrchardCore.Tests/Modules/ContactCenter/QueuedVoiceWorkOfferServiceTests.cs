@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using Microsoft.Extensions.Logging;
 using Moq;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -39,8 +41,9 @@ public sealed class QueuedVoiceWorkOfferServiceTests
         inboundVoiceService
             .Setup(service => service.OfferNextAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync("user-1");
+        var session = new Mock<ISession>();
 
-        var service = CreateService(agentManager, healer, inboundVoiceService);
+        var service = CreateService(agentManager, healer, inboundVoiceService, session);
 
         // Act
         var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
@@ -49,6 +52,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
         Assert.Equal(1, offered);
         inboundVoiceService.Verify(voice => voice.OfferNextAsync("q1", It.IsAny<CancellationToken>()), Times.Once);
         inboundVoiceService.Verify(voice => voice.OfferNextAsync("q2", It.IsAny<CancellationToken>()), Times.Never);
+        session.Verify(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -66,7 +70,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
 
         var healer = new Mock<IAgentWorkStateHealingService>();
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var service = CreateService(agentManager, healer, inboundVoiceService);
+        var service = CreateService(agentManager, healer, inboundVoiceService, new Mock<ISession>());
 
         // Act
         var offered = await service.OfferForUserAsync("user-1", TestContext.Current.CancellationToken);
@@ -108,7 +112,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             .Setup(service => service.OfferNextAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync("user-1");
 
-        var service = CreateService(agentManager, healer, inboundVoiceService);
+        var service = CreateService(agentManager, healer, inboundVoiceService, new Mock<ISession>());
 
         // Act
         var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
@@ -122,11 +126,14 @@ public sealed class QueuedVoiceWorkOfferServiceTests
     private static QueuedVoiceWorkOfferService CreateService(
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentWorkStateHealingService> healer,
-        Mock<IInboundVoiceService> inboundVoiceService)
+        Mock<IInboundVoiceService> inboundVoiceService,
+        Mock<ISession> session)
     {
         return new QueuedVoiceWorkOfferService(
             agentManager.Object,
             [healer.Object],
-            inboundVoiceService.Object);
+            inboundVoiceService.Object,
+            session.Object,
+            Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());
     }
 }

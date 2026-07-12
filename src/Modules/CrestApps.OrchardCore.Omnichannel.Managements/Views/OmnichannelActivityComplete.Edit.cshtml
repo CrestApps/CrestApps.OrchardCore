@@ -95,33 +95,34 @@
     </div>
 }
 
-<div class="activity-wrapper">
-    <div class="ocat-wrapper">
-        <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
-        <div class="ocat-end">
-            <select asp-for="DispositionId" class="form-select">
-                <option value="">@T["Select a disposition"]</option>
-                @foreach (var disposition in Model.Dispositions)
+@if (Model.RequireDisposition || Model.Dispositions.Any())
+{
+    <div class="activity-wrapper">
+        <div class="ocat-wrapper">
+            <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+            <div class="ocat-end">
+                <select asp-for="DispositionId" class="form-select">
+                    <option value="">@T["Select a disposition"]</option>
+                    @foreach (var disposition in Model.Dispositions)
+                    {
+                        <option value="@disposition.ItemId">@disposition.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="DispositionId" class="text-danger"></span>
+
+                @if (Model.ShowWorkflowPreview)
                 {
-                    <option value="@disposition.ItemId">@disposition.Name</option>
+                    <div id="campaign-actions-preview" class="d-none my-3">
+                        <h5 class="text-uppercase">@T["Workflow Results"]</h5>
+                        <div id="actions-list"></div>
+                    </div>
                 }
-            </select>
-            <span asp-validation-for="DispositionId" class="text-danger"></span>
-
-            @if (Model.ShowWorkflowPreview)
-            {
-                <div id="campaign-actions-preview" class="d-none my-3">
-                    <h5 class="text-uppercase">@T["Workflow Results"]</h5>
-                    <div id="actions-list"></div>
-                </div>
-            }
+            </div>
         </div>
-
     </div>
+}
 
-</div>
-
-@if (Model.ShowWorkflowPreview)
+@if (Model.ShowWorkflowPreview && (Model.RequireDisposition || Model.Dispositions.Any()))
 {
     <style asp-name="flatpickr"></style>
     <script asp-name="flatpickr" at="Foot"></script>

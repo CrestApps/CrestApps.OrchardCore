@@ -31,6 +31,7 @@ internal static class AsteriskAriConnectionUtilities
     public static void ApplyBasicAuthentication(HttpClient client, AsteriskWebOptions options)
     {
         client.BaseAddress = CreateBaseUri(options.AsteriskBaseUrl);
+        client.DefaultRequestHeaders.ConnectionClose = true;
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
             Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.AsteriskUserName}:{options.AsteriskPassword}")));

@@ -173,6 +173,9 @@ public sealed class DialerAttemptService : IDialerAttemptService
             }
 
             interaction.Status = InteractionStatus.Ringing;
+            interaction.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
+                ? interaction.ProviderName
+                : result.ProviderName;
             interaction.ProviderInteractionId = result.ProviderCallId;
             interaction.StartedUtc = _clock.UtcNow;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);

@@ -71,9 +71,15 @@
             });
         }
 
-        connection.onreconnected(function () {
+        connection.onreconnected(function (connectionId) {
             startHeartbeat();
-            loadSnapshot().catch(function () { });
+            loadSnapshot()
+                .then(function (snapshot) {
+                    if (typeof options.onReconnected === 'function') {
+                        options.onReconnected(connectionId, snapshot);
+                    }
+                })
+                .catch(function () { });
         });
 
         connection.onclose(function () {

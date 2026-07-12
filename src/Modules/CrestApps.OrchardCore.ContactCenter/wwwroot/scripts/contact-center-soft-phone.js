@@ -18,8 +18,8 @@
 
         var inbound = call.direction === 1 || call.direction === 'Inbound';
 
-        return (state === 'Connecting' || state === 'Connected' || state === 'OnHold') ||
-            (state === 'Ringing' && !inbound);
+        return !inbound &&
+            (state === 'Connecting' || state === 'Ringing' || state === 'Connected' || state === 'OnHold');
     }
 
     function getSelectedValues(select) {
@@ -52,15 +52,48 @@
     }
 
     function refreshPickers(root) {
-        if (!window.jQuery || !root) {
+        if (!root) {
             return;
         }
 
-        var $pickers = window.jQuery(root).find('.selectpicker');
+        var pickers = root.querySelectorAll('.selectpicker');
 
-        if ($pickers.length && typeof $pickers.selectpicker === 'function') {
-            $pickers.selectpicker('refresh');
-        }
+        Array.prototype.forEach.call(pickers, function (picker) {
+            var $picker = window.jQuery && window.jQuery(picker);
+
+            if ($picker && typeof $picker.selectpicker === 'function') {
+                $picker.selectpicker('val', getSelectedValues(picker));
+                $picker.selectpicker('refresh');
+
+                return;
+            }
+
+            var selectedOptions = Array.prototype.filter.call(picker.options, function (option) {
+                return option.selected && !option.disabled;
+            });
+            var selectedText = selectedOptions.map(function (option) {
+                return option.text;
+            });
+            var countText = picker.getAttribute('data-count-selected-text') || '{0} selected';
+            var label = selectedText.length > 2
+                ? countText.replace('{0}', selectedText.length)
+                : selectedText.join(', ');
+
+            if (!label) {
+                label = picker.getAttribute('title') || '';
+            }
+
+            var button = picker.parentElement && picker.parentElement.querySelector('.dropdown-toggle');
+            var buttonLabel = button && button.querySelector('.filter-option-inner-inner');
+
+            if (button) {
+                button.setAttribute('title', label);
+            }
+
+            if (buttonLabel) {
+                buttonLabel.textContent = label;
+            }
+        });
     }
 
     function setBusy(root, busy) {
@@ -205,10 +238,12 @@
         return api.__contactCenterQueuedVoiceSyncPromise;
     }
 
-    function restorePendingIncomingOffer(root, api, client) {
+    function restorePendingIncomingOffer(root, api, client, attemptsRemaining) {
         if (!root || !api || !client || typeof api.setIncomingOffer !== 'function') {
             return Promise.resolve(null);
         }
+
+        attemptsRemaining = typeof attemptsRemaining === 'number' ? attemptsRemaining : 3;
 
         var connection = api.getConnection && api.getConnection();
         var currentCall = api.getCurrentCall && api.getCurrentCall();
@@ -230,6 +265,16 @@
                 return offer;
             })
             .catch(function () {
+                if (attemptsRemaining > 0) {
+                    return new Promise(function (resolve) {
+                        window.setTimeout(resolve, 250);
+                    }).then(function () {
+                        api.__contactCenterPendingOfferPromise = null;
+
+                        return restorePendingIncomingOffer(root, api, client, attemptsRemaining - 1);
+                    });
+                }
+
                 return null;
             })
             .finally(function () {
@@ -378,6 +423,9 @@
                 hubUrl: hubUrl,
                 onSnapshot: function (snapshot) {
                     updateMembershipUi(root, snapshot);
+                },
+                onReconnected: function () {
+                    recoverSoftPhoneState(root, api, client);
                 }
             })
             : null;

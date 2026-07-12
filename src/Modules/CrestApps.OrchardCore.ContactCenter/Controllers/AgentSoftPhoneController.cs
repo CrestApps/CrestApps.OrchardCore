@@ -107,13 +107,15 @@ public sealed class AgentSoftPhoneController : Controller
     /// <param name="status">The presence state.</param>
     /// <param name="presenceReason">The optional reason code.</param>
     /// <param name="returnUrl">The local URL to return to after updating presence.</param>
+    /// <param name="queuedVoiceWorkOfferServices">The optional queued voice offer services.</param>
     /// <returns>A redirect to the current page.</returns>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetPresence(
         AgentPresenceStatus status,
         string presenceReason,
-        string returnUrl)
+        string returnUrl,
+        [FromServices] IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
         {
@@ -121,6 +123,16 @@ public sealed class AgentSoftPhoneController : Controller
         }
 
         await _presenceManager.SetPresenceAsync(GetUserId(), status, presenceReason);
+
+        if (status == AgentPresenceStatus.Available)
+        {
+            var queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
+
+            if (queuedVoiceWorkOfferService is not null)
+            {
+                await queuedVoiceWorkOfferService.OfferForUserAsync(GetUserId());
+            }
+        }
 
         return RedirectToReturnLocation(returnUrl);
     }

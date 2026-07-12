@@ -19,6 +19,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     private readonly IContentManager _contentManager;
     private readonly ISubjectActionExecutor _subjectActionExecutor;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly IEnumerable<IActivityDispositionHandler> _handlers;
     private readonly IClock _clock;
 
     /// <summary>
@@ -29,6 +30,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     /// <param name="contentManager">The content manager used to load the contact for subject actions.</param>
     /// <param name="subjectActionExecutor">The subject action executor that runs the subject flow.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service used to resolve the required-disposition policy.</param>
+    /// <param name="handlers">The handlers notified after a successful disposition.</param>
     /// <param name="clock">The clock used to stamp completion times.</param>
     public DefaultActivityDispositionService(
         IOmnichannelActivityManager activityManager,
@@ -36,6 +38,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         IContentManager contentManager,
         ISubjectActionExecutor subjectActionExecutor,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IEnumerable<IActivityDispositionHandler> handlers,
         IClock clock)
     {
         _activityManager = activityManager;
@@ -43,6 +46,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         _contentManager = contentManager;
         _subjectActionExecutor = subjectActionExecutor;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _handlers = handlers;
         _clock = clock;
     }
 
@@ -109,6 +113,11 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
             };
 
             await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);
+        }
+
+        foreach (var handler in _handlers)
+        {
+            await handler.DispositionedAsync(request, cancellationToken);
         }
 
         return ActivityDispositionResult.Success(activity);

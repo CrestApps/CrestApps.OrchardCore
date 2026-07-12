@@ -77,6 +77,80 @@ public sealed class AgentWorkStateHealingServiceTests
     }
 
     [Fact]
+    public async Task HealForAvailabilityAsync_WhenDialerReservationHasNoInteraction_PreservesIt()
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.SetupSequence(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                ActiveReservationId = "r1",
+            })
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Reserved,
+                ActiveReservationId = "r1",
+            });
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(manager => manager.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                ActivityItemId = "act-1",
+                QueueItemId = "qi-1",
+                AgentId = "a1",
+                Status = ReservationStatus.Pending,
+                ExpiresUtc = _now.AddSeconds(30),
+            });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(manager => manager.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ItemId = "qi-1",
+                ReservationId = "r1",
+                AgentId = "a1",
+                Status = QueueItemStatus.Reserved,
+            });
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(manager => manager.FindByIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "act-1",
+                Source = ActivitySources.PreviewDial,
+                AssignmentStatus = ActivityAssignmentStatus.Reserved,
+                ReservationId = "r1",
+            });
+
+        var service = CreateService(
+            agentManager,
+            reservationManager,
+            reservationService,
+            queueItemManager,
+            interactionManager,
+            activityManager);
+
+        // Act
+        var healed = await service.HealForAvailabilityAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, healed);
+        reservationService.Verify(manager => manager.CancelAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task HealForAvailabilityAsync_WhenAvailableAgentHasProviderConfirmedConnectedInteraction_PreservesIt()
     {
         // Arrange

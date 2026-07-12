@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Asterisk.Drivers;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -37,7 +38,8 @@ public sealed class Startup : StartupBase
         services
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
-            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>();
+            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
+            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>();
 
         services
             .AddSingleton<AsteriskRealtimeVoiceListener>()

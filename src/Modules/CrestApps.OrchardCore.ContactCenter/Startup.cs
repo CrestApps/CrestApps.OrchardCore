@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Telephony;
@@ -117,6 +118,7 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IAgentProfileStore, AgentProfileStore>()
             .AddScoped<IAgentProfileManager, AgentProfileManager>()
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 

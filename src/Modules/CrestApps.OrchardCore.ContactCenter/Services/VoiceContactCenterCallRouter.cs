@@ -11,6 +11,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -44,6 +45,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
+    private readonly ISession _session;
     private readonly IClock _clock;
 
     /// <summary>
@@ -67,6 +69,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service used to confirm a queued call still exists before it is offered.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove queued calls that no longer exist on the provider.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
+    /// <param name="session">The YesSql session used to persist queue changes before selecting the next call.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -87,6 +90,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
+        ISession session,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -107,6 +111,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
         _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
+        _session = session;
         _clock = clock;
     }
 
@@ -331,6 +336,14 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
             if (interaction is null)
             {
+                var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
+
+                if (activity is not null &&
+                    !string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
                 await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
 
                 return null;
@@ -343,6 +356,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
                 // Provider truth reports the call no longer exists. Remove it from the queue and release the
                 // reservation and agent so the dead call is never offered again, then try the next call.
                 await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
 
                 continue;
             }

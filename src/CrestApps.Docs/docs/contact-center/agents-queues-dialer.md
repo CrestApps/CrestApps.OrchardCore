@@ -76,7 +76,7 @@ Assignment is concurrency-safe. Each queue's assignment runs under a per-queue d
 
 ## Dialer
 
-A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, inventory definitions, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Power and progressive profiles run automatically each minute: the Contact Center reserves an available agent, evaluates the compliance gate, creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call. Manual and preview profiles wait for agent action. Dialer inventory loads load **unassigned** inventory the dialer reserves later.
+A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, inventory definitions, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Power and progressive profiles run automatically each minute: the Contact Center reserves an available agent, evaluates the compliance gate, creates an outbound interaction, and asks the Voice Contact Center Call Router to place the call. Manual and preview profiles wait for agent action. Dialer inventory loads create **unassigned** activities and enqueue automated work immediately so the selected profile can reserve it without a separate operator enqueue step.
 
 ### Dialing modes and safety
 
@@ -85,7 +85,7 @@ Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsuppor
 | Mode | Behavior |
 | --- | --- |
 | `Manual` | The agent chooses and places the call. No automated cycle runs. |
-| `Preview` | The agent reviews the activity, then accepts or skips. No automated cycle runs. |
+| `Preview` | The agent reviews the activity, then accepts or skips. Accepting the offer starts the outbound attempt through the configured Contact Center voice provider; no automated cycle runs. |
 | `Power` | Reserves agents and places a capped number of calls per cycle. **Calls per agent is hard-capped** (`PowerDialerStrategy.MaxCallsPerAgent`) until predictive pacing exists. |
 | `Progressive` | Places one call per available agent as agents become available. |
 | `Predictive` | **Disabled.** The editor hides it, saving it is rejected, and the dialer refuses to run it until answer-rate forecasting and abandonment controls exist. |
@@ -110,9 +110,9 @@ Use callbacks when an agent schedules a later follow-up, an inbound entry point 
 
 ## Voice Contact Center Call Router
 
-The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`, which resolves the configured `IContactCenterVoiceProvider`, so the Contact Center keeps assignment, queue, pacing, and compliance logic while the provider executes call operations. The `DialPad.Dialer` feature implements `IContactCenterVoiceProvider` over the DialPad telephony provider; enable it to dial through DialPad.
+The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`, which resolves the configured `IContactCenterVoiceProvider`, so the Contact Center keeps assignment, queue, pacing, and compliance logic while the provider executes call operations. The `DialPad.Dialer` feature implements `IContactCenterVoiceProvider` over the DialPad telephony provider. The Asterisk module also provides an adapter that uses the tenant Asterisk provider when enabled and otherwise resolves the configured **Default Asterisk** provider.
 
-Voice providers that support contact-center orchestration beyond soft-phone call control can also register `IContactCenterVoiceProvider`. The `IContactCenterVoiceProviderResolver` resolves those providers by technical name so future PBX integrations can participate in provider-side queueing, call assignment, and voice-specific orchestration without coupling Contact Center to one provider.
+Voice providers that support contact-center orchestration beyond soft-phone call control can also register `IContactCenterVoiceProvider`. The `IContactCenterVoiceProviderResolver` resolves those providers by technical name so future PBX integrations can participate in provider-side queueing, call assignment, and voice-specific orchestration without coupling Contact Center to one provider. Dial results include the actual executing provider identity, which is persisted on the interaction so provider events and reconciliation use the same configured alias.
 
 ## Admin UX and extensibility
 

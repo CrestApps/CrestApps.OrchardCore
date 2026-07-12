@@ -293,4 +293,88 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
                 call.IsMuted)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task HandleAsync_CallSessionUpdated_WhenInboundOfferIsRinging_PushesRingingState()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "Asterisk",
+            ProviderInteractionId = "call-1",
+            CustomerAddress = "+15550001000",
+            QueueId = "queue-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            Status = InteractionStatus.Ringing,
+            CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Asterisk",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            State = ContactCenterCallState.Connected,
+            FromAddress = "+15550001000",
+            ToAddress = "+15550002000",
+            StartedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
+            AnsweredUtc = new DateTime(2026, 7, 10, 13, 0, 1, DateTimeKind.Utc),
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager.Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("agent-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "agent-1",
+                UserId = "user-1",
+                UserName = "agent.one",
+            });
+
+        var store = new Mock<ITelephonyInteractionStore>();
+        store.Setup(value => value.FindByCallIdAsync("user-1", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TelephonyInteraction)null);
+
+        var client = new Mock<ITelephonyClient>();
+        var clients = new Mock<IHubClients<ITelephonyClient>>();
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
+        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
+
+        var handler = new ContactCenterSoftPhoneEventHandler(
+            interactionManager.Object,
+            callSessionManager.Object,
+            agentManager.Object,
+            store.Object,
+            hubContext.Object);
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallSessionUpdated,
+            InteractionId = "interaction-1",
+        };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        client.Verify(
+            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
+                call.CallId == "call-1" &&
+                call.State == CallState.Ringing &&
+                call.Direction == CallDirection.Inbound)),
+            Times.Once);
+    }
 }

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -14,6 +15,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentWorkStateHealingService _agentWorkStateHealingService;
     private readonly IInboundVoiceService _inboundVoiceService;
+    private readonly ISession _session;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueuedVoiceWorkOfferService"/> class.
@@ -21,14 +24,20 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="agentWorkStateHealingServices">The optional agent state healers.</param>
     /// <param name="inboundVoiceService">The inbound voice service.</param>
+    /// <param name="session">The YesSql session used to persist availability before querying routing indexes.</param>
+    /// <param name="logger">The logger.</param>
     public QueuedVoiceWorkOfferService(
         IAgentProfileManager agentManager,
         IEnumerable<IAgentWorkStateHealingService> agentWorkStateHealingServices,
-        IInboundVoiceService inboundVoiceService)
+        IInboundVoiceService inboundVoiceService,
+        ISession session,
+        ILogger<QueuedVoiceWorkOfferService> logger)
     {
         _agentManager = agentManager;
         _agentWorkStateHealingService = agentWorkStateHealingServices.FirstOrDefault();
         _inboundVoiceService = inboundVoiceService;
+        _session = session;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -57,6 +66,15 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             agent.PresenceStatus != AgentPresenceStatus.Available ||
             agent.QueueIds.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipped queued voice offering because agent was missing, unavailable, or had no queue membership. AgentId={AgentId}, Presence={PresenceStatus}, QueueCount={QueueCount}.",
+                    agent?.ItemId,
+                    agent?.PresenceStatus,
+                    agent?.QueueIds.Count ?? 0);
+            }
+
             return 0;
         }
 
@@ -68,8 +86,18 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
 
         if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipped queued voice offering for agent '{AgentId}' because reservation '{ReservationId}' is active.",
+                    agent.ItemId,
+                    agent.ActiveReservationId);
+            }
+
             return 0;
         }
+
+        await _session.SaveChangesAsync(cancellationToken);
 
         var offered = 0;
 
@@ -82,6 +110,15 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             if (!string.IsNullOrWhiteSpace(agentUserId))
             {
                 offered++;
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Offered the next queued voice activity from queue '{QueueId}' to agent '{AgentId}' for user '{UserId}'.",
+                        queueId,
+                        agent.ItemId,
+                        agentUserId);
+                }
             }
 
             agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken);

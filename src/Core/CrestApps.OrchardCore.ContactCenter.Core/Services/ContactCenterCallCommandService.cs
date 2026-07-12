@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -17,6 +19,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IActivityReservationService _reservationService;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
+    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IDialerProfileManager _dialerProfileManager;
+    private readonly IDialerAttemptService _dialerAttemptService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
@@ -34,6 +39,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="reservationService">The reservation service used to accept or reject the offer.</param>
     /// <param name="reservationManager">The reservation manager used to validate offer ownership before state changes.</param>
     /// <param name="interactionManager">The interaction manager used to advance the interaction.</param>
+    /// <param name="activityManager">The activity manager used to resolve non-media work offers.</param>
+    /// <param name="dialerProfileManagers">The optional dialer profile managers.</param>
+    /// <param name="dialerAttemptServices">The optional dialer attempt services.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to connect media.</param>
     /// <param name="telephonyProviderResolver">The telephony provider resolver used for server-side answer operations.</param>
@@ -48,6 +56,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IActivityReservationService reservationService,
         IActivityReservationManager reservationManager,
         IInteractionManager interactionManager,
+        IOmnichannelActivityManager activityManager,
+        IEnumerable<IDialerProfileManager> dialerProfileManagers,
+        IEnumerable<IDialerAttemptService> dialerAttemptServices,
         IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyProviderResolver telephonyProviderResolver,
@@ -62,6 +73,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _reservationService = reservationService;
         _reservationManager = reservationManager;
         _interactionManager = interactionManager;
+        _activityManager = activityManager;
+        _dialerProfileManager = dialerProfileManagers.FirstOrDefault();
+        _dialerAttemptService = dialerAttemptServices.FirstOrDefault();
         _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyProviderResolver = telephonyProviderResolver;
@@ -91,7 +105,28 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         if (interaction is null)
         {
-            return CallCommandResult.Failure("No interaction is linked to the offered activity.");
+            var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
+
+            if (activity?.Source == ActivitySources.PreviewDial &&
+                _dialerProfileManager is not null &&
+                _dialerAttemptService is not null &&
+                !string.IsNullOrWhiteSpace(activity.CampaignId))
+            {
+                var profile = await _dialerProfileManager.FindByCampaignAsync(activity.CampaignId, cancellationToken);
+
+                if (profile is not null)
+                {
+                    return await _dialerAttemptService.TryDialAsync(profile, reservation, cancellationToken)
+                        ? CallCommandResult.Success("The outbound call was started.", requiresDeviceAnswer: false)
+                        : CallCommandResult.Failure("The outbound call could not be started.");
+                }
+            }
+
+            reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
+
+            return reservation is null
+                ? CallCommandResult.Failure("The offer is no longer available.")
+                : CallCommandResult.Success("The work was accepted.", requiresDeviceAnswer: false);
         }
 
         interaction = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);

@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
@@ -43,6 +45,80 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.CallSessionManager.Verify(
             m => m.CreateAsync(It.Is<CallSession>(s => s.State == ContactCenterCallState.Ringing && !s.AnsweredUtc.HasValue), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenWorkHasNoInteraction_AcceptsReservationWithoutMedia()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupAcceptedReservation();
+        harness.InteractionManager
+            .Setup(manager => manager.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.RequiresDeviceAnswer);
+        Assert.Null(result.InteractionId);
+        harness.ReservationService.Verify(
+            reservationService => reservationService.AcceptAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.Provider.Verify(
+            provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenPreviewDialerWorkHasNoInteraction_StartsDialerAttempt()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.ActivityManager
+            .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                Source = ActivitySources.PreviewDial,
+                CampaignId = "campaign-1",
+            });
+        harness.DialerProfileManager
+            .Setup(manager => manager.FindByCampaignAsync("campaign-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DialerProfile
+            {
+                ItemId = "profile-1",
+                CampaignId = "campaign-1",
+                Mode = DialerMode.Preview,
+            });
+        harness.DialerAttemptService
+            .Setup(service => service.TryDialAsync(
+                It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        harness.DialerAttemptService.Verify(
+            service => service.TryDialAsync(
+                It.Is<DialerProfile>(profile => profile.ItemId == "profile-1"),
+                It.Is<ActivityReservation>(reservation => reservation.ItemId == "r1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.ReservationService.Verify(
+            reservationService => reservationService.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -296,6 +372,12 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public Mock<IInteractionManager> InteractionManager { get; } = new();
 
+        public Mock<IOmnichannelActivityManager> ActivityManager { get; } = new();
+
+        public Mock<IDialerProfileManager> DialerProfileManager { get; } = new();
+
+        public Mock<IDialerAttemptService> DialerAttemptService { get; } = new();
+
         public Mock<IAgentProfileManager> AgentManager { get; } = new();
 
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
@@ -412,6 +494,9 @@ public sealed class ContactCenterCallCommandServiceTests
                 ReservationService.Object,
                 ReservationManager.Object,
                 InteractionManager.Object,
+                ActivityManager.Object,
+                [DialerProfileManager.Object],
+                [DialerAttemptService.Object],
                 AgentManager.Object,
                 VoiceProviderResolver.Object,
                 TelephonyProviderResolver.Object,

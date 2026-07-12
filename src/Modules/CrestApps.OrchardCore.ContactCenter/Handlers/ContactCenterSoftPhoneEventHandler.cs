@@ -245,6 +245,11 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
     private static CallState MapCallState(ContactCenterCallState? sessionState, InteractionStatus interactionStatus)
     {
+        if (interactionStatus == InteractionStatus.Ringing)
+        {
+            return CallState.Ringing;
+        }
+
         if (sessionState.HasValue)
         {
             return sessionState.Value switch

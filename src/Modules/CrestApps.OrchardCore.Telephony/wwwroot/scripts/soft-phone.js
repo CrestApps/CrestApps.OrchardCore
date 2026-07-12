@@ -339,6 +339,9 @@
       if (typeof layout.activeTab === 'string' && layout.activeTab.length) {
         activeTab = layout.activeTab;
       }
+      if (dom.number && typeof layout.phoneNumber === 'string') {
+        dom.number.value = layout.phoneNumber;
+      }
       if (layout.open && dom.panel) {
         dom.panel.hidden = false;
       }
@@ -500,6 +503,15 @@
       setStatus(currentCall ? statusTextForState(stateName) : strings.idle || 'Ready');
       if (dom.peer) {
         dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
+      }
+      if (dom.number && active && currentCall) {
+        var peerNumber = getPeerNumber(currentCall);
+        if (peerNumber) {
+          dom.number.value = peerNumber;
+          saveLayout({
+            phoneNumber: peerNumber
+          });
+        }
       }
       show(dom.dial, !active);
       show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
@@ -956,7 +968,7 @@
       if (!call) {
         return;
       }
-      if (hasBlockingActiveCall()) {
+      if (hasBlockingActiveCall() && currentCallId() !== call.callId) {
         return;
       }
       if (incomingHandled && isSameIncomingOffer(call, context)) {
@@ -1209,6 +1221,22 @@
       });
       if (dom.dial) {
         dom.dial.addEventListener('click', dial);
+      }
+      if (dom.number) {
+        dom.number.addEventListener('input', function () {
+          saveLayout({
+            phoneNumber: dom.number.value
+          });
+        });
+        dom.number.addEventListener('keydown', function (event) {
+          if (event.key !== 'Enter' || event.isComposing) {
+            return;
+          }
+          event.preventDefault();
+          if (!currentCall && !activeCommand) {
+            dial();
+          }
+        });
       }
       if (dom.hangup) {
         dom.hangup.addEventListener('click', hangup);

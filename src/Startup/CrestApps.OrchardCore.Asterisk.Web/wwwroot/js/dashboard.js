@@ -88,7 +88,9 @@
             summary: root.querySelector('[data-dashboard-summary]'),
             notifications: root.querySelector('[data-dashboard-notifications]'),
             calls: root.querySelector('[data-dashboard-calls]'),
+            callCount: root.querySelector('[data-dashboard-call-count]'),
             bridges: root.querySelector('[data-dashboard-bridges]'),
+            bridgeCount: root.querySelector('[data-dashboard-bridge-count]'),
             infoJson: root.querySelector('[data-dashboard-info-json]'),
             channelsJson: root.querySelector('[data-dashboard-channels-json]'),
             bridgesJson: root.querySelector('[data-dashboard-bridges-json]')
@@ -174,6 +176,10 @@
 
             var calls = snapshot.calls || [];
 
+            if (refs.callCount) {
+                refs.callCount.textContent = snapshot.activeCallCount + ' total / ' + snapshot.channelCount + ' channel legs';
+            }
+
             if (!calls.length) {
                 refs.calls.innerHTML = '<tr><td colspan="9" class="text-body-secondary">No active calls.</td></tr>';
 
@@ -201,6 +207,10 @@
             }
 
             var bridges = snapshot.bridges || [];
+
+            if (refs.bridgeCount) {
+                refs.bridgeCount.textContent = snapshot.bridgeCount + ' total';
+            }
 
             if (!bridges.length) {
                 refs.bridges.innerHTML = '<tr><td colspan="4" class="text-body-secondary">No active bridges.</td></tr>';

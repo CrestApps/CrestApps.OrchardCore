@@ -13,6 +13,7 @@ using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -283,6 +284,50 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
+    public async Task OfferNextAsync_WhenDialerActivityHasNoInteraction_PreservesReservation()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                AgentId = "a1",
+                ActivityItemId = "act1",
+                QueueId = "q1",
+            });
+        harness.AgentManager
+            .Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+            });
+        harness.InteractionManager
+            .Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        harness.ActivityManager
+            .Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                Source = ActivitySources.PreviewDial,
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var agentUserId = await service.OfferNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(agentUserId);
+        harness.ReservationService.Verify(
+            service => service.RejectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task OfferNextAsync_WhenQueuedCallNoLongerExistsOnProvider_RemovesItAndOffersNextCall()
     {
         // Arrange
@@ -326,6 +371,7 @@ public sealed class InboundVoiceServiceTests
         // Assert
         Assert.Equal("user-live", agentUserId);
         harness.OfferSynchronizationService.Verify(s => s.ReconcileEndedOfferAsync("int-dead", It.IsAny<CancellationToken>()), Times.Once);
+        harness.Session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         harness.IncomingCallDispatcher.Verify(
             d => d.DispatchAsync("user-dead", It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -371,6 +417,8 @@ public sealed class InboundVoiceServiceTests
         public Mock<IProviderVoiceOfferSynchronizationService> OfferSynchronizationService { get; } = new();
 
         public Mock<IDistributedLock> DistributedLock { get; } = new();
+
+        public Mock<ISession> Session { get; } = new();
 
         public Harness()
         {
@@ -430,6 +478,7 @@ public sealed class InboundVoiceServiceTests
                 ProviderCallStateSynchronizationService.Object,
                 OfferSynchronizationService.Object,
                 DistributedLock.Object,
+                Session.Object,
                 clock.Object);
         }
     }

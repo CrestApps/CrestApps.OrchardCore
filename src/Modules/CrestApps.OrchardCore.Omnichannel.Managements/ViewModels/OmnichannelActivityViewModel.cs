@@ -108,6 +108,12 @@ public class OmnichannelActivityViewModel
     public IEnumerable<OmnichannelDisposition> Dispositions { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a disposition is required.
+    /// </summary>
+    [BindNever]
+    public bool RequireDisposition { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether workflow preview should be shown.
     /// </summary>
     [BindNever]

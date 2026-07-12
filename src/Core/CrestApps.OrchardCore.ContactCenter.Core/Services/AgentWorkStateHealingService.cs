@@ -70,7 +70,11 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
             return 0;
         }
 
-        return await HealAsync(agent, releaseAssignedWork: true, cancellationToken);
+        return await HealAsync(
+            agent,
+            forceCancelReservation: true,
+            releaseAssignedWork: true,
+            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -85,13 +89,21 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
             return 0;
         }
 
-        return await HealAsync(agent, releaseAssignedWork: agent.PresenceStatus == AgentPresenceStatus.Available, cancellationToken);
+        return await HealAsync(
+            agent,
+            forceCancelReservation: false,
+            releaseAssignedWork: agent.PresenceStatus == AgentPresenceStatus.Available,
+            cancellationToken);
     }
 
-    private async Task<int> HealAsync(AgentProfile agent, bool releaseAssignedWork, CancellationToken cancellationToken)
+    private async Task<int> HealAsync(
+        AgentProfile agent,
+        bool forceCancelReservation,
+        bool releaseAssignedWork,
+        CancellationToken cancellationToken)
     {
         var healed = 0;
-        healed += await HealPendingReservationAsync(agent, forceCancel: releaseAssignedWork, cancellationToken);
+        healed += await HealPendingReservationAsync(agent, forceCancelReservation, cancellationToken);
         agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
         healed += await HealActiveInteractionAsync(agent, releaseAssignedWork, cancellationToken);
 
@@ -131,28 +143,36 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         }
 
         var queueItem = await _queueItemManager.FindByIdAsync(pendingReservation.QueueItemId, cancellationToken);
+        var activity = await _activityManager.FindByIdAsync(pendingReservation.ActivityItemId, cancellationToken);
         var interaction = await _interactionManager.FindByActivityIdAsync(pendingReservation.ActivityItemId, cancellationToken);
         var reservationExpired = pendingReservation.ExpiresUtc <= _clock.UtcNow;
         var queueItemInvalid = queueItem is null ||
             queueItem.Status != QueueItemStatus.Reserved ||
             !string.Equals(queueItem.ReservationId, pendingReservation.ItemId, StringComparison.Ordinal) ||
             !string.Equals(queueItem.AgentId, agent.ItemId, StringComparison.Ordinal);
-        var interactionInvalid = interaction is null ||
-            interaction.Status != InteractionStatus.Ringing ||
-            !string.Equals(interaction.AgentId, agent.ItemId, StringComparison.Ordinal);
+        var activityInvalid = activity is null;
+        var interactionInvalid =
+            activity?.Source == ActivitySources.Inbound
+                ? interaction is null ||
+                interaction.Status != InteractionStatus.Ringing ||
+                !string.Equals(interaction.AgentId, agent.ItemId, StringComparison.Ordinal)
+                : interaction is not null &&
+                (interaction.Status != InteractionStatus.Ringing ||
+                    !string.Equals(interaction.AgentId, agent.ItemId, StringComparison.Ordinal));
 
-        if (!forceCancel && !reservationExpired && !queueItemInvalid && !interactionInvalid)
+        if (!forceCancel && !reservationExpired && !queueItemInvalid && !activityInvalid && !interactionInvalid)
         {
             return 0;
         }
 
         _logger.LogWarning(
-            "Canceling stale pending reservation '{ReservationId}' for agent '{AgentId}'. ForceCancel={ForceCancel}, Expired={Expired}, QueueItemInvalid={QueueItemInvalid}, InteractionInvalid={InteractionInvalid}.",
+            "Canceling stale pending reservation '{ReservationId}' for agent '{AgentId}'. ForceCancel={ForceCancel}, Expired={Expired}, QueueItemInvalid={QueueItemInvalid}, ActivityInvalid={ActivityInvalid}, InteractionInvalid={InteractionInvalid}.",
             pendingReservation.ItemId,
             agent.ItemId,
             forceCancel,
             reservationExpired,
             queueItemInvalid,
+            activityInvalid,
             interactionInvalid);
 
         await _reservationService.CancelAsync(pendingReservation.ItemId, cancellationToken);

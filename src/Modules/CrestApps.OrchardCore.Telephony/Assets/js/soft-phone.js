@@ -391,6 +391,10 @@
                 activeTab = layout.activeTab;
             }
 
+            if (dom.number && typeof layout.phoneNumber === 'string') {
+                dom.number.value = layout.phoneNumber;
+            }
+
             if (layout.open && dom.panel) {
                 dom.panel.hidden = false;
             }
@@ -586,6 +590,15 @@
 
             if (dom.peer) {
                 dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
+            }
+
+            if (dom.number && active && currentCall) {
+                var peerNumber = getPeerNumber(currentCall);
+
+                if (peerNumber) {
+                    dom.number.value = peerNumber;
+                    saveLayout({ phoneNumber: peerNumber });
+                }
             }
 
             show(dom.dial, !active);
@@ -1159,7 +1172,7 @@
                 return;
             }
 
-            if (hasBlockingActiveCall()) {
+            if (hasBlockingActiveCall() && currentCallId() !== call.callId) {
                 return;
             }
 
@@ -1489,6 +1502,23 @@
 
             if (dom.dial) {
                 dom.dial.addEventListener('click', dial);
+            }
+
+            if (dom.number) {
+                dom.number.addEventListener('input', function () {
+                    saveLayout({ phoneNumber: dom.number.value });
+                });
+                dom.number.addEventListener('keydown', function (event) {
+                    if (event.key !== 'Enter' || event.isComposing) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    if (!currentCall && !activeCommand) {
+                        dial();
+                    }
+                });
             }
 
             if (dom.hangup) {

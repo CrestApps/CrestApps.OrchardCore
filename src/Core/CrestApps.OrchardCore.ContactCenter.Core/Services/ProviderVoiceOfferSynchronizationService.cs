@@ -78,6 +78,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         }
 
         var queueItem = await _queueItemManager.FindByActivityIdAsync(interaction.ActivityItemId, cancellationToken);
+        var activity = await _activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
 
         // Cancel every lingering reservation bound to this activity. Reject/re-offer cycles can accumulate
         // multiple accepted reservations for the same activity, and leaving them behind keeps an agent's
@@ -112,7 +113,20 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             if (!string.IsNullOrWhiteSpace(answeredAgentId))
             {
                 var presenceManager = _serviceProvider.GetRequiredService<IAgentPresenceManager>();
-                await presenceManager.StartWrapUpAsync(answeredAgentId, cancellationToken);
+                var agent = await _agentManager.FindByIdAsync(answeredAgentId, cancellationToken);
+                var activityWasCompleted = activity?.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
+
+                if (activityWasCompleted &&
+                    agent is not null &&
+                    string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
+                    agent.PresenceStatus is AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
+                {
+                    await presenceManager.CompleteWorkAsync(answeredAgentId, cancellationToken);
+                }
+                else if (!activityWasCompleted)
+                {
+                    await presenceManager.StartWrapUpAsync(answeredAgentId, cancellationToken);
+                }
             }
 
             return;
@@ -160,8 +174,6 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
             }
         }
-
-        var activity = await _activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
 
         if (activity is null)
         {

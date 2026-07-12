@@ -89,6 +89,51 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task EnterInPhoneNumber_DialsNumber()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        var baselineCount = await page.EvaluateAsync<int>(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount')");
+
+        // Act
+        await page.PressAsync("[data-telephony-number]", "Enter");
+
+        // Assert
+        await page.WaitForFunctionAsync(
+            "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
+            new[] { baselineCount });
+    }
+
+    [Fact]
+    public async Task ActiveCallNumber_RemainsVisibleAndDisabledAfterReload()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Act
+        await page.ReloadAsync();
+        await WaitForConnectedAsync(page);
+
+        // Assert
+        var number = page.Locator("[data-telephony-number]");
+        await number.WaitForAsync();
+        Assert.Equal("+15551234567", await number.InputValueAsync());
+        Assert.True(await number.IsDisabledAsync());
+    }
+
+    [Fact]
     public async Task Dial_WhileCommandIsPending_SendsOnlyOneRequest()
     {
         // Arrange
@@ -443,6 +488,44 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
         Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+    }
+
+    [Fact]
+    public async Task PendingInboundOffer_OverridesProviderConnectedState_ForTheSameCall()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await PublishCallStateAsync(page, "call-inbound-pending", "+15550001001");
+        await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Act
+        await page.EvaluateAsync(
+            """
+            () => window.telephonySoftPhone.getInstance().setIncomingOffer(
+                {
+                    callId: 'call-inbound-pending',
+                    from: '+15550001001',
+                    direction: 'Inbound',
+                    state: 'Ringing',
+                    providerName: 'InMemory'
+                },
+                {
+                    properties: {
+                        acceptUrl: '/accept',
+                        reservationId: 'res-pending'
+                    }
+                })
+            """);
+
+        // Assert
+        await page.Locator("[data-telephony-incoming]")
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
+        Assert.Equal("Ringing...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        Assert.Equal("+15550001001", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
     }
 
     [Fact]
