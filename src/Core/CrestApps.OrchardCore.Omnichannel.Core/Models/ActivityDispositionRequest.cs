@@ -26,6 +26,11 @@ public sealed class ActivityDispositionRequest
     public string Notes { get; set; }
 
     /// <summary>
+    /// Gets or sets schedule dates supplied for disposition-driven subject actions.
+    /// </summary>
+    public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
+
+    /// <summary>
     /// Gets or sets the actor identifier applying the disposition.
     /// </summary>
     public string ActorId { get; set; }

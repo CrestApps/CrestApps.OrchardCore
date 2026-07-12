@@ -62,12 +62,9 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Signing Contact Center user '{UserId}' in to {QueueCount} queues and {CampaignCount} campaigns. Queue ids: {QueueIds}. Campaign ids: {CampaignIds}.",
-                userId,
+                "Signing a Contact Center agent in to {QueueCount} queues and {CampaignCount} campaigns.",
                 selectedQueueIds.Count,
-                selectedCampaignIds.Count,
-                string.Join(", ", selectedQueueIds),
-                string.Join(", ", selectedCampaignIds));
+                selectedCampaignIds.Count);
         }
 
         var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
@@ -98,6 +95,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         profile.QueueIds = selectedQueueIds;
         profile.CampaignIds = selectedCampaignIds;
         profile.PresenceStatus = AgentPresenceStatus.Available;
@@ -107,7 +106,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -149,12 +148,14 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
         profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, cancellationToken);
 
         return profile;
     }
@@ -210,6 +211,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         profile.PresenceStatus = AgentPresenceStatus.Offline;
         profile.PresenceReason = null;
         profile.RequestedPresenceStatus = null;
@@ -219,7 +222,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedOut, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedOut, profile, previousStatus, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -273,6 +276,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         if (status == AgentPresenceStatus.RequestBreak)
         {
             profile.RequestedPresenceStatus = AgentPresenceStatus.Break;
@@ -297,7 +302,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceChangedUtc = _clock.UtcNow;
 
         await SaveAsync(profile, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
 
         return profile;
     }
@@ -339,12 +344,14 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return profile;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         profile.PresenceStatus = AgentPresenceStatus.WrapUp;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
 
         return profile;
     }
@@ -380,13 +387,15 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        var previousStatus = profile.PresenceStatus;
+
         profile.PresenceStatus = profile.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(profile);
         profile.RequestedPresenceStatus = null;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
 
         return profile;
     }
@@ -460,16 +469,33 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         }
     }
 
-    private Task PublishAsync(string eventType, AgentProfile profile, CancellationToken cancellationToken)
+    private Task PublishAsync(
+        string eventType,
+        AgentProfile profile,
+        AgentPresenceStatus previousStatus,
+        CancellationToken cancellationToken)
     {
-        return _publisher.PublishAsync(new InteractionEvent
+        var interactionEvent = new InteractionEvent
         {
             EventType = eventType,
             AggregateType = nameof(AgentProfile),
             AggregateId = profile.ItemId,
             ActorId = profile.UserId,
             SourceComponent = ContactCenterConstants.Components.Agents,
-        }, cancellationToken);
+        };
+
+        interactionEvent.SetData(new AgentPresenceChangedEventData
+        {
+            PreviousStatus = previousStatus,
+            CurrentStatus = profile.PresenceStatus,
+            RequestedStatus = profile.RequestedPresenceStatus,
+            Reason = profile.PresenceReason,
+            QueueIds = profile.QueueIds.ToList(),
+            CampaignIds = profile.CampaignIds.ToList(),
+            ChangedUtc = profile.PresenceChangedUtc ?? _clock.UtcNow,
+        });
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
 }

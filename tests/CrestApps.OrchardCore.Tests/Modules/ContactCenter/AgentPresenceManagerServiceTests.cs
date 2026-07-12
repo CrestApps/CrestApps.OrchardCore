@@ -198,6 +198,43 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task SetPresenceAsync_PublishesAuditableTransitionDetails()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Break,
+            QueueIds = ["q1"],
+            CampaignIds = ["c1"],
+        };
+        InteractionEvent publishedEvent = null;
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(m => m.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvent = interactionEvent)
+            .Returns(Task.CompletedTask);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [], publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(publishedEvent);
+        var transition = publishedEvent.GetData<AgentPresenceChangedEventData>();
+        Assert.Equal(AgentPresenceStatus.Break, transition.PreviousStatus);
+        Assert.Equal(AgentPresenceStatus.Available, transition.CurrentStatus);
+        Assert.Equal(["q1"], transition.QueueIds);
+        Assert.Equal(["c1"], transition.CampaignIds);
+        Assert.Equal(_now, transition.ChangedUtc);
+    }
+
+    [Fact]
     public async Task SetPresenceAsync_RequestBreakWhenAvailable_GrantsBreakImmediately()
     {
         // Arrange

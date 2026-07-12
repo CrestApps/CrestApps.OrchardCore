@@ -419,7 +419,15 @@
                 hubUrl: config.hubUrl,
                 onSnapshot: refresh,
                 onPresenceChanged: refresh,
-                onOfferReceived: refresh,
+                onOfferReceived: function (notification) {
+                    if (notification && notification.autoOpenActivity && notification.activityItemId && config.completeActivityUrlTemplate) {
+                        window.location.assign(config.completeActivityUrlTemplate.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+
+                        return;
+                    }
+
+                    refresh();
+                },
                 onOfferRevoked: refresh,
                 onQueueStatsChanged: refresh
             });

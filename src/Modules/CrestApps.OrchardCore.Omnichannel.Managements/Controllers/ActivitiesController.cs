@@ -482,8 +482,9 @@ public sealed class ActivitiesController : Controller
     /// Performs the complete operation.
     /// </summary>
     /// <param name="id">The id.</param>
+    /// <param name="returnUrl">The optional local URL used after completing or cancelling the activity.</param>
     [Admin("omnichannel/activities/complete/{id}")]
-    public async Task<IActionResult> Complete(string id)
+    public async Task<IActionResult> Complete(string id, string returnUrl)
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
@@ -504,13 +505,18 @@ public sealed class ActivitiesController : Controller
             subject = await _contentManager.NewAsync(activity.SubjectContentType);
         }
 
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
         var model = new CompleteOmnichannelActivityContainer()
         {
-            ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
+            ContactContentItem = contact,
+            Contact = contact is null
+                ? null
+                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
             Subject = subject is null
                 ? null
-                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            ReturnUrl = GetSafeReturnUrl(returnUrl),
         };
 
         return View(model);
@@ -520,10 +526,15 @@ public sealed class ActivitiesController : Controller
     /// Asynchronously performs the complete operation.
     /// </summary>
     /// <param name="id">The id.</param>
+    /// <param name="returnUrl">The optional local URL used after completing the activity.</param>
+    /// <param name="actionScheduleDates">The subject-action schedule dates submitted with the disposition.</param>
     [HttpPost]
     [ActionName(nameof(Complete))]
     [Admin("omnichannel/activities/complete/{id}")]
-    public async Task<IActionResult> CompleteAsync(string id)
+    public async Task<IActionResult> CompleteAsync(
+        string id,
+        string returnUrl,
+        [Bind(Prefix = "ActionScheduleDates")] Dictionary<string, DateTime?> actionScheduleDates)
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
@@ -545,13 +556,18 @@ public sealed class ActivitiesController : Controller
             subject = await _contentManager.NewAsync(activity.SubjectContentType);
         }
 
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
         var model = new CompleteOmnichannelActivityContainer()
         {
-            ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
+            ContactContentItem = contact,
+            Contact = contact is null
+                ? null
+                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
             Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
             Subject = subject is null
                 ? null
-                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            ReturnUrl = GetSafeReturnUrl(returnUrl),
         };
 
         if (ModelState.IsValid)
@@ -566,6 +582,7 @@ public sealed class ActivitiesController : Controller
             {
                 Activity = activity,
                 DispositionId = activity.DispositionId,
+                ActionScheduleDates = actionScheduleDates,
                 Source = ActivityDispositionSource.Agent,
                 ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
                 ActorDisplayName = User.Identity?.Name,
@@ -575,6 +592,11 @@ public sealed class ActivitiesController : Controller
             {
                 await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 
+                if (!string.IsNullOrEmpty(model.ReturnUrl))
+                {
+                    return Redirect(model.ReturnUrl);
+                }
+
                 return RedirectToAction(nameof(Activities));
             }
 
@@ -582,6 +604,13 @@ public sealed class ActivitiesController : Controller
         }
 
         return View(model);
+    }
+
+    private string GetSafeReturnUrl(string returnUrl)
+    {
+        return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : null;
     }
 
     /// <summary>

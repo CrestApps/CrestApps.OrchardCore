@@ -28,14 +28,14 @@ public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["My workspace"], S["My workspace"].PrefixPosition("0"), workspace => workspace
+                .Add(S["My workspace"], "-2", workspace => workspace
                     .AddClass("contact-center-workspace")
                     .Id("contactCenterWorkspace")
                     .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.SignIntoQueues)
                     .LocalNav()
                 )
-                .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("1"), dashboard => dashboard
+                .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("2"), dashboard => dashboard
                     .AddClass("contact-center-dashboard")
                     .Id("contactCenterDashboard")
                     .Action("Index", "SupervisorDashboard", "CrestApps.OrchardCore.ContactCenter")

@@ -53,4 +53,21 @@ internal sealed class InteractionIndexMigrations : DataMigration
 
         return 1;
     }
+
+    /// <summary>
+    /// Adds after-call wrap-up timestamps used by handle-time reporting.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table =>
+        {
+            table.AddColumn<DateTime>("WrapUpStartedUtc");
+            table.AddColumn<DateTime>("WrapUpCompletedUtc");
+        },
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 2;
+    }
 }

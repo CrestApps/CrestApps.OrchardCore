@@ -22,4 +22,22 @@ public sealed class DialerActivitySourceHelperTests
         // Assert
         Assert.Equal(expectedSource, actualSource);
     }
+
+    [Theory]
+    [InlineData(ActivitySources.Dialer, true)]
+    [InlineData(ActivitySources.PreviewDial, true)]
+    [InlineData(ActivitySources.PowerDial, true)]
+    [InlineData(ActivitySources.ProgressiveDial, true)]
+    [InlineData(ActivitySources.PredictiveDial, true)]
+    [InlineData("powerdial", true)]
+    [InlineData(ActivitySources.Inbound, false)]
+    [InlineData(ActivitySources.Manual, false)]
+    public void IsDialerSource_WhenSourceProvided_ReturnsExpectedResult(string source, bool expected)
+    {
+        // Act
+        var result = DialerActivitySourceHelper.IsDialerSource(source);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
 }

@@ -28,7 +28,17 @@ public sealed class CompleteOmnichannelActivityContainer : ShapeViewModel
     public ContentItem ContactContentItem { get; set; }
 
     /// <summary>
+    /// Gets or sets the rendered contact details.
+    /// </summary>
+    public IShape Contact { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject.
     /// </summary>
     public IShape Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local URL used after completing or cancelling the activity.
+    /// </summary>
+    public string ReturnUrl { get; set; }
 }

@@ -113,6 +113,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         };
 
         var talkTimeTotal = 0d;
+        var wrapUpTimeTotal = 0d;
         var answerSpeedTotal = 0d;
         var answeredWithHandleTime = 0L;
 
@@ -144,6 +145,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                     talkTimeTotal += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
                     answeredWithHandleTime++;
                 }
+
+                wrapUpTimeTotal += GetWrapUpSeconds(interaction);
             }
 
             if (abandoned)
@@ -181,7 +184,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         }
 
         report.TotalTalkTimeSeconds = talkTimeTotal;
-        report.AverageHandleTimeSeconds = answeredWithHandleTime > 0 ? talkTimeTotal / answeredWithHandleTime : 0d;
+        report.TotalWrapUpTimeSeconds = wrapUpTimeTotal;
+        report.AverageHandleTimeSeconds = answeredWithHandleTime > 0 ? (talkTimeTotal + wrapUpTimeTotal) / answeredWithHandleTime : 0d;
         report.AverageSpeedOfAnswerSeconds = report.Answered > 0 ? answerSpeedTotal / report.Answered : 0d;
 
         report.ByChannel = channelCounts
@@ -238,6 +242,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             {
                 row.TotalTalkTimeSeconds += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
             }
+
+            row.TotalWrapUpTimeSeconds += GetWrapUpSeconds(interaction);
         }
 
         foreach (var agent in agents)
@@ -267,7 +273,10 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 row.DisplayName = row.AgentId;
             }
 
-            row.AverageHandleTimeSeconds = row.InteractionsHandled > 0 ? row.TotalTalkTimeSeconds / row.InteractionsHandled : 0d;
+            row.AverageWrapUpTimeSeconds = row.InteractionsHandled > 0 ? row.TotalWrapUpTimeSeconds / row.InteractionsHandled : 0d;
+            row.AverageHandleTimeSeconds = row.InteractionsHandled > 0
+                ? (row.TotalTalkTimeSeconds + row.TotalWrapUpTimeSeconds) / row.InteractionsHandled
+                : 0d;
         }
 
         return new AgentProductivityReport
@@ -551,6 +560,18 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         }
 
         return agent.ItemId;
+    }
+
+    private static double GetWrapUpSeconds(Interaction interaction)
+    {
+        if (!interaction.WrapUpStartedUtc.HasValue ||
+            !interaction.WrapUpCompletedUtc.HasValue ||
+            interaction.WrapUpCompletedUtc.Value < interaction.WrapUpStartedUtc.Value)
+        {
+            return 0d;
+        }
+
+        return (interaction.WrapUpCompletedUtc.Value - interaction.WrapUpStartedUtc.Value).TotalSeconds;
     }
 
     private sealed class QueueUsageAccumulator

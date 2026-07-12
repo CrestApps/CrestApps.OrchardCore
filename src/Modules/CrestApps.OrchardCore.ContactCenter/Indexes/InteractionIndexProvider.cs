@@ -37,6 +37,8 @@ public sealed class InteractionIndexProvider : IndexProvider<Interaction>
                 CorrelationId = interaction.CorrelationId,
                 CreatedUtc = interaction.CreatedUtc,
                 EndedUtc = interaction.EndedUtc,
+                WrapUpStartedUtc = interaction.WrapUpStartedUtc,
+                WrapUpCompletedUtc = interaction.WrapUpCompletedUtc,
             });
     }
 }

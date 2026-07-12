@@ -1,4 +1,6 @@
 @model ShapeViewModel<AgentSoftPhoneViewModel>
+@using CrestApps.OrchardCore.ContactCenter
+@using CrestApps.OrchardCore.Omnichannel.Core
 
 <style asp-name="crestapps-bootstrap-select"></style>
 <script asp-name="crestapps-bootstrap-select" depends-on="bootstrap" at="Foot"></script>
@@ -8,6 +10,16 @@
 @{
     var viewModel = Model.Value;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
+    var completeActivityUrlTemplate = Url.Action(
+        "Complete",
+        "Activities",
+        new
+        {
+            area = OmnichannelConstants.Features.Managements,
+            id = "__activityId__",
+            returnUrl = workspaceUrl,
+        });
 }
 
 <div class="telephony-soft-phone__view telephony-soft-phone__extension-view contact-center-soft-phone"
@@ -21,6 +33,7 @@
      data-contact-center-sign-out-item-text="@T["Sign out"]"
      data-contact-center-sync-url="@Url.Action("SyncQueuedVoiceWork", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
      data-contact-center-current-offer-url="@Url.Action("CurrentIncomingOffer", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
+     data-contact-center-complete-activity-url-template="@completeActivityUrlTemplate"
      hidden>
     <div class="d-flex align-items-center justify-content-between mb-2">
        <strong>@T["Contact Center"]</strong>
@@ -47,7 +60,7 @@
 
            <div class="mb-2">
                <label class="form-label small mb-1">@T["Campaigns"]</label>
-               <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Select campaigns(s)"]">
+               <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Select campaign(s)"]">
                    @foreach (var option in viewModel.CampaignOptions)
                    {
                        <option value="@option.Value" selected="@(option.Selected ? "selected" : null)" disabled="@(option.Disabled ? "disabled" : null)">@option.Text</option>

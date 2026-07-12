@@ -72,4 +72,14 @@ public sealed class InteractionIndex : CatalogItemIndex
     /// Gets or sets the UTC time the interaction ended.
     /// </summary>
     public DateTime? EndedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time after-call wrap-up started.
+    /// </summary>
+    public DateTime? WrapUpStartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time after-call wrap-up was completed.
+    /// </summary>
+    public DateTime? WrapUpCompletedUtc { get; set; }
 }

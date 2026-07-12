@@ -4,24 +4,26 @@
 
 @model OmnichannelActivityViewModel
 
+<h5 class="mb-3">@T["Activity information"]</h5>
+
 <div class="ocat-wrapper">
     <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
     <div class="ocat-end">
-        <input asp-for="InteractionType" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.InteractionType)" class="form-control-plaintext" value="@Model.InteractionType" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
     <div class="ocat-end">
-        <input asp-for="Channel" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.Channel)" class="form-control-plaintext" value="@Model.Channel" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
     <div class="ocat-end">
-        <input asp-for="CampaignTitle" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.CampaignTitle)" class="form-control-plaintext" value="@Model.CampaignTitle" readonly />
     </div>
 </div>
 
@@ -39,21 +41,21 @@
                 _ => T["Normal"],
             };
         }
-        <input asp-for="UrgencyLevel" class="form-control-plaintext" value="@value.Value" />
+        <input id="@Html.IdFor(x => x.UrgencyLevel)" class="form-control-plaintext" value="@value.Value" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
     <div class="ocat-end">
-        <input asp-for="AssignedToName" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.AssignedToName)" class="form-control-plaintext" value="@Model.AssignedToName" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="ScheduledLocal" class="ocat-label">@T["Scheduled at"]</label>
     <div class="ocat-end">
-        <input asp-for="ScheduledLocal" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.ScheduledLocal)" class="form-control-plaintext" value="@Model.ScheduledLocal.ToString("g")" readonly />
     </div>
 </div>
 
@@ -62,14 +64,14 @@
     <div class="ocat-wrapper">
         <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
         <div class="ocat-end">
-            <input asp-for="CompletedByName" class="form-control-plaintext" />
+            <input id="@Html.IdFor(x => x.CompletedByName)" class="form-control-plaintext" value="@Model.CompletedByName" readonly />
         </div>
     </div>
 
     <div class="ocat-wrapper">
         <label asp-for="CompletedLocal" class="ocat-label">@T["Completed at"]</label>
         <div class="ocat-end">
-            <input asp-for="CompletedLocal" class="form-control-plaintext" />
+            <input id="@Html.IdFor(x => x.CompletedLocal)" class="form-control-plaintext" value="@Model.CompletedLocal.Value.ToString("g")" readonly />
         </div>
     </div>
 }
@@ -79,17 +81,20 @@
     <div class="ocat-wrapper">
         <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
         <div class="ocat-end">
-            <input asp-for="Instructions" class="form-control-plaintext" />
+            <textarea id="@Html.IdFor(x => x.Instructions)" class="form-control-plaintext" rows="3" readonly>@Model.Instructions</textarea>
         </div>
     </div>
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.Notes))
+<hr class="my-4" />
+<h5 class="mb-3">@T["Workflow"]</h5>
+
+@if (Model.ShowWorkflowPreview || !string.IsNullOrWhiteSpace(Model.Notes))
 {
     <div class="ocat-wrapper">
         <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
         <div class="ocat-end">
-            <textarea asp-for="Notes" class="form-control"></textarea>
+            <textarea asp-for="Notes" class="form-control" rows="4" placeholder="@T["Capture call notes and follow-up details"]"></textarea>
             <span asp-validation-for="Notes" class="text-danger"></span>
         </div>
     </div>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,10 +40,20 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandler : IContactCenterEv
             return;
         }
 
-        // Resolve the queued-voice service lazily at execution time. Eagerly injecting the Voice
-        // re-offer graph into the outbox handler can recreate the circular activation path between
-        // Contact Center event dispatch, the voice router, and Telephony dispatcher services.
-        var queuedVoiceWorkOfferService = _serviceProvider.GetServices<IQueuedVoiceWorkOfferService>().FirstOrDefault();
+        if (interactionEvent.EventType == ContactCenterConstants.Events.AgentPresenceChanged)
+        {
+            var transition = interactionEvent.GetData<AgentPresenceChangedEventData>();
+
+            if (transition?.CurrentStatus != AgentPresenceStatus.Available)
+            {
+                return;
+            }
+        }
+
+        // Use a fresh scope because outbox dispatch may already have pending YesSql changes in its
+        // scope. Resolving the offer pipeline there can trigger a flush while querying the agent.
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var queuedVoiceWorkOfferService = scope.ServiceProvider.GetServices<IQueuedVoiceWorkOfferService>().FirstOrDefault();
 
         if (queuedVoiceWorkOfferService is null)
         {

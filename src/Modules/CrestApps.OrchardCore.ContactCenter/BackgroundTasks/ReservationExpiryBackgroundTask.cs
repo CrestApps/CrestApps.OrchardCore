@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -30,6 +32,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
         var queueItemManager = serviceProvider.GetRequiredService<IQueueItemManager>();
         var interactionManager = serviceProvider.GetRequiredService<IInteractionManager>();
+        var activityManager = serviceProvider.GetRequiredService<IOmnichannelActivityManager>();
         var inboundVoiceService = serviceProvider.GetServices<IInboundVoiceService>().FirstOrDefault();
         var clock = serviceProvider.GetRequiredService<IClock>();
         var session = serviceProvider.GetRequiredService<ISession>();
@@ -83,6 +86,28 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 if (voiceWorkBlockedGenericAssignment)
                 {
                     continue;
+                }
+
+                var genericWaitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
+                var nextGenericItem = QueueItemPrioritizer.SelectNext(genericWaitingItems, queue, clock.UtcNow);
+
+                if (nextGenericItem is not null)
+                {
+                    var activity = await activityManager.FindByIdAsync(nextGenericItem.ActivityItemId, cancellationToken);
+
+                    if (activity?.Source is ActivitySources.PowerDial or ActivitySources.ProgressiveDial)
+                    {
+                        if (logger.IsEnabled(LogLevel.Debug))
+                        {
+                            logger.LogDebug(
+                                "Skipped generic assignment for automated dialer activity '{ActivityItemId}' in queue '{QueueId}'. The dialer pacing task owns {ActivitySource} work.",
+                                activity.ItemId,
+                                queue.ItemId,
+                                activity.Source);
+                        }
+
+                        continue;
+                    }
                 }
 
                 await assignmentService.AssignQueueAsync(queue.ItemId, cancellationToken);

@@ -45,12 +45,14 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.User(notification.UserId).OfferReceived(notification);
         }
 
+        var observerNotification = CreateObserverNotification(notification);
+
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
-            await _hubContext.Clients.Group(ContactCenterHub.QueueGroup(notification.QueueId)).OfferReceived(notification);
+            await _hubContext.Clients.Group(ContactCenterHub.QueueGroup(notification.QueueId)).OfferReceived(observerNotification);
         }
 
-        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).OfferReceived(notification);
+        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).OfferReceived(observerNotification);
     }
 
     /// <inheritdoc/>
@@ -82,5 +84,20 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         }
 
         await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).QueueStatsChanged(notification);
+    }
+
+    private static AgentOfferNotification CreateObserverNotification(AgentOfferNotification notification)
+    {
+        return new AgentOfferNotification
+        {
+            UserId = notification.UserId,
+            AgentId = notification.AgentId,
+            ReservationId = notification.ReservationId,
+            ActivityItemId = notification.ActivityItemId,
+            QueueItemId = notification.QueueItemId,
+            QueueId = notification.QueueId,
+            ExpiresUtc = notification.ExpiresUtc,
+            ServerTimeUtc = notification.ServerTimeUtc,
+        };
     }
 }

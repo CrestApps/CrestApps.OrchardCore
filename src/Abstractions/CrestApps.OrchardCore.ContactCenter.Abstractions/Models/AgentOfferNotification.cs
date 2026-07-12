@@ -27,6 +27,11 @@ public sealed class AgentOfferNotification
     public string ActivityItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the assigned activity should open automatically in the agent experience.
+    /// </summary>
+    public bool AutoOpenActivity { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue item being offered.
     /// </summary>
     public string QueueItemId { get; set; }

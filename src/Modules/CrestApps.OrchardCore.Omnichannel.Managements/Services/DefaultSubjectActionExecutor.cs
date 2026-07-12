@@ -21,6 +21,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
     public DefaultSubjectActionExecutor(
@@ -29,6 +30,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         IContentManager contentManager,
         ISession session,
         IClock clock,
+        ILocalClock localClock,
         ILogger<DefaultSubjectActionExecutor> logger)
     {
         _actionCatalog = actionCatalog;
@@ -36,6 +38,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _contentManager = contentManager;
         _session = session;
         _clock = clock;
+        _localClock = localClock;
         _logger = logger;
     }
 
@@ -117,7 +120,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             Status = ActivityStatus.NotStated,
         };
 
-        nextAttempt.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
+        nextAttempt.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
         if (!await TryAssignOwnerAsync(
             nextAttempt,
@@ -169,7 +172,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             Status = ActivityStatus.NotStated,
         };
 
-        newActivity.ScheduledUtc = ResolveScheduleDate(action, context, metadata.DefaultScheduleHours);
+        newActivity.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
         if (!await TryAssignOwnerAsync(
             newActivity,
@@ -246,11 +249,19 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         });
     }
 
-    private DateTime ResolveScheduleDate(SubjectAction action, SubjectActionExecutionContext context, int? defaultScheduleHours)
+    private async Task<DateTime> ResolveScheduleDateAsync(
+        SubjectAction action,
+        SubjectActionExecutionContext context,
+        int? defaultScheduleHours)
     {
         if (context.ActionScheduleDates?.TryGetValue(action.ItemId, out var userDate) == true && userDate.HasValue)
         {
-            return userDate.Value;
+            if (userDate.Value.Kind == DateTimeKind.Utc)
+            {
+                return userDate.Value;
+            }
+
+            return await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(userDate.Value, DateTimeKind.Unspecified));
         }
 
         if (defaultScheduleHours.HasValue)

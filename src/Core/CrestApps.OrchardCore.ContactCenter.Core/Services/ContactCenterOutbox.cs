@@ -122,6 +122,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             }
 
             await ScheduleRetryAsync(message, firstError, cancellationToken);
+
+            break;
         }
 
         return redelivered;
@@ -181,8 +183,6 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
                 completedHandlerTypes.Add(handlerType);
                 message.CompletedHandlerTypes = completedHandlerTypes.ToArray();
-                message.ModifiedUtc = _clock.UtcNow;
-                await _outboxStore.UpdateAsync(message, cancellationToken);
             }
             catch (Exception ex)
             {

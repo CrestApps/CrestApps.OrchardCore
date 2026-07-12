@@ -317,6 +317,36 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     }
 
     /// <summary>
+    /// Changes the current agent's presence without reloading the page.
+    /// </summary>
+    /// <param name="status">The requested presence status.</param>
+    /// <param name="reason">The optional reason code.</param>
+    /// <returns>The updated agent snapshot.</returns>
+    public async Task<AgentDesktopSnapshot> SetPresence(AgentPresenceStatus status, string reason)
+    {
+        var userId = EnsureUserId();
+        AgentDesktopSnapshot snapshot = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+
+            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
+            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
+
+            await presenceManager.SetPresenceAsync(
+                userId,
+                status,
+                reason,
+                Context.ConnectionAborted);
+
+            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+        });
+
+        return snapshot;
+    }
+
+    /// <summary>
     /// Re-checks the signed-in queues for already-waiting inbound voice work.
     /// </summary>
     /// <returns>The number of offers attempted.</returns>

@@ -110,6 +110,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
                 Contact = contact,
                 Subject = activity.Subject,
                 Disposition = disposition,
+                ActionScheduleDates = request.ActionScheduleDates,
             };
 
             await _subjectActionExecutor.ExecuteAsync(executionContext, cancellationToken);

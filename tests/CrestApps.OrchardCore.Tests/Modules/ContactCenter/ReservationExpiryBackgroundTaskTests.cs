@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -55,6 +57,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
                 },
             ]);
         var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
         interactionManager
             .Setup(manager => manager.FindByActivityIdAsync("activity-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Interaction
@@ -80,6 +83,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             queueManager,
             queueItemManager,
             interactionManager,
+            activityManager,
             inboundVoiceService,
             clock,
             session);
@@ -116,6 +120,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<QueueItem>());
         var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
 
         var inboundVoiceService = new Mock<IInboundVoiceService>();
         var clock = new Mock<IClock>();
@@ -128,6 +133,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             queueManager,
             queueItemManager,
             interactionManager,
+            activityManager,
             inboundVoiceService,
             clock,
             session);
@@ -139,6 +145,61 @@ public sealed class ReservationExpiryBackgroundTaskTests
         assignmentService.Verify(
             service => service.AssignQueueAsync("queue-1", It.IsAny<CancellationToken>()),
             Times.Once);
+        inboundVoiceService.Verify(
+            service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ActivitySources.PowerDial)]
+    [InlineData(ActivitySources.ProgressiveDial)]
+    public async Task DoWorkAsync_WhenNextActivityUsesAutomatedDialer_SkipsGenericAssignment(string activitySource)
+    {
+        // Arrange
+        var queue = new ActivityQueue { ItemId = "queue-1" };
+        var reservationService = new Mock<IActivityReservationService>();
+        var assignmentService = new Mock<IActivityAssignmentService>();
+        var queueService = new Mock<IActivityQueueService>();
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([queue]);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new QueueItem { ActivityItemId = "activity-1" }]);
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "activity-1",
+                Source = activitySource,
+            });
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        var clock = new Mock<IClock>();
+        var session = new Mock<ISession>();
+
+        await using var serviceProvider = CreateServiceProvider(
+            reservationService,
+            assignmentService,
+            queueService,
+            queueManager,
+            queueItemManager,
+            interactionManager,
+            activityManager,
+            inboundVoiceService,
+            clock,
+            session);
+
+        // Act
+        await new ReservationExpiryBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        assignmentService.Verify(
+            service => service.AssignQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         inboundVoiceService.Verify(
             service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -161,6 +222,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([new QueueItem { ActivityItemId = "activity-1" }]);
         var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
         interactionManager
             .Setup(manager => manager.FindByActivityIdAsync("activity-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Interaction
@@ -183,6 +245,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             queueManager,
             queueItemManager,
             interactionManager,
+            activityManager,
             inboundVoiceService,
             clock,
             session);
@@ -209,6 +272,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         Mock<IActivityQueueManager> queueManager,
         Mock<IQueueItemManager> queueItemManager,
         Mock<IInteractionManager> interactionManager,
+        Mock<IOmnichannelActivityManager> activityManager,
         Mock<IInboundVoiceService> inboundVoiceService,
         Mock<IClock> clock,
         Mock<ISession> session)
@@ -220,6 +284,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         services.AddSingleton(queueManager.Object);
         services.AddSingleton(queueItemManager.Object);
         services.AddSingleton(interactionManager.Object);
+        services.AddSingleton(activityManager.Object);
         services.AddSingleton(inboundVoiceService.Object);
         services.AddSingleton(clock.Object);
         services.AddSingleton(session.Object);

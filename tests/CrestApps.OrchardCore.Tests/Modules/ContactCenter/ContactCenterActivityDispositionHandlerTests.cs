@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -36,10 +37,13 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             });
 
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
+        var interactionManager = new Mock<IInteractionManager>();
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
+            interactionManager.Object,
             [offerService.Object],
+            Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest
@@ -80,10 +84,13 @@ public sealed class ContactCenterActivityDispositionHandlerTests
 
         var presenceManager = new Mock<IAgentPresenceManager>();
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
+        var interactionManager = new Mock<IInteractionManager>();
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
+            interactionManager.Object,
             [offerService.Object],
+            Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest
@@ -133,10 +140,13 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             });
 
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
+        var interactionManager = new Mock<IInteractionManager>();
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
+            interactionManager.Object,
             [offerService.Object],
+            Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest

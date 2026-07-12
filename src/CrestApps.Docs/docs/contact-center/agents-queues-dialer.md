@@ -26,6 +26,27 @@ Agents sign in from the floating Telephony soft phone. When the Contact Center q
 
 Presence is a dropdown in the soft-phone header so agents can change availability without switching tabs. **Request break** is system-approved: if no assignment is in progress, the request is granted immediately and the agent enters `Break`; if a route/reservation is already in progress, the request is kept pending while the call continues, and the system grants `Break` automatically when that in-flight work is released. Agents in `RequestBreak` or `Break` are not eligible for new routing decisions.
 
+### Presence state reference
+
+| State | Set by | Meaning and routing behavior |
+| --- | --- | --- |
+| `Offline` | Agent/system | Signed out and ineligible for all work. |
+| `Available` | Agent/system | Ready for work. A transition to this state publishes an event that triggers queued voice recovery in a separate service scope. |
+| `Reserved` | System | An offer is assigned but not yet accepted. The agent cannot receive another offer beyond configured capacity. |
+| `Busy` | System | The agent accepted and is actively handling an interaction. |
+| `WrapUp` | System | The answered interaction ended and after-call work is pending. The agent remains ineligible until the CRM activity is completed. |
+| `RequestBreak` | Agent | A request to enter `Break`; when work is already reserved or active, the request is stored and granted after the work is released or completed. |
+| `Break` | Agent/system | A granted break. The agent is signed in but ineligible for work. |
+| `Away` | Agent | Not ready because the agent is away from the desk. |
+| `DoNotDisturb` | Agent | Not ready and should not receive work. |
+| `Meeting` | Agent | Not ready because the agent is in a meeting. |
+| `Training` | Agent | Not ready because the agent is in training. |
+| `AfterHoursUnavailable` | Agent/system | Not ready outside staffed hours. |
+
+`Reserved`, `Busy`, and `WrapUp` are system-managed. Agents should not manually force those states. A completed wrap-up returns the agent to the pending requested state, when one exists, or otherwise to the default ready state (`Available` for a signed-in agent and `Offline` for a signed-out agent).
+
+Every sign-in, sign-out, and presence transition is stored as a durable Contact Center event with the previous state, current state, requested state, reason code, queue memberships, campaign memberships, and transition time. This event history supports calculations such as available time, break time, not-ready time, queue/campaign staffing time, and state-transition audits. Voice interactions separately record creation, answer, end, wrap-up-start, and wrap-up-completion timestamps; reports include talk time, wrap-up time, and average handle time.
+
 ## Agent state reason codes
 
 Administrators define **reason codes** from **Interaction Center → Agent states** so agents pick an auditable, standardized reason when they go not ready. A reason code has a unique name, an optional description, the presence state it places the agent in (`AppliesTo` — `Break`, `Away`, `DoNotDisturb`, `Meeting`, `Training`, or `AfterHoursUnavailable`), a sort order, and an enabled flag. The catalog is managed with the same display-driver CRUD pattern as Skills and queues, and the `ManageContactCenterAgents` permission gates it.
@@ -71,6 +92,8 @@ A queue can reference a reusable **business-hours calendar** (managed from **Int
 Independently of business hours, a queue may set an **overflow queue** and an **overflow-after** threshold. Waiting items that exceed the threshold are moved to the overflow queue so long-waiting work can be picked up by a broader team. Contact Center preserves the original enqueue time for SLA aging while separately tracking when the item entered its current queue, so every overflow hop receives its configured dwell time and visited queues cannot form a routing cycle. Overflow moves run each minute alongside reservation expiry and assignment.
 
 A reservation locks the activity for one agent and can be accepted, rejected, canceled, or expired. The CRM activity moves through `Available → Reserved → Assigned`, mirrored on the queue item and agent presence. Canceled reservations always return the item to the queue. The **Reservation timeout (seconds)** setting controls how long an unanswered offer stays reserved, and **Unanswered offer action** controls what happens when that timeout expires: requeue the work, send the live voice call to voicemail, or reject the live voice call. Voicemail and reject are voice-only actions; when there is no live provider call to act on, the system safely falls back to requeueing the work instead of dropping it. A background task expires stale reservations and assigns waiting work every minute.
+
+Declining an inbound offer rejects that reservation and immediately makes the agent eligible according to their pending/default presence while routing tries the next eligible agent. If the agent does not respond before the reservation timeout, the queue's unanswered-offer action is applied. Preview outbound work remains agent-controlled; power and progressive work is owned by the dialer pacing cycle rather than the generic inbound assignment loop. Automated dialer reservations without a valid interaction are released so pacing can retry safely instead of leaving the agent stuck in `Reserved`.
 
 Assignment is concurrency-safe. Each queue's assignment runs under a per-queue distributed lock, agent reservation creation runs under a per-agent distributed lock across all queues, and reservation accept/reject/cancel/expiry transitions share a per-reservation lock. Expiry re-reads the reservation after acquiring the lock and releases it only while it is still pending, so an accept racing the expiry sweep cannot requeue a live call.
 

@@ -1,9 +1,13 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 
@@ -17,38 +21,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandler
 {
     private readonly IContactCenterRealTimeNotifier _notifier;
-    private readonly IAgentProfileManager _agentManager;
-    private readonly IActivityReservationManager _reservationManager;
-    private readonly IQueueItemStore _queueItemStore;
-    private readonly UserManager<IUser> _userManager;
-    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeEventHandler"/> class.
     /// </summary>
     /// <param name="notifier">The real-time notifier used to broadcast updates.</param>
-    /// <param name="agentManager">The agent profile manager used to resolve agents.</param>
-    /// <param name="reservationManager">The reservation manager used to resolve offers.</param>
-    /// <param name="queueItemStore">The queue item store used to compute queue depth.</param>
-    /// <param name="userManager">The user manager used to resolve Orchard users.</param>
-    /// <param name="displayNameProvider">The display name provider used to render agent full names.</param>
+    /// <param name="serviceProvider">The service provider used to isolate projections from the outbox persistence scope.</param>
     /// <param name="clock">The clock used to stamp notifications.</param>
     public ContactCenterRealTimeEventHandler(
         IContactCenterRealTimeNotifier notifier,
-        IAgentProfileManager agentManager,
-        IActivityReservationManager reservationManager,
-        IQueueItemStore queueItemStore,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IServiceProvider serviceProvider,
         IClock clock)
     {
         _notifier = notifier;
-        _agentManager = agentManager;
-        _reservationManager = reservationManager;
-        _queueItemStore = queueItemStore;
-        _userManager = userManager;
-        _displayNameProvider = displayNameProvider;
+        _serviceProvider = serviceProvider;
         _clock = clock;
     }
 
@@ -57,41 +45,78 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var agentManager = services.GetRequiredService<IAgentProfileManager>();
+        var reservationManager = services.GetRequiredService<IActivityReservationManager>();
+        var queueItemStore = services.GetRequiredService<IQueueItemStore>();
+        var activityManager = services.GetRequiredService<IOmnichannelActivityManager>();
+        var userManager = services.GetRequiredService<UserManager<IUser>>();
+        var displayNameProvider = services.GetRequiredService<IDisplayNameProvider>();
+
         switch (interactionEvent.EventType)
         {
             case ContactCenterConstants.Events.AgentSignedIn:
             case ContactCenterConstants.Events.AgentSignedOut:
             case ContactCenterConstants.Events.AgentPresenceChanged:
-                await BroadcastPresenceAsync(interactionEvent, cancellationToken);
+                await BroadcastPresenceAsync(
+                    interactionEvent,
+                    agentManager,
+                    userManager,
+                    displayNameProvider,
+                    cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.AgentReserved:
-                await BroadcastOfferReceivedAsync(interactionEvent, cancellationToken);
+                await BroadcastOfferReceivedAsync(
+                    interactionEvent,
+                    reservationManager,
+                    agentManager,
+                    queueItemStore,
+                    activityManager,
+                    cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.AgentReleased:
-                await BroadcastOfferRevokedAsync(interactionEvent, AgentOfferRevokedReason.Released, cancellationToken);
+                await BroadcastOfferRevokedAsync(
+                    interactionEvent,
+                    AgentOfferRevokedReason.Released,
+                    reservationManager,
+                    agentManager,
+                    queueItemStore,
+                    cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.QueueItemAssigned:
-                await BroadcastOfferRevokedAsync(interactionEvent, AgentOfferRevokedReason.Accepted, cancellationToken);
+                await BroadcastOfferRevokedAsync(
+                    interactionEvent,
+                    AgentOfferRevokedReason.Accepted,
+                    reservationManager,
+                    agentManager,
+                    queueItemStore,
+                    cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.QueueItemAdded:
             case ContactCenterConstants.Events.QueueItemDequeued:
-                await BroadcastQueueStatsForItemAsync(interactionEvent.AggregateId, cancellationToken);
+                await BroadcastQueueStatsForItemAsync(interactionEvent.AggregateId, queueItemStore, cancellationToken);
                 break;
         }
     }
 
-    private async Task BroadcastPresenceAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken)
+    private async Task BroadcastPresenceAsync(
+        InteractionEvent interactionEvent,
+        IAgentProfileManager agentManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(interactionEvent.AggregateId))
         {
             return;
         }
 
-        var profile = await _agentManager.FindByIdAsync(interactionEvent.AggregateId, cancellationToken);
+        var profile = await agentManager.FindByIdAsync(interactionEvent.AggregateId, cancellationToken);
 
         if (profile is null)
         {
@@ -102,7 +127,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         {
             UserId = profile.UserId,
             AgentId = profile.ItemId,
-            DisplayName = await GetAgentDisplayNameAsync(profile, cancellationToken),
+            DisplayName = await GetAgentDisplayNameAsync(profile, userManager, displayNameProvider, cancellationToken),
             Status = profile.PresenceStatus.ToString(),
             Reason = profile.PresenceReason,
             QueueIds = [.. profile.QueueIds],
@@ -110,16 +135,23 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         }, cancellationToken);
     }
 
-    private async Task BroadcastOfferReceivedAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken)
+    private async Task BroadcastOfferReceivedAsync(
+        InteractionEvent interactionEvent,
+        IActivityReservationManager reservationManager,
+        IAgentProfileManager agentManager,
+        IQueueItemStore queueItemStore,
+        IOmnichannelActivityManager activityManager,
+        CancellationToken cancellationToken)
     {
-        var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, cancellationToken);
+        var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, reservationManager, cancellationToken);
 
         if (reservation is null)
         {
             return;
         }
 
-        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var agent = await agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var activity = await activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
         await _notifier.NotifyOfferReceivedAsync(new AgentOfferNotification
         {
@@ -127,24 +159,29 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             AgentId = reservation.AgentId,
             ReservationId = reservation.ItemId,
             ActivityItemId = reservation.ActivityItemId,
+            AutoOpenActivity = DialerActivitySourceHelper.IsDialerSource(activity?.Source),
             QueueItemId = reservation.QueueItemId,
             QueueId = reservation.QueueId,
             ExpiresUtc = reservation.ExpiresUtc,
             ServerTimeUtc = _clock.UtcNow,
         }, cancellationToken);
 
-        await BroadcastQueueStatsAsync(reservation.QueueId, cancellationToken);
+        await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
     }
 
-    private async Task<string> GetAgentDisplayNameAsync(AgentProfile agent, CancellationToken cancellationToken)
+    private static async Task<string> GetAgentDisplayNameAsync(
+        AgentProfile agent,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
+        CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(agent.UserId))
         {
-            var user = await _userManager.FindByIdAsync(agent.UserId);
+            var user = await userManager.FindByIdAsync(agent.UserId);
 
             if (user is not null)
             {
-                var displayName = await _displayNameProvider.GetAsync(user, cancellationToken);
+                var displayName = await displayNameProvider.GetAsync(user, cancellationToken);
 
                 if (!string.IsNullOrWhiteSpace(displayName))
                 {
@@ -156,9 +193,15 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         return string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName;
     }
 
-    private async Task BroadcastOfferRevokedAsync(InteractionEvent interactionEvent, AgentOfferRevokedReason reason, CancellationToken cancellationToken)
+    private async Task BroadcastOfferRevokedAsync(
+        InteractionEvent interactionEvent,
+        AgentOfferRevokedReason reason,
+        IActivityReservationManager reservationManager,
+        IAgentProfileManager agentManager,
+        IQueueItemStore queueItemStore,
+        CancellationToken cancellationToken)
     {
-        var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, cancellationToken);
+        var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, reservationManager, cancellationToken);
 
         if (reservation is null)
         {
@@ -169,7 +212,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             ? AgentOfferRevokedReason.Expired
             : reason;
 
-        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var agent = await agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
 
         await _notifier.NotifyOfferRevokedAsync(new AgentOfferRevokedNotification
         {
@@ -180,44 +223,53 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             Reason = resolvedReason,
         }, cancellationToken);
 
-        await BroadcastQueueStatsAsync(reservation.QueueId, cancellationToken);
+        await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
     }
 
-    private async Task<ActivityReservation> ResolveReservationAsync(string reservationId, CancellationToken cancellationToken)
+    private static async Task<ActivityReservation> ResolveReservationAsync(
+        string reservationId,
+        IActivityReservationManager reservationManager,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(reservationId))
         {
             return null;
         }
 
-        return await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+        return await reservationManager.FindByIdAsync(reservationId, cancellationToken);
     }
 
-    private async Task BroadcastQueueStatsForItemAsync(string queueItemId, CancellationToken cancellationToken)
+    private async Task BroadcastQueueStatsForItemAsync(
+        string queueItemId,
+        IQueueItemStore queueItemStore,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(queueItemId))
         {
             return;
         }
 
-        var item = await _queueItemStore.FindByIdAsync(queueItemId, cancellationToken);
+        var item = await queueItemStore.FindByIdAsync(queueItemId, cancellationToken);
 
         if (item is null)
         {
             return;
         }
 
-        await BroadcastQueueStatsAsync(item.QueueId, cancellationToken);
+        await BroadcastQueueStatsAsync(item.QueueId, queueItemStore, cancellationToken);
     }
 
-    private async Task BroadcastQueueStatsAsync(string queueId, CancellationToken cancellationToken)
+    private async Task BroadcastQueueStatsAsync(
+        string queueId,
+        IQueueItemStore queueItemStore,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(queueId))
         {
             return;
         }
 
-        var waiting = await _queueItemStore.ListWaitingAsync(queueId, cancellationToken);
+        var waiting = await queueItemStore.ListWaitingAsync(queueId, cancellationToken);
 
         await _notifier.NotifyQueueStatsChangedAsync(new QueueStatsNotification
         {

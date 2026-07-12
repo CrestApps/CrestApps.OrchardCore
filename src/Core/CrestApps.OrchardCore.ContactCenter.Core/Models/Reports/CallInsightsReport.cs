@@ -52,6 +52,11 @@ public sealed class CallInsightsReport
     public double TotalTalkTimeSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets the total after-call wrap-up time, in seconds.
+    /// </summary>
+    public double TotalWrapUpTimeSeconds { get; set; }
+
+    /// <summary>
     /// Gets or sets the average handle time, in seconds, across all answered interactions.
     /// </summary>
     public double AverageHandleTimeSeconds { get; set; }

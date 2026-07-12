@@ -87,6 +87,7 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal("Default Asterisk", session.ProviderName);
         Assert.Equal(InteractionStatus.Ended, interaction.Status);
         Assert.Equal(ContactCenterCallState.Ended, session.State);
+        Assert.Equal(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc), interaction.WrapUpStartedUtc);
         presenceManager.Verify(
             manager => manager.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
             Times.Once);

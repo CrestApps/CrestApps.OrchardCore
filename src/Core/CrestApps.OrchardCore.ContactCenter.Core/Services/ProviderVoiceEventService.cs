@@ -171,6 +171,15 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         ApplyProviderDetails(session, interaction, providerEvent);
         session.LastProviderEventUtc = now;
 
+        var startsWrapUp = IsTerminalState(providerEvent.State) &&
+            !string.IsNullOrEmpty(session.AgentId) &&
+            (session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue);
+
+        if (startsWrapUp)
+        {
+            interaction.WrapUpStartedUtc ??= now;
+        }
+
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
@@ -178,9 +187,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             await TryBridgeAnsweredOutboundAsync(session, interaction, cancellationToken);
         }
-        else if (IsTerminalState(providerEvent.State) &&
-            !string.IsNullOrEmpty(session.AgentId) &&
-            (session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue))
+        else if (startsWrapUp)
         {
             await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
         }

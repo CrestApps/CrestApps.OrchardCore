@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
@@ -15,7 +16,9 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
 {
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentPresenceManager _presenceManager;
+    private readonly IInteractionManager _interactionManager;
     private readonly IQueuedVoiceWorkOfferService _queuedVoiceWorkOfferService;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -23,17 +26,23 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     /// </summary>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="presenceManager">The agent presence manager.</param>
+    /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="queuedVoiceWorkOfferServices">The optional queued voice work offer services.</param>
+    /// <param name="clock">The clock used to complete wrap-up timing.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterActivityDispositionHandler(
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
+        IInteractionManager interactionManager,
         IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
+        IClock clock,
         ILogger<ContactCenterActivityDispositionHandler> logger)
     {
         _agentManager = agentManager;
         _presenceManager = presenceManager;
+        _interactionManager = interactionManager;
         _queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
+        _clock = clock;
         _logger = logger;
     }
 
@@ -49,6 +58,14 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
             string.IsNullOrWhiteSpace(activity.AssignedToId))
         {
             return;
+        }
+
+        var interaction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
+
+        if (interaction?.WrapUpStartedUtc is not null && interaction.WrapUpCompletedUtc is null)
+        {
+            interaction.WrapUpCompletedUtc = _clock.UtcNow;
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
         var agent = await _agentManager.FindByUserIdAsync(activity.AssignedToId, cancellationToken);

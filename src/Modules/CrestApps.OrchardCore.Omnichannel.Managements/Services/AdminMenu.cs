@@ -23,14 +23,14 @@ internal sealed class AdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Activities"], "1", activities => activities
+                .Add(S["Activities"], "-1", activities => activities
                     .AddClass("activities")
                     .Id("activities")
                     .Action("Activities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )
-                .Add(S["Manage Activities"], "2", manageActivities => manageActivities
+                .Add(S["Manage Activities"], S["Manage Activities"].PrefixPosition("3"), manageActivities => manageActivities
                     .AddClass("manage-activities")
                     .Id("manageActivities")
                     .Action("ManageActivities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")

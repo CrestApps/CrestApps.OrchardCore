@@ -186,8 +186,15 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (string.IsNullOrWhiteSpace(activity.Subject?.DisplayText))
             {
-                var subjectContentType = await _contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType);
-                model.Subject = subjectContentType?.DisplayName ?? activity.SubjectContentType;
+                if (string.IsNullOrWhiteSpace(activity.SubjectContentType))
+                {
+                    model.Subject = S["Activity"];
+                }
+                else
+                {
+                    var subjectContentType = await _contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType);
+                    model.Subject = subjectContentType?.DisplayName ?? activity.SubjectContentType;
+                }
             }
             else
             {

@@ -17,6 +17,7 @@ public sealed class DefaultActivityDispositionServiceTests
     {
         // Arrange
         var activity = new OmnichannelActivity { ItemId = "act1", DispositionId = "d1", ContactContentItemId = "c1", SubjectContentType = "S" };
+        var scheduleDate = new DateTime(2026, 7, 1, 14, 30, 0);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         var dispositionsCatalog = new Mock<INamedCatalog<OmnichannelDisposition>>();
@@ -34,7 +35,14 @@ public sealed class DefaultActivityDispositionServiceTests
 
         // Act
         var result = await service.ApplyAsync(
-            new ActivityDispositionRequest { Activity = activity, DispositionId = "d1", ActorId = "u1", ActorDisplayName = "Agent" },
+            new ActivityDispositionRequest
+            {
+                Activity = activity,
+                DispositionId = "d1",
+                ActorId = "u1",
+                ActorDisplayName = "Agent",
+                ActionScheduleDates = new Dictionary<string, DateTime?> { ["action-1"] = scheduleDate },
+            },
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -44,7 +52,12 @@ public sealed class DefaultActivityDispositionServiceTests
         Assert.Equal(_now, activity.CompletedUtc);
 
         executor.Verify(
-            e => e.ExecuteAsync(It.Is<SubjectActionExecutionContext>(context => context.Activity == activity && context.Disposition.Name == "Sale"), It.IsAny<CancellationToken>()),
+            e => e.ExecuteAsync(
+                It.Is<SubjectActionExecutionContext>(context =>
+                    context.Activity == activity &&
+                    context.Disposition.Name == "Sale" &&
+                    context.ActionScheduleDates["action-1"] == scheduleDate),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         handler.Verify(
             h => h.DispositionedAsync(It.Is<ActivityDispositionRequest>(request => request.Activity == activity), It.IsAny<CancellationToken>()),

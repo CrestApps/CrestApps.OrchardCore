@@ -21,8 +21,9 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var outbox = serviceProvider.GetRequiredService<IContactCenterOutbox>();
-        var logger = serviceProvider.GetRequiredService<ILogger<OutboxDispatchBackgroundTask>>();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var outbox = scope.ServiceProvider.GetRequiredService<IContactCenterOutbox>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<OutboxDispatchBackgroundTask>>();
 
         try
         {

@@ -341,6 +341,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
                 if (activity is not null &&
                     !string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+                    }
+
                     return null;
                 }
 

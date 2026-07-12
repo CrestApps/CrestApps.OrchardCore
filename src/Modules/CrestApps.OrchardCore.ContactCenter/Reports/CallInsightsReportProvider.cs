@@ -51,6 +51,7 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
             new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(report.AverageHandleTimeSeconds)),
             new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(report.AverageSpeedOfAnswerSeconds)),
             new ReportMetric(S["Total talk time"].Value, ReportFormat.Duration(report.TotalTalkTimeSeconds)),
+            new ReportMetric(S["Total wrap-up time"].Value, ReportFormat.Duration(report.TotalWrapUpTimeSeconds)),
         ]));
 
         if (report.ByChannel.Count > 0)

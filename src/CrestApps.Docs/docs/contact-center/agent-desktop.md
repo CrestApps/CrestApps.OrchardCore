@@ -87,14 +87,14 @@ Open **Interaction Center → My workspace**. This is the screen an agent keeps 
 1. Open **My workspace** and the Telephony soft phone.
 2. Sign in to the queues and campaigns you are staffed for.
 3. Set presence to **Available** when ready, or choose a reason code when not ready.
-4. Accept or decline offers from the ringing card; use the soft phone for media controls.
-5. End the conversation, open **Complete activity**, review/update the CRM context, choose the disposition, add notes when needed, and submit.
+4. Accept or decline inbound offers from the ringing card; dialer assignments open their **Complete activity** screen automatically so the assigned record is ready without another navigation step.
+5. End the conversation, review/update the CRM context, choose the disposition, add notes when needed, and submit.
 6. Use **Recent activity** to verify your last outcomes before taking the next offer.
 
 ### 1. Sign in and set your presence
 
 - **Sign in to queues and campaigns** from the soft phone's **Work** tab. You can only choose queues and campaigns you are allowed to handle.
-- Empty queue and campaign selectors show **Select queue(s)** and **Select campaigns(s)**. No membership is selected until you explicitly choose it.
+- Empty queue and campaign selectors show **Select queue(s)** and **Select campaign(s)**. No membership is selected until you explicitly choose it.
 - Select at least one queue or campaign before signing in. The Work tab shows an inline error when nothing is selected.
 - After sign-in, the Work tab lists every queue and campaign you are signed in to. Use the individual **Sign out** action to leave one membership while remaining signed in to the others, or **Sign out of all** to leave every membership.
 - If inbound voice work is already waiting in one of those queues, signing in or switching back to **Available** immediately asks routing to offer the next queued call instead of waiting for another inbound event.
@@ -123,6 +123,8 @@ When routing selects you for a piece of work, a **ringing offer card** appears w
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
 
+Dialer work is distinguished from inbound queue offers by its activity source. When Preview, Power, Progressive, Predictive, or generic dialer inventory is assigned to you, the browser opens the assigned activity's shared **Complete activity** page automatically. Inbound work continues to show the ringing offer instead, so it is never redirected before you choose **Accept** or **Decline**.
+
 ### 3. Handle the active interaction
 
 Once you accept, the **active interaction** panel shows:
@@ -137,6 +139,10 @@ Use the soft phone for hold, mute, transfer, and hang-up. The workspace reflects
 The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
 
 When Contact Center owns the assigned voice interaction, server-side call-session changes now flow back into the Telephony soft phone in real time, so provider-side disconnects, failed calls, transfers, hold/resume, mute/unmute, and other normalized call-state changes immediately update the live call card and the persisted **Recent** history instead of waiting for the next browser reconnect.
+
+For an answered call, a terminal provider event moves the agent from **Busy** to **Wrap-up** immediately. Wrap-up is not a timed auto-return: the agent reviews the CRM context, selects the disposition, records notes or scheduling changes, and completes the activity. Completion records the wrap-up end time and returns the agent to a previously requested break when one is pending; otherwise it returns the signed-in agent to **Available** and routing can offer the next call. This avoids sending another call while after-call work is unfinished.
+
+Presence changes and queued-call recovery run as separate operations. The soft phone no longer constructs the voice routing graph inside the same presence-change request, which prevents a circular activation or pending YesSql flush from leaving the presence control spinning indefinitely.
 
 Contact Center also runs a provider-truth reconciliation pass when the tenant activates and on a periodic safety cadence. If Orchard Core restarts during busy hours, persisted ringing or active interactions are revalidated against the telephony server before routing resumes, and a pre-connect offer that already ended on the provider side is removed from the queue instead of being re-offered as a ghost call.
 
@@ -155,6 +161,8 @@ When the conversation ends, click **Complete activity** in the active panel. Thi
 5. Add notes when needed and submit the completion form.
 
 Completing routes through the shared disposition path, which applies the disposition, marks the activity completed, and runs the subject flow's follow-up actions - the same path used everywhere in the CRM, so inbound, outbound, and manual work all behave consistently. If the subject flow **requires** a disposition, completion is blocked until you pick one and the completion page shows why.
+
+Completion links opened from Contact Center include a local return location. After dialer work is completed or cancelled, the agent returns to **My workspace**; manual activity completion keeps the default **Activities** destination. Return locations are accepted only when they are local application URLs.
 
 ### 5. Review recent activity
 

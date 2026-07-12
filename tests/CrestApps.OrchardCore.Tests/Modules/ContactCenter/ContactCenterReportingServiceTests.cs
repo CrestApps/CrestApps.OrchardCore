@@ -105,6 +105,36 @@ public sealed class ContactCenterReportingServiceTests
     }
 
     [Fact]
+    public void BuildAgentProductivity_IncludesWrapUpInHandleTime()
+    {
+        // Arrange
+        var interaction = AgentInteraction("agent-1", InteractionDirection.Inbound, answeredAfter: 5, endedAfter: 65);
+        interaction.WrapUpStartedUtc = interaction.EndedUtc;
+        interaction.WrapUpCompletedUtc = interaction.EndedUtc.Value.AddSeconds(30);
+
+        var agents = new[]
+        {
+            new AgentProfile { ItemId = "agent-1", UserId = "user-1", DisplayName = "Agent One" },
+        };
+
+        // Act
+        var report = ContactCenterReportingService.BuildAgentProductivity(
+            _from,
+            _to,
+            [interaction],
+            new Dictionary<string, long>(),
+            agents);
+
+        // Assert
+        var row = Assert.Single(report.Rows);
+
+        Assert.Equal(60d, row.TotalTalkTimeSeconds);
+        Assert.Equal(30d, row.TotalWrapUpTimeSeconds);
+        Assert.Equal(30d, row.AverageWrapUpTimeSeconds);
+        Assert.Equal(90d, row.AverageHandleTimeSeconds);
+    }
+
+    [Fact]
     public void BuildQueueUsage_AggregatesPerQueueAndIncludesWaiting()
     {
         // Arrange

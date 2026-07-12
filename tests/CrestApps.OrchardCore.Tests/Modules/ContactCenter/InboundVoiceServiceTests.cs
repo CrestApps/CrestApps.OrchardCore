@@ -284,7 +284,7 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
-    public async Task OfferNextAsync_WhenDialerActivityHasNoInteraction_PreservesReservation()
+    public async Task OfferNextAsync_WhenPreviewDialActivityHasNoInteraction_PreservesReservation()
     {
         // Arrange
         var harness = new Harness();
@@ -325,6 +325,50 @@ public sealed class InboundVoiceServiceTests
         harness.ReservationService.Verify(
             service => service.RejectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task OfferNextAsync_WhenAutomatedDialerActivityHasNoInteraction_ReleasesReservation()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                AgentId = "a1",
+                ActivityItemId = "act1",
+                QueueId = "q1",
+            });
+        harness.AgentManager
+            .Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+            });
+        harness.InteractionManager
+            .Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        harness.ActivityManager
+            .Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                Source = ActivitySources.PowerDial,
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var agentUserId = await service.OfferNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(agentUserId);
+        harness.ReservationService.Verify(
+            service => service.RejectAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

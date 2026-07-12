@@ -102,6 +102,48 @@
         });
     }
 
+    function setPresenceBusy(busy) {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-contact-center-presence-form] button'), function (button) {
+            button.disabled = busy;
+        });
+    }
+
+    function updatePresenceUi(snapshot) {
+        if (!snapshot) {
+            return;
+        }
+
+        var container = document.querySelector('[data-contact-center-presence]');
+
+        if (!container) {
+            return;
+        }
+
+        var status = snapshot.presenceStatus || 'Offline';
+        var reason = snapshot.presenceReason;
+        var requested = snapshot.requestedPresenceStatus;
+        var option = container.querySelector('[data-presence-status="' + status + '"]');
+        var text = container.querySelector('[data-contact-center-presence-text]');
+        var pending = container.querySelector('[data-contact-center-pending-presence]');
+        var label = reason || (option && option.getAttribute('data-presence-label')) || status;
+
+        if (text) {
+            text.textContent = label;
+        }
+
+        if (requested === 'Break') {
+            if (!pending) {
+                pending = document.createElement('span');
+                pending.className = 'badge text-bg-warning';
+                pending.setAttribute('data-contact-center-pending-presence', '');
+                pending.textContent = container.getAttribute('data-break-pending-text') || 'Break pending';
+                container.querySelector('[data-contact-center-presence-toggle]').appendChild(pending);
+            }
+        } else if (pending) {
+            pending.remove();
+        }
+    }
+
     function showMembershipError(root, api, message) {
         var error = root && root.querySelector('[data-contact-center-membership-error]');
 
@@ -171,6 +213,7 @@
         }
 
         root.__contactCenterMembershipSnapshot = snapshot;
+        updatePresenceUi(snapshot);
 
         var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
         var signedInText = root.getAttribute('data-contact-center-signed-in-text') || 'Signed in';
@@ -200,6 +243,57 @@
         renderMembershipList(root, snapshot, queueSelect, campaignSelect);
         showMembershipError(root, null, null);
         refreshPickers(root);
+    }
+
+    function bindPresenceForms(root, api, client) {
+        if (!client || document.__contactCenterPresenceBound) {
+            return;
+        }
+
+        document.__contactCenterPresenceBound = true;
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-contact-center-presence-form]'), function (form) {
+            form.addEventListener('submit', function (event) {
+                var formData = new FormData(form);
+                var status = event.submitter && event.submitter.getAttribute('data-presence-value');
+                var reason = formData.get('presenceReason');
+
+                if (!client.connection || client.connection.state !== 'Connected') {
+                    return;
+                }
+
+                event.preventDefault();
+                setPresenceBusy(true);
+
+                invokeHub(client, 'SetPresence', Number(status), reason)
+                    .then(function (snapshot) {
+                        updatePresenceUi(snapshot);
+                        updateMembershipUi(root, snapshot);
+
+                        if (snapshot && snapshot.presenceStatus === 'Available') {
+                            return recoverSoftPhoneState(root, api, client);
+                        }
+
+                        return null;
+                    })
+                    .catch(function (error) {
+                        var statusInput = form.querySelector('input[name="status"]');
+
+                        if (!statusInput) {
+                            statusInput = document.createElement('input');
+                            statusInput.type = 'hidden';
+                            statusInput.name = 'status';
+                            form.appendChild(statusInput);
+                        }
+
+                        statusInput.value = status;
+                        HTMLFormElement.prototype.submit.call(form);
+                    })
+                    .finally(function () {
+                        setPresenceBusy(false);
+                    });
+            });
+        });
     }
 
     function invokeHub(client, method) {
@@ -289,6 +383,18 @@
             .then(function (offer) {
                 return offer ? null : postQueuedVoiceSync(root, api, client);
             });
+    }
+
+    function openAssignedDialerActivity(root, notification) {
+        if (!notification || !notification.autoOpenActivity || !notification.activityItemId) {
+            return;
+        }
+
+        var template = root.getAttribute('data-contact-center-complete-activity-url-template');
+
+        if (template) {
+            window.location.assign(template.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+        }
     }
 
     function bindMembershipForms(root, api, client) {
@@ -432,9 +538,11 @@
 
         api.__contactCenterQueuedVoiceSyncBound = true;
         bindMembershipForms(root, api, client);
+        bindPresenceForms(root, api, client);
 
         if (client && client.connection) {
-            client.connection.on('OfferReceived', function () {
+            client.connection.on('OfferReceived', function (notification) {
+                openAssignedDialerActivity(root, notification);
                 recoverSoftPhoneState(root, api, client);
             });
 

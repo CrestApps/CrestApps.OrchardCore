@@ -1,6 +1,5 @@
-﻿using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -100,7 +99,7 @@ public sealed class CopilotAuthController : Controller
     {
         if (!string.IsNullOrEmpty(error))
         {
-            _logger.LogWarning("GitHub OAuth error: {Error}", error.SanitizeLogValue());
+            _logger.LogWarning("GitHub returned an OAuth error.");
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
             return HandleOAuthReturn(state, success: false, username: null);

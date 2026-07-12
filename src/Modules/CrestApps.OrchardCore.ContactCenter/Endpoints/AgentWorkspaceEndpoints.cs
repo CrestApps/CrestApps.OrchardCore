@@ -125,7 +125,6 @@ internal static class AgentWorkspaceEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IAgentPresenceManager presenceManager,
-        IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -140,16 +139,6 @@ internal static class AgentWorkspaceEndpoints
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         await presenceManager.SetPresenceAsync(userId, request.Status, request.Reason, httpContext.RequestAborted);
-
-        if (request.Status == AgentPresenceStatus.Available)
-        {
-            var queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
-
-            if (queuedVoiceWorkOfferService is not null)
-            {
-                await queuedVoiceWorkOfferService.OfferForUserAsync(userId, httpContext.RequestAborted);
-            }
-        }
 
         return TypedResults.Ok();
     }
@@ -209,6 +198,7 @@ internal static class AgentWorkspaceEndpoints
             Activity = activity,
             DispositionId = request.DispositionId,
             Notes = request.Notes,
+            ActionScheduleDates = request.ActionScheduleDates,
             Source = ActivityDispositionSource.Agent,
             ActorId = userId,
             ActorDisplayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userManager, displayNameProvider, httpContext.RequestAborted),
@@ -433,7 +423,16 @@ internal static class AgentWorkspaceEndpoints
             httpContext,
             "Complete",
             "Activities",
-            new { area = OmnichannelConstants.Features.Managements, id = activity.ItemId });
+            new
+            {
+                area = OmnichannelConstants.Features.Managements,
+                id = activity.ItemId,
+                returnUrl = linkGenerator.GetPathByAction(
+                    httpContext,
+                    "Index",
+                    "AgentWorkspace",
+                    new { area = ContactCenterConstants.Feature.Area }),
+            });
     }
 
     private static async Task<string> GetCurrentUserDisplayNameAsync(
@@ -502,5 +501,7 @@ internal static class AgentWorkspaceEndpoints
         public string DispositionId { get; set; }
 
         public string Notes { get; set; }
+
+        public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
     }
 }

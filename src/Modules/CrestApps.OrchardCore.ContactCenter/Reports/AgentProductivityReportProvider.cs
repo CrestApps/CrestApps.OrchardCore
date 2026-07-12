@@ -44,6 +44,8 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
             new ReportColumn(S["Outbound"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Avg handle time"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Total talk time"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Avg wrap-up time"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Total wrap-up time"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Activities completed"].Value, ReportColumnAlign.End),
         };
 
@@ -55,6 +57,8 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
             ReportFormat.Number(row.OutboundHandled),
             ReportFormat.Duration(row.AverageHandleTimeSeconds),
             ReportFormat.Duration(row.TotalTalkTimeSeconds),
+            ReportFormat.Duration(row.AverageWrapUpTimeSeconds),
+            ReportFormat.Duration(row.TotalWrapUpTimeSeconds),
             ReportFormat.Number(row.ActivitiesCompleted),
         ]));
 

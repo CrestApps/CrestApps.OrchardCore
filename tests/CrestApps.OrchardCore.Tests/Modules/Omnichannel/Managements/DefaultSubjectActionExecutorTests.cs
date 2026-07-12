@@ -111,9 +111,42 @@ public sealed class DefaultSubjectActionExecutorTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LocalScheduleDate_ConvertsToUtc()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        var localDate = new DateTime(2026, 7, 15, 9, 30, 0, DateTimeKind.Unspecified);
+        var expectedUtc = new DateTime(2026, 7, 15, 16, 30, 0, DateTimeKind.Utc);
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var localClock = new Mock<ILocalClock>();
+        localClock
+            .Setup(x => x.ConvertToUtcAsync(localDate))
+            .ReturnsAsync(expectedUtc);
+
+        var executor = CreateExecutor(action, session, localClock.Object);
+        var context = CreateContext();
+        context.ActionScheduleDates = new Dictionary<string, DateTime?>
+        {
+            [action.ItemId] = localDate,
+        };
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal(expectedUtc, savedActivity.ScheduledUtc);
+    }
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
-        Mock<ISession> session)
+        Mock<ISession> session,
+        ILocalClock localClock = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -134,6 +167,7 @@ public sealed class DefaultSubjectActionExecutorTests
             contentManager.Object,
             session.Object,
             clock.Object,
+            localClock ?? Mock.Of<ILocalClock>(),
             NullLogger<DefaultSubjectActionExecutor>.Instance);
     }
 

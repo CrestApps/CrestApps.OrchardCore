@@ -5,8 +5,11 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -53,8 +56,12 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task HandleAsync_AgentReserved_BroadcastsOfferAndQueueStats()
+    [Theory]
+    [InlineData(ActivitySources.PowerDial, true)]
+    [InlineData(ActivitySources.Inbound, false)]
+    public async Task HandleAsync_AgentReserved_BroadcastsOfferAndQueueStats(
+        string activitySource,
+        bool expectedAutoOpen)
     {
         // Arrange
         var reservationManager = new Mock<IActivityReservationManager>();
@@ -77,8 +84,16 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         queueItemStore.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([new QueueItem { ItemId = "qi1" }, new QueueItem { ItemId = "qi2" }]);
 
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                Source = activitySource,
+            });
+
         var notifier = new Mock<IContactCenterRealTimeNotifier>();
-        var handler = CreateHandler(notifier, reservationManager, agentManager, queueItemStore);
+        var handler = CreateHandler(notifier, reservationManager, agentManager, queueItemStore, activityManager);
 
         var interactionEvent = new InteractionEvent
         {
@@ -93,7 +108,11 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         // Assert
         notifier.Verify(
             n => n.NotifyOfferReceivedAsync(
-                It.Is<AgentOfferNotification>(o => o.UserId == "u1" && o.QueueId == "q1" && o.ReservationId == "r1"),
+                It.Is<AgentOfferNotification>(o =>
+                    o.UserId == "u1" &&
+                    o.QueueId == "q1" &&
+                    o.ReservationId == "r1" &&
+                    o.AutoOpenActivity == expectedAutoOpen),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -181,18 +200,24 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         Mock<IContactCenterRealTimeNotifier> notifier,
         Mock<IActivityReservationManager> reservationManager = null,
         Mock<IAgentProfileManager> agentManager = null,
-        Mock<IQueueItemStore> queueItemStore = null)
+        Mock<IQueueItemStore> queueItemStore = null,
+        Mock<IOmnichannelActivityManager> activityManager = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
+        var services = new ServiceCollection()
+            .AddSingleton((agentManager ?? new Mock<IAgentProfileManager>()).Object)
+            .AddSingleton((reservationManager ?? new Mock<IActivityReservationManager>()).Object)
+            .AddSingleton((queueItemStore ?? new Mock<IQueueItemStore>()).Object)
+            .AddSingleton((activityManager ?? new Mock<IOmnichannelActivityManager>()).Object)
+            .AddSingleton(MockUserManager().Object)
+            .AddSingleton(MockDisplayNameProvider().Object)
+            .BuildServiceProvider();
+
         return new ContactCenterRealTimeEventHandler(
             notifier.Object,
-            (agentManager ?? new Mock<IAgentProfileManager>()).Object,
-            (reservationManager ?? new Mock<IActivityReservationManager>()).Object,
-            (queueItemStore ?? new Mock<IQueueItemStore>()).Object,
-            MockUserManager().Object,
-            MockDisplayNameProvider().Object,
+            services,
             clock.Object);
     }
 
