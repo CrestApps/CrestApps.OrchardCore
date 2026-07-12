@@ -277,7 +277,12 @@
 
     function loadLayout() {
       try {
-        return JSON.parse(localStorage.getItem(storageKey)) || {};
+        var layout = JSON.parse(localStorage.getItem(storageKey)) || {};
+        if (Object.prototype.hasOwnProperty.call(layout, 'phoneNumber')) {
+          localStorage.removeItem(storageKey);
+          return {};
+        }
+        return layout;
       } catch (e) {
         return {};
       }
@@ -390,9 +395,6 @@
       var layout = loadLayout();
       if (typeof layout.activeTab === 'string' && layout.activeTab.length) {
         activeTab = layout.activeTab;
-      }
-      if (dom.number && typeof layout.phoneNumber === 'string') {
-        dom.number.value = formatPhoneNumber(layout.phoneNumber);
       }
       if (layout.open && dom.panel) {
         dom.panel.hidden = false;
@@ -559,11 +561,7 @@
       if (dom.number && active && currentCall) {
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
-          var formattedPeerNumber = formatPhoneNumber(peerNumber);
-          dom.number.value = formattedPeerNumber;
-          saveLayout({
-            phoneNumber: formattedPeerNumber
-          });
+          dom.number.value = formatPhoneNumber(peerNumber);
         }
       }
       show(dom.dial, !active);
@@ -679,9 +677,6 @@
       togglePanel(true);
       if (dom.number) {
         dom.number.value = formatPhoneNumber(number);
-        saveLayout({
-          phoneNumber: dom.number.value
-        });
       }
       invoke('Dial', {
         to: normalizeDialNumber(number)
@@ -753,9 +748,6 @@
         });
       } else if (!isActive(stateName) && dom.number) {
         dom.number.value = formatPhoneNumber(dom.number.value + value);
-        saveLayout({
-          phoneNumber: dom.number.value
-        });
       }
     }
     function togglePanel(open) {
@@ -1284,9 +1276,6 @@
       if (dom.number) {
         dom.number.addEventListener('input', function () {
           dom.number.value = formatPhoneNumber(dom.number.value);
-          saveLayout({
-            phoneNumber: dom.number.value
-          });
         });
         dom.number.addEventListener('keydown', function (event) {
           if (event.key !== 'Enter' || event.isComposing) {
