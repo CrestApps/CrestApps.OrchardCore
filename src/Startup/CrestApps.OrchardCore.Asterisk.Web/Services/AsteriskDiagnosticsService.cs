@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Web.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Asterisk.Web.Services;
@@ -21,6 +22,7 @@ public sealed class AsteriskDiagnosticsService
     private readonly AsteriskWebOptions _options;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger _logger;
 
     private AsteriskDiagnosticsSnapshot _currentSnapshot = new();
 
@@ -30,14 +32,17 @@ public sealed class AsteriskDiagnosticsService
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="options">The configured sample app options.</param>
     /// <param name="timeProvider">The time provider.</param>
+    /// <param name="logger">The logger.</param>
     public AsteriskDiagnosticsService(
         IHttpClientFactory httpClientFactory,
         IOptions<AsteriskWebOptions> options,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<AsteriskDiagnosticsService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     /// <summary>
@@ -67,11 +72,27 @@ public sealed class AsteriskDiagnosticsService
     /// <returns>The refreshed dashboard snapshot.</returns>
     public async Task<AsteriskDiagnosticsSnapshot> RefreshAsync(CancellationToken cancellationToken)
     {
+        var waitStartedTimestamp = _timeProvider.GetTimestamp();
         await _refreshLock.WaitAsync(cancellationToken);
+        var lockWaitElapsed = _timeProvider.GetElapsedTime(waitStartedTimestamp);
+        var refreshStartedTimestamp = _timeProvider.GetTimestamp();
 
         try
         {
             _currentSnapshot = await LoadSnapshotAsync(cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Refreshed Asterisk diagnostics in {RefreshMilliseconds} ms after waiting {LockWaitMilliseconds} ms for the refresh lock. Reachable: {Reachable}. Channels: {ChannelCount}. Bridges: {BridgeCount}. Calls: {CallCount}. Error: {ErrorMessage}",
+                    _timeProvider.GetElapsedTime(refreshStartedTimestamp).TotalMilliseconds,
+                    lockWaitElapsed.TotalMilliseconds,
+                    _currentSnapshot.Reachable,
+                    _currentSnapshot.ChannelCount,
+                    _currentSnapshot.BridgeCount,
+                    _currentSnapshot.ActiveCallCount,
+                    _currentSnapshot.ErrorMessage);
+            }
 
             return _currentSnapshot;
         }

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -215,7 +216,8 @@ public sealed class ActivityAssignmentServiceTests
             businessHours.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
-            clock.Object);
+            clock.Object,
+            NullLogger<ActivityAssignmentService>.Instance);
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

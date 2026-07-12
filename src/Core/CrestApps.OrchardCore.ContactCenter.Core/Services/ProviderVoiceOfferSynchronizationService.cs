@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -18,6 +19,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     private readonly IActivityReservationManager _reservationManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -30,6 +32,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     /// <param name="reservationManager">The reservation manager.</param>
     /// <param name="agentManager">The agent manager.</param>
     /// <param name="activityManager">The activity manager.</param>
+    /// <param name="serviceProvider">The service provider used to lazily resolve presence management without an event-publisher cycle.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public ProviderVoiceOfferSynchronizationService(
@@ -39,6 +42,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         IActivityReservationManager reservationManager,
         IAgentProfileManager agentManager,
         IOmnichannelActivityManager activityManager,
+        IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ProviderVoiceOfferSynchronizationService> logger)
     {
@@ -48,6 +52,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         _reservationManager = reservationManager;
         _agentManager = agentManager;
         _activityManager = activityManager;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
     }
@@ -72,13 +77,16 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             return;
         }
 
-        var wasAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
         var queueItem = await _queueItemManager.FindByActivityIdAsync(interaction.ActivityItemId, cancellationToken);
 
         // Cancel every lingering reservation bound to this activity. Reject/re-offer cycles can accumulate
         // multiple accepted reservations for the same activity, and leaving them behind keeps an agent's
         // ActiveReservationId pointing at dead work, which blocks all future offers.
         var reservations = await _reservationManager.ListActiveByActivityAsync(interaction.ActivityItemId, cancellationToken);
+        var providerReportedAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
+        var wasAnsweredByAgent = providerReportedAnswered &&
+            (queueItem?.Status == QueueItemStatus.Assigned ||
+                reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted));
         var canceledReservationIds = new HashSet<string>(StringComparer.Ordinal);
         string reservationAgentId = null;
 
@@ -90,7 +98,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             canceledReservationIds.Add(reservation.ItemId);
         }
 
-        if (wasAnswered)
+        if (wasAnsweredByAgent)
         {
             if (queueItem?.Status == QueueItemStatus.Assigned)
             {
@@ -99,12 +107,13 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
 
-            // The wrap-up cascade owns the agent's presence transition for answered calls, but still clear a
-            // dangling reservation pointer so the agent is not blocked from receiving the next offer.
-            await ClearStaleReservationPointerAsync(
-                session?.AgentId ?? interaction.AgentId ?? reservationAgentId,
-                canceledReservationIds,
-                cancellationToken);
+            var answeredAgentId = session?.AgentId ?? interaction.AgentId ?? reservationAgentId;
+
+            if (!string.IsNullOrWhiteSpace(answeredAgentId))
+            {
+                var presenceManager = _serviceProvider.GetRequiredService<IAgentPresenceManager>();
+                await presenceManager.StartWrapUpAsync(answeredAgentId, cancellationToken);
+            }
 
             return;
         }
@@ -117,7 +126,8 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 interaction.ActivityItemId);
         }
 
-        if (queueItem is not null && queueItem.Status is QueueItemStatus.Reserved or QueueItemStatus.Assigned)
+        if (queueItem is not null &&
+            queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
         {
             queueItem.Status = QueueItemStatus.Removed;
             queueItem.DequeuedUtc = _clock.UtcNow;
@@ -138,7 +148,9 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                     agent.ActiveReservationId = null;
                 }
 
-                if (agent.PresenceStatus is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy)
+                if (agent.PresenceStatus is AgentPresenceStatus.Reserved or
+                    AgentPresenceStatus.Busy or
+                    AgentPresenceStatus.WrapUp)
                 {
                     agent.PresenceStatus = AgentPresenceUtilities.ResolveDefaultReadyState(agent);
                 }
@@ -166,29 +178,6 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         activity.ReservedUtc = null;
         activity.ReservationExpiresUtc = null;
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-    }
-
-    private async Task ClearStaleReservationPointerAsync(
-        string agentId,
-        HashSet<string> canceledReservationIds,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(agentId) || canceledReservationIds.Count == 0)
-        {
-            return;
-        }
-
-        var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
-
-        if (agent is null ||
-            string.IsNullOrWhiteSpace(agent.ActiveReservationId) ||
-            !canceledReservationIds.Contains(agent.ActiveReservationId))
-        {
-            return;
-        }
-
-        agent.ActiveReservationId = null;
-        await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
     }
 
     private static bool IsTerminalState(ContactCenterCallState? state)

@@ -196,6 +196,59 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task RefreshInteractionAsync_WhenTerminalSessionHasNonTerminalInteraction_RepairsInteractionAndOfferState()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.Status = InteractionStatus.Ringing;
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession
+            {
+                ItemId = "session-1",
+                InteractionId = "interaction-1",
+                ProviderCallId = "call-1",
+                State = ContactCenterCallState.Ended,
+                StartedUtc = _now.AddMinutes(-2),
+                EndedUtc = _now.AddMinutes(-1),
+            });
+        var interactionManager = new Mock<IInteractionManager>();
+        var eventService = new Mock<IProviderVoiceEventService>();
+        var offerSynchronizationService = new Mock<IProviderVoiceOfferSynchronizationService>();
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        var service = CreateService(
+            interactionManager,
+            callSessionManager,
+            eventService,
+            offerSynchronizationService,
+            resolver);
+
+        // Act
+        var refreshed = await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, refreshed.Status);
+        Assert.Equal(_now.AddMinutes(-2), refreshed.StartedUtc);
+        Assert.Equal(_now.AddMinutes(-1), refreshed.EndedUtc);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.Is<Interaction>(value => value.Status == InteractionStatus.Ended),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        offerSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync("interaction-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        eventService.Verify(
+            service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        resolver.Verify(
+            value => value.GetAsync(It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task TenantActivation_PerformsImmediateProviderReconciliation()
     {
         // Arrange
@@ -279,6 +332,32 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             interactionManager.Object,
             callSessionManager.Object,
             eventService.Object,
+            new Mock<IProviderVoiceOfferSynchronizationService>().Object,
+            resolver.Object,
+            distributedLock.Object,
+            clock.Object,
+            NullLogger<ProviderCallStateSynchronizationService>.Instance);
+    }
+
+    private static ProviderCallStateSynchronizationService CreateService(
+        Mock<IInteractionManager> interactionManager,
+        Mock<ICallSessionManager> callSessionManager,
+        Mock<IProviderVoiceEventService> eventService,
+        Mock<IProviderVoiceOfferSynchronizationService> offerSynchronizationService,
+        Mock<ITelephonyProviderResolver> resolver)
+    {
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, true));
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        return new ProviderCallStateSynchronizationService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            eventService.Object,
+            offerSynchronizationService.Object,
             resolver.Object,
             distributedLock.Object,
             clock.Object,

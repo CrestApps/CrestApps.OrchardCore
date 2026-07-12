@@ -41,7 +41,7 @@ app.MapDelete(
         }
 
         await diagnosticsService.DisconnectChannelAsync(channelId, cancellationToken);
-        dashboardBroadcastService.RequestRefresh();
+        dashboardBroadcastService.RequestRefresh("dashboard disconnect action");
 
         return TypedResults.NoContent();
     });

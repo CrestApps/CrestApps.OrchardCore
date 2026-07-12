@@ -37,20 +37,20 @@
 
            <div class="mb-2">
                <label class="form-label small mb-1">@T["Queues"]</label>
-               <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" title="@T["Select queues"]">
+               <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" title="@T["Select queue(s)"]">
                    @foreach (var queue in viewModel.AvailableQueues)
                    {
-                       <option value="@queue.ItemId" selected="@viewModel.SelectedQueueIds.Contains(queue.ItemId)">@queue.Name</option>
+                       <option value="@queue.ItemId" selected="@(viewModel.SelectedQueueIds.Contains(queue.ItemId) ? "selected" : null)">@queue.Name</option>
                    }
                </select>
            </div>
 
            <div class="mb-2">
                <label class="form-label small mb-1">@T["Campaigns"]</label>
-               <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Any campaign"]">
+               <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Select campaigns(s)"]">
                    @foreach (var option in viewModel.CampaignOptions)
                    {
-                       <option value="@option.Value" selected="@option.Selected" disabled="@option.Disabled">@option.Text</option>
+                       <option value="@option.Value" selected="@(option.Selected ? "selected" : null)" disabled="@(option.Disabled ? "disabled" : null)">@option.Text</option>
                    }
                </select>
            </div>

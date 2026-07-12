@@ -165,7 +165,7 @@ fallback when the user-specific mailbox does not exist.
 
 ## Aspire local development
 
-`src\Startup\CrestApps.Aspire.AppHost` now provisions an **Asterisk** container for local development using the `andrius/asterisk:latest` image, mounts minimal `http.conf`, `ari.conf`, and `extensions.conf` files, and injects the **Default Asterisk** environment variables into the Orchard Core web project automatically. The AppHost explicitly launches its multi-target project resources with `net10.0`, preventing `dotnet run` from exiting before the Orchard and Asterisk Web applications start.
+`src\Startup\CrestApps.Aspire.AppHost` now provisions an **Asterisk** container for local development using the `andrius/asterisk:latest` image, mounts minimal `http.conf`, `ari.conf`, and `extensions.conf` files, and injects the **Default Asterisk** environment variables into the Orchard Core web project automatically. Repository projects use `TargetFramework` for the default single `net10.0` target while preserving `TargetFrameworks` for multi-target overrides, so Aspire can launch Orchard Core, Asterisk Web, and the sample clients without `dotnet run` stopping for an ambiguous framework selection.
 
 This makes the configuration-backed provider available immediately for local tenants as soon as:
 
@@ -201,6 +201,8 @@ With the default Aspire credentials, these endpoints are useful:
 If the soft phone dials successfully but `channels` stays empty while the call is active, the originate request is not reaching or being accepted by Asterisk. If the call appears in `channels` but a later action such as hold fails, inspect the Orchard application logs and the Asterisk container logs together to see the ARI response body and the PBX-side reason.
 
 The Telephony SignalR hub now logs the start and completion of each soft-phone action with the authenticated user id, SignalR connection id, the provider call id, and any Contact Center correlation metadata that travelled with the call reference. When an Asterisk call-control action fails after a queued inbound offer is accepted, those hub entries make it easier to confirm whether Orchard is still acting on the original offered channel id or on the latest provider-side call identity.
+
+The Asterisk development dashboard also logs the refresh source, refresh-lock wait, ARI snapshot duration, SignalR broadcast duration, and resulting channel/bridge/logical-call counts. Compare the timestamp of the incoming ARI event with these entries to distinguish delayed provider event delivery from slow snapshot acquisition, lock contention, or SignalR broadcast delay. The standalone sample builds its own local SignalR browser asset through `Assets.json`; if `/js/signalr.min.js` is missing, the dashboard cannot receive event pushes and intentionally falls back to its slower reconciliation poll.
 
 ### What to expect from the bundled local path
 

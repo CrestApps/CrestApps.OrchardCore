@@ -184,9 +184,10 @@ public sealed class AsteriskStasisEventForwarderService : BackgroundService
             return;
         }
 
-        _dashboardBroadcastService.RequestRefresh();
+        var eventType = typeElement.GetString();
+        _dashboardBroadcastService.RequestRefresh(eventType ?? "unknown Asterisk event");
 
-        if (!string.Equals(typeElement.GetString(), "StasisStart", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(eventType, "StasisStart", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

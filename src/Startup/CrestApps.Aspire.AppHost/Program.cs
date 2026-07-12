@@ -27,7 +27,6 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
 // .WithReference(redis)
 // .WithReference(ollama)
 // .WaitFor(redis)
-    .WithArgs("--framework", "net10.0")
     .WaitFor(asterisk)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
     .WithEnvironment((options) =>
@@ -78,21 +77,18 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
-    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
-    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Asterisk_Web>("AsteriskWeb")
-    .WithArgs("--framework", "net10.0")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WaitFor(asterisk)

@@ -5,11 +5,4 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Content Include="../../Modules/CrestApps.OrchardCore.SignalR/wwwroot/scripts/signalr.min.js"
-             Link="wwwroot/js/signalr.min.js"
-             CopyToOutputDirectory="PreserveNewest"
-             CopyToPublishDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>

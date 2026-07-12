@@ -94,6 +94,7 @@ Open **Interaction Center → My workspace**. This is the screen an agent keeps 
 ### 1. Sign in and set your presence
 
 - **Sign in to queues and campaigns** from the soft phone's **Work** tab. You can only choose queues and campaigns you are allowed to handle.
+- Empty queue and campaign selectors show **Select queue(s)** and **Select campaigns(s)**. No membership is selected until you explicitly choose it.
 - Select at least one queue or campaign before signing in. The Work tab shows an inline error when nothing is selected.
 - After sign-in, the Work tab lists every queue and campaign you are signed in to. Use the individual **Sign out** action to leave one membership while remaining signed in to the others, or **Sign out of all** to leave every membership.
 - If inbound voice work is already waiting in one of those queues, signing in or switching back to **Available** immediately asks routing to offer the next queued call instead of waiting for another inbound event.
@@ -138,6 +139,10 @@ The soft phone also keeps the active remote number visible while you are on the 
 When Contact Center owns the assigned voice interaction, server-side call-session changes now flow back into the Telephony soft phone in real time, so provider-side disconnects, failed calls, transfers, hold/resume, mute/unmute, and other normalized call-state changes immediately update the live call card and the persisted **Recent** history instead of waiting for the next browser reconnect.
 
 Contact Center also runs a provider-truth reconciliation pass when the tenant activates and on a periodic safety cadence. If Orchard Core restarts during busy hours, persisted ringing or active interactions are revalidated against the telephony server before routing resumes, and a pre-connect offer that already ended on the provider side is removed from the queue instead of being re-offered as a ghost call.
+
+If a prior terminal provider event was already recorded in the call session but another recovery path left the interaction nonterminal, reconciliation now repairs the interaction from the terminal call session before capacity is evaluated, then clears stale queue, reservation, and agent state. This prevents an ended call from consuming the agent's `MaxConcurrentInteractions` slot indefinitely.
+
+For inbound server-side calls, a provider may report the caller leg as connected before an agent accepts the Contact Center offer. Ended-offer cleanup therefore uses the accepted reservation or assigned queue item—not the provider leg's answered timestamp—to decide whether the work reached an agent. A terminal call that was only waiting or reserved is removed and releases the agent so routing can continue to the next live call.
 
 ### 4. Complete the activity in the CRM
 

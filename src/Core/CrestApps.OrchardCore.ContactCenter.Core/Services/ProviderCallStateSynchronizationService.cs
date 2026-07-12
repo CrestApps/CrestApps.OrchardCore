@@ -21,6 +21,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IProviderVoiceEventService _providerVoiceEventService;
+    private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
@@ -32,6 +33,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="callSessionManager">The call session manager.</param>
     /// <param name="providerVoiceEventService">The provider voice-event ingestion service.</param>
+    /// <param name="offerSynchronizationService">The provider-ended offer synchronization service.</param>
     /// <param name="telephonyProviderResolver">The telephony provider resolver.</param>
     /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
     /// <param name="clock">The clock used to stamp reconciliation events.</param>
@@ -40,6 +42,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IProviderVoiceEventService providerVoiceEventService,
+        IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         ITelephonyProviderResolver telephonyProviderResolver,
         IDistributedLock distributedLock,
         IClock clock,
@@ -48,6 +51,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _providerVoiceEventService = providerVoiceEventService;
+        _offerSynchronizationService = offerSynchronizationService;
         _telephonyProviderResolver = telephonyProviderResolver;
         _distributedLock = distributedLock;
         _clock = clock;
@@ -61,6 +65,35 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
         if (string.IsNullOrWhiteSpace(interaction.ProviderName) || string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
         {
+            return interaction;
+        }
+
+        var currentSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        if (currentSession is not null &&
+            TryMapTerminalInteractionStatus(currentSession.State, out var terminalStatus))
+        {
+            if (interaction.Status != terminalStatus)
+            {
+                var previousStatus = interaction.Status;
+                interaction.Status = terminalStatus;
+                interaction.StartedUtc ??= currentSession.StartedUtc;
+                interaction.AnsweredUtc ??= currentSession.AnsweredUtc;
+                interaction.EndedUtc ??= currentSession.EndedUtc ?? _clock.UtcNow;
+
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+                _logger.LogWarning(
+                    "Repaired interaction '{InteractionId}' from '{PreviousStatus}' to '{CurrentStatus}' because call session '{CallSessionId}' is terminal in provider state '{ProviderState}'.",
+                    interaction.ItemId,
+                    previousStatus,
+                    interaction.Status,
+                    currentSession.ItemId,
+                    currentSession.State);
+            }
+
+            await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
+
             return interaction;
         }
 
@@ -104,8 +137,6 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
             return interaction;
         }
-
-        var currentSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
         if (lookup.Found && IsEquivalent(currentSession, lookup.Call))
         {
@@ -240,5 +271,29 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         return session.State == mappedState &&
             session.IsMuted == call.IsMuted &&
             session.IsOnHold == (mappedState == ContactCenterCallState.OnHold);
+    }
+
+    private static bool TryMapTerminalInteractionStatus(
+        ContactCenterCallState? callState,
+        out InteractionStatus interactionStatus)
+    {
+        switch (callState)
+        {
+            case ContactCenterCallState.Ended:
+                interactionStatus = InteractionStatus.Ended;
+
+                return true;
+            case ContactCenterCallState.Failed:
+            case ContactCenterCallState.NoAnswer:
+            case ContactCenterCallState.Rejected:
+            case ContactCenterCallState.Canceled:
+                interactionStatus = InteractionStatus.Failed;
+
+                return true;
+            default:
+                interactionStatus = default;
+
+                return false;
+        }
     }
 }

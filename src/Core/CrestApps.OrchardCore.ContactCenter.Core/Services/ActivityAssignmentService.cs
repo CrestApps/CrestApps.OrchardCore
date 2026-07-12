@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
@@ -25,6 +26,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityAssignmentService"/> class.
@@ -38,6 +40,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize assignment per queue.</param>
     /// <param name="clock">The clock used to evaluate SLA aging and business hours.</param>
+    /// <param name="logger">The logger.</param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
@@ -47,7 +50,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
-        IClock clock)
+        IClock clock,
+        ILogger<ActivityAssignmentService> logger)
     {
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
@@ -58,6 +62,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _publisher = publisher;
         _distributedLock = distributedLock;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -72,6 +77,13 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         if (!locked)
         {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Skipped assigning the next Contact Center item for queue '{QueueId}' because its assignment lock was not acquired.",
+                    queueId);
+            }
+
             return null;
         }
 
@@ -92,6 +104,13 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         if (!locked)
         {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Skipped assigning Contact Center queue '{QueueId}' because its assignment lock was not acquired.",
+                    queueId);
+            }
+
             return 0;
         }
 
@@ -113,6 +132,14 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         if (queue is null || !queue.Enabled)
         {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Skipped Contact Center assignment for queue '{QueueId}' because the queue is {QueueState}.",
+                    queueId,
+                    queue is null ? "missing" : "disabled");
+            }
+
             return null;
         }
 
@@ -120,6 +147,13 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         if (!await _businessHours.IsOpenAsync(queue.BusinessHoursCalendarId, now, cancellationToken))
         {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Skipped Contact Center assignment for queue '{QueueId}' because its business hours are closed.",
+                    queueId);
+            }
+
             return null;
         }
 
@@ -128,15 +162,46 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         if (topItem is null)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "No waiting Contact Center item is available for queue '{QueueId}'.",
+                    queueId);
+            }
+
             return null;
         }
 
         var agents = await _agentManager.ListAvailableForQueueAsync(queueId, cancellationToken);
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Evaluating Contact Center queue item '{QueueItemId}' for queue '{QueueId}' against {AvailableAgentCount} available agents.",
+                topItem.ItemId,
+                queueId,
+                agents.Count);
+        }
+
         var decision = await _routingService.SelectAgentAsync(queue, topItem, agents, cancellationToken);
 
         if (!decision.Succeeded || decision.Agent is null)
         {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                var candidateSummary = string.Join(
+                    "; ",
+                    decision.Candidates.Select(candidate =>
+                        $"{candidate.Agent.ItemId}: eligible={candidate.IsEligible}, reasons={string.Join(", ", candidate.Reasons)}"));
+
+                _logger.LogWarning(
+                    "Contact Center routing did not assign queue item '{QueueItemId}' from queue '{QueueId}'. Reason: {Reason}. Candidates: {CandidateSummary}",
+                    topItem.ItemId,
+                    queueId,
+                    decision.Reason,
+                    candidateSummary);
+            }
+
             await PublishRoutingDecisionAsync(decision, cancellationToken);
 
             return null;
@@ -152,6 +217,27 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         {
             decision.Succeeded = false;
             decision.Reason = "The selected agent or queue item was no longer available when the reservation was created.";
+
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Contact Center reservation creation lost a race for queue item '{QueueItemId}' and agent '{AgentId}' in queue '{QueueId}'.",
+                    topItem.ItemId,
+                    decision.Agent.ItemId,
+                    queueId);
+            }
+        }
+        else
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Reserved Contact Center queue item '{QueueItemId}' as reservation '{ReservationId}' for agent '{AgentId}' in queue '{QueueId}'.",
+                    topItem.ItemId,
+                    reservation.ItemId,
+                    decision.Agent.ItemId,
+                    queueId);
+            }
         }
 
         await PublishRoutingDecisionAsync(decision, cancellationToken);

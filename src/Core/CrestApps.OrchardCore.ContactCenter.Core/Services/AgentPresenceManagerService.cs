@@ -56,6 +56,20 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
+        var selectedQueueIds = queueIds?.Distinct().ToList() ?? [];
+        var selectedCampaignIds = campaignIds?.Distinct().ToList() ?? [];
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Signing Contact Center user '{UserId}' in to {QueueCount} queues and {CampaignCount} campaigns. Queue ids: {QueueIds}. Campaign ids: {CampaignIds}.",
+                userId,
+                selectedQueueIds.Count,
+                selectedCampaignIds.Count,
+                string.Join(", ", selectedQueueIds),
+                string.Join(", ", selectedCampaignIds));
+        }
+
         var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
         if (profile is not null && _agentWorkStateHealingService is not null)
@@ -84,8 +98,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
-        profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
-        profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
+        profile.QueueIds = selectedQueueIds;
+        profile.CampaignIds = selectedCampaignIds;
         profile.PresenceStatus = AgentPresenceStatus.Available;
         profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
@@ -94,6 +108,15 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Completed Contact Center sign-in for agent '{AgentId}' and user '{UserId}' with presence '{PresenceStatus}'.",
+                profile.ItemId,
+                userId,
+                profile.PresenceStatus);
+        }
 
         return profile;
     }
@@ -310,6 +333,12 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        if (profile.PresenceStatus == AgentPresenceStatus.WrapUp &&
+            string.IsNullOrWhiteSpace(profile.ActiveReservationId))
+        {
+            return profile;
+        }
+
         profile.PresenceStatus = AgentPresenceStatus.WrapUp;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
@@ -390,6 +419,13 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     {
         if (_sessionManager is null)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipped Contact Center live-session membership synchronization for user '{UserId}' because no session manager is registered.",
+                    userId);
+            }
+
             return;
         }
 
@@ -397,6 +433,13 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         if (session is null)
         {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "No live Contact Center agent session exists for user '{UserId}'; profile memberships were saved but no connected session was updated.",
+                    userId);
+            }
+
             return;
         }
 
@@ -405,6 +448,16 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         session.ModifiedUtc = _clock.UtcNow;
 
         await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Synchronized Contact Center session '{SessionId}' for user '{UserId}' with {QueueCount} queues and {CampaignCount} campaigns.",
+                session.ItemId,
+                userId,
+                session.QueueIds.Count,
+                session.CampaignIds.Count);
+        }
     }
 
     private Task PublishAsync(string eventType, AgentProfile profile, CancellationToken cancellationToken)

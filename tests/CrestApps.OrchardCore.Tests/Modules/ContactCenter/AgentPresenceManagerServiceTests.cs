@@ -263,6 +263,46 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task StartWrapUpAsync_WhenAlreadyInWrapUp_DoesNotPublishDuplicateChange()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.WrapUp,
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            publisher.Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.StartWrapUpAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(existing, profile);
+        agentManager.Verify(
+            m => m.UpdateAsync(It.IsAny<AgentProfile>(), null, It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            m => m.PublishAsync(
+                It.IsAny<InteractionEvent>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task CompleteWorkAsync_WhenBreakRequested_AppliesBreak()
     {
         // Arrange
