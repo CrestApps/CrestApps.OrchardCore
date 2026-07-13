@@ -134,7 +134,9 @@ Once you accept, the **active interaction** panel shows:
 - The **queue** the work came from.
 - A **Complete activity** link that opens the same Omnichannel CRM completion page used by manual activities.
 
-Use the soft phone for hold, mute, transfer, and hang-up. The workspace reflects the call state in real time.
+Use the soft phone for hold, mute, transfer, and hang-up. When a call is held, the keypad becomes available for a second call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
+
+Consultative transfer remains provider-dependent. Asterisk currently supports blind transfer and two-call conference but rejects warm transfer; DialPad exposes its provider transfer and merge actions when configured. The shared Telephony contract does not yet expose an agent-specific conference participant or leave-conference operation, so the UI does not claim that an agent can leave a conference while keeping all remote participants connected.
 
 The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
 

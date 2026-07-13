@@ -97,6 +97,16 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult(_provider.GetDialRequestCount());
     }
 
+    public Task<int> GetHangupRequestCount()
+    {
+        return Task.FromResult(_provider.GetHangupRequestCount());
+    }
+
+    public Task<int> GetMergeRequestCount()
+    {
+        return Task.FromResult(_provider.GetMergeRequestCount());
+    }
+
     public Task SetDialDelay(int milliseconds)
     {
         _provider.SetDialDelay(milliseconds);
@@ -130,6 +140,15 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         }
 
         return _provider.GetCallStateAsync(call.CallId);
+    }
+
+    public async Task<TelephonyCallListLookupResult> GetActiveCalls()
+    {
+        return new TelephonyCallListLookupResult
+        {
+            Succeeded = true,
+            Calls = await _provider.GetActiveCallsAsync(),
+        };
     }
 
     public async Task<bool> PublishLatestCallState()

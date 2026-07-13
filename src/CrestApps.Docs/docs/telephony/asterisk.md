@@ -118,7 +118,7 @@ The provider uses ARI endpoints such as:
 - `POST /channels/{id}/continue` to blind-transfer a Stasis-managed Local channel back into the dialplan
 - `POST /channels/{id}/variable` plus `POST /channels/{id}/continue` to push provider-neutral metadata into the channel and route it to the configured voicemail dialplan target
 - `POST /channels/{id}/dtmf` to send digits
-- `POST /bridges` plus `POST /bridges/{id}/addChannel` to merge two calls
+- `POST /bridges` plus `POST /bridges/{id}/addChannel` to merge two calls; the provider stamps the owned bridge id on both channels and deletes the mixing bridge after the last tracked participant hangs up
 
 Because all requests are issued server-side, the ARI password never reaches the browser.
 

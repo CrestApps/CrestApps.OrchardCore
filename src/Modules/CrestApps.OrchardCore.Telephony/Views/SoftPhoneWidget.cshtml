@@ -44,7 +44,10 @@
             ["notConnected"] = T["Not connected"].Value,
             ["invalidNumber"] = T["Enter a phone number to call."].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
-            ["mergePrompt"] = T["Second call id to merge"].Value,
+            ["activeCalls"] = T["Active calls"].Value,
+            ["selectCallsToMerge"] = T["Select two calls to conference."].Value,
+            ["conference"] = T["Conference selected calls"].Value,
+            ["disconnectAll"] = T["Disconnect all calls"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
             ["noInteractions"] = T["No recent calls."].Value,
             ["incoming"] = T["Incoming"].Value,
@@ -115,6 +118,11 @@
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
 
+                <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
+                    <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
+                    <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
+                </div>
+
                 <div class="telephony-soft-phone__keypad">
                     @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" })
                     {
@@ -141,8 +149,11 @@
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
                     </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Merge"]" hidden>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Conference selected calls"]" hidden>
                         <i class="fa-solid fa-code-merge"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup-all" data-telephony-hangup-all title="@T["Disconnect all calls"]" hidden>
+                        <i class="fa-solid fa-phone-volume"></i>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup" data-telephony-hangup title="@T["Hang up"]" hidden>
                         <i class="fa-solid fa-phone-slash"></i>

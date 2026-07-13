@@ -307,6 +307,54 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     }
 
     /// <summary>
+    /// Gets all active calls for the current user directly from their configured telephony providers.
+    /// </summary>
+    /// <returns>The provider-authoritative active call-list result.</returns>
+    public async Task<TelephonyCallListLookupResult> GetActiveCalls()
+    {
+        var result = new TelephonyCallListLookupResult
+        {
+            Succeeded = false,
+            Error = S["Unable to determine the active call state."].Value,
+        };
+        LogHubActionStart("GetActiveCalls");
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetActiveCalls");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
+
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
+            result = await synchronizationService.GetActiveCallsAsync(userId, Context.ConnectionAborted);
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Returned={ReturnedCount}, Error={Error}.",
+                "GetActiveCalls",
+                Context.UserIdentifier ?? "(anonymous)",
+                result.Succeeded,
+                result.Calls.Count,
+                result.Error ?? "(none)");
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Gets the capabilities of the configured provider as a bit flag integer value.
     /// </summary>
     /// <returns>The provider capabilities as an integer.</returns>

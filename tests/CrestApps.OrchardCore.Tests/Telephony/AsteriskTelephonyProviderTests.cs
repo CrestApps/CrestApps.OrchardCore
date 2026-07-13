@@ -144,6 +144,113 @@ public sealed class AsteriskTelephonyProviderTests
     }
 
     [Fact]
+    public async Task MergeThenHangupAll_WhenConferenceBecomesEmpty_DeletesOwnedBridge()
+    {
+        // Arrange
+        var bridgeLookupCount = 0;
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            var url = request.RequestUri.AbsoluteUri;
+
+            if (request.Method == HttpMethod.Post && url == $"{BaseUrl}bridges?type=mixing")
+            {
+                return JsonResponse("""{"id":"bridge-1"}""");
+            }
+
+            if (request.Method == HttpMethod.Get &&
+                url.EndsWith($"/variable?variable={AsteriskConstants.ConferenceBridgeVariableName}", StringComparison.Ordinal))
+            {
+                return JsonResponse("""{"value":"bridge-1"}""");
+            }
+
+            if (request.Method == HttpMethod.Get && url == $"{BaseUrl}bridges/bridge-1")
+            {
+                bridgeLookupCount++;
+
+                return JsonResponse(bridgeLookupCount == 1
+                    ? """{"id":"bridge-1","channels":["call-2"]}"""
+                    : """{"id":"bridge-1","channels":[]}""");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var mergeResult = await provider.MergeAsync(
+            new MergeRequest
+            {
+                PrimaryCallId = "call-1",
+                SecondaryCallId = "call-2",
+            },
+            TestContext.Current.CancellationToken);
+        var firstHangup = await provider.HangupAsync(
+            new CallReference { CallId = "call-1" },
+            TestContext.Current.CancellationToken);
+        var secondHangup = await provider.HangupAsync(
+            new CallReference { CallId = "call-2" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(mergeResult.Succeeded);
+        Assert.True(firstHangup.Succeeded);
+        Assert.True(secondHangup.Succeeded);
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}channels/call-1/variable?variable={AsteriskConstants.ConferenceBridgeVariableName}&value=bridge-1");
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}channels/call-2/variable?variable={AsteriskConstants.ConferenceBridgeVariableName}&value=bridge-1");
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Delete &&
+                request.RequestUri.AbsoluteUri == $"{BaseUrl}bridges/bridge-1");
+    }
+
+    [Fact]
+    public async Task MergeAsync_WhenCleanupTrackingFails_KeepsSuccessfulConference()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            var url = request.RequestUri.AbsoluteUri;
+
+            if (request.Method == HttpMethod.Post && url == $"{BaseUrl}bridges?type=mixing")
+            {
+                return JsonResponse("""{"id":"bridge-1"}""");
+            }
+
+            if (url.Contains("channels/call-1/variable", StringComparison.Ordinal))
+            {
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.MergeAsync(
+            new MergeRequest
+            {
+                PrimaryCallId = "call-1",
+                SecondaryCallId = "call-2",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.DoesNotContain(
+            handler.Requests,
+            request => request.Method == HttpMethod.Delete &&
+                request.RequestUri.AbsoluteUri == $"{BaseUrl}bridges/bridge-1");
+    }
+
+    [Fact]
     public void Capabilities_WhenUsingLocalLoopback_KeepAdvancedActionsEnabled()
     {
         // Arrange
@@ -394,5 +501,13 @@ public sealed class AsteriskTelephonyProviderTests
             new StubClock(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());
+    }
+
+    private static HttpResponseMessage JsonResponse(string content)
+    {
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(content),
+        };
     }
 }

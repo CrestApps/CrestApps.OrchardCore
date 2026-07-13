@@ -61,6 +61,11 @@ public static class AsteriskConstants
     public const string MuteStateVariableName = "CRESTAPPS_STATE_MUTED";
 
     /// <summary>
+    /// The channel variable used to track the provider-owned conference bridge for cleanup.
+    /// </summary>
+    public const string ConferenceBridgeVariableName = "CRESTAPPS_CONFERENCE_BRIDGE_ID";
+
+    /// <summary>
     /// The shell configuration section used for the configuration-backed default provider.
     /// </summary>
     public const string DefaultConfigurationSectionPath = "CrestApps:Asterisk:Default";

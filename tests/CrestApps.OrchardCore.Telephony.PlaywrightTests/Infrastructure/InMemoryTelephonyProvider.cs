@@ -11,10 +11,12 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCallStateProvider
 {
     private readonly ConcurrentDictionary<string, TelephonyCall> _calls = new();
+    private readonly ConcurrentDictionary<string, byte> _publishedCallIds = new();
     private TelephonyCall _latestCall;
-    private bool _latestCallPublished;
     private int _counter;
     private int _dialRequestCount;
+    private int _hangupRequestCount;
+    private int _mergeRequestCount;
     private int _dialDelayMilliseconds;
     private int _lookupRequestCount;
     private int _lookupDelayMilliseconds;
@@ -62,16 +64,18 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
 
         _calls[call.CallId] = call;
         _latestCall = call;
-        _latestCallPublished = false;
 
         return TelephonyResult.Success(call);
     }
 
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _hangupRequestCount);
+
         if (call?.CallId is not null)
         {
             _calls.TryRemove(call.CallId, out _);
+            _publishedCallIds.TryRemove(call.CallId, out _);
         }
 
         _latestCall = new TelephonyCall
@@ -119,6 +123,8 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
 
     public Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _mergeRequestCount);
+
         return Update(request?.PrimaryCallId, c => c.State = CallState.Connected);
     }
 
@@ -158,7 +164,7 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
         Interlocked.Increment(ref _lookupRequestCount);
 
         if (string.IsNullOrEmpty(callId) ||
-            !_latestCallPublished ||
+            !_publishedCallIds.ContainsKey(callId) ||
             !_calls.TryGetValue(callId, out var call))
         {
             return new TelephonyCallLookupResult
@@ -190,9 +196,31 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
 
     public TelephonyCall PublishLatestCallState()
     {
-        _latestCallPublished = true;
+        if (_latestCall?.CallId is not null)
+        {
+            _publishedCallIds[_latestCall.CallId] = 0;
+        }
 
         return _latestCall;
+    }
+
+    public async Task<IReadOnlyList<TelephonyCall>> GetActiveCallsAsync()
+    {
+        var calls = new List<TelephonyCall>();
+
+        foreach (var callId in _calls.Keys)
+        {
+            var lookup = await GetCallStateAsync(callId);
+
+            if (lookup.Found && lookup.Call is not null)
+            {
+                calls.Add(lookup.Call);
+            }
+        }
+
+        return calls
+            .OrderByDescending(call => call.StartedUtc)
+            .ToList();
     }
 
     public TelephonyCall DisconnectLatestCall()
@@ -214,7 +242,10 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
             ProviderName = Name.Name,
             StartedUtc = _latestCall?.StartedUtc,
         };
-        _latestCallPublished = true;
+        if (callId is not null)
+        {
+            _publishedCallIds[callId] = 0;
+        }
 
         return _latestCall;
     }
@@ -222,6 +253,16 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     public int GetDialRequestCount()
     {
         return Volatile.Read(ref _dialRequestCount);
+    }
+
+    public int GetHangupRequestCount()
+    {
+        return Volatile.Read(ref _hangupRequestCount);
+    }
+
+    public int GetMergeRequestCount()
+    {
+        return Volatile.Read(ref _mergeRequestCount);
     }
 
     public void SetDialDelay(int milliseconds)

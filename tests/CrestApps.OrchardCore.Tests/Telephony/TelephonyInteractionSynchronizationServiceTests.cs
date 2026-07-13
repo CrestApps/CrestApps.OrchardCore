@@ -184,6 +184,63 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task GetActiveCallsAsync_ReturnsEveryProviderAuthoritativeCall()
+    {
+        // Arrange
+        var firstInteraction = CreateInteraction();
+        var secondInteraction = CreateInteraction("call-2");
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.ListActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstInteraction, secondInteraction]);
+        var (hubContext, _) = CreateHubContext();
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.OnHold,
+                    ProviderName = "provider-1",
+                },
+            },
+            secondLookup: new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-2",
+                    To = string.Empty,
+                    State = CallState.Connected,
+                    ProviderName = "provider-1",
+                },
+            });
+
+        // Act
+        var result = await service.GetActiveCallsAsync("user-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Collection(
+            result.Calls,
+            call =>
+            {
+                Assert.Equal("call-1", call.CallId);
+                Assert.Equal("+15550002000", call.To);
+            },
+            call =>
+            {
+                Assert.Equal("call-2", call.CallId);
+                Assert.Equal("+15550002000", call.To);
+            });
+    }
+
+    [Fact]
     public async Task ReconcileProviderInteractionsAsync_WhenCallIsMissing_NotifiesUserAndDeletesOrphan()
     {
         // Arrange
@@ -250,13 +307,22 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Mock<IHubContext<TelephonyHub, ITelephonyClient>> hubContext,
         TelephonyCallLookupResult lookup,
         bool lockAcquired = false,
-        bool providerRegistered = true)
+        bool providerRegistered = true,
+        TelephonyCallLookupResult secondLookup = null)
     {
         var provider = new Mock<ITelephonyProvider>();
         provider
             .As<ITelephonyCallStateProvider>()
             .Setup(value => value.GetCallStateAsync("call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(lookup);
+
+        if (secondLookup is not null)
+        {
+            provider
+                .As<ITelephonyCallStateProvider>()
+                .Setup(value => value.GetCallStateAsync("call-2", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(secondLookup);
+        }
         var resolver = new Mock<ITelephonyProviderResolver>();
 
         if (providerRegistered)
@@ -295,12 +361,12 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         return (hubContext, client);
     }
 
-    private static TelephonyInteraction CreateInteraction()
+    private static TelephonyInteraction CreateInteraction(string callId = "call-1")
     {
         return new TelephonyInteraction
         {
             InteractionId = "interaction-1",
-            CallId = "call-1",
+            CallId = callId,
             ProviderName = "provider-1",
             UserId = "user-1",
             From = "+15550001000",

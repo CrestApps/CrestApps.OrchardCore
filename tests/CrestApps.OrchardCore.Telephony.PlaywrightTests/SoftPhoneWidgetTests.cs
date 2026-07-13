@@ -72,7 +72,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
         Assert.Equal("fa-solid fa-phone", await page.Locator("[data-telephony-toggle-icon]").GetAttributeAsync("class"));
         Assert.True(await page.Locator("[data-telephony-mute]").IsVisibleAsync());
-        Assert.True(await page.Locator("[data-telephony-merge]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-telephony-merge]").IsHiddenAsync());
 
         // Act - hang up
         await page.ClickAsync("[data-telephony-hangup]");
@@ -129,7 +129,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Assert
         var number = page.Locator("[data-telephony-number]");
         await number.WaitForAsync();
-        Assert.Equal("+15551234567", await number.InputValueAsync());
+        Assert.Equal("+1 (555) 123-4567", await number.InputValueAsync());
         Assert.True(await number.IsDisabledAsync());
     }
 
@@ -193,6 +193,96 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.Locator("[data-telephony-resume]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
         Assert.Equal("On hold", status.Trim());
+    }
+
+    [Fact]
+    public async Task HeldCall_AllowsSecondDial_AndListsBothCalls()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.ClickAsync("[data-telephony-hold]");
+        await PublishLatestCallStateAsync(page);
+
+        // Act
+        var number = page.Locator("[data-telephony-number]");
+        Assert.False(await number.IsDisabledAsync());
+        await number.FillAsync("+15557654321");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+
+        // Assert
+        var calls = page.Locator("[data-telephony-call-select]");
+        await calls.Nth(1).WaitForAsync();
+        Assert.Equal(2, await calls.CountAsync());
+        var callListText = await page.Locator("[data-telephony-active-calls-list]").InnerTextAsync();
+        Assert.Contains("(555) 123-4567", callListText);
+        Assert.Contains("(555) 765-4321", callListText);
+    }
+
+    [Fact]
+    public async Task ActiveCallList_ShortExtension_RemainsUnformatted()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "2001");
+
+        // Act
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+
+        // Assert
+        Assert.Contains(
+            "2001",
+            await page.Locator("[data-telephony-active-calls-list]").InnerTextAsync());
+    }
+
+    [Fact]
+    public async Task TwoSelectedCalls_CanBeConferencedWithoutEnteringCallIds()
+    {
+        // Arrange
+        var page = await CreateTwoCallPageAsync();
+        var baselineCount = await page.EvaluateAsync<int>(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount')");
+        var merge = page.Locator("[data-telephony-merge]");
+        Assert.True(await merge.IsDisabledAsync());
+
+        // Act
+        var selections = page.Locator("[data-telephony-conference-call]");
+        await selections.Nth(0).CheckAsync();
+        await selections.Nth(1).CheckAsync();
+        Assert.False(await merge.IsDisabledAsync());
+        await merge.ClickAsync();
+
+        // Assert
+        await page.WaitForFunctionAsync(
+            "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
+            new[] { baselineCount });
+    }
+
+    [Fact]
+    public async Task DisconnectAll_HangupsEveryActiveCall()
+    {
+        // Arrange
+        var page = await CreateTwoCallPageAsync();
+        var baselineCount = await page.EvaluateAsync<int>(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount')");
+
+        // Act
+        await page.ClickAsync("[data-telephony-hangup-all]");
+
+        // Assert
+        await page.WaitForFunctionAsync(
+            "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetHangupRequestCount').then(value => value === count + 2)",
+            new[] { baselineCount });
     }
 
     [Fact]
@@ -595,6 +685,25 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
                 return connection && connection.state === 'Connected';
             }
             """);
+    }
+
+    private async Task<IPage> CreateTwoCallPageAsync()
+    {
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.ClickAsync("[data-telephony-hold]");
+        await PublishLatestCallStateAsync(page);
+        await page.FillAsync("[data-telephony-number]", "+15557654321");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.Locator("[data-telephony-call-select]").Nth(1).WaitForAsync();
+
+        return page;
     }
 
     private static async Task PublishLatestCallStateAsync(IPage page)

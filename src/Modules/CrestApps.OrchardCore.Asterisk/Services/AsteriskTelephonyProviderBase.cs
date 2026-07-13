@@ -301,10 +301,27 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
     }
 
-    public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
     {
-        return ExecuteCallActionAsync(
-            call?.CallId,
+        if (string.IsNullOrWhiteSpace(call?.CallId))
+        {
+            return TelephonyResult.Failed(S["A call id is required to end the call."].Value);
+        }
+
+        var settings = await GetResolvedSettingsAsync(cancellationToken);
+
+        if (!IsConfigured(settings))
+        {
+            return NotConfigured();
+        }
+
+        var bridgeId = await GetChannelVariableAsync(
+            settings,
+            call.CallId,
+            AsteriskConstants.ConferenceBridgeVariableName,
+            cancellationToken);
+        var result = await ExecuteCallActionAsync(
+            call.CallId,
             HttpMethod.Delete,
             "channels/{callId}",
             null,
@@ -314,6 +331,13 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             S["A call id is required to end the call."].Value,
             cancellationToken,
             succeedWhenChannelIsMissing: true);
+
+        if (result.Succeeded && !string.IsNullOrWhiteSpace(bridgeId))
+        {
+            await DeleteConferenceBridgeWhenEmptyAsync(settings, bridgeId, cancellationToken);
+        }
+
+        return result;
     }
 
     public Task<TelephonyResult> HoldAsync(CallReference call, CancellationToken cancellationToken = default)
@@ -476,7 +500,30 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     addChannelResponse.StatusCode,
                     await ReadResponseBodyAsync(addChannelResponse, cancellationToken));
 
+                await DeleteBridgeAsync(settings, bridgeId, cancellationToken);
+
                 return TelephonyResult.Failed(S["The calls could not be merged."].Value);
+            }
+
+            var primaryTracked = await SetChannelVariableAsync(
+                settings,
+                request.PrimaryCallId,
+                AsteriskConstants.ConferenceBridgeVariableName,
+                bridgeId,
+                cancellationToken);
+            var secondaryTracked = await SetChannelVariableAsync(
+                settings,
+                request.SecondaryCallId,
+                AsteriskConstants.ConferenceBridgeVariableName,
+                bridgeId,
+                cancellationToken);
+
+            if (!primaryTracked || !secondaryTracked)
+            {
+                _logger.LogWarning(
+                    "Asterisk merged calls for provider {ProviderName}, but conference bridge cleanup tracking could not be stored on every channel. BridgeId: {BridgeId}.",
+                    ProviderName,
+                    bridgeId);
             }
 
             return TelephonyResult.Success(BuildCall(request.PrimaryCallId, CallState.Connected));
@@ -720,6 +767,27 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         string variableName,
         CancellationToken cancellationToken)
     {
+        var value = await GetChannelVariableAsync(settings, callId, variableName, cancellationToken);
+
+        if (bool.TryParse(value, out var parsed))
+        {
+            return parsed;
+        }
+
+        return value switch
+        {
+            "1" => true,
+            "0" => false,
+            _ => null,
+        };
+    }
+
+    private async Task<string> GetChannelVariableAsync(
+        AsteriskResolvedSettings settings,
+        string callId,
+        string variableName,
+        CancellationToken cancellationToken)
+    {
         using var response = await SendAsync(
             settings,
             HttpMethod.Get,
@@ -733,7 +801,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return false;
+            return null;
         }
 
         if (!response.IsSuccessStatusCode)
@@ -750,19 +818,8 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var value = ReadString(document.RootElement, "value");
 
-        if (bool.TryParse(value, out var parsed))
-        {
-            return parsed;
-        }
-
-        return value switch
-        {
-            "1" => true,
-            "0" => false,
-            _ => null,
-        };
+        return ReadString(document.RootElement, "value");
     }
 
     private static CallDirection ResolveDirection(string direction)
@@ -859,7 +916,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
     }
 
-    private async Task SetChannelVariableAsync(
+    private async Task<bool> SetChannelVariableAsync(
         AsteriskResolvedSettings settings,
         string callId,
         string variableName,
@@ -889,6 +946,75 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 variableName,
                 response.StatusCode,
                 responseBody);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task DeleteConferenceBridgeWhenEmptyAsync(
+        AsteriskResolvedSettings settings,
+        string bridgeId,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Get,
+            $"bridges/{Uri.EscapeDataString(bridgeId)}",
+            null,
+            null,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Asterisk could not inspect conference bridge {BridgeId} for provider {ProviderName}. Status code: {StatusCode}.",
+                bridgeId,
+                ProviderName,
+                response.StatusCode);
+
+            return;
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+        if (document.RootElement.TryGetProperty("channels", out var channels) &&
+            channels.ValueKind == JsonValueKind.Array &&
+            channels.GetArrayLength() > 0)
+        {
+            return;
+        }
+
+        await DeleteBridgeAsync(settings, bridgeId, cancellationToken);
+    }
+
+    private async Task DeleteBridgeAsync(
+        AsteriskResolvedSettings settings,
+        string bridgeId,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Delete,
+            $"bridges/{Uri.EscapeDataString(bridgeId)}",
+            null,
+            null,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning(
+                "Asterisk could not delete conference bridge {BridgeId} for provider {ProviderName}. Status code: {StatusCode}.",
+                bridgeId,
+                ProviderName,
+                response.StatusCode);
         }
     }
 

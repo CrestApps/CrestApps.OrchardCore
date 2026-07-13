@@ -89,6 +89,26 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return [];
+        }
+
+        var interactions = await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
+                x.UserId == userId &&
+                x.Outcome == CallOutcome.InProgress)
+            .OrderByDescending(x => x.StartedUtc)
+            .ListAsync(cancellationToken);
+
+        return interactions.ToList();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(CancellationToken cancellationToken = default)
     {
         var interactions = await _session

@@ -16,6 +16,14 @@ public interface ITelephonyInteractionSynchronizationService
     Task<TelephonyCallLookupResult> GetActiveCallAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets every provider-authoritative active call for a user.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The provider call-list lookup result.</returns>
+    Task<TelephonyCallListLookupResult> GetActiveCallsAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reconciles all active telephony interactions.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

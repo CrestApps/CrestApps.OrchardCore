@@ -117,6 +117,9 @@
     var normalized = normalizeDialNumber(value);
     var international = normalized.charAt(0) === '+';
     var digits = normalized.replace(/\D/g, '');
+    if (!international && digits.length < 7) {
+      return digits;
+    }
     if (!international && digits.length <= 10 || international && digits.charAt(0) === '1' && digits.length <= 11) {
       return formatNanpNumber(digits, international);
     }
@@ -139,6 +142,8 @@
       number: rootElement.querySelector('[data-telephony-number]'),
       peer: rootElement.querySelector('[data-telephony-peer]'),
       error: rootElement.querySelector('[data-telephony-error]'),
+      activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
+      activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
       keys: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-key]')),
       dial: rootElement.querySelector('[data-telephony-dial]'),
       hold: rootElement.querySelector('[data-telephony-hold]'),
@@ -148,6 +153,7 @@
       transfer: rootElement.querySelector('[data-telephony-transfer]'),
       merge: rootElement.querySelector('[data-telephony-merge]'),
       hangup: rootElement.querySelector('[data-telephony-hangup]'),
+      hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
       connectPanel: rootElement.querySelector('[data-telephony-connect-panel]'),
       connect: rootElement.querySelector('[data-telephony-connect]'),
       unavailable: rootElement.querySelector('[data-telephony-unavailable]'),
@@ -168,6 +174,8 @@
     };
     var connection = null;
     var currentCall = null;
+    var activeCalls = {};
+    var conferenceSelections = {};
     var callStateRevision = 0;
     var incomingContext = null;
     var incomingHandled = false;
@@ -271,6 +279,47 @@
         return call.from || call.to || '';
       }
       return call.to || call.from || '';
+    }
+    function getActiveCalls() {
+      return Object.keys(activeCalls).map(function (callId) {
+        return activeCalls[callId];
+      }).filter(function (call) {
+        return call && isActive(normalizeState(call.state));
+      }).sort(function (left, right) {
+        return Date.parse(right.startedUtc || 0) - Date.parse(left.startedUtc || 0);
+      });
+    }
+    function selectCurrentCall(call) {
+      if (!call) {
+        currentCall = null;
+        return;
+      }
+      activeCalls[call.callId] = call;
+      currentCall = call;
+    }
+    function removeActiveCall(callId) {
+      if (!callId) {
+        return;
+      }
+      delete activeCalls[callId];
+      delete conferenceSelections[callId];
+      if (currentCall && currentCall.callId === callId) {
+        currentCall = getActiveCalls()[0] || null;
+      }
+    }
+    function upsertActiveCall(call, select) {
+      if (!call || !call.callId) {
+        return;
+      }
+      var stateName = normalizeState(call.state);
+      if (!isActive(stateName)) {
+        removeActiveCall(call.callId);
+        return;
+      }
+      activeCalls[call.callId] = call;
+      if (select || !currentCall || currentCall.callId === call.callId) {
+        currentCall = call;
+      }
     }
 
     // ---- Layout persistence and dragging ----
@@ -507,6 +556,41 @@
         loadHistory();
       }
     }
+    function renderActiveCalls() {
+      if (!dom.activeCalls || !dom.activeCallsList) {
+        return;
+      }
+      var calls = getActiveCalls();
+      show(dom.activeCalls, calls.length > 0);
+      dom.activeCallsList.innerHTML = calls.map(function (call) {
+        var callId = call.callId || '';
+        var selected = !!conferenceSelections[callId];
+        var current = currentCall && currentCall.callId === callId;
+        var number = formatPhoneNumber(getPeerNumber(call)) || callId;
+        var state = statusTextForState(normalizeState(call.state));
+        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
+      }).join('');
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-call-select]'), function (button) {
+        button.addEventListener('click', function () {
+          var callId = button.getAttribute('data-telephony-call-select');
+          if (activeCalls[callId]) {
+            selectCurrentCall(activeCalls[callId]);
+            render();
+          }
+        });
+      });
+      Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-conference-call]'), function (checkbox) {
+        checkbox.addEventListener('change', function () {
+          var callId = checkbox.getAttribute('data-telephony-conference-call');
+          if (checkbox.checked) {
+            conferenceSelections[callId] = true;
+          } else {
+            delete conferenceSelections[callId];
+          }
+          render();
+        });
+      });
+    }
     function render() {
       renderIncoming();
       ensureActiveTab();
@@ -514,6 +598,12 @@
       var active = isActive(stateName);
       var connected = stateName === 'Connected';
       var liveMedia = connected || stateName === 'OnHold';
+      var calls = getActiveCalls();
+      var canDial = !active || stateName === 'OnHold';
+      var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function (callId) {
+        return !!activeCalls[callId];
+      });
+      renderActiveCalls();
       if (dom.toggleIcon) {
         dom.toggleIcon.className = 'fa-solid fa-phone';
       }
@@ -558,31 +648,35 @@
       if (dom.peer) {
         dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
       }
-      if (dom.number && active && currentCall) {
+      if (dom.number && active && currentCall && stateName !== 'OnHold') {
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
           dom.number.value = formatPhoneNumber(peerNumber);
         }
       }
-      show(dom.dial, !active);
+      show(dom.dial, canDial && has(CAPABILITIES.Dial));
       show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
+      show(dom.hangupAll, calls.length > 1 && has(CAPABILITIES.Hangup));
       show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
       show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
       var muted = currentCall && currentCall.isMuted;
       show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
       show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
       show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer));
-      show(dom.merge, connected && has(CAPABILITIES.Merge));
+      show(dom.merge, calls.length > 1 && has(CAPABILITIES.Merge));
       if (dom.number) {
-        dom.number.disabled = active || !!activeCommand;
+        dom.number.disabled = !canDial || !!activeCommand;
       }
-      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.merge].forEach(function (button) {
+      [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.merge, dom.hangupAll].forEach(function (button) {
         if (button) {
           button.disabled = !!activeCommand;
         }
       });
+      if (dom.merge) {
+        dom.merge.disabled = !!activeCommand || selectedConferenceCallIds.length !== 2;
+      }
       dom.keys.forEach(function (button) {
-        button.disabled = active || !!activeCommand;
+        button.disabled = active && stateName !== 'Connected' && stateName !== 'OnHold' || !!activeCommand;
       });
       syncViewHeight();
     }
@@ -600,30 +694,33 @@
       showError(null);
       return true;
     }
-    function applyActiveCallLookup(result, expectedRevision) {
+    function applyActiveCallsLookup(result, expectedRevision) {
       if (!result || result.succeeded === false) {
         return null;
       }
       if (expectedRevision !== callStateRevision) {
         return currentCall;
       }
-      currentCall = result.found === true ? result.call : null;
-      if (currentCall && (normalizeState(currentCall.state) === 'Disconnected' || normalizeState(currentCall.state) === 'Failed')) {
-        currentCall = null;
-      }
+      var calls = result.calls || [];
+      var previousCallId = currentCall ? currentCall.callId : null;
+      activeCalls = {};
+      calls.forEach(function (call) {
+        upsertActiveCall(call, false);
+      });
+      currentCall = previousCallId && activeCalls[previousCallId] ? activeCalls[previousCallId] : getActiveCalls()[0] || null;
       if (!currentCall) {
         incomingHandled = false;
       }
       render();
       return currentCall;
     }
-    function refreshActiveCall() {
+    function refreshActiveCalls() {
       if (!connection) {
         return Promise.resolve(null);
       }
       var expectedRevision = callStateRevision;
-      return connection.invoke('GetActiveCall').then(function (result) {
-        return applyActiveCallLookup(result, expectedRevision);
+      return connection.invoke('GetActiveCalls').then(function (result) {
+        return applyActiveCallsLookup(result, expectedRevision);
       });
     }
     function invoke(method, payload) {
@@ -688,6 +785,29 @@
         invoke('Hangup', call);
       }
     }
+    function hangupAll() {
+      var calls = getActiveCalls();
+      if (!connection || !calls.length || activeCommand) {
+        return Promise.resolve(null);
+      }
+      activeCommand = 'HangupAll';
+      render();
+      return Promise.all(calls.map(function (call) {
+        return connection.invoke('Hangup', {
+          callId: call.callId,
+          metadata: call.metadata || null
+        });
+      })).then(function (results) {
+        results.forEach(applyCommandResult);
+        return results;
+      })["catch"](function (error) {
+        showError(error && error.message ? error.message : String(error));
+        throw error;
+      })["finally"](function () {
+        activeCommand = null;
+        render();
+      });
+    }
     function hold() {
       var call = currentCallReference();
       if (call) {
@@ -727,17 +847,17 @@
       }
     }
     function merge() {
-      var id = currentCallId();
-      if (!id) {
+      var callIds = Object.keys(conferenceSelections).filter(function (callId) {
+        return !!activeCalls[callId];
+      });
+      if (callIds.length !== 2) {
+        showError(strings.selectCallsToMerge || 'Select two calls to conference.');
         return;
       }
-      var secondary = window.prompt(strings.mergePrompt || 'Second call id to merge');
-      if (secondary) {
-        invoke('Merge', {
-          primaryCallId: id,
-          secondaryCallId: secondary
-        });
-      }
+      invoke('Merge', {
+        primaryCallId: callIds[0],
+        secondaryCallId: callIds[1]
+      });
     }
     function pressKey(value) {
       var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
@@ -773,11 +893,11 @@
       return normalizeState(currentCall.state) === 'Ringing' && inbound;
     }
     function hasBlockingActiveCall() {
-      if (!currentCall) {
-        return false;
-      }
-      var stateName = normalizeState(currentCall.state);
-      return isActive(stateName) && !isRingingInbound();
+      return getActiveCalls().some(function (call) {
+        var inbound = call.direction === 1 || call.direction === 'Inbound';
+        var stateName = normalizeState(call.state);
+        return isActive(stateName) && !(stateName === 'Ringing' && inbound);
+      });
     }
     function getIncomingReservationId(context) {
       return context && context.properties ? context.properties.reservationId || null : null;
@@ -968,7 +1088,7 @@
         if (!result || result.succeeded === false) {
           showError(strings.offerUnavailable || 'This call is no longer available.');
           incomingContext = null;
-          currentCall = null;
+          removeActiveCall(id);
           render();
           return;
         }
@@ -1025,7 +1145,7 @@
       if (incomingHandled && isSameIncomingOffer(call, context)) {
         return;
       }
-      currentCall = call;
+      upsertActiveCall(call, true);
       incomingContext = context || null;
       incomingHandled = false;
       incomingAcceptPending = false;
@@ -1041,7 +1161,7 @@
         incomingAcceptPending = false;
       }
       if (!options.preserveCurrentCall && currentCall && isRingingInbound()) {
-        currentCall = null;
+        removeActiveCall(currentCall.callId);
       }
       render();
     }
@@ -1136,10 +1256,10 @@
       return interaction.outcome === 0 || interaction.outcome === 'InProgress';
     }
     function restoreActiveCall() {
-      if (!connection || currentCall) {
+      if (!connection) {
         return Promise.resolve();
       }
-      return refreshActiveCall()["catch"](function () {});
+      return refreshActiveCalls()["catch"](function () {});
     }
     function formatTime(value) {
       try {
@@ -1189,18 +1309,27 @@
         callStateRevision++;
         var isTerminal = !call || normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed';
         if (isTerminal) {
-          if (!call || !currentCall || !call.callId || !currentCall.callId || call.callId === currentCall.callId) {
+          if (!call || !call.callId) {
+            activeCalls = {};
+            conferenceSelections = {};
             currentCall = null;
             incomingHandled = false;
           } else {
-            refreshActiveCall()["catch"](function (error) {
-              showError(error && error.message ? error.message : String(error));
-            });
+            var tracked = !!activeCalls[call.callId];
+            removeActiveCall(call.callId);
+            if (!currentCall) {
+              incomingHandled = false;
+            }
+            if (!tracked) {
+              refreshActiveCalls()["catch"](function (error) {
+                showError(error && error.message ? error.message : String(error));
+              });
+            }
           }
           render();
           return;
         }
-        currentCall = call;
+        upsertActiveCall(call, true);
         render();
       });
       connection.on('IncomingCall', function (call, context) {
@@ -1277,18 +1406,26 @@
         dom.number.addEventListener('input', function () {
           dom.number.value = formatPhoneNumber(dom.number.value);
         });
+        dom.number.addEventListener('focus', function () {
+          if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
+            dom.number.select();
+          }
+        });
         dom.number.addEventListener('keydown', function (event) {
           if (event.key !== 'Enter' || event.isComposing) {
             return;
           }
           event.preventDefault();
-          if (!currentCall && !activeCommand) {
+          if ((!currentCall || normalizeState(currentCall.state) === 'OnHold') && !activeCommand) {
             dial();
           }
         });
       }
       if (dom.hangup) {
         dom.hangup.addEventListener('click', hangup);
+      }
+      if (dom.hangupAll) {
+        dom.hangupAll.addEventListener('click', hangupAll);
       }
       if (dom.hold) {
         dom.hold.addEventListener('click', hold);
@@ -1352,6 +1489,7 @@
       dial: dial,
       dialNumber: dialNumber,
       hangup: hangup,
+      hangupAll: hangupAll,
       hold: hold,
       resume: resume,
       mute: mute,
@@ -1366,6 +1504,7 @@
       getCurrentCall: function getCurrentCall() {
         return currentCall;
       },
+      getActiveCalls: getActiveCalls,
       isIncomingAcceptPending: function isIncomingAcceptPending() {
         return incomingAcceptPending;
       },

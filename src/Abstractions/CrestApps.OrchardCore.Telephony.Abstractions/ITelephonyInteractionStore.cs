@@ -59,6 +59,14 @@ public interface ITelephonyInteractionStore
     Task<TelephonyInteraction> FindActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists all in-progress interactions for the given user.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The user's active interactions, newest first.</returns>
+    Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists all in-progress interactions that can be reconciled against their providers.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

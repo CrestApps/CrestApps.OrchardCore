@@ -77,6 +77,46 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     }
 
     /// <inheritdoc/>
+    public async Task<TelephonyCallListLookupResult> GetActiveCallsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var interactions = await _interactionStore.ListActiveByUserAsync(userId, cancellationToken);
+        var calls = new List<TelephonyCall>(interactions.Count);
+
+        foreach (var interaction in interactions)
+        {
+            var (lookup, _) = await RefreshInteractionAsync(
+                interaction,
+                notifyOrphanRemoval: true,
+                notifyProviderState: false,
+                cancellationToken);
+
+            if (!lookup.Succeeded)
+            {
+                return new TelephonyCallListLookupResult
+                {
+                    Succeeded = false,
+                    Error = lookup.Error,
+                };
+            }
+
+            if (lookup.Found && lookup.Call is not null)
+            {
+                calls.Add(lookup.Call);
+            }
+        }
+
+        return new TelephonyCallListLookupResult
+        {
+            Succeeded = true,
+            Calls = calls,
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<int> ReconcileActiveInteractionsAsync(CancellationToken cancellationToken = default)
     {
         return await ReconcileAsync(providerName: null, cancellationToken);
@@ -332,10 +372,26 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
     private static TelephonyCall NormalizeCall(TelephonyInteraction interaction, TelephonyCall call)
     {
-        call.CallId ??= interaction.CallId;
-        call.ProviderName ??= interaction.ProviderName;
-        call.From ??= interaction.From;
-        call.To ??= interaction.To;
+        if (string.IsNullOrWhiteSpace(call.CallId))
+        {
+            call.CallId = interaction.CallId;
+        }
+
+        if (string.IsNullOrWhiteSpace(call.ProviderName))
+        {
+            call.ProviderName = interaction.ProviderName;
+        }
+
+        if (string.IsNullOrWhiteSpace(call.From))
+        {
+            call.From = interaction.From;
+        }
+
+        if (string.IsNullOrWhiteSpace(call.To))
+        {
+            call.To = interaction.To;
+        }
+
         call.Direction = interaction.Direction;
         call.StartedUtc ??= interaction.StartedUtc == default
             ? null
