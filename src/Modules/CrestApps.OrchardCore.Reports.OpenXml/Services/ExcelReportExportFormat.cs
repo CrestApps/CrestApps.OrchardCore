@@ -65,11 +65,16 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
                 for (var i = 0; i < document.Sections.Count; i++)
                 {
                     var section = document.Sections[i];
+                    var sheetTitle = string.IsNullOrWhiteSpace(document.Title)
+                        ? section.Title
+                        : document.Sections.Count == 1
+                            ? document.Title
+                            : $"{document.Title} {i + 1}";
                     var sheetData = AddWorksheet(
                         workbookPart,
                         sheets,
                         usedSheetNames,
-                        section.Title,
+                        sheetTitle,
                         sheetId,
                         i + 1);
 

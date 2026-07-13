@@ -29,6 +29,6 @@ public sealed class CsvReportExportFormatTests
         var content = Encoding.UTF8.GetString(exportFormat.Serialize(document));
 
         // Assert
-        Assert.Contains("Daily trend\r\nLabel,Offered,Answered\r\nMonday,12,10\r\nTuesday,18,15\r\n", content);
+        Assert.Equal("Label,Offered,Answered\r\nMonday,12,10\r\nTuesday,18,15\r\n", content.TrimStart('\uFEFF'));
     }
 }

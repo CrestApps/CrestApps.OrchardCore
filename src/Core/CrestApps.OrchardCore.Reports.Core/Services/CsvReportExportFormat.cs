@@ -52,11 +52,6 @@ public sealed class CsvReportExportFormat : IReportExportFormat
 
             first = false;
 
-            if (!string.IsNullOrEmpty(section.Title))
-            {
-                AppendRow(builder, section.Title);
-            }
-
             switch (section.Kind)
             {
                 case ReportSectionKind.Metrics:

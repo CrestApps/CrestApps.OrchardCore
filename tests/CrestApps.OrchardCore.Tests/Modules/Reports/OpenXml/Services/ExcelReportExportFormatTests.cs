@@ -14,7 +14,10 @@ public sealed class ExcelReportExportFormatTests
     public void Serialize_WhenDocumentHasMultipleSections_ShouldCreateWorkbookWithExpectedSheetsAndCells()
     {
         // Arrange
-        var document = new ReportDocument()
+        var document = new ReportDocument
+        {
+            Title = "Agent performance",
+        }
             .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Open conversations", "42", "Current period")]))
             .Add(ReportSection.ForTable("Queues", [new ReportColumn("Queue"), new ReportColumn("Count")], [new ReportRow(["Support", "18"])]))
             .Add(ReportSection.ForBars("Channel mix", [new ReportBar("Voice", "12", 0.6)]))
@@ -43,10 +46,10 @@ public sealed class ExcelReportExportFormatTests
 
         var sheets = workbookPart.Workbook.Sheets.Elements<Sheet>().ToArray();
         Assert.Equal(4, sheets.Length);
-        Assert.Equal("Summary", sheets[0].Name);
-        Assert.Equal("Queues", sheets[1].Name);
-        Assert.Equal("Channel mix", sheets[2].Name);
-        Assert.Equal("Daily trend", sheets[3].Name);
+        Assert.Equal("Agent performance 1", sheets[0].Name);
+        Assert.Equal("Agent performance 2", sheets[1].Name);
+        Assert.Equal("Agent performance 3", sheets[2].Name);
+        Assert.Equal("Agent performance 4", sheets[3].Name);
 
         var summaryRows = GetSheetRows(workbookPart, sheets[0]);
         Assert.Equal(["Metric", "Value", "Hint"], GetCellValues(summaryRows[0]));

@@ -104,6 +104,8 @@ public sealed class ReportsController : Controller
         var filter = await BuildFilterAsync(id);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
         var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        document.Title = report.DisplayName.Value;
+
         await _displayValueResolver.ResolveNonTableValuesAsync(document);
 
         return View(new ReportDisplayViewModel
@@ -147,6 +149,8 @@ public sealed class ReportsController : Controller
 
         var filter = await BuildFilterAsync(id);
         var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        document.Title = report.DisplayName.Value;
+
         await _displayValueResolver.ResolveAsync(document);
         var content = exportFormat.Serialize(document);
         var fileName = $"{id}-{filter.FromUtc:yyyyMMdd}-to-{filter.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";

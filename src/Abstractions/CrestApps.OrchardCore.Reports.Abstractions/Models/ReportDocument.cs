@@ -7,6 +7,11 @@ namespace CrestApps.OrchardCore.Reports.Models;
 public sealed class ReportDocument
 {
     /// <summary>
+    /// Gets or sets the report title used for exported document metadata such as worksheet names.
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
     /// Gets or sets the sections that make up the report, in display order.
     /// </summary>
     public IList<ReportSection> Sections { get; set; } = [];

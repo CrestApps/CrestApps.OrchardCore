@@ -4,8 +4,9 @@
 @model ReportDocument
 
 <div class="row g-4 mb-4">
-    @foreach (var reportSection in Model.Sections)
+    @for (var sectionIndex = 0; sectionIndex < Model.Sections.Count; sectionIndex++)
     {
+        var reportSection = Model.Sections[sectionIndex];
         var sectionWidth = Math.Clamp(reportSection.Width, 1, 12);
         var chartData = reportSection.Chart is null
             ? null
@@ -24,7 +25,7 @@
             });
 
         <section class="report-section col-12 col-xl-@sectionWidth">
-        @if (!string.IsNullOrEmpty(reportSection.Title))
+        @if (sectionIndex > 0 && !string.IsNullOrEmpty(reportSection.Title))
         {
             <h2 class="h5">@reportSection.Title</h2>
         }
