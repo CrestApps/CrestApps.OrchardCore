@@ -67,7 +67,7 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
                     {
                         model.SelectedUsers =
                         [
-                            new SelectListItem(metadata.NormalizedUserName, metadata.NormalizedUserName),
+                            new SelectListItem(S["(Unknown user)"], metadata.NormalizedUserName),
                         ];
                     }
                 }

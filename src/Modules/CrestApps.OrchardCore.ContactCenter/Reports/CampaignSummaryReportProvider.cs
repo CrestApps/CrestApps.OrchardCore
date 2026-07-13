@@ -45,6 +45,7 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
             cancellationToken);
 
         var noCampaign = S["(No campaign)"].Value;
+        var unknownCampaign = S["(Unknown campaign)"].Value;
 
         var document = new ReportDocument();
 
@@ -61,7 +62,11 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
         foreach (var row in report.Rows)
         {
             rows.Add(new ReportRow(ContactCenterReportCells.Progress(
-                string.IsNullOrEmpty(row.CampaignName) ? noCampaign : row.CampaignName,
+                string.IsNullOrEmpty(row.CampaignId)
+                    ? noCampaign
+                    : string.IsNullOrEmpty(row.CampaignName)
+                        ? unknownCampaign
+                        : row.CampaignName,
                 row.Counts)));
         }
 

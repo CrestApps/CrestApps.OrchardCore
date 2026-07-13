@@ -16,17 +16,21 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
 {
     private readonly ISession _session;
     private readonly IActivityQueueManager _queueManager;
+    private readonly IAgentProfileManager _agentManager;
     private readonly EnterpriseInteractionReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
+    private Dictionary<string, string> _agentUserNames = [];
 
     public EnterpriseInteractionReportProvider(
         ISession session,
         IActivityQueueManager queueManager,
+        IAgentProfileManager agentManager,
         EnterpriseInteractionReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _queueManager = queueManager;
+        _agentManager = agentManager;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
     }
@@ -53,6 +57,9 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
 
         var queues = (await _queueManager.GetAllAsync(cancellationToken))
             .ToDictionary(queue => queue.ItemId, StringComparer.Ordinal);
+        _agentUserNames = (await _agentManager.GetAllAsync(cancellationToken))
+            .Where(agent => !string.IsNullOrEmpty(agent.UserName))
+            .ToDictionary(agent => agent.ItemId, agent => agent.UserName, StringComparer.Ordinal);
 
         return _definition.Kind switch
         {
@@ -83,7 +90,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
             EnterpriseInteractionReportKind.AgentTransferPerformance => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Transfers),
             EnterpriseInteractionReportKind.AgentRecordingCoverage => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Recordings),
             EnterpriseInteractionReportKind.QueueUsageBilling => BuildUsageReport(filteredInteractions, S["Queue"].Value, interaction => ResolveQueueName(interaction.QueueId, queues)),
-            EnterpriseInteractionReportKind.AgentUsageBilling => BuildUsageReport(filteredInteractions, S["Agent"].Value, interaction => DisplayOrUnknown(interaction.AgentId)),
+            EnterpriseInteractionReportKind.AgentUsageBilling => BuildUsageReport(filteredInteractions, S["Agent"].Value, interaction => ResolveAgentName(interaction.AgentId)),
             EnterpriseInteractionReportKind.ProviderUsageBilling => BuildUsageReport(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
             EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date (UTC)"].Value, interaction => interaction.CreatedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
@@ -242,7 +249,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
             new ReportChart
             {
                 Type = ReportChartType.Bar,
-                Labels = [.. agentWorkload.Select(entry => entry.Agent)],
+                Labels = [.. agentWorkload.Select(entry => ResolveAgentName(entry.Agent))],
                 Datasets =
                 [
                     new ReportChartDataset(S["Handled"].Value, agentWorkload.Select(entry => (double)entry.Handled)),
@@ -385,7 +392,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
                 interaction.Direction.ToString(),
                 interaction.Status.ToString(),
                 DisplayOrUnknown(interaction.QueueId),
-                DisplayOrUnknown(interaction.AgentId),
+                ResolveAgentName(interaction.AgentId),
                 DisplayOrUnknown(interaction.ProviderName),
                 ReportFormat.Duration(GetWaitSeconds(interaction)),
                 ReportFormat.Duration(GetTalkSeconds(interaction)),
@@ -638,7 +645,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
                     Row = includeWrapUpOnly
                         ? new ReportRow(
                         [
-                            group.Key,
+                            ResolveAgentName(group.Key),
                             ReportFormat.Number(count),
                             ReportFormat.Number(completed),
                             ReportFormat.Percent(count > 0 ? (double)completed / count : 0d),
@@ -647,7 +654,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
                         ])
                         : new ReportRow(
                         [
-                            group.Key,
+                            ResolveAgentName(group.Key),
                             ReportFormat.Number(count),
                             ReportFormat.Duration(count > 0 ? talk / count : 0d),
                             ReportFormat.Duration(count > 0 ? wrapUp / count : 0d),
@@ -809,7 +816,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
                     Order = (double)order,
                     Row = new ReportRow(
                     [
-                        group.Key,
+                        ResolveAgentName(group.Key),
                         ReportFormat.Number(metrics.Total),
                         ReportFormat.Number(metrics.Answered),
                         ReportFormat.Number(metrics.Failed),
@@ -1128,6 +1135,17 @@ internal sealed class EnterpriseInteractionReportProvider : IReport
     private string DisplayOrUnknown(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? S["(Not set)"].Value : value;
+    }
+
+    private string ResolveAgentName(string agentId)
+    {
+        if (string.IsNullOrEmpty(agentId) ||
+            !_agentUserNames.TryGetValue(agentId, out var userName))
+        {
+            return S["(Unknown agent)"].Value;
+        }
+
+        return ReportValue.UserDisplayName(userName, S["(Unknown agent)"].Value);
     }
 
     internal sealed class InteractionMetrics

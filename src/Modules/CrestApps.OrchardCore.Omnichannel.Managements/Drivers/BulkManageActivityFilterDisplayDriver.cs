@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -27,6 +28,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -38,6 +40,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     /// <param name="optionsProvider">The bulk activity form options provider.</param>
     /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityFilterDisplayDriver(
         LinkGenerator linkGenerator,
@@ -45,6 +48,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         BulkActivityAdminFormOptionsProvider optionsProvider,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IDisplayNameProvider displayNameProvider,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
         _linkGenerator = linkGenerator;
@@ -52,6 +56,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         _optionsProvider = optionsProvider;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _displayNameProvider = displayNameProvider;
         S = stringLocalizer;
     }
 
@@ -168,9 +173,20 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             {
                 var selectedUsers = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(filter.AssignedToUserIds))
                     .ListAsync();
+                var selectedUserOptions = new List<object>();
+
+                foreach (var selectedUser in selectedUsers)
+                {
+                    selectedUserOptions.Add(new
+                    {
+                        value = selectedUser.UserId,
+                        text = await _displayNameProvider.GetAsync(selectedUser),
+                        selected = true,
+                    });
+                }
 
                 model.SelectedAssignedUsersJson = System.Text.Json.JsonSerializer.Serialize(
-                    selectedUsers.Select(u => new { value = u.UserId, text = u.UserName, selected = true }));
+                    selectedUserOptions);
             }
         }).Location("Content:1");
     }

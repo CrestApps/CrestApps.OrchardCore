@@ -1,14 +1,13 @@
 using System.Globalization;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Users;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
@@ -16,18 +15,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 internal sealed class EnterpriseActivityReportProvider : IReport
 {
     private readonly ISession _session;
-    private readonly UserManager<IUser> _userManager;
+    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly EnterpriseActivityReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
 
     public EnterpriseActivityReportProvider(
         ISession session,
-        UserManager<IUser> userManager,
+        ICatalogManager<OmnichannelCampaign> campaignManager,
+        INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         EnterpriseActivityReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
-        _userManager = userManager;
+        _campaignManager = campaignManager;
+        _dispositionManager = dispositionManager;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
     }
@@ -56,7 +58,12 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         var filteredActivities = OmnichannelReportQuery.Filter(
             activities,
             OmnichannelReportFilter.GetCriteria(context.Filter));
-        var users = await ResolveUsersAsync(filteredActivities, cancellationToken);
+        var campaignNames = IsCampaignReport()
+            ? CatalogReportDisplayNames.ForCampaigns(await _campaignManager.GetAllAsync(cancellationToken))
+            : null;
+        var dispositionNames = _definition.Kind == EnterpriseActivityReportKind.CampaignDispositionMix
+            ? CatalogReportDisplayNames.ForDispositions(await _dispositionManager.GetAllAsync(cancellationToken))
+            : null;
 
         return _definition.Kind switch
         {
@@ -69,15 +76,56 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             EnterpriseActivityReportKind.AttemptAnalysis => BuildAttempts(filteredActivities),
             EnterpriseActivityReportKind.ContactTypeWorkload => BuildProgress(filteredActivities, S["Contact type"].Value, activity => Display(activity.ContactContentType)),
             EnterpriseActivityReportKind.UrgencyPerformance => BuildProgress(filteredActivities, S["Urgency"].Value, activity => activity.UrgencyLevel.ToString()),
-            EnterpriseActivityReportKind.AssignedUserPerformance => BuildProgress(filteredActivities, S["Assigned user"].Value, activity => ResolveUser(activity.AssignedToId, users)),
-            EnterpriseActivityReportKind.CreatedByPerformance => BuildProgress(filteredActivities, S["Created by"].Value, activity => ResolveUser(activity.CreatedById, users)),
-            EnterpriseActivityReportKind.UserCompletionTime => BuildCompletionDuration(filteredActivities, S["Assigned user"].Value, activity => ResolveUser(activity.AssignedToId, users)),
-            EnterpriseActivityReportKind.UserDailyProductivity => BuildDailyUserProductivity(filteredActivities, users),
-            EnterpriseActivityReportKind.CampaignSourceMix => BuildCampaignDimension(filteredActivities, S["Source"].Value, activity => Display(activity.Source)),
-            EnterpriseActivityReportKind.CampaignChannelMix => BuildCampaignDimension(filteredActivities, S["Channel"].Value, activity => Display(activity.Channel)),
-            EnterpriseActivityReportKind.CampaignDispositionMix => BuildCampaignDimension(filteredActivities, S["Disposition"].Value, activity => Display(activity.DispositionId)),
-            EnterpriseActivityReportKind.CampaignAttemptPerformance => BuildCampaignDimension(filteredActivities, S["Attempts"].Value, activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture)),
-            EnterpriseActivityReportKind.OverdueByUser => BuildOverdueByDimension(filteredActivities, context.ToUtc, S["Assigned user"].Value, activity => ResolveUser(activity.AssignedToId, users)),
+            EnterpriseActivityReportKind.AssignedUserPerformance => BuildProgress(
+                filteredActivities,
+                S["Assigned user"].Value,
+                activity => activity.AssignedToId,
+                activity => ResolveUser(activity.AssignedToUsername)),
+            EnterpriseActivityReportKind.CreatedByPerformance => BuildProgress(
+                filteredActivities,
+                S["Created by"].Value,
+                activity => activity.CreatedById,
+                activity => ResolveUser(activity.CreatedByUsername)),
+            EnterpriseActivityReportKind.UserCompletionTime => BuildCompletionDuration(
+                filteredActivities,
+                S["Assigned user"].Value,
+                activity => activity.AssignedToId,
+                activity => ResolveUser(activity.AssignedToUsername)),
+            EnterpriseActivityReportKind.UserDailyProductivity => BuildDailyUserProductivity(filteredActivities),
+            EnterpriseActivityReportKind.CampaignSourceMix => BuildCampaignDimension(
+                filteredActivities,
+                campaignNames,
+                S["Source"].Value,
+                activity => activity.Source,
+                activity => Display(activity.Source)),
+            EnterpriseActivityReportKind.CampaignChannelMix => BuildCampaignDimension(
+                filteredActivities,
+                campaignNames,
+                S["Channel"].Value,
+                activity => activity.Channel,
+                activity => Display(activity.Channel)),
+            EnterpriseActivityReportKind.CampaignDispositionMix => BuildCampaignDimension(
+                filteredActivities,
+                campaignNames,
+                S["Disposition"].Value,
+                activity => activity.DispositionId,
+                activity => CatalogReportDisplayNames.Resolve(
+                    activity.DispositionId,
+                    dispositionNames,
+                    S["(No disposition)"].Value,
+                    S["(Unknown disposition)"].Value)),
+            EnterpriseActivityReportKind.CampaignAttemptPerformance => BuildCampaignDimension(
+                filteredActivities,
+                campaignNames,
+                S["Attempts"].Value,
+                activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture),
+                activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture)),
+            EnterpriseActivityReportKind.OverdueByUser => BuildOverdueByDimension(
+                filteredActivities,
+                context.ToUtc,
+                S["Assigned user"].Value,
+                activity => activity.AssignedToId,
+                activity => ResolveUser(activity.AssignedToUsername)),
             EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(filteredActivities, S["Channel endpoint"].Value, activity => Display(activity.ChannelEndpointId)),
             EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(filteredActivities, S["Customer"].Value, activity => Display(activity.ContactContentItemId)),
             EnterpriseActivityReportKind.ScheduleCompletion => BuildScheduleCompletion(filteredActivities),
@@ -150,17 +198,19 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private ReportDocument BuildProgress(
         IReadOnlyList<OmnichannelActivityIndex> activities,
         string dimensionName,
-        Func<OmnichannelActivityIndex, string> selector)
+        Func<OmnichannelActivityIndex, string> keySelector,
+        Func<OmnichannelActivityIndex, string> displaySelector = null)
     {
         return new ReportDocument()
-            .Add(BuildProgressSection(activities, S["Activity performance"].Value, dimensionName, selector));
+            .Add(BuildProgressSection(activities, S["Activity performance"].Value, dimensionName, keySelector, displaySelector));
     }
 
     private ReportSection BuildProgressSection(
         IEnumerable<OmnichannelActivityIndex> activities,
         string title,
         string dimensionName,
-        Func<OmnichannelActivityIndex, string> selector)
+        Func<OmnichannelActivityIndex, string> keySelector,
+        Func<OmnichannelActivityIndex, string> displaySelector = null)
     {
         var columns = new[]
         {
@@ -176,17 +226,20 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         };
 
         var rows = activities
-            .GroupBy(selector, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(keySelector, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var counts = Aggregate(group);
+                var displayValue = displaySelector is null
+                    ? group.Key
+                    : displaySelector(group.First());
 
                 return new
                 {
                     counts.Total,
                     Row = new ReportRow(
                     [
-                        group.Key,
+                        displayValue,
                         ReportFormat.Number(counts.Total),
                         ReportFormat.Number(counts.Completed),
                         ReportFormat.Number(counts.InProgress),
@@ -240,7 +293,8 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private ReportDocument BuildCompletionDuration(
         IReadOnlyList<OmnichannelActivityIndex> activities,
         string dimensionName,
-        Func<OmnichannelActivityIndex, string> selector)
+        Func<OmnichannelActivityIndex, string> keySelector,
+        Func<OmnichannelActivityIndex, string> displaySelector = null)
     {
         var completed = activities.Where(activity => activity.CompletedUtc.HasValue);
         var columns = new[]
@@ -252,7 +306,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             new ReportColumn(S["Maximum cycle time"].Value, ReportColumnAlign.End),
         };
         var rows = completed
-            .GroupBy(selector, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(keySelector, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var durations = group
@@ -270,7 +324,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                     Average = durations.Length > 0 ? durations.Average() : 0d,
                     Row = new ReportRow(
                     [
-                        group.Key,
+                        displaySelector is null ? group.Key : displaySelector(group.First()),
                         ReportFormat.Number(durations.LongLength),
                         ReportFormat.Duration(durations.Length > 0 ? durations.Average() : 0d),
                         ReportFormat.Duration(median),
@@ -285,9 +339,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .Add(ReportSection.ForTable(S["Activity completion time"].Value, columns, rows));
     }
 
-    private ReportDocument BuildDailyUserProductivity(
-        IReadOnlyList<OmnichannelActivityIndex> activities,
-        IReadOnlyDictionary<string, string> users)
+    private ReportDocument BuildDailyUserProductivity(IReadOnlyList<OmnichannelActivityIndex> activities)
     {
         var completed = activities.Where(activity => activity.CompletedUtc.HasValue && !string.IsNullOrEmpty(activity.AssignedToId));
         var columns = new[]
@@ -309,7 +361,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .Select(group => new ReportRow(
             [
                 group.Key.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                ResolveUser(group.Key.AssignedToId, users),
+                ResolveUser(group.First().AssignedToUsername),
                 ReportFormat.Number(group.LongCount()),
                 ReportFormat.Duration(group.Average(activity => Math.Max(0d, (activity.CompletedUtc.Value - activity.CreatedUtc).TotalSeconds))),
                 ReportFormat.Number(group.Sum(activity => Math.Max(0, activity.Attempts))),
@@ -321,8 +373,10 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
     private ReportDocument BuildCampaignDimension(
         IReadOnlyList<OmnichannelActivityIndex> activities,
+        IReadOnlyDictionary<string, string> campaignNames,
         string dimensionName,
-        Func<OmnichannelActivityIndex, string> selector)
+        Func<OmnichannelActivityIndex, string> dimensionKeySelector,
+        Func<OmnichannelActivityIndex, string> dimensionDisplaySelector)
     {
         var columns = new[]
         {
@@ -336,21 +390,26 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         var rows = activities
             .GroupBy(activity => new
             {
-                Campaign = Display(activity.CampaignId),
-                Dimension = selector(activity),
+                activity.CampaignId,
+                Dimension = dimensionKeySelector(activity),
             })
             .Select(group =>
             {
                 var total = group.LongCount();
                 var completed = group.LongCount(activity => activity.Status == ActivityStatus.Completed);
+                var first = group.First();
 
                 return new
                 {
                     Total = total,
                     Row = new ReportRow(
                     [
-                        group.Key.Campaign,
-                        group.Key.Dimension,
+                        CatalogReportDisplayNames.Resolve(
+                            group.Key.CampaignId,
+                            campaignNames,
+                            S["(No campaign)"].Value,
+                            S["(Unknown campaign)"].Value),
+                        dimensionDisplaySelector(first),
                         ReportFormat.Number(total),
                         ReportFormat.Number(completed),
                         ReportFormat.Number(group.LongCount(activity => activity.Status == ActivityStatus.Failed)),
@@ -369,7 +428,8 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         IReadOnlyList<OmnichannelActivityIndex> activities,
         DateTime asOfUtc,
         string dimensionName,
-        Func<OmnichannelActivityIndex, string> selector)
+        Func<OmnichannelActivityIndex, string> keySelector,
+        Func<OmnichannelActivityIndex, string> displaySelector = null)
     {
         var overdue = activities.Where(activity => !IsTerminal(activity.Status) && IsOverdue(activity, asOfUtc));
         var columns = new[]
@@ -381,7 +441,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             new ReportColumn(S["Maximum overdue age"].Value, ReportColumnAlign.End),
         };
         var rows = overdue
-            .GroupBy(selector, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(keySelector, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var ages = group.Select(activity => Math.Max(0d, (asOfUtc - activity.ScheduledUtc).TotalSeconds)).ToArray();
@@ -391,7 +451,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                     Count = ages.LongLength,
                     Row = new ReportRow(
                     [
-                        group.Key,
+                        displaySelector is null ? group.Key : displaySelector(group.First()),
                         ReportFormat.Number(ages.LongLength),
                         ReportFormat.Number(group.LongCount(activity => string.IsNullOrEmpty(activity.AssignedToId))),
                         ReportFormat.Duration(ages.Length > 0 ? ages.Average() : 0d),
@@ -442,36 +502,14 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         return string.IsNullOrWhiteSpace(value) ? S["(Not set)"].Value : value;
     }
 
-    private async Task<IReadOnlyDictionary<string, string>> ResolveUsersAsync(
-        IEnumerable<OmnichannelActivityIndex> activities,
-        CancellationToken cancellationToken)
+    private string ResolveUser(string userName)
     {
-        var userIds = activities
-            .SelectMany(activity => new[] { activity.AssignedToId, activity.CreatedById })
-            .Where(userId => !string.IsNullOrEmpty(userId))
-            .Distinct(StringComparer.Ordinal);
-        var users = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var userId in userIds)
+        if (string.IsNullOrEmpty(userName))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var user = await _userManager.FindByIdAsync(userId);
-
-            if (user is not null)
-            {
-                users[userId] = await _userManager.GetUserNameAsync(user) ?? userId;
-            }
+            return S["(Not set)"].Value;
         }
 
-        return users;
-    }
-
-    private string ResolveUser(string userId, IReadOnlyDictionary<string, string> users)
-    {
-        return !string.IsNullOrEmpty(userId) && users.TryGetValue(userId, out var userName)
-            ? userName
-            : Display(userId);
+        return ReportValue.UserDisplayName(userName, S["(Unknown user)"].Value);
     }
 
     private static ActivityProgress Aggregate(IEnumerable<OmnichannelActivityIndex> activities)
@@ -524,6 +562,15 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private static bool IsOverdue(OmnichannelActivityIndex activity, DateTime asOfUtc)
     {
         return activity.ScheduledUtc != default && activity.ScheduledUtc < asOfUtc;
+    }
+
+    private bool IsCampaignReport()
+    {
+        return _definition.Kind is
+            EnterpriseActivityReportKind.CampaignSourceMix or
+            EnterpriseActivityReportKind.CampaignChannelMix or
+            EnterpriseActivityReportKind.CampaignDispositionMix or
+            EnterpriseActivityReportKind.CampaignAttemptPerformance;
     }
 
     private sealed record ActivityAgeBucket(string Label, double FromDays, double ToDays);

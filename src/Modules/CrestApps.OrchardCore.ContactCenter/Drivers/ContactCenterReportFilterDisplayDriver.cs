@@ -6,10 +6,13 @@ using CrestApps.OrchardCore.ContactCenter.Reports;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -42,6 +45,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportFilterDisplayDriver"/> class.
@@ -49,16 +54,22 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterReportFilterDisplayDriver(
         IActivityQueueManager queueManager,
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         IStringLocalizer<ContactCenterReportFilterDisplayDriver> stringLocalizer)
     {
         _queueManager = queueManager;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         S = stringLocalizer;
     }
 
@@ -116,15 +127,20 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         var queues = await _queueManager.GetAllAsync();
         var agents = await _agentManager.GetAllAsync();
         var campaigns = await _campaignManager.GetAllAsync();
+        var agentOptions = new List<SelectListItem>();
+
+        foreach (var agent in agents)
+        {
+            agentOptions.Add(new SelectListItem(await ResolveAgentNameAsync(agent), agent.ItemId));
+        }
 
         model.Queues = queues
             .OrderBy(queue => queue.Name)
             .Select(queue => new SelectListItem(queue.Name ?? queue.ItemId, queue.ItemId))
             .ToList();
 
-        model.Agents = agents
-            .OrderBy(agent => ResolveAgentName(agent))
-            .Select(agent => new SelectListItem(ResolveAgentName(agent), agent.ItemId))
+        model.Agents = agentOptions
+            .OrderBy(option => option.Text)
             .ToList();
 
         model.Campaigns = campaigns
@@ -183,18 +199,23 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         return reportName?.StartsWith("contact-center-", StringComparison.Ordinal) == true;
     }
 
-    private static string ResolveAgentName(AgentProfile agent)
+    private async Task<string> ResolveAgentNameAsync(AgentProfile agent)
     {
-        if (!string.IsNullOrWhiteSpace(agent.DisplayName))
+        if (!string.IsNullOrEmpty(agent.UserId))
         {
-            return agent.DisplayName;
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
         }
 
-        if (!string.IsNullOrWhiteSpace(agent.UserName))
-        {
-            return agent.UserName;
-        }
-
-        return agent.ItemId;
+        return S["(Unknown agent)"].Value;
     }
 }

@@ -149,7 +149,10 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         foreach (var campaign in campaigns)
         {
-            names[campaign.ItemId] = string.IsNullOrWhiteSpace(campaign.DisplayText) ? campaign.ItemId : campaign.DisplayText;
+            if (!string.IsNullOrWhiteSpace(campaign.ItemId) && !string.IsNullOrWhiteSpace(campaign.DisplayText))
+            {
+                names[campaign.ItemId] = campaign.DisplayText;
+            }
         }
 
         return BuildCampaignSummary(fromUtc, toUtc, FilterActivities(activities, criteria), names);
@@ -400,6 +403,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             }
 
             row ??= new AgentProductivityRow { AgentId = agent.ItemId };
+            row.UserName = agent.UserName;
             row.DisplayName = ResolveAgentName(agent);
             row.ActivitiesCompleted = completed;
 
@@ -523,7 +527,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 CampaignId = group.Key,
                 CampaignName = string.IsNullOrEmpty(group.Key)
                     ? null
-                    : campaignNames.GetValueOrDefault(group.Key, group.Key),
+                    : campaignNames.GetValueOrDefault(group.Key),
                 Counts = counts,
             });
 

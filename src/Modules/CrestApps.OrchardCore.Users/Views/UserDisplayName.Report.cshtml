@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Users
+@using Microsoft.AspNetCore.Identity
+@using OrchardCore.Users
+@inject UserManager<IUser> UserManager
+@inject IDisplayNameProvider DisplayNameProvider
+@{
+    var user = await UserManager.FindByNameAsync((string)Model.UserName);
+    var displayName = user is null
+        ? T["Unknown user"].Value
+        : await DisplayNameProvider.GetAsync(user);
+}
+@displayName

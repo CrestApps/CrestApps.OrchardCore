@@ -55,15 +55,9 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
             cancellationToken);
         var counts = OmnichannelReportAggregator.CountByDisposition(completed);
         var dispositions = await _dispositionManager.GetAllAsync(cancellationToken);
-
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var disposition in dispositions)
-        {
-            names[disposition.ItemId] = string.IsNullOrWhiteSpace(disposition.Name) ? disposition.ItemId : disposition.Name;
-        }
-
+        var names = CatalogReportDisplayNames.ForDispositions(dispositions);
         var noDisposition = S["(No disposition)"].Value;
+        var unknownDisposition = S["(Unknown disposition)"].Value;
         var total = counts.Values.Sum();
 
         var columns = new[]
@@ -77,7 +71,7 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
             .OrderByDescending(entry => entry.Value)
             .Select(entry => new ReportRow(
             [
-                string.IsNullOrEmpty(entry.Key) ? noDisposition : names.GetValueOrDefault(entry.Key, entry.Key),
+                CatalogReportDisplayNames.Resolve(entry.Key, names, noDisposition, unknownDisposition),
                 ReportFormat.Number(entry.Value),
                 ReportFormat.Percent(total > 0 ? (double)entry.Value / total : 0),
             ]))

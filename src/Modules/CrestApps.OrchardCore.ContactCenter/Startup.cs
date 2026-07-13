@@ -22,6 +22,8 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -37,6 +39,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.ContactCenter;
@@ -509,6 +512,7 @@ public sealed class AnalyticsStartup : StartupBase
         services.AddScoped<IReport>(serviceProvider => new EnterpriseInteractionReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),
             serviceProvider.GetRequiredService<IActivityQueueManager>(),
+            serviceProvider.GetRequiredService<IAgentProfileManager>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>()));
     }

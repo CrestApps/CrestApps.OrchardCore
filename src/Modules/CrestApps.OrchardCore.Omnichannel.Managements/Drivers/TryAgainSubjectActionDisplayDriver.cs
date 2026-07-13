@@ -62,7 +62,7 @@ internal sealed class TryAgainSubjectActionDisplayDriver : DisplayDriver<Subject
                     {
                         model.SelectedUsers =
                         [
-                            new(metadata.NormalizedUserName, metadata.NormalizedUserName),
+                            new(S["(Unknown user)"], metadata.NormalizedUserName),
                         ];
                     }
                 }

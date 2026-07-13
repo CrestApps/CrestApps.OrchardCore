@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -285,7 +286,8 @@ public sealed class ReportsStartup : StartupBase
 
         services.AddScoped<IReport>(serviceProvider => new EnterpriseActivityReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),
-            serviceProvider.GetRequiredService<UserManager<IUser>>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
+            serviceProvider.GetRequiredService<INamedCatalogManager<OmnichannelDisposition>>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));
     }

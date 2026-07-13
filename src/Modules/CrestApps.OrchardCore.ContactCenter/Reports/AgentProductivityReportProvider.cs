@@ -58,7 +58,7 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
 
         var rows = report.Rows.Select(row => new ReportRow(
         [
-            row.DisplayName,
+            ReportValue.UserDisplayName(row.UserName, S["(Unknown agent)"].Value),
             ReportFormat.Number(row.InteractionsHandled),
             ReportFormat.Number(row.InboundHandled),
             ReportFormat.Number(row.OutboundHandled),

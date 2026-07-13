@@ -11,6 +11,11 @@ public sealed class AgentProductivityRow
     public string AgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the username used by the cached report display-name shape.
+    /// </summary>
+    public string UserName { get; set; }
+
+    /// <summary>
     /// Gets or sets the resolved display name of the agent.
     /// </summary>
     public string DisplayName { get; set; }

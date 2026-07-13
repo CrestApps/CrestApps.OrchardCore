@@ -92,10 +92,10 @@ public sealed class AgentWorkspaceController : Controller
 
         if (user is not null)
         {
-            return await GetUserDisplayNameAsync(user, User.Identity?.Name, cancellationToken);
+            return await GetUserDisplayNameAsync(user, "Unknown user", cancellationToken);
         }
 
-        return User.Identity?.Name;
+        return "Unknown user";
     }
 
     private async Task<string> GetUserDisplayNameAsync(

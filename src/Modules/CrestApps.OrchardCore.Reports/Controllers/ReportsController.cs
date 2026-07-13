@@ -23,6 +23,7 @@ public sealed class ReportsController : Controller
     private readonly IDisplayManager<ReportFilter> _filterDisplayManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ReportDisplayValueResolver _displayValueResolver;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
 
@@ -34,6 +35,7 @@ public sealed class ReportsController : Controller
     /// <param name="filterDisplayManager">The display manager used to build and bind the report filter.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor used to bind the filter from the request.</param>
+    /// <param name="displayValueResolver">The resolver for typed report values.</param>
     /// <param name="clock">The clock used to compute the default reporting period.</param>
     /// <param name="localClock">The tenant local clock used to resolve default date boundaries.</param>
     public ReportsController(
@@ -42,6 +44,7 @@ public sealed class ReportsController : Controller
         IDisplayManager<ReportFilter> filterDisplayManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        ReportDisplayValueResolver displayValueResolver,
         IClock clock,
         ILocalClock localClock)
     {
@@ -50,6 +53,7 @@ public sealed class ReportsController : Controller
         _filterDisplayManager = filterDisplayManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _displayValueResolver = displayValueResolver;
         _clock = clock;
         _localClock = localClock;
     }
@@ -100,6 +104,7 @@ public sealed class ReportsController : Controller
         var filter = await BuildFilterAsync(id);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
         var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        await _displayValueResolver.ResolveAsync(document);
 
         return View(new ReportDisplayViewModel
         {
@@ -142,6 +147,7 @@ public sealed class ReportsController : Controller
 
         var filter = await BuildFilterAsync(id);
         var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        await _displayValueResolver.ResolveAsync(document);
         var content = exportFormat.Serialize(document);
         var fileName = $"{id}-{filter.FromUtc:yyyyMMdd}-to-{filter.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";
 

@@ -10,7 +10,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -29,6 +31,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using OrchardCore.Users;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -56,6 +59,8 @@ public sealed class ActivitiesController : Controller
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -77,6 +82,8 @@ public sealed class ActivitiesController : Controller
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     public ActivitiesController(
@@ -94,6 +101,8 @@ public sealed class ActivitiesController : Controller
         IClock clock,
         ILocalClock localClock,
         INotifier notifier,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         IStringLocalizer<ActivitiesController> stringLocalizer,
         IHtmlLocalizer<ActivitiesController> htmlLocalizer)
     {
@@ -111,6 +120,8 @@ public sealed class ActivitiesController : Controller
         _clock = clock;
         _localClock = localClock;
         _notifier = notifier;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -585,7 +596,7 @@ public sealed class ActivitiesController : Controller
                 ActionScheduleDates = actionScheduleDates,
                 Source = ActivityDispositionSource.Agent,
                 ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-                ActorDisplayName = User.Identity?.Name,
+                ActorDisplayName = await GetCurrentUserDisplayNameAsync(),
             });
 
             if (result.Succeeded)
@@ -1259,6 +1270,20 @@ public sealed class ActivitiesController : Controller
         return string.Equals(currentSource, ActivitySources.Automatic, StringComparison.Ordinal)
             ? ActivitySources.Manual
             : currentSource;
+    }
+
+    private async Task<string> GetCurrentUserDisplayNameAsync()
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user is null)
+        {
+            return S["Unknown user"].Value;
+        }
+
+        var displayName = await _displayNameProvider.GetAsync(user, HttpContext.RequestAborted);
+
+        return string.IsNullOrWhiteSpace(displayName) ? S["Unknown user"].Value : displayName;
     }
 
     private static string MapDialerModeToActivitySource(DialerMode mode)

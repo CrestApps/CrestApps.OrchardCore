@@ -341,6 +341,29 @@ public sealed class ContactCenterReportingServiceTests
     }
 
     [Fact]
+    public void BuildCampaignSummary_UnknownCampaign_DoesNotExposeIdentifierAsName()
+    {
+        // Arrange
+        var activities = new[]
+        {
+            ActivityIndex("deleted-campaign-id", ActivityStatus.Completed),
+        };
+
+        // Act
+        var report = ContactCenterReportingService.BuildCampaignSummary(
+            _from,
+            _to,
+            activities,
+            new Dictionary<string, string>(StringComparer.Ordinal));
+
+        // Assert
+        var row = Assert.Single(report.Rows);
+
+        Assert.Equal("deleted-campaign-id", row.CampaignId);
+        Assert.Null(row.CampaignName);
+    }
+
+    [Fact]
     public void BuildSubjectInventory_GroupsBySubjectType()
     {
         // Arrange

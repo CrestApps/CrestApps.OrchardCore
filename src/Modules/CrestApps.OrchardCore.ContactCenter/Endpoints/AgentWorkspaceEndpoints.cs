@@ -445,10 +445,10 @@ internal static class AgentWorkspaceEndpoints
 
         if (currentUser is not null)
         {
-            return await GetUserDisplayNameAsync(currentUser, user.Identity?.Name, displayNameProvider, cancellationToken);
+            return await GetUserDisplayNameAsync(currentUser, "Unknown user", displayNameProvider, cancellationToken);
         }
 
-        return user.Identity?.Name;
+        return "Unknown user";
     }
 
     private static async Task<string> GetUserDisplayNameAsync(

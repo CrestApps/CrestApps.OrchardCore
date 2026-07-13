@@ -212,7 +212,7 @@ internal static class SupervisorDashboardEndpoints
             }
         }
 
-        return string.IsNullOrEmpty(agent.DisplayName) ? agent.UserName : agent.DisplayName;
+        return string.IsNullOrWhiteSpace(agent.DisplayName) ? "Unknown agent" : agent.DisplayName;
     }
 
     private sealed class EngageRequest

@@ -52,15 +52,9 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
             cancellationToken);
         var data = OmnichannelReportAggregator.BuildCampaignPerformance(activities);
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);
-
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var campaign in campaigns)
-        {
-            names[campaign.ItemId] = string.IsNullOrWhiteSpace(campaign.DisplayText) ? campaign.ItemId : campaign.DisplayText;
-        }
-
+        var names = CatalogReportDisplayNames.ForCampaigns(campaigns);
         var noCampaign = S["(No campaign)"].Value;
+        var unknownCampaign = S["(Unknown campaign)"].Value;
 
         var columns = new[]
         {
@@ -78,9 +72,7 @@ public sealed class CampaignPerformanceReportProvider : OmnichannelReportBase
 
         foreach (var row in data.Rows)
         {
-            var name = string.IsNullOrEmpty(row.CampaignId)
-                ? noCampaign
-                : names.GetValueOrDefault(row.CampaignId, row.CampaignId);
+            var name = CatalogReportDisplayNames.Resolve(row.CampaignId, names, noCampaign, unknownCampaign);
 
             rows.Add(new ReportRow(BuildCells(name, row.Counts)));
         }

@@ -567,10 +567,10 @@ internal sealed class AgentWorkforceReportProvider : IReport
     {
         if (!string.IsNullOrEmpty(agentId) && agents.TryGetValue(agentId, out var agent))
         {
-            return agent.DisplayName ?? agent.UserName ?? agent.Name ?? agentId;
+            return ReportValue.UserDisplayName(agent.UserName, "(Unknown agent)");
         }
 
-        return string.IsNullOrEmpty(agentId) ? "(Unknown)" : agentId;
+        return "(Unknown agent)";
     }
 
     internal sealed class AgentPresenceInterval
