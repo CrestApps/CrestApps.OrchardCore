@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -16,19 +18,22 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IClock _clock;
     private readonly ILogger<AsteriskRealtimeVoiceEventDispatcher> _logger;
+    private readonly string _tenantName;
 
     public AsteriskRealtimeVoiceEventDispatcher(
         IEnumerable<IProviderVoiceEventService> providerVoiceEventServices,
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IClock clock,
-        ILogger<AsteriskRealtimeVoiceEventDispatcher> logger)
+        ILogger<AsteriskRealtimeVoiceEventDispatcher> logger,
+        ShellSettings shellSettings)
     {
         _providerVoiceEventServices = providerVoiceEventServices;
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
         _clock = clock;
         _logger = logger;
+        _tenantName = shellSettings.Name;
     }
 
     public async Task HandleAsync(AsteriskRealtimeVoiceEvent voiceEvent, CancellationToken cancellationToken = default)
@@ -95,7 +100,9 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
 
         ApplyInteractionState(interaction, voiceEvent);
         await _telephonyInteractionStore.UpdateAsync(interaction, cancellationToken);
-        await _hubContext.Clients.User(interaction.UserId).CallStateChanged(BuildTelephonyCall(interaction, voiceEvent));
+        await _hubContext.Clients
+            .Group(TenantSignalRGroupName.ForUser(_tenantName, interaction.UserId))
+            .CallStateChanged(BuildTelephonyCall(interaction, voiceEvent));
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

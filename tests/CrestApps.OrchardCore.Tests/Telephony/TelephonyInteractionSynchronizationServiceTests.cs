@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -347,7 +349,11 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             hubContext.Object,
             distributedLock.Object,
             clock.Object,
-            NullLogger<TelephonyInteractionSynchronizationService>.Instance);
+            NullLogger<TelephonyInteractionSynchronizationService>.Instance,
+            new ShellSettings
+            {
+                Name = "TenantA",
+            });
     }
 
     private static (Mock<IHubContext<TelephonyHub, ITelephonyClient>> HubContext, Mock<ITelephonyClient> Client) CreateHubContext()
@@ -356,7 +362,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var client = new Mock<ITelephonyClient>();
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser("TenantA", "user-1"))).Returns(client.Object);
 
         return (hubContext, client);
     }

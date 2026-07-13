@@ -3,16 +3,23 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ContactCenterSoftPhoneEventHandlerTests
 {
+    private static readonly ShellSettings _shellSettings = new()
+    {
+        Name = "TenantA",
+    };
+
     [Fact]
     public async Task HandleAsync_CallConnected_CreatesTelephonyInteraction_AndPushesConnectedState()
     {
@@ -75,7 +82,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
         var client = new Mock<ITelephonyClient>();
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
 
         var handler = new ContactCenterSoftPhoneEventHandler(
@@ -83,7 +90,8 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object);
+            hubContext.Object,
+            _shellSettings);
 
         var interactionEvent = new InteractionEvent
         {
@@ -174,7 +182,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
         var client = new Mock<ITelephonyClient>();
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
 
         var handler = new ContactCenterSoftPhoneEventHandler(
@@ -182,7 +190,8 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object);
+            hubContext.Object,
+            _shellSettings);
 
         var interactionEvent = new InteractionEvent
         {
@@ -265,7 +274,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
         var client = new Mock<ITelephonyClient>();
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
 
         var handler = new ContactCenterSoftPhoneEventHandler(
@@ -273,7 +282,8 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object);
+            hubContext.Object,
+            _shellSettings);
 
         var interactionEvent = new InteractionEvent
         {
@@ -350,7 +360,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
         var client = new Mock<ITelephonyClient>();
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
 
         var handler = new ContactCenterSoftPhoneEventHandler(
@@ -358,7 +368,8 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             callSessionManager.Object,
             agentManager.Object,
             store.Object,
-            hubContext.Object);
+            hubContext.Object,
+            _shellSettings);
 
         var interactionEvent = new InteractionEvent
         {

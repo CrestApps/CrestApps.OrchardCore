@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -16,15 +18,22 @@ public sealed class ContactCenterRealTimeNotifierTests
         var queueClient = new Mock<IContactCenterHubClient>();
         var supervisorClient = new Mock<IContactCenterHubClient>();
         var clients = new Mock<IHubClients<IContactCenterHubClient>>();
+        var shellSettings = new ShellSettings
+        {
+            Name = "TenantA",
+        };
+        var userGroup = TenantSignalRGroupName.ForUser(shellSettings.Name, "u1");
+        var queueGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.QueueGroup("q1"));
+        var supervisorsGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.SupervisorsGroup);
 
-        clients.Setup(c => c.User("u1")).Returns(assignedUserClient.Object);
-        clients.Setup(c => c.Group(ContactCenterHub.QueueGroup("q1"))).Returns(queueClient.Object);
-        clients.Setup(c => c.Group(ContactCenterHub.SupervisorsGroup)).Returns(supervisorClient.Object);
+        clients.Setup(c => c.Group(userGroup)).Returns(assignedUserClient.Object);
+        clients.Setup(c => c.Group(queueGroup)).Returns(queueClient.Object);
+        clients.Setup(c => c.Group(supervisorsGroup)).Returns(supervisorClient.Object);
 
         var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
         hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
 
-        var notifier = new ContactCenterRealTimeNotifier(hubContext.Object);
+        var notifier = new ContactCenterRealTimeNotifier(hubContext.Object, shellSettings);
         var notification = new AgentOfferNotification
         {
             UserId = "u1",

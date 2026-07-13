@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
@@ -19,6 +21,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneEventHandler"/> class.
@@ -28,18 +31,21 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     /// <param name="agentProfileManager">The agent profile manager used to resolve the assigned Orchard user.</param>
     /// <param name="telephonyInteractionStore">The telephony interaction store used by the soft phone's recent-call history.</param>
     /// <param name="hubContext">The telephony hub context used to push call-state changes to the soft phone.</param>
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public ContactCenterSoftPhoneEventHandler(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentProfileManager,
         ITelephonyInteractionStore telephonyInteractionStore,
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext)
+        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
+        ShellSettings shellSettings)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _agentProfileManager = agentProfileManager;
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
+        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -84,7 +90,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         var call = BuildCall(interaction, session);
 
         await UpsertTelephonyInteractionAsync(agent, interaction, session, call, cancellationToken);
-        await _hubContext.Clients.User(agent.UserId).CallStateChanged(call);
+        await _hubContext.Clients
+            .Group(TenantSignalRGroupName.ForUser(_tenantName, agent.UserId))
+            .CallStateChanged(call);
     }
 
     private static bool ShouldHandle(string eventType)

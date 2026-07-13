@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -9,12 +10,18 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
 public sealed class AsteriskRealtimeVoiceEventDispatcherTests
 {
+    private static readonly ShellSettings _shellSettings = new()
+    {
+        Name = "TenantA",
+    };
+
     [Fact]
     public async Task HandleAsync_WhenPlainTelephonyInteractionMatches_EndsInteraction_AndPushesDisconnectedState()
     {
@@ -48,7 +55,7 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
             .Setup(value => value.FindByProviderCallIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
-        clients.Setup(value => value.User("user-1")).Returns(client.Object);
+        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         clock.SetupGet(value => value.UtcNow).Returns(endedUtc);
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
@@ -56,7 +63,8 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
             store.Object,
             hubContext.Object,
             clock.Object,
-            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance);
+            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance,
+            _shellSettings);
         var voiceEvent = new AsteriskRealtimeVoiceEvent
         {
             ProviderName = "Asterisk",
@@ -112,7 +120,8 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
             store.Object,
             hubContext.Object,
             clock.Object,
-            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance);
+            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance,
+            _shellSettings);
         var voiceEvent = new AsteriskRealtimeVoiceEvent
         {
             ProviderName = "Asterisk",

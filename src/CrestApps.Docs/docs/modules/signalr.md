@@ -76,3 +76,9 @@ Then, initialize the SignalR connection using JavaScript:
 Note the dependency on the `signalr` script, which is automatically added to the page by the SignalR module.
 
 This setup ensures your SignalR hub is properly registered and accessible within Orchard Core, allowing seamless real-time communication.
+
+## Multi-tenant destinations
+
+SignalR backplanes are shared infrastructure, while Orchard user identifiers and application group names are tenant-local. Do not send tenant data through an unqualified `Clients.User(userId)` or a globally named group.
+
+Use `TenantSignalRGroupName.ForUser(shellSettings.Name, userId)` for user destinations and `TenantSignalRGroupName.ForGroup(shellSettings.Name, logicalGroupName)` for application groups. The hub must add only authorized connections to the corresponding tenant-qualified group, and publishers must target the same generated name. This keeps equal user, queue, or supervisor identifiers in different Orchard shells isolated on both single-node and backplane deployments.

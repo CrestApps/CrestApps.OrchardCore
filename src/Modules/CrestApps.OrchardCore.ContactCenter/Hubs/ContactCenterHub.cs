@@ -4,12 +4,14 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
@@ -30,14 +32,19 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     public const string SupervisorsGroup = "cc:supervisors";
 
     private readonly ILogger _logger;
+    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterHub"/> class.
     /// </summary>
     /// <param name="logger">The logger.</param>
-    public ContactCenterHub(ILogger<ContactCenterHub> logger)
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
+    public ContactCenterHub(
+        ILogger<ContactCenterHub> logger,
+        ShellSettings shellSettings)
     {
         _logger = logger;
+        _tenantName = shellSettings.Name;
     }
 
     /// <summary>
@@ -82,7 +89,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
                     foreach (var queueId in session.QueueIds)
                     {
-                        await Groups.AddToGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
                     }
                 }
                 catch (Exception ex)
@@ -95,7 +102,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             {
                 authorized = true;
 
-                await Groups.AddToGroupAsync(Context.ConnectionId, SupervisorsGroup, Context.ConnectionAborted);
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetSupervisorsGroup(), Context.ConnectionAborted);
             }
         });
 
@@ -105,6 +112,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
             return;
         }
+
+        await Groups.AddToGroupAsync(
+            Context.ConnectionId,
+            TenantSignalRGroupName.ForUser(_tenantName, userId),
+            Context.ConnectionAborted);
 
         await base.OnConnectedAsync();
     }
@@ -192,7 +204,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             if (await AuthorizeAsync(scope.ServiceProvider, ContactCenterPermissions.MonitorContactCenter))
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
             }
         });
     }
@@ -208,7 +220,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             return;
         }
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
     }
 
     /// <summary>
@@ -454,12 +466,22 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         foreach (var queueId in current.Except(previous))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
         }
 
         foreach (var queueId in previous.Except(current))
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, QueueGroup(queueId), Context.ConnectionAborted);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
         }
+    }
+
+    private string GetQueueGroup(string queueId)
+    {
+        return TenantSignalRGroupName.ForGroup(_tenantName, QueueGroup(queueId));
+    }
+
+    private string GetSupervisorsGroup()
+    {
+        return TenantSignalRGroupName.ForGroup(_tenantName, SupervisorsGroup);
     }
 }

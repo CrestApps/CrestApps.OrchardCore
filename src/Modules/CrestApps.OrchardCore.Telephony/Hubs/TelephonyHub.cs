@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
@@ -19,6 +21,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs;
 public sealed class TelephonyHub : Hub<ITelephonyClient>
 {
     private readonly ILogger _logger;
+    private readonly string _tenantName;
 
     internal readonly IStringLocalizer S;
 
@@ -27,12 +30,48 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public TelephonyHub(
         ILogger<TelephonyHub> logger,
-        IStringLocalizer<TelephonyHub> stringLocalizer)
+        IStringLocalizer<TelephonyHub> stringLocalizer,
+        ShellSettings shellSettings)
     {
         _logger = logger;
+        _tenantName = shellSettings.Name;
         S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnConnectedAsync()
+    {
+        var userId = Context.UserIdentifier;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Context.Abort();
+
+            return;
+        }
+
+        var authorized = false;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            authorized = await AuthorizeAsync(scope.ServiceProvider);
+        });
+
+        if (!authorized)
+        {
+            Context.Abort();
+
+            return;
+        }
+
+        await Groups.AddToGroupAsync(
+            Context.ConnectionId,
+            TenantSignalRGroupName.ForUser(_tenantName, userId),
+            Context.ConnectionAborted);
+        await base.OnConnectedAsync();
     }
 
     /// <summary>

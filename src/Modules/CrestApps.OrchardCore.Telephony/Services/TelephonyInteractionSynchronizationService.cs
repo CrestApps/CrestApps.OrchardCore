@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
@@ -23,6 +25,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyInteractionSynchronizationService"/> class.
@@ -33,13 +36,15 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
     /// <param name="clock">The clock used to stamp terminal interactions.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public TelephonyInteractionSynchronizationService(
         ITelephonyInteractionStore interactionStore,
         ITelephonyProviderResolver providerResolver,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IDistributedLock distributedLock,
         IClock clock,
-        ILogger<TelephonyInteractionSynchronizationService> logger)
+        ILogger<TelephonyInteractionSynchronizationService> logger,
+        ShellSettings shellSettings)
     {
         _interactionStore = interactionStore;
         _providerResolver = providerResolver;
@@ -47,6 +52,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
+        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -407,7 +413,9 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             return;
         }
 
-        await _hubContext.Clients.User(userId).CallStateChanged(call);
+        await _hubContext.Clients
+            .Group(TenantSignalRGroupName.ForUser(_tenantName, userId))
+            .CallStateChanged(call);
     }
 
     private static bool SetIfDifferent(string currentValue, string providerValue, Action<string> setter)

@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
@@ -19,6 +21,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultIncomingCallDispatcher"/> class.
@@ -28,18 +31,21 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
     /// <param name="interactionStore">The telephony interaction store.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public DefaultIncomingCallDispatcher(
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IEnumerable<IIncomingCallContextProvider> contextProviders,
         ITelephonyInteractionStore interactionStore,
         IClock clock,
-        ILogger<DefaultIncomingCallDispatcher> logger)
+        ILogger<DefaultIncomingCallDispatcher> logger,
+        ShellSettings shellSettings)
     {
         _hubContext = hubContext;
         _contextProviders = contextProviders;
         _interactionStore = interactionStore;
         _clock = clock;
         _logger = logger;
+        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -70,7 +76,9 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
         };
 
         await RecordInteractionAsync(userId, call, cancellationToken);
-        await _hubContext.Clients.User(userId).IncomingCall(call, context);
+        await _hubContext.Clients
+            .Group(TenantSignalRGroupName.ForUser(_tenantName, userId))
+            .IncomingCall(call, context);
     }
 
     private async Task RecordInteractionAsync(string userId, TelephonyCall call, CancellationToken cancellationToken)

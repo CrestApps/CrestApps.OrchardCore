@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.SignalR;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -12,14 +14,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifier
 {
     private readonly IHubContext<ContactCenterHub, IContactCenterHubClient> _hubContext;
+    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeNotifier"/> class.
     /// </summary>
     /// <param name="hubContext">The Contact Center hub context used to push events to connected clients.</param>
-    public ContactCenterRealTimeNotifier(IHubContext<ContactCenterHub, IContactCenterHubClient> hubContext)
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
+    public ContactCenterRealTimeNotifier(
+        IHubContext<ContactCenterHub, IContactCenterHubClient> hubContext,
+        ShellSettings shellSettings)
     {
         _hubContext = hubContext;
+        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -29,10 +36,10 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
 
         if (!string.IsNullOrEmpty(notification.UserId))
         {
-            await _hubContext.Clients.User(notification.UserId).PresenceChanged(notification);
+            await _hubContext.Clients.Group(UserGroup(notification.UserId)).PresenceChanged(notification);
         }
 
-        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).PresenceChanged(notification);
+        await _hubContext.Clients.Group(SupervisorsGroup).PresenceChanged(notification);
     }
 
     /// <inheritdoc/>
@@ -42,17 +49,17 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
 
         if (!string.IsNullOrEmpty(notification.UserId))
         {
-            await _hubContext.Clients.User(notification.UserId).OfferReceived(notification);
+            await _hubContext.Clients.Group(UserGroup(notification.UserId)).OfferReceived(notification);
         }
 
         var observerNotification = CreateObserverNotification(notification);
 
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
-            await _hubContext.Clients.Group(ContactCenterHub.QueueGroup(notification.QueueId)).OfferReceived(observerNotification);
+            await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferReceived(observerNotification);
         }
 
-        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).OfferReceived(observerNotification);
+        await _hubContext.Clients.Group(SupervisorsGroup).OfferReceived(observerNotification);
     }
 
     /// <inheritdoc/>
@@ -62,15 +69,15 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
 
         if (!string.IsNullOrEmpty(notification.UserId))
         {
-            await _hubContext.Clients.User(notification.UserId).OfferRevoked(notification);
+            await _hubContext.Clients.Group(UserGroup(notification.UserId)).OfferRevoked(notification);
         }
 
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
-            await _hubContext.Clients.Group(ContactCenterHub.QueueGroup(notification.QueueId)).OfferRevoked(notification);
+            await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferRevoked(notification);
         }
 
-        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).OfferRevoked(notification);
+        await _hubContext.Clients.Group(SupervisorsGroup).OfferRevoked(notification);
     }
 
     /// <inheritdoc/>
@@ -80,10 +87,28 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
 
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
-            await _hubContext.Clients.Group(ContactCenterHub.QueueGroup(notification.QueueId)).QueueStatsChanged(notification);
+            await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).QueueStatsChanged(notification);
         }
 
-        await _hubContext.Clients.Group(ContactCenterHub.SupervisorsGroup).QueueStatsChanged(notification);
+        await _hubContext.Clients.Group(SupervisorsGroup).QueueStatsChanged(notification);
+    }
+
+    private string SupervisorsGroup
+    {
+        get
+        {
+            return TenantSignalRGroupName.ForGroup(_tenantName, ContactCenterHub.SupervisorsGroup);
+        }
+    }
+
+    private string QueueGroup(string queueId)
+    {
+        return TenantSignalRGroupName.ForGroup(_tenantName, ContactCenterHub.QueueGroup(queueId));
+    }
+
+    private string UserGroup(string userId)
+    {
+        return TenantSignalRGroupName.ForUser(_tenantName, userId);
     }
 
     private static AgentOfferNotification CreateObserverNotification(AgentOfferNotification notification)
