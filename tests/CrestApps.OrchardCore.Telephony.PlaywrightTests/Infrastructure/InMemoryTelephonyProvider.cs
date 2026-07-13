@@ -129,7 +129,22 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     {
         Interlocked.Increment(ref _mergeRequestCount);
 
-        return Update(request?.PrimaryCallId, c => c.State = CallState.Connected);
+        var callIds = request?.GetCallIds() ?? [];
+
+        foreach (var callId in callIds)
+        {
+            if (_calls.TryGetValue(callId, out var call))
+            {
+                call.State = CallState.Connected;
+                call.IsOnHold = false;
+                call.Metadata["isConference"] = true;
+                call.Metadata["participantCount"] = callIds.Count;
+            }
+        }
+
+        return Task.FromResult(callIds.Count >= 2
+            ? TelephonyResult.Success(_calls[callIds[0]])
+            : TelephonyResult.Failed("At least two calls are required."));
     }
 
     public Task<TelephonyResult> SendDigitsAsync(SendDigitsRequest request, CancellationToken cancellationToken = default)

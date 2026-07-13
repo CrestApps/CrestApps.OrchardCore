@@ -24,6 +24,16 @@ public sealed class ContactCenterReportCriteria
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the campaign group identifier used to filter campaign reports.
+    /// </summary>
+    public string CampaignGroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign identifiers resolved from the selected campaign group.
+    /// </summary>
+    public IReadOnlySet<string> CampaignIds { get; set; }
+
+    /// <summary>
     /// Gets or sets the activity source used to filter CRM activities.
     /// </summary>
     public string ActivitySource { get; set; }

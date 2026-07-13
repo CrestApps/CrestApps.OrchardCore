@@ -142,6 +142,11 @@ public static class OmnichannelConstants
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
 
         /// <summary>
+        /// Gets the permission to manage campaign groups.
+        /// </summary>
+        public readonly static Permission ManageCampaignGroups = new("ManageCampaignGroups", "Manage campaign groups");
+
+        /// <summary>
         /// Gets the permission to manage activities in bulk.
         /// </summary>
         public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");

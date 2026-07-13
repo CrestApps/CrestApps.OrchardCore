@@ -248,10 +248,10 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TwoSelectedCalls_CanBeConferencedWithoutEnteringCallIds()
+    public async Task MultipleSelectedCalls_CanBeConferencedWithoutEnteringCallIds()
     {
         // Arrange
-        var page = await CreateTwoCallPageAsync();
+        var page = await CreateThreeCallPageAsync();
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount')");
         var merge = page.Locator("[data-telephony-merge]");
@@ -263,6 +263,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.True(await merge.IsHiddenAsync());
         await selections.Nth(1).CheckAsync();
         Assert.True(await merge.IsVisibleAsync());
+        await selections.Nth(2).CheckAsync();
         await merge.ClickAsync();
 
         // Assert
@@ -270,6 +271,8 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         Assert.True(await merge.IsHiddenAsync());
+        await page.WaitForFunctionAsync(
+            "() => Array.from(document.querySelectorAll('.telephony-soft-phone__active-call-state')).every(element => element.textContent.trim() === 'In conference')");
     }
 
     [Fact]
@@ -508,8 +511,8 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.True(await page.Locator("[data-telephony-view=\"keypad\"]").IsHiddenAsync());
 
         var historyText = await page.Locator("[data-telephony-history-list]").InnerTextAsync();
-        Assert.Contains("15551234567", historyText);
-        Assert.Contains("15559876543", historyText);
+        Assert.Contains("+1 (555) 123-4567", historyText);
+        Assert.Contains("+1 (555) 987-6543", historyText);
 
         // Act - switch back to the keypad tab.
         await page.ClickAsync("[data-telephony-tab=\"keypad\"]");
@@ -564,7 +567,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         if (tab == "history")
         {
             var historyText = await page.Locator("[data-telephony-history-list]").InnerTextAsync();
-            Assert.Contains("15551234567", historyText);
+            Assert.Contains("+1 (555) 123-4567", historyText);
         }
     }
 
@@ -765,6 +768,20 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.ClickAsync("[data-telephony-dial]");
         await PublishLatestCallStateAsync(page);
         await page.Locator("[data-telephony-call-select]").Nth(1).WaitForAsync();
+
+        return page;
+    }
+
+    private async Task<IPage> CreateThreeCallPageAsync()
+    {
+        var page = await CreateTwoCallPageAsync();
+
+        await page.ClickAsync("[data-telephony-hold]");
+        await PublishLatestCallStateAsync(page);
+        await page.FillAsync("[data-telephony-number]", "+15551112222");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        await page.Locator("[data-telephony-call-select]").Nth(2).WaitForAsync();
 
         return page;
     }

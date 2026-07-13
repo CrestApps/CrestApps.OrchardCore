@@ -21,6 +21,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportingService"/> class.
@@ -30,18 +31,21 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// <param name="queueItemManager">The queue item manager used to read live waiting depth.</param>
     /// <param name="agentManager">The agent profile manager used to resolve agent names.</param>
     /// <param name="campaignManager">The campaign manager used to resolve campaign names.</param>
+    /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaign reports.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueManager queueManager,
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
-        ICatalogManager<OmnichannelCampaign> campaignManager)
+        ICatalogManager<OmnichannelCampaign> campaignManager,
+        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager)
     {
         _session = session;
         _queueManager = queueManager;
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
+        _campaignGroupManager = campaignGroupManager;
     }
 
     /// <inheritdoc/>
@@ -144,8 +148,11 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     {
         var activities = await QueryActivityIndexesAsync(fromUtc, toUtc, cancellationToken);
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);
+        var campaignGroups = await _campaignGroupManager.GetAllAsync(cancellationToken);
 
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        var campaignGroupIds = new Dictionary<string, string>(StringComparer.Ordinal);
+        var campaignGroupNames = campaignGroups.ToDictionary(group => group.ItemId, group => group.DisplayText, StringComparer.Ordinal);
 
         foreach (var campaign in campaigns)
         {
@@ -153,9 +160,25 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             {
                 names[campaign.ItemId] = campaign.DisplayText;
             }
+
+            campaignGroupIds[campaign.ItemId] = campaign.CampaignGroupId;
         }
 
-        return BuildCampaignSummary(fromUtc, toUtc, FilterActivities(activities, criteria), names);
+        if (!string.IsNullOrEmpty(criteria?.CampaignGroupId))
+        {
+            criteria.CampaignIds = campaigns
+                .Where(campaign => campaign.CampaignGroupId == criteria.CampaignGroupId)
+                .Select(campaign => campaign.ItemId)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        return BuildCampaignSummary(
+            fromUtc,
+            toUtc,
+            FilterActivities(activities, criteria),
+            names,
+            campaignGroupIds,
+            campaignGroupNames);
     }
 
     /// <inheritdoc/>
@@ -228,6 +251,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         return activities
             .Where(activity => string.IsNullOrEmpty(criteria.CampaignId) || activity.CampaignId == criteria.CampaignId)
+            .Where(activity => criteria.CampaignIds is null || criteria.CampaignIds.Contains(activity.CampaignId ?? string.Empty))
             .Where(activity => string.IsNullOrEmpty(criteria.ActivitySource) || activity.Source == criteria.ActivitySource)
             .Where(activity => string.IsNullOrEmpty(channel) || string.Equals(activity.Channel, channel, StringComparison.OrdinalIgnoreCase))
             .Where(activity => !criteria.ActivityStatus.HasValue || activity.Status == criteria.ActivityStatus.Value)
@@ -510,7 +534,9 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         DateTime fromUtc,
         DateTime toUtc,
         IReadOnlyList<OmnichannelActivityIndex> activities,
-        IReadOnlyDictionary<string, string> campaignNames)
+        IReadOnlyDictionary<string, string> campaignNames,
+        IReadOnlyDictionary<string, string> campaignGroupIds,
+        IReadOnlyDictionary<string, string> campaignGroupNames)
     {
         var report = new CampaignSummaryReport
         {
@@ -538,7 +564,35 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             .OrderByDescending(row => row.Counts.Total)
             .ToList();
 
+        foreach (var group in activities.GroupBy(
+            activity => ResolveCampaignGroupId(activity.CampaignId, campaignGroupIds),
+            StringComparer.Ordinal))
+        {
+            report.GroupRows.Add(new CampaignGroupSummaryRow
+            {
+                CampaignGroupId = group.Key,
+                CampaignGroupName = string.IsNullOrEmpty(group.Key)
+                    ? null
+                    : campaignGroupNames.GetValueOrDefault(group.Key),
+                Counts = BuildCounts(group),
+            });
+        }
+
+        report.GroupRows = report.GroupRows
+            .OrderByDescending(row => row.Counts.Total)
+            .ToList();
+
         return report;
+    }
+
+    private static string ResolveCampaignGroupId(
+        string campaignId,
+        IReadOnlyDictionary<string, string> campaignGroupIds)
+    {
+        return !string.IsNullOrEmpty(campaignId) &&
+            campaignGroupIds.TryGetValue(campaignId, out var campaignGroupId)
+            ? campaignGroupId ?? string.Empty
+            : string.Empty;
     }
 
     internal static SubjectInventoryReport BuildSubjectInventory(

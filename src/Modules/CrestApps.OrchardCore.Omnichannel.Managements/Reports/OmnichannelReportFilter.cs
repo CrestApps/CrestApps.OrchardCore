@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports.Models;
@@ -7,19 +8,34 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 internal static class OmnichannelReportFilter
 {
     public const string CampaignId = "CampaignId";
+    public const string CampaignGroupId = "CampaignGroupId";
     public const string Channel = "Channel";
     public const string Source = "Source";
     public const string Status = "Status";
 
-    public static OmnichannelReportCriteria GetCriteria(ReportFilter filter)
+    public static async Task<OmnichannelReportCriteria> GetCriteriaAsync(
+        ReportFilter filter,
+        ICatalogManager<OmnichannelCampaign> campaignManager,
+        CancellationToken cancellationToken = default)
     {
-        return new OmnichannelReportCriteria
+        var criteria = new OmnichannelReportCriteria
         {
             CampaignId = GetString(filter, CampaignId),
+            CampaignGroupId = GetString(filter, CampaignGroupId),
             Channel = GetString(filter, Channel),
             Source = GetString(filter, Source),
             Status = GetStatus(filter),
         };
+
+        if (!string.IsNullOrEmpty(criteria.CampaignGroupId))
+        {
+            criteria.CampaignIds = (await campaignManager.GetAllAsync(cancellationToken))
+                .Where(campaign => campaign.CampaignGroupId == criteria.CampaignGroupId)
+                .Select(campaign => campaign.ItemId)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        return criteria;
     }
 
     public static string GetString(ReportFilter filter, string key)
@@ -54,6 +70,10 @@ internal static class OmnichannelReportFilter
 internal sealed class OmnichannelReportCriteria
 {
     public string CampaignId { get; set; }
+
+    public string CampaignGroupId { get; set; }
+
+    public IReadOnlySet<string> CampaignIds { get; set; }
 
     public string Channel { get; set; }
 

@@ -45,6 +45,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
 
@@ -54,6 +55,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="campaignGroupManager">The campaign group manager.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -61,6 +63,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         IActivityQueueManager queueManager,
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IStringLocalizer<ContactCenterReportFilterDisplayDriver> stringLocalizer)
@@ -68,6 +71,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         _queueManager = queueManager;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
+        _campaignGroupManager = campaignGroupManager;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         S = stringLocalizer;
@@ -103,6 +107,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.QueueId, model.QueueId);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.AgentId, model.AgentId);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.CampaignId, model.CampaignId);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.CampaignGroupId, model.CampaignGroupId);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.Channel, model.Channel);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.Direction, model.Direction);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.ActivitySource, model.ActivitySource);
@@ -116,17 +121,20 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.QueueId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.QueueId);
         model.AgentId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.AgentId);
         model.CampaignId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.CampaignId);
+        model.CampaignGroupId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.CampaignGroupId);
         model.Channel = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.Channel);
         model.Direction = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.Direction);
         model.ActivitySource = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivitySource);
         model.ActivityStatus = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivityStatus);
         model.ShowActivityFilters = _activityReports.Contains(filter.ReportName);
+        model.ShowCampaignGroupFilter = filter.ReportName == "contact-center-campaign-summary";
         model.ShowWorkforceFilters = _workforceReports.Contains(filter.ReportName);
         model.ShowInteractionFilters = !model.ShowActivityFilters && !model.ShowWorkforceFilters;
 
         var queues = await _queueManager.GetAllAsync();
         var agents = await _agentManager.GetAllAsync();
         var campaigns = await _campaignManager.GetAllAsync();
+        var campaignGroups = await _campaignGroupManager.GetAllAsync();
         var agentOptions = new List<SelectListItem>();
 
         foreach (var agent in agents)
@@ -146,6 +154,11 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.Campaigns = campaigns
             .OrderBy(campaign => campaign.DisplayText)
             .Select(campaign => new SelectListItem(campaign.DisplayText ?? campaign.ItemId, campaign.ItemId))
+            .ToList();
+
+        model.CampaignGroups = campaignGroups
+            .OrderBy(group => group.DisplayText)
+            .Select(group => new SelectListItem(group.DisplayText ?? group.ItemId, group.ItemId))
             .ToList();
 
         model.Channels =

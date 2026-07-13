@@ -70,6 +70,7 @@ internal static class OmnichannelReportQuery
 
         return activities
             .Where(activity => string.IsNullOrEmpty(criteria.CampaignId) || activity.CampaignId == criteria.CampaignId)
+            .Where(activity => criteria.CampaignIds is null || criteria.CampaignIds.Contains(activity.CampaignId ?? string.Empty))
             .Where(activity => string.IsNullOrEmpty(criteria.Channel) || string.Equals(activity.Channel, criteria.Channel, StringComparison.OrdinalIgnoreCase))
             .Where(activity => string.IsNullOrEmpty(criteria.Source) || activity.Source == criteria.Source)
             .Where(activity => !criteria.Status.HasValue || activity.Status == criteria.Status.Value)

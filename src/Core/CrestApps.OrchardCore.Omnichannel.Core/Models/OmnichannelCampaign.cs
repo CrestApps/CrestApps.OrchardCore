@@ -20,6 +20,11 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     public string Description { get; set; }
 
     /// <summary>
+    /// Gets or sets the campaign group identifier used for reporting aggregation.
+    /// </summary>
+    public string CampaignGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction type.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
@@ -135,6 +140,7 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             ItemId = ItemId,
             DisplayText = DisplayText,
             Description = Description,
+            CampaignGroupId = CampaignGroupId,
             InteractionType = InteractionType,
             Channel = Channel,
             ChannelEndpointId = ChannelEndpointId,

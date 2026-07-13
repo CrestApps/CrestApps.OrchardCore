@@ -19,6 +19,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly EnterpriseActivityReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
@@ -26,12 +27,14 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     public EnterpriseActivityReportProvider(
         ISession session,
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         EnterpriseActivityReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _campaignManager = campaignManager;
+        _campaignGroupManager = campaignGroupManager;
         _dispositionManager = dispositionManager;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
@@ -60,9 +63,19 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .ToArray();
         var filteredActivities = OmnichannelReportQuery.Filter(
             activities,
-            OmnichannelReportFilter.GetCriteria(context.Filter));
-        var campaignNames = IsCampaignReport()
-            ? CatalogReportDisplayNames.ForCampaigns(await _campaignManager.GetAllAsync(cancellationToken))
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken));
+        var campaigns = IsCampaignReport()
+            ? await _campaignManager.GetAllAsync(cancellationToken)
+            : null;
+        var campaignNames = campaigns is null
+            ? null
+            : CatalogReportDisplayNames.ForCampaigns(campaigns);
+        var campaignGroupIds = campaigns is null
+            ? null
+            : campaigns.ToDictionary(campaign => campaign.ItemId, campaign => campaign.CampaignGroupId, StringComparer.Ordinal);
+        var campaignGroupNames = IsCampaignReport()
+            ? (await _campaignGroupManager.GetAllAsync(cancellationToken))
+                .ToDictionary(group => group.ItemId, group => group.DisplayText, StringComparer.Ordinal)
             : null;
         var dispositionNames = _definition.Kind == EnterpriseActivityReportKind.CampaignDispositionMix
             ? CatalogReportDisplayNames.ForDispositions(await _dispositionManager.GetAllAsync(cancellationToken))
@@ -101,18 +114,24 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             EnterpriseActivityReportKind.CampaignSourceMix => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
+                campaignGroupIds,
+                campaignGroupNames,
                 S["Source"].Value,
                 activity => activity.Source,
                 activity => Display(activity.Source)),
             EnterpriseActivityReportKind.CampaignChannelMix => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
+                campaignGroupIds,
+                campaignGroupNames,
                 S["Channel"].Value,
                 activity => activity.Channel,
                 activity => Display(activity.Channel)),
             EnterpriseActivityReportKind.CampaignDispositionMix => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
+                campaignGroupIds,
+                campaignGroupNames,
                 S["Disposition"].Value,
                 activity => activity.DispositionId,
                 activity => CatalogReportDisplayNames.Resolve(
@@ -123,6 +142,8 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             EnterpriseActivityReportKind.CampaignAttemptPerformance => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
+                campaignGroupIds,
+                campaignGroupNames,
                 S["Attempts"].Value,
                 activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture),
                 activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture)),
@@ -382,12 +403,15 @@ internal sealed class EnterpriseActivityReportProvider : IReport
     private ReportDocument BuildCampaignDimension(
         IReadOnlyList<OmnichannelActivityIndex> activities,
         IReadOnlyDictionary<string, string> campaignNames,
+        IReadOnlyDictionary<string, string> campaignGroupIds,
+        IReadOnlyDictionary<string, string> campaignGroupNames,
         string dimensionName,
         Func<OmnichannelActivityIndex, string> dimensionKeySelector,
         Func<OmnichannelActivityIndex, string> dimensionDisplaySelector)
     {
         var columns = new[]
         {
+            new ReportColumn(S["Campaign group"].Value),
             new ReportColumn(S["Campaign"].Value),
             new ReportColumn(dimensionName),
             new ReportColumn(S["Activities"].Value, ReportColumnAlign.End),
@@ -412,6 +436,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                     Total = total,
                     Row = new ReportRow(
                     [
+                        ResolveCampaignGroupName(group.Key.CampaignId, campaignGroupIds, campaignGroupNames),
                         CatalogReportDisplayNames.Resolve(
                             group.Key.CampaignId,
                             campaignNames,
@@ -428,8 +453,51 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .OrderByDescending(entry => entry.Total)
             .Select(entry => entry.Row);
 
+        var groupRows = activities
+            .GroupBy(activity => new
+            {
+                CampaignGroupId = ResolveCampaignGroupId(activity.CampaignId, campaignGroupIds),
+                Dimension = dimensionKeySelector(activity),
+            })
+            .Select(group =>
+            {
+                var total = group.LongCount();
+                var completed = group.LongCount(activity => activity.Status == ActivityStatus.Completed);
+                var first = group.First();
+
+                return new
+                {
+                    Total = total,
+                    Row = new ReportRow(
+                    [
+                        CatalogReportDisplayNames.Resolve(
+                            group.Key.CampaignGroupId,
+                            campaignGroupNames,
+                            S["(No campaign group)"].Value,
+                            S["(Unknown campaign group)"].Value),
+                        dimensionDisplaySelector(first),
+                        ReportFormat.Number(total),
+                        ReportFormat.Number(completed),
+                        ReportFormat.Number(group.LongCount(activity => activity.Status == ActivityStatus.Failed)),
+                        ReportFormat.Percent(total > 0 ? (double)completed / total : 0d),
+                    ]),
+                };
+            })
+            .OrderByDescending(entry => entry.Total)
+            .Select(entry => entry.Row);
+        var groupColumns = new[]
+        {
+            new ReportColumn(S["Campaign group"].Value),
+            new ReportColumn(dimensionName),
+            new ReportColumn(S["Activities"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Completed"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Failed"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Completion rate"].Value, ReportColumnAlign.End),
+        };
+
         return new ReportDocument()
-            .Add(ReportSection.ForTable(S["Campaign breakdown"].Value, columns, rows));
+            .Add(ReportSection.ForTable(S["Campaign breakdown"].Value, columns, rows))
+            .Add(ReportSection.ForTable(S["Campaign group breakdown"].Value, groupColumns, groupRows));
     }
 
     private ReportDocument BuildOverdueByDimension(
@@ -614,6 +682,28 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             EnterpriseActivityReportKind.CampaignChannelMix or
             EnterpriseActivityReportKind.CampaignDispositionMix or
             EnterpriseActivityReportKind.CampaignAttemptPerformance;
+    }
+
+    private string ResolveCampaignGroupName(
+        string campaignId,
+        IReadOnlyDictionary<string, string> campaignGroupIds,
+        IReadOnlyDictionary<string, string> campaignGroupNames)
+    {
+        return CatalogReportDisplayNames.Resolve(
+            ResolveCampaignGroupId(campaignId, campaignGroupIds),
+            campaignGroupNames,
+            S["(No campaign group)"].Value,
+            S["(Unknown campaign group)"].Value);
+    }
+
+    private static string ResolveCampaignGroupId(
+        string campaignId,
+        IReadOnlyDictionary<string, string> campaignGroupIds)
+    {
+        return !string.IsNullOrEmpty(campaignId) &&
+            campaignGroupIds.TryGetValue(campaignId, out var campaignGroupId)
+            ? campaignGroupId ?? string.Empty
+            : string.Empty;
     }
 
     private sealed record ActivityAgeBucket(string Label, double FromDays, double ToDays);

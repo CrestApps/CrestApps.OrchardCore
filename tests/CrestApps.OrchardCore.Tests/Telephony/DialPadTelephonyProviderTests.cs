@@ -149,6 +149,31 @@ public sealed class DialPadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task MergeAsync_WithMultipleCalls_MergesEachAdditionalCallIntoPrimary()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.MergeAsync(
+            new MergeRequest
+            {
+                CallIds = ["call-1", "call-2", "call-3"],
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(
+            handler.Requests,
+            request => Assert.Equal($"{BaseUrl}call/call-1/merge", request.RequestUri.AbsoluteUri));
+        Assert.True((bool)result.Call.Metadata["isConference"]);
+        Assert.Equal(3, result.Call.Metadata["participantCount"]);
+    }
+
+    [Fact]
     public async Task GetClientCredentialsAsync_WhenConfigured_ReturnsProviderName()
     {
         // Arrange

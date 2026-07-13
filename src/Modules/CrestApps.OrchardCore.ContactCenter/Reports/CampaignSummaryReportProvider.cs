@@ -74,6 +74,27 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
 
         document.Add(ReportSection.ForTable(S["Campaigns"].Value, ContactCenterReportCells.ProgressColumns(S, S["Campaign"].Value), rows));
 
+        var noCampaignGroup = S["(No campaign group)"].Value;
+        var unknownCampaignGroup = S["(Unknown campaign group)"].Value;
+        var groupRows = new List<ReportRow>();
+
+        foreach (var row in report.GroupRows)
+        {
+            groupRows.Add(new ReportRow(ContactCenterReportCells.Progress(
+                string.IsNullOrEmpty(row.CampaignGroupId)
+                    ? noCampaignGroup
+                    : string.IsNullOrEmpty(row.CampaignGroupName)
+                        ? unknownCampaignGroup
+                        : row.CampaignGroupName,
+                row.Counts)));
+        }
+
+        groupRows.Add(new ReportRow(ContactCenterReportCells.Progress(S["All campaign groups"].Value, report.Totals), emphasize: true));
+        document.Add(ReportSection.ForTable(
+            S["Campaign groups"].Value,
+            ContactCenterReportCells.ProgressColumns(S, S["Campaign group"].Value),
+            groupRows));
+
         return document;
     }
 }

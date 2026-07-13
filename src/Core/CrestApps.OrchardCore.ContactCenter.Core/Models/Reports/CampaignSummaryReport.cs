@@ -22,6 +22,11 @@ public sealed class CampaignSummaryReport
     public IList<CampaignSummaryRow> Rows { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the campaign-group summary rows.
+    /// </summary>
+    public IList<CampaignGroupSummaryRow> GroupRows { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the combined progress counts across every campaign in the report.
     /// </summary>
     public ActivityProgressCounts Totals { get; set; } = new();

@@ -1,22 +1,12 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
-@model OmnichannelCampaignViewModel
+@model OmnichannelCampaignGroupViewModel
 
 <div class="ocat-wrapper">
     <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="CampaignGroupId" class="ocat-label">@T["Campaign group"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignGroupId" asp-items="Model.CampaignGroups" class="form-select">
-            <option value="">@T["No campaign group"]</option>
-        </select>
-        <span class="hint">@T["Groups let reports aggregate results across related campaigns."]</span>
     </div>
 </div>
 

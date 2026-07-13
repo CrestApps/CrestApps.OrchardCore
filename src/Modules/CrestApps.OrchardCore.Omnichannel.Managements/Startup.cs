@@ -114,6 +114,10 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<OmnichannelCampaign>, OmnichannelCampaignHandler>();
 
         services
+            .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<OmnichannelCampaignGroup>, OmnichannelCampaignGroupHandler>();
+
+        services
             .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
 
@@ -291,6 +295,7 @@ public sealed class ReportsStartup : StartupBase
         services.AddScoped<IReport>(serviceProvider => new EnterpriseActivityReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>(),
             serviceProvider.GetRequiredService<INamedCatalogManager<OmnichannelDisposition>>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));

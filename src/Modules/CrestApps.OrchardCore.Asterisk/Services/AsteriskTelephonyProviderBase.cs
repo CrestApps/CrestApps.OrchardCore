@@ -444,9 +444,11 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
     public async Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.PrimaryCallId) || string.IsNullOrWhiteSpace(request.SecondaryCallId))
+        var callIds = request?.GetCallIds();
+
+        if (callIds is null || callIds.Count < 2)
         {
-            return TelephonyResult.Failed(S["Both call ids are required to merge calls."].Value);
+            return TelephonyResult.Failed(S["At least two call ids are required to merge calls."].Value);
         }
 
         var settings = await GetResolvedSettingsAsync(cancellationToken);
@@ -492,7 +494,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
             var addChannelQuery = new Dictionary<string, string>
             {
-                ["channel"] = $"{request.PrimaryCallId},{request.SecondaryCallId}",
+                ["channel"] = string.Join(',', callIds),
             };
 
             using var addChannelResponse = await SendAsync(
@@ -516,32 +518,27 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 return TelephonyResult.Failed(S["The calls could not be merged."].Value);
             }
 
-            var primaryTracked = await SetChannelVariableAsync(
-                settings,
-                request.PrimaryCallId,
-                AsteriskConstants.ConferenceBridgeVariableName,
-                bridgeId,
-                cancellationToken);
-            var secondaryTracked = await SetChannelVariableAsync(
-                settings,
-                request.SecondaryCallId,
-                AsteriskConstants.ConferenceBridgeVariableName,
-                bridgeId,
-                cancellationToken);
-            var primaryHoldCleared = await SetChannelVariableAsync(
-                settings,
-                request.PrimaryCallId,
-                AsteriskConstants.HoldStateVariableName,
-                bool.FalseString,
-                cancellationToken);
-            var secondaryHoldCleared = await SetChannelVariableAsync(
-                settings,
-                request.SecondaryCallId,
-                AsteriskConstants.HoldStateVariableName,
-                bool.FalseString,
-                cancellationToken);
+            var allChannelsTracked = true;
 
-            if (!primaryTracked || !secondaryTracked || !primaryHoldCleared || !secondaryHoldCleared)
+            foreach (var callId in callIds)
+            {
+                var tracked = await SetChannelVariableAsync(
+                    settings,
+                    callId,
+                    AsteriskConstants.ConferenceBridgeVariableName,
+                    bridgeId,
+                    cancellationToken);
+                var holdCleared = await SetChannelVariableAsync(
+                    settings,
+                    callId,
+                    AsteriskConstants.HoldStateVariableName,
+                    bool.FalseString,
+                    cancellationToken);
+
+                allChannelsTracked &= tracked && holdCleared;
+            }
+
+            if (!allChannelsTracked)
             {
                 _logger.LogWarning(
                     "Asterisk merged calls for provider {ProviderName}, but conference state tracking could not be stored on every channel. BridgeId: {BridgeId}.",
@@ -550,13 +547,13 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             }
 
             return TelephonyResult.Success(BuildCall(
-                request.PrimaryCallId,
+                callIds[0],
                 CallState.Connected,
                 metadata: new Dictionary<string, object>
                 {
                     ["isConference"] = true,
                     ["conferenceBridgeId"] = bridgeId,
-                    ["participantCount"] = 2,
+                    ["participantCount"] = callIds.Count,
                 }));
         }
         catch (Exception ex)

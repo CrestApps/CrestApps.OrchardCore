@@ -32,6 +32,15 @@ else if (Model.ShowInteractionFilters)
 }
 else if (Model.ShowActivityFilters)
 {
+    @if (Model.ShowCampaignGroupFilter)
+    {
+        <div class="col p-1">
+            <label class="form-label" asp-for="CampaignGroupId">@T["Campaign group"]</label>
+            <select asp-for="CampaignGroupId" asp-items="Model.CampaignGroups" class="form-select">
+                <option value="">@T["All campaign groups"]</option>
+            </select>
+        </div>
+    }
     <div class="col p-1">
         <label class="form-label" asp-for="CampaignId">@T["Campaign"]</label>
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">

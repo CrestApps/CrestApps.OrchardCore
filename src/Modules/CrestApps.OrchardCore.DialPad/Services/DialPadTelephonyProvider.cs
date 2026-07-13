@@ -313,19 +313,47 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
     }
 
     /// <inheritdoc/>
-    public Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.SecondaryCallId))
+        var callIds = request?.GetCallIds();
+
+        if (callIds is null || callIds.Count < 2)
         {
-            return Task.FromResult(TelephonyResult.Failed(S["A second call is required to merge calls."].Value));
+            return TelephonyResult.Failed(S["At least two calls are required to merge calls."].Value);
         }
 
-        return ExecuteCallActionAsync(
-            request.PrimaryCallId,
-            "merge",
-            new Dictionary<string, object> { ["target_call_id"] = request.SecondaryCallId },
-            () => BuildCall(request.PrimaryCallId, CallState.Connected),
-            cancellationToken);
+        var primaryCallId = callIds[0];
+
+        foreach (var secondaryCallId in callIds.Skip(1))
+        {
+            var result = await ExecuteCallActionAsync(
+                primaryCallId,
+                "merge",
+                new Dictionary<string, object> { ["target_call_id"] = secondaryCallId },
+                () => BuildCall(
+                    primaryCallId,
+                    CallState.Connected,
+                    metadata: new Dictionary<string, object>
+                    {
+                        ["isConference"] = true,
+                        ["participantCount"] = callIds.Count,
+                    }),
+                cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+        }
+
+        return TelephonyResult.Success(BuildCall(
+            primaryCallId,
+            CallState.Connected,
+            metadata: new Dictionary<string, object>
+            {
+                ["isConference"] = true,
+                ["participantCount"] = callIds.Count,
+            }));
     }
 
     /// <inheritdoc/>
@@ -808,7 +836,8 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
         CallState state,
         bool isMuted = false,
         bool isOnHold = false,
-        CallDirection direction = CallDirection.Outbound)
+        CallDirection direction = CallDirection.Outbound,
+        IDictionary<string, object> metadata = null)
     {
         return new TelephonyCall
         {
@@ -818,6 +847,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             IsOnHold = isOnHold,
             Direction = direction,
             ProviderName = DialPadConstants.ProviderTechnicalName,
+            Metadata = metadata ?? new Dictionary<string, object>(),
         };
     }
 

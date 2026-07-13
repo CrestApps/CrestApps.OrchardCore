@@ -23,6 +23,11 @@ public class ContactCenterReportFilterViewModel
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected campaign group identifier.
+    /// </summary>
+    public string CampaignGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets the selected channel.
     /// </summary>
     public string Channel { get; set; }
@@ -53,6 +58,11 @@ public class ContactCenterReportFilterViewModel
     public bool ShowActivityFilters { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the campaign group filter is displayed.
+    /// </summary>
+    public bool ShowCampaignGroupFilter { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether workforce-specific filters are displayed.
     /// </summary>
     public bool ShowWorkforceFilters { get; set; }
@@ -71,6 +81,11 @@ public class ContactCenterReportFilterViewModel
     /// Gets or sets the campaign options.
     /// </summary>
     public IList<SelectListItem> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the campaign group options.
+    /// </summary>
+    public IList<SelectListItem> CampaignGroups { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the channel options.

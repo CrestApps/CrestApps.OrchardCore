@@ -1,4 +1,6 @@
 using System.Globalization;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -14,18 +16,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
 {
     private readonly ISession _session;
+    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivitySummaryReportProvider"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="campaignManager">The campaign manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivitySummaryReportProvider(
         ISession session,
+        ICatalogManager<OmnichannelCampaign> campaignManager,
         IStringLocalizer<ActivitySummaryReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
         _session = session;
+        _campaignManager = campaignManager;
     }
 
     /// <inheritdoc/>
@@ -47,7 +53,7 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
             _session,
             context.FromUtc,
             context.ToUtc,
-            OmnichannelReportFilter.GetCriteria(context.Filter),
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken),
             cancellationToken);
         var data = OmnichannelReportAggregator.BuildActivitySummary(activities);
 

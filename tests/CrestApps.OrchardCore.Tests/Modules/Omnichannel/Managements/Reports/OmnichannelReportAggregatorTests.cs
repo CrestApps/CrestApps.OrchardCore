@@ -65,6 +65,34 @@ public sealed class OmnichannelReportAggregatorTests
     }
 
     [Fact]
+    public void BuildCampaignGroupPerformance_AggregatesCampaignsInSameGroup()
+    {
+        // Arrange
+        var activities = new[]
+        {
+            Campaign("camp-1", ActivityStatus.Completed),
+            Campaign("camp-2", ActivityStatus.NotStated),
+            Campaign("camp-3", ActivityStatus.Failed),
+        };
+        var campaignGroupIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["camp-1"] = "group-1",
+            ["camp-2"] = "group-1",
+            ["camp-3"] = "group-2",
+        };
+
+        // Act
+        var data = OmnichannelReportAggregator.BuildCampaignGroupPerformance(activities, campaignGroupIds);
+
+        // Assert
+        Assert.Equal(2, data.Rows.Count);
+        var group = data.Rows.Single(row => row.CampaignGroupId == "group-1");
+        Assert.Equal(2, group.Counts.Total);
+        Assert.Equal(1, group.Counts.Completed);
+        Assert.Equal(1, group.Counts.Pending);
+    }
+
+    [Fact]
     public void CountByDisposition_CountsCompletedByDisposition()
     {
         // Arrange
@@ -103,6 +131,7 @@ public sealed class OmnichannelReportAggregatorTests
         var criteria = new OmnichannelReportCriteria
         {
             CampaignId = "campaign-1",
+            CampaignIds = new HashSet<string>(["campaign-1"], StringComparer.Ordinal),
             Channel = OmnichannelConstants.Channels.Phone,
             Source = ActivitySources.Inbound,
             Status = ActivityStatus.Completed,

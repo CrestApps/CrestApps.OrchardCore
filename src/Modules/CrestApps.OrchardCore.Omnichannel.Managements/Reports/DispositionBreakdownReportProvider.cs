@@ -14,21 +14,25 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
 {
     private readonly ISession _session;
+    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DispositionBreakdownReportProvider"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="campaignManager">The campaign manager.</param>
     /// <param name="dispositionManager">The disposition manager used to resolve disposition names.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DispositionBreakdownReportProvider(
         ISession session,
+        ICatalogManager<OmnichannelCampaign> campaignManager,
         INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IStringLocalizer<DispositionBreakdownReportProvider> stringLocalizer)
         : base(stringLocalizer)
     {
         _session = session;
+        _campaignManager = campaignManager;
         _dispositionManager = dispositionManager;
     }
 
@@ -51,7 +55,7 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
             _session,
             context.FromUtc,
             context.ToUtc,
-            OmnichannelReportFilter.GetCriteria(context.Filter),
+            await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken),
             cancellationToken);
         var counts = OmnichannelReportAggregator.CountByDisposition(completed);
         var dispositions = await _dispositionManager.GetAllAsync(cancellationToken);

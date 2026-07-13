@@ -96,7 +96,7 @@ provider follows DialPad's documented requirements:
 
 ## Capabilities
 
-The DialPad provider advertises support for dialing, hang up, hold, resume, mute, transfer, merge, sending DTMF digits, receiving inbound calls, and provider-directory lookup. The soft phone UI uses these capabilities to decide which controls to display. Transfer directory lookup calls DialPad's paginated company-users endpoint, displays the user's name, and prefers the internal extension before falling back to the assigned phone number.
+The DialPad provider advertises support for dialing, hang up, hold, resume, mute, transfer, merge, sending DTMF digits, receiving inbound calls, and provider-directory lookup. The soft phone UI uses these capabilities to decide which controls to display. Multi-party conference requests are executed as sequential DialPad merge operations that merge every additional selected call into the primary call. Transfer directory lookup calls DialPad's paginated company-users endpoint, displays the user's name, and prefers the internal extension before falling back to the assigned phone number.
 
 ## How call control works
 

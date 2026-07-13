@@ -85,6 +85,38 @@ internal static class OmnichannelReportAggregator
     }
 
     /// <summary>
+    /// Builds campaign performance aggregated by campaign group.
+    /// </summary>
+    /// <param name="activities">The activities created in the period.</param>
+    /// <param name="campaignGroupIds">The campaign-to-group mapping.</param>
+    /// <returns>The aggregated campaign-group performance.</returns>
+    public static OmnichannelCampaignGroupPerformanceData BuildCampaignGroupPerformance(
+        IReadOnlyList<OmnichannelActivityIndex> activities,
+        IReadOnlyDictionary<string, string> campaignGroupIds)
+    {
+        var data = new OmnichannelCampaignGroupPerformanceData();
+
+        foreach (var group in activities.GroupBy(
+            activity => ResolveCampaignGroupId(activity.CampaignId, campaignGroupIds),
+            StringComparer.Ordinal))
+        {
+            var counts = BuildCounts(group.ToArray());
+
+            data.Rows.Add(new OmnichannelCampaignGroupRow
+            {
+                CampaignGroupId = group.Key,
+                Counts = counts,
+            });
+
+            Accumulate(data.Totals, counts);
+        }
+
+        data.Rows = data.Rows.OrderByDescending(row => row.Counts.Total).ToList();
+
+        return data;
+    }
+
+    /// <summary>
     /// Counts the completed activities grouped by disposition.
     /// </summary>
     /// <param name="completedActivities">The activities completed in the period.</param>
@@ -151,5 +183,15 @@ internal static class OmnichannelReportAggregator
         totals.InProgress += counts.InProgress;
         totals.Failed += counts.Failed;
         totals.Cancelled += counts.Cancelled;
+    }
+
+    private static string ResolveCampaignGroupId(
+        string campaignId,
+        IReadOnlyDictionary<string, string> campaignGroupIds)
+    {
+        return !string.IsNullOrEmpty(campaignId) &&
+            campaignGroupIds.TryGetValue(campaignId, out var campaignGroupId)
+            ? campaignGroupId ?? string.Empty
+            : string.Empty;
     }
 }

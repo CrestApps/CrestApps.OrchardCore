@@ -17,17 +17,21 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
+    private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelReportFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="campaignManager">The campaign manager.</param>
+    /// <param name="campaignGroupManager">The campaign group manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelReportFilterDisplayDriver(
         ICatalogManager<OmnichannelCampaign> campaignManager,
+        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
         IStringLocalizer<OmnichannelReportFilterDisplayDriver> stringLocalizer)
     {
         _campaignManager = campaignManager;
+        _campaignGroupManager = campaignGroupManager;
         S = stringLocalizer;
     }
 
@@ -59,6 +63,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.CampaignId, model.CampaignId);
+        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.CampaignGroupId, model.CampaignGroupId);
         OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Channel, model.Channel);
         OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Source, model.Source);
         OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Status, model.Status);
@@ -69,6 +74,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)
     {
         model.CampaignId = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.CampaignId);
+        model.CampaignGroupId = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.CampaignGroupId);
         model.Channel = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Channel);
         model.Source = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Source);
         model.Status = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Status);
@@ -78,6 +84,13 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         model.Campaigns = campaigns
             .OrderBy(campaign => campaign.DisplayText)
             .Select(campaign => new SelectListItem(campaign.DisplayText ?? campaign.ItemId, campaign.ItemId))
+            .ToList();
+
+        var campaignGroups = await _campaignGroupManager.GetAllAsync();
+
+        model.CampaignGroups = campaignGroups
+            .OrderBy(group => group.DisplayText)
+            .Select(group => new SelectListItem(group.DisplayText ?? group.ItemId, group.ItemId))
             .ToList();
 
         model.Channels =

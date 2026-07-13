@@ -163,11 +163,14 @@ When the import file is not already using E.164 phone numbers, select the defaul
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
 
-### 5) Create a Campaign
+### 5) Create Campaign Groups and Campaigns
 
-1. Go to `Interaction Center` → `Campaigns`.
-2. Create the campaign name and description.
-3. Save the campaign.
+1. Optionally go to `Interaction Center` → `Campaign Groups` and create a name and description for a reporting group.
+2. Go to `Interaction Center` → `Campaigns`.
+3. Create the campaign name and description and optionally select its campaign group.
+4. Save the campaign.
+
+Campaign groups let reporting users combine multiple related campaigns without changing activity execution. Activities continue to store the campaign identifier, and reports resolve the campaign's current group when they run. Moving a campaign to another group therefore changes the group used for historical aggregation.
 
 ### 6) Configure Subject Flows
 

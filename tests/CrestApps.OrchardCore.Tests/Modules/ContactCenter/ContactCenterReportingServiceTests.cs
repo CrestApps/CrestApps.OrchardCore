@@ -322,9 +322,23 @@ public sealed class ContactCenterReportingServiceTests
         {
             ["camp-1"] = "Winback",
         };
+        var campaignGroupIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["camp-1"] = "group-1",
+        };
+        var campaignGroupNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["group-1"] = "Retention",
+        };
 
         // Act
-        var report = ContactCenterReportingService.BuildCampaignSummary(_from, _to, activities, names);
+        var report = ContactCenterReportingService.BuildCampaignSummary(
+            _from,
+            _to,
+            activities,
+            names,
+            campaignGroupIds,
+            campaignGroupNames);
 
         // Assert
         var row = Assert.Single(report.Rows);
@@ -338,6 +352,9 @@ public sealed class ContactCenterReportingServiceTests
         Assert.Equal(1, row.Counts.Cancelled);
         Assert.Equal(0.2d, row.Counts.CompletionRate);
         Assert.Equal(5, report.Totals.Total);
+        var groupRow = Assert.Single(report.GroupRows);
+        Assert.Equal("Retention", groupRow.CampaignGroupName);
+        Assert.Equal(5, groupRow.Counts.Total);
     }
 
     [Fact]
@@ -354,6 +371,8 @@ public sealed class ContactCenterReportingServiceTests
             _from,
             _to,
             activities,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            new Dictionary<string, string>(StringComparer.Ordinal),
             new Dictionary<string, string>(StringComparer.Ordinal));
 
         // Assert
@@ -387,10 +406,24 @@ public sealed class ContactCenterReportingServiceTests
         {
             ["campaign-ai-reminders"] = "AI appointment reminders",
         };
+        var campaignGroupIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["campaign-ai-reminders"] = "group-reminders",
+        };
+        var campaignGroupNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["group-reminders"] = "Customer reminders",
+        };
 
         // Act
         var calls = ContactCenterReportingService.BuildCallInsights(_from, _to, interactions);
-        var campaigns = ContactCenterReportingService.BuildCampaignSummary(_from, _to, activities, campaignNames);
+        var campaigns = ContactCenterReportingService.BuildCampaignSummary(
+            _from,
+            _to,
+            activities,
+            campaignNames,
+            campaignGroupIds,
+            campaignGroupNames);
 
         // Assert
         Assert.Equal(5, calls.Total);
@@ -409,6 +442,7 @@ public sealed class ContactCenterReportingServiceTests
         Assert.Equal(1, campaign.Counts.InProgress);
         Assert.Equal(1, campaign.Counts.Failed);
         Assert.Equal(0.6d, campaign.Counts.CompletionRate);
+        Assert.Equal("Customer reminders", Assert.Single(campaigns.GroupRows).CampaignGroupName);
         Assert.All(activities, activity =>
         {
             Assert.Equal(ActivityInteractionType.Automated, activity.InteractionType);

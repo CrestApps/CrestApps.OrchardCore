@@ -167,9 +167,12 @@ public sealed class AsteriskTelephonyProviderTests
             {
                 bridgeLookupCount++;
 
-                return JsonResponse(bridgeLookupCount == 1
-                    ? """{"id":"bridge-1","channels":["call-2"]}"""
-                    : """{"id":"bridge-1","channels":[]}""");
+                return JsonResponse(bridgeLookupCount switch
+                {
+                    1 => """{"id":"bridge-1","channels":["call-2","call-3"]}""",
+                    2 => """{"id":"bridge-1","channels":["call-3"]}""",
+                    _ => """{"id":"bridge-1","channels":[]}""",
+                });
             }
 
             return new HttpResponseMessage(HttpStatusCode.NoContent);
@@ -180,8 +183,7 @@ public sealed class AsteriskTelephonyProviderTests
         var mergeResult = await provider.MergeAsync(
             new MergeRequest
             {
-                PrimaryCallId = "call-1",
-                SecondaryCallId = "call-2",
+                CallIds = ["call-1", "call-2", "call-3"],
             },
             TestContext.Current.CancellationToken);
         var firstHangup = await provider.HangupAsync(
@@ -190,11 +192,20 @@ public sealed class AsteriskTelephonyProviderTests
         var secondHangup = await provider.HangupAsync(
             new CallReference { CallId = "call-2" },
             TestContext.Current.CancellationToken);
+        var thirdHangup = await provider.HangupAsync(
+            new CallReference { CallId = "call-3" },
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(mergeResult.Succeeded);
         Assert.True(firstHangup.Succeeded);
         Assert.True(secondHangup.Succeeded);
+        Assert.True(thirdHangup.Succeeded);
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}bridges/bridge-1/addChannel?channel=call-1,call-2,call-3");
         Assert.Contains(
             handler.Requests,
             request => request.Method == HttpMethod.Post &&
@@ -215,6 +226,11 @@ public sealed class AsteriskTelephonyProviderTests
             request => request.Method == HttpMethod.Post &&
                 request.RequestUri.AbsoluteUri ==
                 $"{BaseUrl}channels/call-2/variable?variable={AsteriskConstants.HoldStateVariableName}&value=False");
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}channels/call-3/variable?variable={AsteriskConstants.HoldStateVariableName}&value=False");
         Assert.Contains(
             handler.Requests,
             request => request.Method == HttpMethod.Delete &&

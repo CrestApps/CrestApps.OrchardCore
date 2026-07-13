@@ -280,6 +280,12 @@
       var key = stateName.charAt(0).toLowerCase() + stateName.slice(1);
       return strings[key] || stateName;
     }
+    function statusTextForCall(call) {
+      if (metadataBoolean(call, 'isConference')) {
+        return strings.inConference || 'In conference';
+      }
+      return statusTextForState(normalizeState(call && call.state));
+    }
     function getPeerNumber(call) {
       if (!call) {
         return '';
@@ -578,18 +584,14 @@
         return;
       }
       var calls = getActiveCalls();
-      var selectedCallIds = Object.keys(conferenceSelections).filter(function (callId) {
-        return !!activeCalls[callId];
-      });
       show(dom.activeCalls, calls.length > 0);
       dom.activeCallsList.innerHTML = calls.map(function (call) {
         var callId = call.callId || '';
         var selected = !!conferenceSelections[callId];
         var current = currentCall && currentCall.callId === callId;
         var number = formatPhoneNumber(getPeerNumber(call)) || callId;
-        var state = statusTextForState(normalizeState(call.state));
-        var disableSelection = !selected && selectedCallIds.length >= 2;
-        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + (disableSelection ? ' disabled' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
+        var state = statusTextForCall(call);
+        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
       }).join('');
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-call-select]'), function (button) {
         button.addEventListener('click', function () {
@@ -692,7 +694,7 @@
       show(dom.footer, true);
       updateTabs();
       showView(activeTab);
-      setStatus(currentCall ? statusTextForState(stateName) : strings.idle || 'Ready');
+      setStatus(currentCall ? statusTextForCall(currentCall) : strings.idle || 'Ready');
       if (dom.peer) {
         dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
       }
@@ -715,7 +717,7 @@
       show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
       show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
       show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
-      show(dom.merge, selectedConferenceCallIds.length === 2 && has(CAPABILITIES.Merge));
+      show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
       if (dom.number) {
         dom.number.disabled = !canDial || !!activeCommand;
       }
@@ -725,7 +727,7 @@
         }
       });
       if (dom.merge) {
-        dom.merge.disabled = !!activeCommand || selectedConferenceCallIds.length !== 2;
+        dom.merge.disabled = !!activeCommand || selectedConferenceCallIds.length < 2;
       }
       dom.keys.forEach(function (button) {
         button.disabled = active && stateName !== 'Connected' && stateName !== 'OnHold' || !!activeCommand;
@@ -948,15 +950,25 @@
       var callIds = Object.keys(conferenceSelections).filter(function (callId) {
         return !!activeCalls[callId];
       });
-      if (callIds.length !== 2) {
-        showError(strings.selectCallsToMerge || 'Select two calls to conference.');
+      if (callIds.length < 2) {
+        showError(strings.selectCallsToMerge || 'Select at least two calls to conference.');
         return;
       }
       invoke('Merge', {
-        primaryCallId: callIds[0],
-        secondaryCallId: callIds[1]
+        callIds: callIds
       }).then(function (result) {
         if (result && result.succeeded !== false) {
+          callIds.forEach(function (callId) {
+            var call = activeCalls[callId];
+            if (!call) {
+              return;
+            }
+            call.state = 'Connected';
+            call.isOnHold = false;
+            call.metadata = call.metadata || {};
+            call.metadata.isConference = true;
+            call.metadata.participantCount = callIds.length;
+          });
           conferenceSelections = {};
           render();
         }
@@ -1386,11 +1398,12 @@
         var inProgress = isInProgress(interaction);
         var directionGlyph = inbound ? "\u2199" : "\u2197";
         var number = inbound ? interaction.from || '' : interaction.to || '';
+        var formattedNumber = formatPhoneNumber(number);
         var label = missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
         var time = formatTime(interaction.startedUtc);
         var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
         var meta = escapeHtml(label) + (time ? " \u2022 " + escapeHtml(time) : '');
-        return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(number || label) + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
+        return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || label) + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
       }).join('');
       Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {

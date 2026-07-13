@@ -13,6 +13,11 @@ public class OmnichannelReportFilterViewModel
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected campaign group identifier.
+    /// </summary>
+    public string CampaignGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets the selected channel.
     /// </summary>
     public string Channel { get; set; }
@@ -31,6 +36,11 @@ public class OmnichannelReportFilterViewModel
     /// Gets or sets the campaign options.
     /// </summary>
     public IList<SelectListItem> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the campaign group options.
+    /// </summary>
+    public IList<SelectListItem> CampaignGroups { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the channel options.

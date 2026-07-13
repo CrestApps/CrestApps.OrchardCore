@@ -11,6 +11,7 @@ internal static class ContactCenterReportFilter
     public const string QueueId = "QueueId";
     public const string AgentId = "AgentId";
     public const string CampaignId = "CampaignId";
+    public const string CampaignGroupId = "CampaignGroupId";
     public const string Channel = "Channel";
     public const string Direction = "Direction";
     public const string ActivitySource = "ActivitySource";
@@ -23,6 +24,7 @@ internal static class ContactCenterReportFilter
             QueueId = GetString(filter, QueueId),
             AgentId = GetString(filter, AgentId),
             CampaignId = GetString(filter, CampaignId),
+            CampaignGroupId = GetString(filter, CampaignGroupId),
             ActivitySource = GetString(filter, ActivitySource),
             Channel = GetEnum<InteractionChannel>(filter, Channel),
             Direction = GetEnum<InteractionDirection>(filter, Direction),

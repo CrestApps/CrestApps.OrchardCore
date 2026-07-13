@@ -58,6 +58,13 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Permission(OmnichannelConstants.Permissions.ManageCampaigns)
                     .LocalNav()
                 )
+                .Add(S["Campaign Groups"], S["Campaign Groups"].PrefixPosition(), campaignGroups => campaignGroups
+                    .AddClass("campaign-groups")
+                    .Id("campaignGroups")
+                    .Action("Index", "CampaignGroups", "CrestApps.OrchardCore.Omnichannel.Managements")
+                    .Permission(OmnichannelConstants.Permissions.ManageCampaignGroups)
+                    .LocalNav()
+                )
                 .Add(S["Dispositions"], S["Dispositions"].PrefixPosition(), dispositions => dispositions
                     .AddClass("dispositions")
                     .Id("dispositions")
