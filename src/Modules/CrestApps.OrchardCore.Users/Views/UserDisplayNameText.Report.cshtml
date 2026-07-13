@@ -4,6 +4,8 @@
 @inject UserManager<IUser> UserManager
 @inject IDisplayNameProvider DisplayNameProvider
 @{
+    Layout = null;
+
     var user = await UserManager.FindByNameAsync((string)Model.UserName);
     var displayName = user is null
         ? Model.UserName
