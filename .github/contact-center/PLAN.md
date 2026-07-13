@@ -1,11 +1,11 @@
 # Contact Center Module Architecture and Implementation Plan
 
-> **Status:** Active. This is the durable, repository-tracked design and progress document for the Contact Center module set. It is referenced from `.github/copilot-instructions.md` so every AI session reviews it before doing Contact Center work.
+> **Status:** Active; commercial production release is blocked. The independent production-readiness review dated 2026-07-13 found release-blocking tenant-isolation, feature-composition, concurrency, provider, security, and validation gaps. This is the durable, repository-tracked design and progress document for the Contact Center module set. It is referenced from `.github/copilot-instructions.md` so every AI session reviews it before doing Contact Center work.
 >
 > **How to use this document:**
 >
-> - Read the **Progress status** section (bottom) first to see what is done and what is next.
-> - Treat the **Phased delivery plan** as the source of truth for scope and ordering. Start at the lowest incomplete phase.
+> - Read the **Independent production-readiness review (2026-07-13)** and **Progress status** sections first. The production-readiness remediation gates override older completion claims when they conflict.
+> - Treat the **Test-first remediation program** as the immediate source of truth. Do not resume advanced capability work until its predecessor release gates are complete.
 > - Keep the **Progress status** section current after each meaningful change (what shipped, what is in progress, decisions made).
 > - Never write competitor product names in code, comments, public docs, or identifiers. Adopt only the industry-standard concepts and terminology captured in the **Standard contact center terminology and metrics** section.
 > - Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item. `Interaction` is communication history for one attempt and never owns workflow or disposition.
@@ -14,9 +14,11 @@
 
 Design an enterprise-grade Contact Center orchestration layer for the existing Orchard Core communications platform. The Contact Center must extend Omnichannel Management instead of introducing a separate work model, sit between CRM and Telephony, own routing and communication orchestration, and allow agents and supervisors to operate directly inside the CRM UI without depending on an external contact center system.
 
-The design is intentionally domain- and architecture-focused. It does not include code or low-level implementation details.
+The document began as a domain and architecture plan. It now also records implementation evidence, production-readiness findings, release gates, and the required test-first remediation sequence.
 
-## Current codebase baseline
+## Historical starting baseline
+
+The following baseline describes the codebase at the start of the Contact Center project. The later progress ledger and the 2026-07-13 independent review describe the current implementation.
 
 ### Existing Telephony boundary
 
@@ -71,7 +73,7 @@ Required CRM alignment:
 
 Design implication: Contact Center should add its own real-time event stream for agent desktop, supervisor dashboard, and queue monitors, and it should consume or normalize Telephony events instead of overloading TelephonyHub with routing responsibilities.
 
-### Current gaps to solve
+### Historical gaps that initiated the project
 
 - No communication-history Interaction domain object linked to CRM activities across voice sessions, future channels, routing, and analytics.
 - CRM activities need nullable ownership, assignment/reservation metadata, and source/kind classification so dialers can work unassigned inventory safely.
@@ -116,8 +118,10 @@ Design implication: Contact Center should add its own real-time event stream for
 ### Orchard modules and features
 
 1. `CrestApps.OrchardCore.ContactCenter`
-   - Base Contact Center module and dependency root.
-   - Core feature: interaction management, event log, tenant settings, baseline permissions, and admin navigation.
+   - Headless Contact Center module and dependency root.
+   - Core feature: interaction management, event log, tenant settings, and baseline permissions.
+   - Must depend on the Omnichannel base/domain boundary, not the Omnichannel Managements administration feature.
+   - Admin navigation and CRM-management UI integration belong in an explicit administration bridge feature.
 
 2. `CrestApps.OrchardCore.ContactCenter.Queues`
    - Queues, queue membership, queue priorities, overflow rules, SLA settings, queue metrics, and queue monitor surfaces.
@@ -138,8 +142,9 @@ Design implication: Contact Center should add its own real-time event stream for
    - Outbound campaign dialing modes: manual, preview, power, progressive, and later predictive.
    - Pacing, retry, agent reservation before dialing, callback scheduling, DNC/compliance checks, and activity/campaign integration.
 
-7. `CrestApps.OrchardCore.ContactCenter.WrapUp`
-   - Wrap-up timers, required disposition rules, disposition validation, post-interaction completion, and CRM activity updates.
+7. Contact Center after-call work and disposition lifecycle
+   - This is not a separate aggregate or feature. It is the coordinated state of the active `Interaction`, `AgentSession`/presence, `OmnichannelActivity`, and source-neutral activity disposition path.
+   - Owns wrap-up timestamps, timeout/recovery policy, required disposition validation, post-interaction completion, CRM activity updates, and capacity release without introducing `WrapUpSession`.
 
 8. `CrestApps.OrchardCore.ContactCenter.Supervision`
    - Supervisor live monitoring, agent monitoring, queue controls, coaching/assist metadata, SLA alerts, and operational command permissions.
@@ -377,17 +382,17 @@ MVP dialer modes:
 - Progressive after stable routing and reservations.
 - Predictive only after reliable historical metrics and abandonment controls exist.
 
-### 7. Disposition & Wrap-Up Management
+### 7. Disposition & After-Call Work Management
 
 | Area | Design |
 | --- | --- |
-| Purpose | Govern post-communication activity completion, required outcomes, timers, notes, CRM activity updates, and follow-up automation. |
-| Responsibilities | Start wrap-up when interaction work ends; enforce required activity disposition rules by queue/subject/campaign; track wrap-up duration; save notes and outcome; update CRM activity through `IActivityDispositionService`; trigger subject actions and optional workflows; release agent capacity when wrap-up completes or times out. |
-| Data owned | Wrap-up session, wrap-up start/end, required disposition policy, disposition source, notes, completion state, timer policy, auto-close policy, and validation results. |
+| Purpose | Govern post-communication activity completion, required outcomes, after-call-work timing, notes, CRM activity updates, and follow-up automation. |
+| Responsibilities | Move the interaction and agent session into after-call work when communication ends; enforce required activity disposition rules by queue/subject/campaign; track wrap-up duration; save notes and outcome; update CRM activity through `IActivityDispositionService`; trigger subject actions and optional workflows; recover abandoned wrap-up safely; release agent capacity when completion or timeout policy reaches a terminal result. |
+| Data owned | Wrap-up timestamps on the Interaction, after-call-work state on the AgentSession/presence projection, required disposition policy, disposition source, notes, completion state, timeout/recovery policy, and validation results. No separate `WrapUpSession` aggregate is used. |
 | Events consumed | CallEnded, ChannelSessionEnded, InteractionWorkCompleted, DispositionSelected, WrapUpTimerExpired, AgentSubmittedWrapUp. |
 | Events emitted | WrapUpStarted, DispositionRequired, DispositionSelected, WrapUpCompleted, ActivityCompleted, SubjectActionsRequested, PostInteractionWorkflowRequested, AgentReleased. |
 | Interactions | Updates CRM Activity and Subject data; executes existing Subject Actions; optionally emits OrchardCore workflow events; informs Agent Presence and Analytics. It never dispositions an Interaction. |
-| Why it exists | Contact center work is not complete when the call ends. Wrap-up ensures business outcomes are captured consistently through the Activity and agents are released at the correct time. |
+| Why it exists | Contact center work is not complete when communication ends. After-call work ensures business outcomes are captured consistently through the Activity and agents are released at the correct time without duplicating the work item or introducing a redundant aggregate. |
 
 Activity disposition service:
 
@@ -704,6 +709,7 @@ The data model below is conceptual only.
 | Entity | Purpose | Key relationships |
 | --- | --- | --- |
 | OmnichannelActivity | Universal CRM work item | Links to Contact, Campaign, Subject, Disposition, assignment/reservation metadata, ActivityKind, ActivitySource, and zero or more Interactions |
+| ContactCenterWorkState | Versioned volatile orchestration state for one activity; target replacement for mutable queue/reservation/assignment fields embedded in the CRM activity | Keyed by OmnichannelActivity id; links to current QueueItem, ActivityReservation, assigned AgentSession, active Interaction, and compare-and-set version |
 | Interaction | Communication-history record for one activity attempt | Links to OmnichannelActivity, provider session/call id, queue history, transfer history, call legs, recording/transcript references |
 | InteractionParticipant | Customer, agent, supervisor, AI agent, external party | Belongs to Interaction |
 | InteractionEvent | Durable domain event history | References Interaction and event envelope |
@@ -722,7 +728,7 @@ The data model below is conceptual only.
 | DialerProfile | Outbound dialing configuration | References Campaign, Queue, pacing and retry policy |
 | DialerRun | Execution instance for outbound campaign work | References DialerProfile and campaign/activity set |
 | DialerAttempt | Single outbound attempt | References DialerRun, Interaction, Activity, CallSession |
-| WrapUpSession | Post-work completion period | References OmnichannelActivity, latest Interaction, Agent, Disposition |
+| After-call work state | Post-communication completion state, represented by Interaction wrap-up timestamps plus AgentSession/presence | References OmnichannelActivity, latest Interaction, Agent, required disposition and timeout/recovery policy; it is not a separate aggregate |
 | ActivityDispositionRequest | Source-neutral disposition command | References OmnichannelActivity, Disposition, source, actor, notes |
 | MetricSnapshot | Aggregated operational analytics | References queue, agent, campaign, time bucket |
 | EntryPoint | Inbound front door configuration | References number/DID mapping, IVR flow, business hours, target queues |
@@ -743,7 +749,7 @@ Relationship overview:
 ```text
 Contact ContentItem
   -> OmnichannelActivity
-       -> QueueItem / AgentReservation / WrapUpSession
+       -> ContactCenterWorkState / QueueItem / AgentReservation
        -> Activity Disposition -> Subject Actions / Workflow bridge
        -> Interaction*
             -> CallSession / Provider session
@@ -792,7 +798,7 @@ WorkCompleted -> CallbackScheduled -> Queued
 9. Real-Time UX offers the interaction to the agent desktop.
 10. Agent accepts, and Contact Center asks Telephony to answer/connect/bridge according to the provider capability.
 11. Call Session Management tracks voice lifecycle events.
-12. When the call ends, Wrap-Up starts.
+12. When the call ends, the Interaction and AgentSession enter after-call work and record wrap-up start.
 13. Agent selects disposition and completes required fields.
 14. CRM activity is updated and Subject Actions or optional workflows run.
 15. Analytics projections and supervisor dashboards update.
@@ -894,7 +900,7 @@ MVP includes:
 9. Call session mapping from Telephony call id to Interaction.
 10. Manual and preview outbound dialing that selects Activities, not Contacts.
 11. Power dialing after reservations are stable.
-12. Wrap-up timer, required activity disposition, notes, CRM activity completion, and Subject Action execution through `IActivityDispositionService`.
+12. After-call-work timing and recovery, required activity disposition, notes, CRM activity completion, Subject Action execution through `IActivityDispositionService`, and deterministic capacity release without a separate `WrapUpSession`.
 13. Agent desktop CRM integration for next work, current activity, interaction history, call controls, and wrap-up.
 14. Supervisor live queue and agent monitor.
 15. Tenant-scoped permissions and audit trail.
@@ -1039,15 +1045,15 @@ Goals:
 - Enforce required disposition rules by queue, subject, and campaign.
 - Track wrap-up time, notes, selected disposition, and completion.
 - Execute existing Subject Actions and optionally emit workflow events.
-- Release agent capacity after wrap-up completion or timeout.
+- Recover browser/session loss during after-call work and release capacity only after a deterministic completion or timeout policy.
 
 Deliverables:
 
-- Wrap-up feature.
+- Interaction/AgentSession after-call-work lifecycle; no separate `WrapUpSession` aggregate or hard feature boundary.
 - Required disposition policies.
 - Activity completion integration.
 - Subject Action integration.
-- Timer and timeout behavior.
+- Timeout, recovery, and abandoned-session behavior.
 - Tests for required dispositions, wrap-up release, activity update, and subject action execution.
 
 ### Phase 7: Agent desktop and supervisor real-time UX
@@ -1369,7 +1375,9 @@ All dialer strategies must share compliance checks, retry policies, callbacks, p
 
 ## Design review: closing the gap to a state-of-the-art dialer
 
-> Added 2026-06-30 after a full review of the shipped Contact Center code against industry-standard cloud contact center / dialer platforms. This section is the authoritative gap list and execution order for turning the current foundation into a state-of-the-art inbound + outbound voice contact center. Treat every unchecked item here as in-scope work, and keep the linked phase checklist below in sync as items ship.
+> **Historical and superseded by the 2026-07-13 independent production-readiness review.** Retained to explain prior implementation decisions; do not action this section when it conflicts with the target domain model, R0-R9 remediation program, or production release gates below.
+>
+> Added 2026-06-30 after a review of the then-shipped Contact Center code against industry-standard cloud contact center and dialer capabilities.
 
 ### Verdict
 
@@ -1417,7 +1425,7 @@ It is **not yet a working dialer**. The step that actually connects a customer t
 | # | Gap | Refs | Recommendation |
 | --- | --- | --- | --- |
 | 9 | No standalone **CallSession** aggregate / provider-event normalization; provider call state, legs, hold/transfer/conference, and talk/hold/wait durations are not projected. | no `CallSession` type exists; `Interaction.cs` | Add `CallSession` + normalized `ProviderVoiceEvent` ingestion with duration metrics and leg/transfer chains. |
-| 10 | No **wrap-up** lifecycle: no timer, required-disposition policy, auto-close, structured notes, or capacity release after wrap-up. | `DefaultActivityDispositionService.cs` | Add `WrapUpSession`, per-queue/subject/campaign required-disposition rules, timeout, and capacity release on completion/timeout. |
+| 10 | No **wrap-up** lifecycle: no timer, required-disposition policy, auto-close, structured notes, or capacity release after wrap-up. | `DefaultActivityDispositionService.cs` | Superseded: persist after-call deadline/recovery on Interaction/`ContactCenterWorkState`, enforce per-queue/subject/campaign required-disposition rules, and release capacity on completion/timeout without adding `WrapUpSession`. |
 | 11 | **Routing** is required-skills + longest-idle over a single queue. No routing policy, overflow, business-hours/holiday gating, sticky agent, skill proficiency, language, customer tier, SLA aging, or bullseye/skill-relaxation expansion. | `ActivityRoutingService.cs`, `RequiredSkillsRoutingStrategy.cs`, `LongestIdleRoutingStrategy.cs` | Add `RoutingPolicy`, `QueueMembership`, proficiency levels, business-hours calendars, overflow targets, and sticky-agent + priority/SLA strategies. |
 | 12 | **Inbound front door** maps one DID → one queue (or a single unmapped fallback). No IVR/self-service, business-hours/holiday gating, menu/intent/language capture, callback offer, voicemail fallback, estimated wait/position, or ambiguous-contact handling (router blindly takes `contactIds[0]`). | `VoiceContactCenterCallRouter.cs`, `src/Modules/CrestApps.OrchardCore.ContactCenter/Services/InboundContactLookup.cs` | Build Entry Points: number mapping, hours/holidays, IVR flow, callback/voicemail, pre-routing enrichment, screen-pop on connect, and a multi-match disambiguation rule. |
 | 13 | **Agent live state** is mixed into `AgentProfile` (admin-owned skills/queues + volatile presence/reservation), and there is no heartbeat, so a closed browser leaves an agent `Available` and offers route to a dead client. | `AgentProfile.cs`, `AgentPresenceManagerService.cs` | Split admin `AgentProfile` from a live `AgentSession` with SignalR connection heartbeat, stale-session cleanup, and capacity counters. |
@@ -1442,32 +1450,442 @@ Replace the thin `IContactCenterVoiceProvider` with a capability-described bound
 - **Delivery model capability (critical).** Providers fall into two families and the orchestration must branch on this:
   - `AgentDeviceNative` (soft-phone/WebRTC, e.g. DialPad): the customer call already rings the agent's registered client; Contact Center reserves/offers/tracks and tells the provider which agent/extension to ring, but does not bridge media itself.
   - `ServerSideAcd` (PBX/CCaaS queue): the provider parks/queues the live call and Contact Center issues `AssignCall`/`Bridge` to connect it to the selected agent.
-- **Lifecycle operations (capability-gated, provider-neutral intents):** `Dial`, `Bridge/Connect`, `Answer`, `Hangup`, `Hold`/`Resume`, `Transfer` (blind/consultative, to agent/queue/external), `Conference`, `SendDigits`, `Park`, `Recording` (start/stop/pause/resume), `Monitor`/`Whisper`/`Barge`/`TakeOver`.
+- **Lifecycle operations (capability-gated, provider-neutral intents):** `Dial`, `Bridge/Connect`, `Answer`, `Hangup`, `Hold`/`Resume`, `Transfer` (blind/consultative, to agent/queue/external), `Conference`, `SendDigits`, `Park`, `Recording` (start/stop/pause/resume), `Monitor`/`Whisper`/`Barge`/`TakeOver`. Every advertised capability must have an executable provider contract; a flag without an invokable operation is invalid.
 - **Inbound + state events:** a normalized `ProviderVoiceEvent` (provider event id, idempotency key, call id, leg id, normalized state, from/to, queue/agent hints, timestamps, sanitized raw metadata) delivered through an `IProviderVoiceEventHandler`, replacing the current assumption that inbound always arrives as a fully-formed `InboundVoiceEvent` posted to an authorized endpoint.
-- **Capabilities enum** must grow to cover the above so the agent desktop and supervisor UI hide/disable unsupported actions exactly like `TelephonyCapabilities` does today.
+- **Capability contracts** must cover the above so the agent desktop and supervisor UI hide unsupported actions exactly like `TelephonyCapabilities` does today. Prefer small executable interfaces per capability family over one ever-growing provider interface.
 
 ### Execution order (maps onto existing phases)
 
 1. **Voice foundation hardening (completes Phase 4):** provider boundary redesign + delivery models, `CallSession` aggregate, `ProviderVoiceEvent` normalization, and the unified Contact Center call-command service that delivers media to the agent on inbound accept and outbound answer. *(P0 #1, #2, #3; P1 #9)*
 2. **Assignment safety (hardens Phases 2/3):** distributed-lock/single-writer assignment, capacity enforcement, live `AgentSession` + heartbeat + stale cleanup, real-time offer timeout. *(P0 #6, #7; P1 #13, #14)*
-3. **Wrap-up + completion unification (completes Phase 6):** wrap-up session, required-disposition policies, capacity release, contact-center-aware completion path through `IActivityDispositionService`. *(P0 #8; P1 #10)*
+3. **After-call work + completion unification (completes Phase 6):** Interaction/AgentSession after-call-work state, required-disposition policies, timeout/recovery, capacity release, and the contact-center-aware completion path through `IActivityDispositionService`; no separate `WrapUpSession` aggregate. *(P0 #8; P1 #10)*
 4. **Dialer safety (completes Phase 5, pulls forward Phase 10 essentials):** strategy-per-mode, eligibility/compliance gate (DNC, preferences, calling windows, retry cool-down, suppression audit), cap Power, block Predictive. *(P0 #4, #5)*
 5. **Agent desktop + supervisor real-time UX (Phase 7):** CRM-integrated cockpit, supervisor dashboards, queue monitor, live call-control intents. *(P1 #15, #16)*
 6. **Eventing/outbox + provider webhooks (hardens Phase 1, extends Phase 4):** outbox, projections, idempotency, signed webhook adapters. *(P1 #17, #18)*
 7. **Inbound entry points/IVR (Phase 8), recording/monitoring (Phase 9), compliance hardening (Phase 10), and analytics (Phase 12)** proceed per the existing phase plan once the above is stable.
 
+## Independent production-readiness review (2026-07-13)
+
+> This review supersedes any older phase or gap item that claims completion while conflicting evidence below remains open. A historical checkmark means an implementation increment shipped; it does not mean the capability is approved for commercial production.
+
+### Board verdict
+
+**Commercial production release is rejected until every P0 gate is closed by automated evidence.** The codebase has a valuable architectural foundation, a clean warnings-as-errors build, substantial unit coverage, and a real provider/eventing implementation. It is not yet safe to claim multi-tenant isolation, multi-node correctness, regulated automated dialing, production observability, executable recording/monitoring, or enterprise scale.
+
+The fundamental ownership model remains approved:
+
+- Omnichannel/CRM owns the business work item, contact, campaign, subject flow, disposition, and business actions.
+- Contact Center owns queueing, routing, reservations, agent orchestration, after-call work, interaction history, provider-command coordination, and operational projections.
+- Telephony/providers own call/media execution, provider authentication, and provider state truth.
+- `OmnichannelActivity` remains the universal business work item. A separate Contact Center work item must not be introduced.
+
+The implementation strategy is revised in four important ways:
+
+1. Canonical mutable state plus database compare-and-set is the correctness authority. Distributed locks are an optimization and contention-control mechanism, never the sole invariant.
+2. The event log remains an audit/integration stream with transactional outbox/inbox semantics. Do not claim event sourcing until every projection has versioned replay, checkpoints, deterministic rebuild, and operational tooling.
+3. Volatile orchestration state should migrate out of the large CRM activity document into a versioned `ContactCenterWorkState` keyed by activity id, while stable business classification and final disposition remain on `OmnichannelActivity`. The migration must name one authority per field and phase; it must not rely on unfenced dual writes.
+4. Advanced capabilities must be unavailable unless a provider registers an executable capability contract. A capability flag and a success-shaped domain event are not proof that media work occurred.
+
+### Validation baseline and review limits
+
+| Evidence | Result | Interpretation |
+| --- | --- | --- |
+| Strict Release build | 84 projects, 0 warnings, 0 errors with warnings-as-errors and analyzers | Compiler and analyzer hygiene is strong; runtime composition and distributed correctness remain unproven. |
+| Unit suite | 1,439 passed, 0 failed, 0 skipped | Good regression foundation, but most tests are in-process and do not prove tenant shells, databases, multiple nodes, or real providers. |
+| Telephony Playwright suite | 24 passed, 0 failed | Validates the isolated soft-phone asset against a custom test host; it does not boot an Orchard tenant or exercise Contact Center features, permissions, queues, routing, reconnect, or supervisor flows. |
+| Feature activation testing | No complete shell/tenant matrix exists | A feature can compile while failing as soon as a tenant enables a legal manifest combination. |
+| Distributed/load/chaos testing | No repeatable Contact Center harness exists | No multi-node, network-partition, provider-outage, Redis-outage, rolling-upgrade, or scale claim is approved. |
+| Azure-specific review | Tool-limited by explicit user decision because the required Azure best-practices tool was unavailable | Azure topology, identity, networking, service limits, and managed-service recommendations require a separate tool-backed validation before an Azure reference architecture is published. |
+
+### P0 commercial release blockers
+
+| Gate | Finding and evidence | Required production outcome |
+| --- | --- | --- |
+| PR0 — Tenant isolation | `ContactCenterHub.SupervisorsGroup` is the global name `cc:supervisors`, and `ContactCenterRealTimeNotifier` broadcasts to it and targets `Clients.User(userId)` without a tenant component (`Hubs/ContactCenterHub.cs:30,94-99`; `Services/ContactCenterRealTimeNotifier.cs:32-86`). These identities can collide when tenant shells share a hub lifetime manager or production backplane. | Centralize tenant-qualified group names and tenant-qualified user identity using an immutable shell key, such as a tenant-aware `IUserIdProvider` or tenant-qualified user groups. The isolation proof must run with the production backplane enabled because in-memory shell separation can mask cross-node collisions. |
+| PR1 — Queue/campaign authorization | Hub membership commands accept arbitrary queue and campaign ids and persist them without manager-owned entitlement checks (`Hubs/ContactCenterHub.cs:220-244`; `AgentPresenceManagerService.cs:55-107,124-160`). Routing trusts those memberships. | Separate administrative entitlements from session opt-in. Authorize every requested membership and group subscription server-side; an agent can never self-enroll in restricted work. |
+| PR2 — Feature composition | The base feature depends on `CrestApps.OrchardCore.Omnichannel.Managements`; `QueuesStartup` registers a Telephony soft-phone driver that requires `HubRouteManager`, but Queues declares neither Telephony nor SignalR/RealTime; Voice depends on `Telephony.SoftPhone`, coupling server orchestration to UI (`ContactCenter/Manifest.cs`; `ContactCenter/Startup.cs:210-262,337-420`; `ContactCenterSoftPhoneWidgetDisplayDriver.cs:24-80`). | Make the base headless, split server voice from soft-phone integration, and make every startup registration belong to a manifest feature whose declared transitive dependencies provide every required service. |
+| PR3 — Agent availability and after-call recovery | Disconnect marks the `AgentSession` offline, stale cleanup scans online sessions, and routing selects `AgentProfile` by Available presence without requiring a live session (`ContactCenterHub.cs:113-126`; `AgentSessionStore.cs:35-40`; `AgentProfileStore.cs:40-45`). A crash during after-call work can also leave a nonterminal interaction consuming capacity indefinitely. | Route from canonical eligibility that combines manager-owned `QueueMembership` with `AgentAvailability` (approved liveness contributor + valid presence + capacity) and session opt-in. Persist `WrapUpDeadlineUtc` and required-disposition state on `ContactCenterWorkState` or Interaction, and sweep it server-side so capacity release never depends on a connected client. |
+| PR4 — Atomic assignment and dialing | Reservation/enqueue paths are read-then-write without database uniqueness/CAS, and `DialerAttemptService` can dial before reservation acceptance; failed acceptance has no provider hangup compensation (`ActivityReservationService.cs:79-156`; `DialerAttemptService.cs:93-118,145-170`). | Add row versions/conditional writes and unique active queue-item/reservation constraints. Persist the command intent and accepted reservation before provider execution, use idempotent command ids, and compensate partial provider success. |
+| PR5 — Atomic provider ingest and deploy-safe outbox | Provider-event deduplication is check-then-insert and CallSession lacks a unique provider-call identity (`ProviderVoiceEventService.cs:125-147,221-257`; `CallSessionIndexMigrations.cs:32-47`). Provider aliases have already required canonicalization repairs. Outbox completed-handler keys use assembly-qualified names plus registration index (`ContactCenterOutbox.cs:172`), so a deployment can replay already completed handlers. | Canonicalize provider identity before deriving keys; store aliases only as diagnostics. Add a transactional provider inbox, unique `(CanonicalProviderKey, ProviderCallId)` and event-id constraints, migration/repair for alias duplicates, monotonic compare-and-set state updates, and stable explicit versioned handler ids. Poison work must not block later due messages. |
+| PR6 — Multi-node provider and real-time ownership | Every node can subscribe to the same Asterisk tenant event stream, while fallback Telephony mutation has no single-writer/monotonic sequence guard (`AsteriskRealtimeVoiceListener.cs:139-149`; `AsteriskRealtimeVoiceEventDispatcher.cs`). SignalR has no configured/proven backplane (`CrestApps.OrchardCore.SignalR/Startup.cs:26-38`; `CrestApps.Aspire.AppHost/Program.cs:18,26-35`). | Make duplicate ingestion transactionally harmless through canonical idempotency, provider sequence/high-water marks, and monotonic state as the correctness invariant. A listener lease/election may reduce load but is not the correctness authority. Ship and test a supported SignalR backplane before any multi-node claim. |
+| PR7 — Secrets and PII | The shipped Asterisk listener logs a URI containing `api_key=user:password` (`AsteriskRealtimeVoiceListener.cs:139-146`; `AsteriskSettingsUtilities.cs:157-175`). Telephony/SMS logs can include raw addresses. | Remove credential-bearing URI logs and centralize structured PII classification/redaction with negative log tests. Raw secrets, customer addresses, and stable personal identifiers must not enter normal logs. |
+| PR7a — Development-host containment | The Asterisk dashboard development host exposes diagnostics, call origination, hangup, and bridge deletion anonymously (`CrestApps.OrchardCore.Asterisk.Web/Program.cs:27-82`). | Guarantee the host is excluded from production artifacts and clearly marked development-only. Add a Production startup guard and local binding as defense in depth; only add full privileged auth if the host is intentionally distributed. |
+| PR8 — CRM attribution correctness | Inbound contact lookup can return multiple matches and the router chooses `contactIds[0]` without ordering or ambiguity state (`InboundContactLookup.cs:31-68`; `VoiceContactCenterCallRouter.cs:464-469`). | Persist unresolved/single/ambiguous resolution. Do not assign the activity to a contact or run contact-bound subject actions until ambiguity is resolved explicitly. |
+| PR9 — Capability truth | Recording and supervisor monitoring services change state/publish success events, but provider contracts expose no recording or monitor/whisper/barge/take-over operations (`ContactCenterRecordingService.cs:28-79`; `ContactCenterMonitoringService.cs:33-74`; `IContactCenterVoiceProvider.cs`). | GA-Core must fail closed: hide and reject Recording, Monitoring, and BidirectionalMedia until each capability has a separately certified executable contract. If any is included in the initial GA profile, provider execution, durable session, consent/retention/access audit, and end-to-end media proof become R8 prerequisites. |
+| PR10 — Regulated outbound safety | The current eligibility window is hour-only and omits day-of-week, holidays, minute precision, regional policy, abandonment caps, safe-harbor behavior, and AMD (`DefaultDialerEligibilityService.cs:153-173`). | Reuse business-hours calendars, validate configurations, add regional compliance and rolling abandonment policies, and keep automatic Power/Progressive/Predictive modes unavailable until certified by tests and legal/product policy. |
+| PR11 — Production proof | No Orchard feature-shell matrix, Contact Center Orchard browser suite, supported-database concurrency matrix, multi-node test, load/soak test, or chaos gate exists. | Release only when all gates below run automatically in CI or a documented release pipeline and publish retained evidence. |
+| PR12 — Internet-facing provider ingress | Anonymous webhook endpoints buffer whole bodies and tie orchestration to request cancellation (`ProviderVoiceWebhookEndpoint.cs:14-45`; `DialPadWebhookController.cs:19-24,63-85`). | Before enabling any route, enforce provider-specific body/header and rate/concurrency limits, freshness/replay policy, authentication before processing, server-owned durable inbox acceptance independent of client disconnect, and 2xx only after inbox commit. |
+
+### P1 enterprise requirements
+
+| Area | Evidence-backed gap | Target |
+| --- | --- | --- |
+| Package and feature boundaries | Provider modules reference Contact Center implementation assemblies; Asterisk registers Contact Center adapters from its base feature; the Workflows bridge is activated only through `[RequireFeatures("OrchardCore.Workflows")]` and has no independently selectable Contact Center feature; Omnichannel Managements resolves optional dialer services dynamically. | Providers reference stable abstractions only. Add explicit Asterisk/DialPad Contact Center adapter features, a real `ContactCenter.Workflows` feature, and Omnichannel-owned contributor contracts instead of reverse references/service location. |
+| Database constraints and indexes | Hot queue, outbox, and active-call queries are not led by their filter columns; routing loads broad sets and performs per-agent active-count queries. | Normalize queue membership/capacity counters, use bounded top-N queries, add provider-specific covering indexes, and verify query plans on every supported database. |
+| Background work | Callback promotion and provider reconciliation are unbounded and duplicate-prone; one poison outbox item can block later due work. | Claim bounded batches with owner/lease expiry, checkpoint provider scans, rate-limit external lookups, continue past poison work, and expose backlog/age metrics. |
+| Analytics/projections | Metric increments have no processed-event guard/checkpoint and rebuild tooling is incomplete. | Add projection versions, unique `(Projection, EventId)` processing records, atomic upserts, replay checkpoints, drift detection, and rebuild operations. |
+| Observability and health | No Contact Center `ActivitySource`, `Meter`, liveness, or readiness model exists. | Add traces, counters/histograms, structured correlation, and health states for database, outbox/dead letters, task lag, provider connectivity, listener lease, and backplane. |
+| Web/API hardening | Stored subject text reaches `innerHTML` in activity completion preview, and the authenticated raw `InboundVoiceEvent` endpoint duplicates the signed provider ingress under a broad interaction-management permission. | Construct UI with encoded DOM/text APIs and enforce CSP-compatible rendering. Unify production provider ingress and isolate simulators behind a development-only host or dedicated integration permission/credential. |
+| Provider command semantics | SignalR client disconnect can cancel state-changing PBX commands; Asterisk RTP needs a documented secure network boundary and sequence-aware jitter/reorder behavior; media stop ignores caller cancellation while acquiring its lock. | Use server-owned idempotent command timeouts, explicit secure media deployment requirements, jitter/reorder tests, and linked bounded shutdown cancellation. |
+| Data governance and upgrades | Retention covers only interaction events; call sessions, Telephony history, metrics, recordings, and PII erasure remain. Destructive migrations are not proven safe for rolling deployment. | Define classification/retention/erasure per entity and use expand-migrate-contract, or explicitly require and document downtime. |
+| Public API and DI | Concrete orchestration types are public without extension need; post-commit handlers and the hub hide dependencies behind service location/child scopes. | Audit and baseline the public API, internalize implementation types where framework discovery permits, and make post-commit/shell-scope execution explicit and testable. |
+| Browser and CI coverage | The existing Playwright host does not boot Orchard Contact Center, and primary workflows do not run the browser suite or future feature/provider/load gates. | Add Orchard-hosted agent/supervisor/provider E2E and layered CI with actionable diagnostics and retained artifacts. |
+
+### Target domain and persistence model
+
+| Model | Ownership and invariant |
+| --- | --- |
+| `OmnichannelActivity` | Universal CRM business work item. Owns contact/campaign/subject/disposition, stable kind/source classification, business schedule, and final business completion. It does not become a queue/reservation/session aggregate. |
+| `ContactCenterWorkState` | Single-row-per-activity versioned orchestration authority. Owns current queue item, assignment/reservation linkage, routing/capacity state, active attempt pointer, `WrapUpDeadlineUtc`, required-disposition state, and compare-and-set/fencing version. Its migration uses add → backfill → verify → read cutover → write cutover → contract, with explicit N/N-1 behavior, divergence repair, and rollback point; no unfenced dual write is allowed. |
+| `Interaction` | Immutable identity plus evolving communication-attempt history linked to one activity. Owns channel, participants, technical outcome, wrap-up timestamps, and terminal lifecycle, but never the business disposition. |
+| `CallSession` | Voice-session projection with unique provider identity, provider sequence/high-water mark, legs, hold/conference/transfer state, and durations. |
+| `AgentProfile` | Administrative configuration: user, skills/proficiency, teams, non-queue permissions metadata, and capacity policy. Queue entitlements live in QueueMembership; no volatile connection or active-reservation state belongs here. |
+| `AgentSession` | Live tenant-scoped presence, connections, selected memberships within entitlement, current capacity usage, after-call state, heartbeat, and fencing/version token. |
+| `QueueMembership` | Manager-owned normalized entitlement/configuration in the Queues feature rather than a mutable string/id list on the profile. Session-selected queue ids are separate and must be validated against this entitlement. |
+| `AgentAvailability` projection | Headless Availability-owned liveness, presence, capacity, and active reservation/interaction projection. It does not own queue definitions or entitlements. Routing forms an eligible candidate by joining AgentAvailability with QueueMembership and validated session opt-in. |
+| Provider inbox/command outbox | Durable idempotency and command coordination boundary. A provider event is acknowledged only after durable inbox acceptance; a provider command uses a stable command id and explicit `Pending`, `Claimed/Fenced`, `Sent`, `OutcomeUnknown`, `Confirmed`, `Compensating`, and terminal states. Unknown outcomes are queried/reconciled before retry; the platform pauses work rather than risking a duplicate customer action. |
+
+Persistence rules:
+
+- Enforce one `ContactCenterWorkState` per activity through an unconditional portable key, then use its version/fencing token for queue/reservation/assignment compare-and-set. Add provider-specific indexes only as optimizations; do not depend on filtered unique indexes that cannot be modeled consistently across supported databases.
+- Use database compare-and-set or conditional update as the final authority. A lock or listener lease expiring must not permit an invariant violation.
+- Keep transactions short and never hold a database transaction across provider/network calls.
+- Commit the owning domain state change and its outbox record atomically in the same tenant database transaction. Cross-context CRM/Contact Center changes use an idempotent saga with explicit reconciliation rather than best-effort synchronous dual writes. Provider/network handlers run after commit, have stable ids, and document idempotency and compensation behavior.
+- Add explicit indexes from observed query predicates and validate plans on SQLite, PostgreSQL, and SQL Server before declaring those databases supported for Contact Center.
+- For every replayable projection, define source-event retention horizon, checkpoint/version, replacement snapshot/archive, legal-hold and erasure transformation, and the rebuild guarantee after source events are purged. Purge is blocked until recovery from the retained source is proven.
+- Do not introduce Elasticsearch as a transactional dependency. It may later serve transcript/history search through an optional projection with explicit mappings, aliases, bulk indexing, replay, and outage degradation.
+
+### Target Orchard Core feature graph
+
+The target graph below is normative. Names may be adjusted during implementation, but the boundaries and dependency direction may not.
+
+```text
+CrestApps.OrchardCore.ContactCenter
+  -> CrestApps.OrchardCore.Omnichannel
+
+CrestApps.OrchardCore.ContactCenter.Admin
+  -> ContactCenter
+  -> CrestApps.OrchardCore.Omnichannel.Managements
+
+ContactCenter.Agents
+  -> ContactCenter
+
+ContactCenter.Availability
+  -> ContactCenter.Agents
+
+ContactCenter.Queues
+  -> ContactCenter.Availability
+
+ContactCenter.Routing
+  -> ContactCenter.Queues
+
+ContactCenter.RealTime
+  -> ContactCenter.Queues
+  -> ContactCenter.Availability
+  -> CrestApps.OrchardCore.SignalR
+
+ContactCenter.Voice
+  -> ContactCenter.Routing
+  -> CrestApps.OrchardCore.Telephony
+
+ContactCenter.Voice.SoftPhone
+  -> ContactCenter.Voice
+  -> ContactCenter.RealTime
+  -> CrestApps.OrchardCore.Telephony.SoftPhone
+
+ContactCenter.AgentDesktop
+  -> ContactCenter.Availability
+  -> ContactCenter.RealTime
+  -> ContactCenter.Voice.SoftPhone
+  -> CrestApps.OrchardCore.Omnichannel.Managements
+
+ContactCenter.Dialer
+  -> ContactCenter.Voice
+  -> ContactCenter.Routing
+
+ContactCenter.Compliance
+  -> ContactCenter.Dialer
+
+ContactCenter.Dialer.Automated
+  -> ContactCenter.Dialer
+  -> ContactCenter.Compliance
+
+ContactCenter.EntryPoints
+  -> ContactCenter.Voice
+  -> ContactCenter.Routing
+
+ContactCenter.Supervision
+  -> ContactCenter.RealTime
+  -> ContactCenter.Voice
+
+ContactCenter.Recording
+  -> ContactCenter.Voice
+
+ContactCenter.Voice.Media
+  -> ContactCenter.Voice
+
+ContactCenter.Analytics
+  -> ContactCenter
+  -> only the capability features whose projections it actually consumes
+
+ContactCenter.Workflows
+  -> ContactCenter
+  -> OrchardCore.Workflows
+
+ContactCenter.Deployment
+  -> explicit capability features represented by each recipe/deployment step
+
+Asterisk
+  -> Telephony
+
+Asterisk.ContactCenterVoice
+  -> Asterisk
+  -> ContactCenter.Voice
+
+Asterisk.ContactCenterMedia
+  -> Asterisk.ContactCenterVoice
+  -> ContactCenter.Voice.Media
+
+DialPad
+  -> Telephony
+
+DialPad.ContactCenterVoice
+  -> DialPad
+  -> ContactCenter.Voice
+```
+
+Feature rules:
+
+- Every `StartupBase` that contributes an optional capability must have an owning `[Feature(...)]`; `[RequireFeatures]` alone is not an independently selectable feature.
+- Every required constructor dependency must be provided by the feature's declared transitive dependency graph. `IEnumerable<T>` and service location must not be used to hide a required feature relationship.
+- Optional integration uses contributor/provider contracts owned by the lower-level bounded context. Omnichannel Managements must not reference Contact Center implementation to discover optional dialer behavior.
+- `ContactCenter.Availability` owns AgentSession, fencing, heartbeat timestamps, cleanup, after-call deadlines, presence/capacity, and AgentAvailability without depending on SignalR. RealTime and provider-presence adapters are liveness contributors. If no approved contributor reports a live agent, Voice/Routing must hold or reject work rather than assume availability.
+- `ContactCenter.Queues` owns QueueMembership entitlements and validates session-selected queue ids. Routing joins QueueMembership with AgentAvailability; Availability must not depend upward on queue definitions.
+- Server-side Voice must operate without SoftPhone or RealTime. Soft-phone display drivers and hub URLs belong only to `Voice.SoftPhone`.
+- Agent Workspace/CRM surfaces belong to `ContactCenter.AgentDesktop`, not Queues, Voice, or the headless base.
+- `ContactCenter.Dialer` supports only Manual/Preview policies in GA-Core. Power/Progressive services and UI belong to `ContactCenter.Dialer.Automated`, which hard-depends on `ContactCenter.Compliance`; Predictive remains a later separately certified feature.
+- Provider base features must operate without Contact Center. Contact Center adapters and media transports are separately enabled.
+- A host with two tenants must support different legal feature sets simultaneously without shared static state, group names, settings, caches, listeners, or provider credentials.
+- Maintain a versioned finite support matrix of GA feature sets, provider capability sets, database/version combinations, and topologies. Generate activation tests from it and reject or clearly mark unlisted combinations as unsupported.
+- Every disable/re-enable path must define quiesce, drain, listener shutdown, active-work disposition, pending-command handling, and reconciliation. Test Voice, RealTime, Dialer, provider adapters, and media features while offers/calls/outbox work are active.
+
+### Test-first remediation program
+
+Every item follows red → green → refactor: add a deterministic failing characterization or invariant test first, make the smallest correctness change, then refactor behind the now-green tests. Do not combine feature-boundary rewrites with domain behavior changes unless an integration test proves both old and new behavior.
+
+#### R0 — Freeze the support contract, objectives, ownership, and failure reproductions
+
+Tests first:
+
+- Re-run and pin the exact baseline commands, commit/worktree identity, counts, and artifacts at R0 start; the review baseline was 1,439 unit tests and 24 Telephony browser tests, but future work must not assume those counts remain static.
+- Publish the finite GA support matrix: legal tenant feature sets, provider capability sets, databases/versions, node/backplane topology, prohibited combinations, and the initial supported capacity tier.
+- Define percentile SLOs, error budgets, dependency limits, RPO/RTO, and acceptance owners before index, telemetry, or load work begins.
+- Create a PR-to-test control matrix with a DRI, approver, test id, CI job, provider/database/topology, invariant, and retained evidence for every P0/P1 gate.
+- **R0a in-process/shared-database reproductions:** add failing tests for two-shell tenant isolation and authorization; legal feature activation; disconnected-agent and wrap-up capacity; double reservation using two service providers over one shared database; provider-call orphan and `OutcomeUnknown`; duplicate/out-of-order/canonical-provider events; rolling-version outbox handler replay; ambiguous contact attribution; fake recording/monitoring success; webhook limits; secret/PII logs; and development-host exposure.
+- **R0b distributed reproductions:** land a single-host, two-shell test using the production Redis/backplane configuration so R1 can prove tenant-qualified groups/users. Track the genuine multi-process duplicate provider stream, listener lease loss, node failure, and network-partition failures; R2 expands the harness to two or more processes so R3/R4 can turn each into a red test before changing its behavior.
+- Add an architecture test that extracts manifests/startup ownership and detects required services from undeclared features.
+
+Exit: every P0 has an owned falsification test or an explicit R0b harness dependency, the finite support/capacity contract and SLOs are approved, and no production code is refactored before its applicable red test exists.
+
+#### R1 — Contain security and tenant-isolation defects
+
+Changes:
+
+- Tenant-qualify every SignalR group and subscription.
+- Add manager-owned queue/campaign entitlements and enforce them on all hub, endpoint, controller, recipe, and routing paths.
+- Remove secret-bearing and raw-PII logs; add centralized structured redaction tests.
+- Make the Asterisk simulator development-only/local-only or fully authenticated and authorized; remove committed production-like credentials.
+- Replace unsafe `innerHTML` construction with encoded DOM APIs and add CSP-compatible XSS tests.
+- Before any provider webhook is enabled, enforce body/header limits, rate/concurrency limits, freshness/replay policy, authentication, durable inbox acceptance independent of request cancellation, and 2xx only after inbox commit.
+
+Exit: two-tenant isolation tests with the production backplane, authorization boundary tests, secret/PII log snapshots, development-host security tests, XSS tests, and provider-ingress abuse/cancellation tests pass.
+
+#### R2 — Correct the feature and package graph without changing behavior
+
+Changes:
+
+- Split the headless base from Omnichannel Managements admin integration.
+- Introduce explicit Availability, Routing, Voice.SoftPhone, AgentDesktop, Compliance, Dialer.Automated, Workflows, provider Contact Center adapter, and provider media features.
+- Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
+- Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
+- Make post-commit handler execution and Orchard shell child scopes explicit abstractions instead of scattered service location.
+- Expand the R0 single-host backplane fixture into the minimal two-node Orchard/Redis-backplane/provider-listener harness needed by distributed R0b scenarios.
+- Define per-feature quiesce/drain/re-enable contracts and test inactive/idle enable-disable behavior before moving registrations. Defer active-call, pending-command, and in-flight-outbox quiesce proof to R3 after durable command state exists.
+
+Exit: every support-matrix feature set boots in a fresh tenant with only declared dependencies, unlisted combinations are rejected or unsupported explicitly, idle disable/re-enable is clean, quiesce contracts exist, the two-node harness runs, and two tenants with different feature sets coexist.
+
+#### R3 — Make assignment, provider commands, and event ingestion atomic
+
+Changes:
+
+- Add row versions, unique active constraints, and compare-and-set queue/reservation transitions.
+- Add canonical `AgentAvailability` and fix disconnect/heartbeat/after-call recovery.
+- Persist accepted reservation and provider command intent before execution; add idempotent command ids and compensation.
+- Add the durable provider-command state machine (`Pending`, `Claimed/Fenced`, `Sent`, `OutcomeUnknown`, `Confirmed`, `Compensating`, terminal), query/reconcile before retry, and pause rather than redial when the outcome cannot be proven.
+- Add canonical provider identity, provider inbox uniqueness, provider-call uniqueness, sequence/high-water handling, alias migration/repair, and stable outbox handler ids.
+- Isolate poison messages and make every handler's idempotency contract explicit.
+- Define atomic domain-state-plus-outbox commits and idempotent cross-context sagas; eliminate inline provider/network dispatch from mutating requests.
+- Implement and test active-work quiesce/drain/re-enable for Voice, Dialer, RealTime, provider adapters, and outbox processing using the durable command/inbox state.
+
+Exit: concurrency tests with multiple service providers/nodes produce exactly one reservation, one provider command, one valid state transition, and no capacity leak under cancellation, timeout, retry, duplicate, reordering, deployment, or active feature disable/re-enable.
+
+#### R4 — Make provider capabilities executable and provider streams highly available
+
+Changes:
+
+- Split voice capabilities into executable call-control, queue/assignment, transfer/conference, recording, monitoring, and media contracts.
+- Hide all unavailable controls and make success depend on provider confirmation.
+- Add one listener owner/lease per tenant/provider stream or prove duplicate ingestion harmless; preserve monotonic provider truth.
+- Decouple PBX mutations from SignalR connection cancellation and use bounded server-owned command timeouts.
+- For GA-Core, fail closed and hide BidirectionalMedia unless it is in the approved support matrix. If media is included, define the secure RTP deployment boundary and implement/test sequence-aware reorder/jitter handling; otherwise defer transport certification to R9.
+
+Exit: Asterisk and DialPad provider contract suites pass; two-node duplicate-stream and listener-lease-loss tests preserve one monotonic call state; unsupported capabilities cannot be invoked or displayed; any GA media capability has its separate certification.
+
+#### R5 — Correct CRM attribution and regulated outbound behavior
+
+Changes:
+
+- Add ambiguous contact resolution and defer contact-bound business actions until resolved.
+- Terminalize or avoid creating active-looking work for closed/unroutable entry points.
+- Reuse business-hours calendars for outbound windows; add minute/day/holiday/regional rules, config validation, abandonment caps, safe-harbor behavior, and AMD outcome mapping.
+- Move Power/Progressive services, settings, profiles, and UI behind `ContactCenter.Dialer.Automated`, which cannot enable without `ContactCenter.Compliance`; keep Manual/Preview on the base Dialer support profile.
+- Keep automated dialing modes disabled until their specific compliance and pacing tests pass.
+
+Exit: CRM attribution tests and the approved compliance policy suite pass with auditable suppression reasons and no silent fallback.
+
+#### R6 — Scale persistence, background work, and projections
+
+Changes:
+
+- Add query-aligned indexes and normalized queue membership/capacity data.
+- Replace broad loads/N+1 counts with bounded top-N queries and aggregate SQL.
+- Claim callbacks, reconciliation work, outbox items, and retention batches with bounded leases/checkpoints.
+- Add projection processed-event keys, atomic upserts, replay versions/checkpoints, rebuild, drift detection, and poison isolation.
+- Resolve enum/raw-SQL portability and validate every supported database.
+
+Exit: database matrix, query-count/plan budgets, duplicate/crash recovery, replay, and target workload tests pass.
+
+#### R7 — Add production operations, privacy, and upgrade safety
+
+Changes:
+
+- Add OpenTelemetry traces/metrics and health endpoints for storage, provider streams, outbox/dead letters, scheduler lag, listener lease, and SignalR backplane.
+- Wire and document the supported multi-node backplane.
+- Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
+- Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
+- Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
+- Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
+
+Exit: health/telemetry contracts, erasure/retention, backup/restore, mixed-version upgrade, and failure-injection tests pass.
+
+#### R8 — Prove end-to-end behavior and release capacity
+
+Changes:
+
+- Add an Orchard-hosted Contact Center Playwright project covering feature enablement, agent sign-in, inbound offer, accept/decline/timeout, call-state recovery, after-call work/disposition, supervisor controls, authorization failures, reconnect, and two-tenant isolation.
+- Add multi-node provider/SignalR integration, load, soak, and chaos suites.
+- Run browser, provider-contract, database, feature-matrix, security, and performance gates in CI/release workflows with retained logs/traces/results.
+- Certify the initial GA support matrix and one approved capacity tier; publish explicit limits and unsupported combinations.
+
+Exit: all production release gates pass for the exact versions/configurations being shipped.
+
+#### R9 — Resume advanced capability work only after R0-R8
+
+- Complete executable recording/monitoring, IVR/self-service, quality, workforce, AI conversation, and non-voice channel adapters only after their prerequisite contracts and release gates exist.
+- Separately certify higher scale tiers, million-record cardinality, sharding, regional failover, and optional media capabilities; these certifications expand the published support envelope without weakening GA-Core correctness.
+- Prove a second channel before generalizing a channel adapter framework; avoid speculative abstractions.
+- Do not enable Predictive dialing until historical metrics, forecasting validation, abandonment controls, legal policy, and sustained production evidence are approved.
+
+### Required automated test portfolio
+
+| Suite | Minimum scope |
+| --- | --- |
+| Domain invariant tests | Every state transition, terminal-state monotonicity, reservation/capacity invariant, after-call recovery, disposition rule, contact ambiguity, and compliance decision. |
+| Manifest/static architecture tests | Every startup belongs to a feature; every dependency exists; provider assemblies reference only approved abstractions; public API baseline; forbidden reverse references and service-locator patterns. |
+| Orchard feature activation matrix | Generate from the versioned finite support matrix: fresh tenant enable/disable for each listed feature set with only declared dependencies; migrations, routes, drivers, resources, navigation, background tasks, recipes, and deployment steps resolve; two tenants use different combinations; live-work quiesce/drain/re-enable behavior is deterministic. |
+| Provider contract tests | Shared suite for every provider: canonical identity/aliases, idempotent commands/events, lost-response `OutcomeUnknown` reconciliation, duplicate/out-of-order handling, capability/operation consistency, timeout/cancellation, transfer/conference, restart/reconciliation, webhook authentication/limits/freshness, and sanitized diagnostics. |
+| Database integration matrix | SQLite, PostgreSQL, and SQL Server for unique constraints, compare-and-set, indexes/query plans, migration/rollback policy, concurrency, retention, and replay. |
+| Multi-tenant security tests | SignalR groups, settings, secrets, queues, interactions, reports, provider streams, caches, logs, and authorization boundaries. |
+| Orchard browser E2E | Agent, supervisor, admin, reconnect, authorization, feature enablement, provider degradation, after-call work, and accessibility-critical flows in the real Orchard host. |
+| Distributed-system tests | Two or more nodes, backplane, listener lease, duplicate events, lock expiry, node crash, rolling deployment, network partition, slow provider, and retry storm. |
+| Performance tests | Routing/offer latency, queue throughput, reservation contention, outbox drain, reconciliation, report aggregation, SignalR fan-out, allocations, query counts, and provider-rate limits at approved workload tiers. |
+| Soak/chaos tests | Sustained load with SQL, Redis/backplane, provider, DNS, network, and node failures; verify bounded recovery, no duplicate customer action, no lost terminal event, and no permanent capacity leak. |
+| Security tests | Cross-tenant isolation, permission escalation, CSRF/XSS, webhook size/rate/signature/replay policy, SSRF/open redirect checks, secret/PII log snapshots, dependency scanning, and development-host exposure. |
+| Upgrade/operations tests | Expand-contract mixed-version run, backup/restore, retention/erasure, health/readiness, telemetry emission, alert thresholds, and runbook exercises. |
+
+### Capacity and service-level acceptance
+
+User-count claims must distinguish registered users/contacts from concurrent agents and active interactions. A single unpartitioned cluster is not expected to serve one million concurrent voice agents.
+
+- GA-Core must certify at least one explicitly approved concurrent-agent tier from the R0 support matrix and publish its queued-item, active-interaction, event-rate, provider, database, and SignalR assumptions. The product must reject unsupported claims rather than imply unbounded scale.
+- Maintain separate scale-certification milestones for 100, 1,000, and 10,000 concurrent agents. A tier becomes supported only after its own load/soak/resilience evidence passes; higher tiers do not silently inherit lower-tier approval.
+- Maintain independent data-cardinality certifications for 100,000 and 1,000,000 contacts, activities, interactions, events, and report-period rows because registered/data volume is not equivalent to concurrent voice load.
+- Require an explicit sharding/tenant-placement and regional-failover design before any claim above the largest tested single-cluster tier.
+- Define and approve numeric SLOs before R8 begins for routing decision latency, offer delivery latency, provider-webhook durable acknowledgement, command completion, reconnect recovery, outbox age, background-task lag, report latency, availability, RPO, and RTO.
+- No benchmark is valid unless it records hardware/service tiers, database provider/version, node count, tenant distribution, feature set, provider simulator behavior, dataset shape, warm-up, duration, percentiles, errors, allocations, query counts, and telemetry.
+
+### Production release gates
+
+1. **Security:** no open P0/P1 cross-tenant, authorization, secret, PII, webhook, XSS, or development-host findings; threat model and security review approved.
+2. **Feature safety:** every feature and supported combination passes the tenant activation matrix with only declared dependencies; provider base features work without Contact Center.
+3. **Correctness:** database constraints/CAS, provider inbox/outbox, stable handler ids, agent availability, after-call recovery, and compensation tests pass under concurrency and retry.
+4. **Provider truth:** every advertised capability has an executable contract and provider test; unsupported UI is absent; recording/monitoring remain disabled until end-to-end media execution and governance pass.
+5. **Multi-node:** cross-node SignalR, provider listener ownership, duplicate event handling, reconnect, rolling deployment, and node-loss tests pass.
+6. **Data:** supported database matrix, query-plan budgets, retention/erasure, replay/rebuild, backup/restore, and migration policy pass.
+7. **Resilience:** SQL, Redis/backplane, provider, network, and node failure exercises meet approved recovery objectives without duplicate customer action or permanent capacity loss.
+8. **Performance:** the initial GA capacity tier meets its numeric SLOs through load and soak tests with no unbounded queue, task, memory, connection, or retry growth; higher tiers remain unsupported until separately certified.
+9. **Operations:** health, readiness, telemetry, alerts, dashboards, runbooks, capacity guidance, and support matrix are complete.
+10. **Quality:** unit, feature, provider, database, browser, security, distributed, performance, chaos, and upgrade suites run in the release pipeline with retained evidence.
+11. **Documentation:** public setup, configuration, permissions, provider development, network/media, HA, backup/restore, privacy, migration, troubleshooting, and limitations docs match tested behavior.
+12. **Independent approval:** named engineering, security, SRE, privacy/legal, product, and documentation approvers review the evidence for the release profile. Tool/model reviews are advisory inputs and their dispositions remain recorded below.
+
+### Technology decisions and non-goals
+
+- Do not adopt full event sourcing merely because an event log exists. Canonical state plus transactional outbox/inbox is simpler and safer for the current maturity.
+- Do not add Elasticsearch to routing, assignment, provider ingest, or other correctness paths. Add it only as an optional search projection after mappings, aliases, bulk indexing, replay, and outage behavior are tested.
+- Do not chase Native AOT or aggressive trimming while Orchard Core's dynamic module, shape, recipe, and reflection model is the deployment foundation. Keep APIs analyzer-clean and trimming-aware where practical, but treat runtime compatibility with Orchard as authoritative.
+- Do not apply `Span<T>`, pooling, source generators, records, or newer C# syntax mechanically. Use profiling and domain semantics; immutability/value objects are valuable where they enforce invariants, while persistence/framework models must remain compatible.
+- `ConfigureAwait(false)` is not a blanket requirement in ASP.NET Core/Orchard application code. Cancellation ownership, bounded timeouts, and not coupling durable mutations to client disconnect are the actual release concerns.
+- Multi-region active-active, workforce forecasting/scheduling, quality management, and AI voice are not GA scope until the single-region multi-node foundation and release gates pass.
+
+### Independent model challenge record
+
+- **Claude Opus 4.8:** independently verified the release rejection and the highest-severity source evidence. Accepted challenges added tenant-qualified SignalR user routing with the production backplane, a durable `WrapUpDeadlineUtc` without resurrecting `WrapUpSession`, canonical provider identity before uniqueness, split R0a/R0b reproductions, portable single-row WorkState CAS, atomic state-plus-outbox/cross-context saga rules, historical-section supersession, and separate GA versus scale-certification envelopes.
+- **GPT-5.6 Terra:** independently stress-tested executability. Accepted challenges added a headless Availability feature, explicit WorkState migration/cutover/rollback phases, a finite support matrix, feature quiesce/drain/re-enable behavior, durable provider `OutcomeUnknown` command semantics, provider-ingress limits/durable acknowledgement in R1, replay-horizon/retention coupling, SLO and ownership decisions in R0, and fail-closed GA-Core treatment for optional recording/monitoring/media capabilities.
+- **Recommendations rejected or narrowed:** full event sourcing, Elasticsearch in correctness paths, resurrecting a `WrapUpSession` aggregate, treating listener/distributed locks as correctness authority, and gating the first supported GA profile on every higher-scale certification. Advanced media transport work is required only when BidirectionalMedia is included in the approved release profile; otherwise the capability remains unavailable.
+- **Final confirmation:** Claude Opus 4.8 and GPT-5.6 Terra re-read the incorporated plan and both returned `solid`, with no remaining blocking dependency, ownership, sequencing, testability, capacity, or release-gate contradiction. The plan is approved as executable test-first; product release remains blocked until the P0/R0-R8 evidence gates pass.
+
 ## Progress status
 
 Keep this section current. Use the checklist below to track phase-level progress; add dated notes under "Change log" for meaningful decisions.
 
+### Production-readiness remediation checklist
+
+This checklist is authoritative for current execution order. Historical phase and G1-G8 checkmarks below record implementation increments only; every affected capability remains production-incomplete until the corresponding remediation and release gates pass.
+
+- [ ] **R0 — Support contract, SLOs, ownership, and failure reproductions:** publish the finite GA matrix and PR-to-test ownership, pin baselines, complete R0a tests, and track R0b harness dependencies.
+- [~] **R1 — Security and tenant isolation:** tenant-qualified SignalR, queue/campaign entitlements, secret/PII redaction, simulator containment, XSS correction.
+  - [x] Tenant-qualified Contact Center and Telephony user/queue/supervisor SignalR destinations, including authorized group joins and provider-event projections.
+  - [x] Asterisk ARI credential-log redaction and development-only simulator containment.
+  - [ ] Queue/campaign entitlement enforcement, centralized operational PII redaction, stored-XSS correction, and webhook ingress hardening.
+- [ ] **R2 — Orchard feature and package graph:** headless base and Availability, explicit optional/provider features, stable abstraction references, finite activation matrix, quiesce/re-enable behavior, and two-node harness.
+- [ ] **R3 — Atomic consistency and agent lifecycle:** database CAS/constraints, canonical availability, after-call recovery, provider command outbox/compensation, provider inbox, stable handler ids.
+- [ ] **R4 — Executable provider capabilities and high availability:** recording/monitoring contracts, provider stream ownership, monotonic events, command cancellation, media transport hardening.
+- [ ] **R5 — CRM attribution and regulated outbound:** ambiguous-contact workflow, terminal unroutable records, full calling calendars, abandonment/safe-harbor/AMD policy, automated-mode gates.
+- [ ] **R6 — Persistence, background work, projections, and scale:** indexes, bounded claims/batches, projection replay/checkpoints, supported-database matrix, load budgets.
+- [ ] **R7 — Operations, privacy, and upgrades:** OpenTelemetry, health/readiness, SignalR backplane, retention/erasure, backup/restore, expand-contract migrations, failure runbooks.
+- [ ] **R8 — End-to-end production proof:** Orchard Contact Center Playwright, multi-node, load/soak/chaos, security, upgrade, and release-pipeline evidence.
+- [ ] **R9 — Advanced capabilities:** resume IVR, recording/monitoring, quality, workforce, AI, non-voice, and Predictive work only after R0-R8.
+
 ### Phase checklist
 
+- The checkboxes below are historical delivery markers, not commercial-readiness approval. The 2026-07-13 review reopened Phase 1 eventing, Phase 2/3 availability and concurrency, Phase 4 provider/feature boundaries, Phase 5/10 compliance, Phase 6 after-call recovery, Phase 7 tenant isolation, Phase 9 executable media, Phase 11 feature gating, Phase 12 projections, and Phase 13 scale/data governance.
 - [x] **Phase 0 — Project governance and durable planning**
   - [x] Durable repo-tracked plan at `.github/contact-center/PLAN.md`
   - [x] Pointer added to `.github/copilot-instructions.md`
   - [x] Public docs landing page under `src/CrestApps.Docs/docs/contact-center`
-  - [x] Module/feature map confirmed against the solution and target bundle
-- [x] **Phase 1 — Domain foundation** (CRM activity extension, interaction history, event log, base module)
+  - [~] Historical module/feature map recorded; the production target graph and activation matrix were reopened by R2.
+- [~] **Phase 1 — Domain foundation** (implementation shipped; provider inbox, stable outbox handlers, projection replay, and headless feature boundary reopened)
   - [x] `CrestApps.OrchardCore.ContactCenter.Abstractions` (constants, channel/direction/status/priority/role enums, event vocabulary)
   - [x] `OmnichannelActivity` extended with activity kind/source, assignment status, and reservation metadata so CRM activities remain the universal work item
   - [x] Load Inventory UI changed to source-first creation with Manual and Dialer sources; Dialer inventory loads load unassigned activities for later reservation
@@ -1477,12 +1895,12 @@ Keep this section current. Use the checklist below to track phase-level progress
   - [x] Registered in `.slnx` and the `Cms.Core.Targets` bundle
   - [x] 13 unit tests (event envelope, event publisher dispatch/idempotency/resilience, interaction manager lifecycle, entity metadata extensibility)
   - [x] Docs landing page + `v2.0.0` changelog entry
-- [x] **Phase 2 — Agent, presence, queue, and reservation foundation**
+- [~] **Phase 2 — Agent, presence, queue, and reservation foundation** (implementation shipped; canonical online availability and database-enforced reservation invariants reopened)
   - [x] `Agents` feature: AgentProfile (presence, capacity, skills, queue/campaign membership), store/manager/index, presence manager, soft-phone queue/campaign sign-in/out
   - [x] `Queues` feature: ActivityQueue, QueueItem, ActivityReservation models/stores/managers/indexes; queue + reservation lifecycle (reserve/accept/reject/expire); reservation-expiry background task
   - [x] Availability-based assignment service (longest-idle agent ↔ highest-priority item); agent/queue/dialer permissions; admin menu + CRUD UI; unit tests
   - [x] Assignment safety (G2 P0 core): per-queue distributed-lock single-writer assignment (P0 #7) and `MaxConcurrentInteractions` capacity enforcement via `CapacityRoutingStrategy` (P0 #6)
-- [x] **Phase 3 — Routing MVP** (policy-based routing shipped: per-queue routing strategy — longest-idle / round-robin / least-busy — plus required-skills + capacity filtering, additive sticky-agent preference, SLA-aging item selection, business-hours gating, queue overflow, and auditable routing-decision events; tests cover strategy selection, tie-breaking, business hours, SLA aging, and overflow)
+- [~] **Phase 3 — Routing MVP** (policy-based routing shipped; normalized queue membership/proficiency, bounded SQL routing, canonical availability, and scale validation reopened)
 - [x] Phase 4 — Voice integration with Telephony (`Voice` feature: Voice Contact Center Call Router (`IVoiceContactCenterCallRouter`) for inbound and outbound voice routing, inbound voice ingress + normalization boundary (`InboundVoiceEvent`/`IInboundVoiceService` compatibility), inbound activity+subject+interaction creation, queue→endpoint routing, agent offer routing, outbound provider dispatch through `IContactCenterVoiceProvider`, and the Telephony soft-phone incoming-call modal with `IIncomingCallContextProvider`/`IIncomingCallDispatcher` extensibility + voicemail capability; **G1 backend shipped: provider delivery models (`AgentDeviceNative`/`ServerSideAcd`) + `ConnectToAgentAsync`, `CallSession` aggregate, normalized `ProviderVoiceEvent`/`IProviderVoiceEventService` ingestion, and the authoritative `IContactCenterCallCommandService` that accepts the reservation, bridges media, and advances interaction+call-session together. all G1 items shipped: the soft-phone JS accept-then-answer coordination now awaits the server accept and only answers the device when `RequiresDeviceAnswer` (asset rebuilt), per-provider signed webhook adapters emit `ProviderVoiceEvent`, and the blind/consultative transfer + conference taxonomy landed** — see "Design review" P0 #1, #2, #3 and P1 #9)
 - [~] Phase 5 — Outbound dialer MVP (`Dialer` feature: profiles, modes, power/progressive pacing, dialer batch sources, outbound calls routed through the Voice Contact Center Call Router, DialPad Contact Center Voice provider. **G4 dialer safety shipped (2026-06-30):** each mode is now a dedicated `IDialerStrategy` (Predictive disabled in editor + rejected server-side + refused at runtime; Power hard-capped via `PowerDialerStrategy.MaxCallsPerAgent`); the new `IDialerEligibilityService` compliance gate runs before every attempt and audits `DialSuppressed` (destination, max-attempts, retry cool-down, contact do-not-call, calling window in the contact's time zone, and national DNC registries); single-attempt logic moved to `IDialerAttemptService`. Remaining: callback scheduling (`CallbackRequest`) + callback queues, and dialer run/attempt projections.)
 - [x] Phase 6 — Disposition lifecycle (the **Subject Flow is the single decision controller** for CRM, inbound, and outbound: every activity carries a Subject + Subject Flow, and completion routes through the source-neutral `IActivityDispositionService`, which applies the disposition, marks the activity `Completed` regardless of its prior contact-center state — resolving P0 #8 — and runs the disposition-driven Subject Actions. A subject flow can require a disposition (`SubjectFlowSettings.RequireDisposition`), enforced centrally so completion is blocked until a disposition is chosen. **Design decision (2026-06-30):** the separate `WrapUp`/`WrapUpSession` concept added earlier was removed as redundant with disposition + subject flow; after-call work is represented by agent presence (`WrapUp`) plus the active/wrap-up interaction on the Agent Workspace, not by a separate domain aggregate.)
@@ -1497,7 +1915,9 @@ Keep this section current. Use the checklist below to track phase-level progress
 
 ### Gap-closure backlog (from the 2026-06-30 design review)
 
-Ordered by the "Design review" execution order. Each item is a hard requirement to reach a state-of-the-art dialer; numbers reference the P0/P1 findings.
+> **Historical and superseded by the 2026-07-13 R0-R9 remediation checklist.** Checkmarks record shipped increments, not current production approval.
+
+Ordered by the former design-review execution order. Numbers reference the historical P0/P1 findings.
 
 - [x] **G1 — Voice foundation hardening (completes Phase 4):** redesign the voice-provider boundary with delivery models (`AgentDeviceNative` vs `ServerSideAcd`), capability-gated lifecycle ops, and a normalized `ProviderVoiceEvent`/`IProviderVoiceEventHandler`; add a `CallSession` aggregate; add a unified Contact Center call-command service that delivers media to the agent on inbound accept and outbound answer as one atomic, audited transition. *(P0 #1, #2, #3; P1 #9)* — **Backend shipped (2026-06-30):** `VoiceProviderDeliveryModel` + `ContactCenterConnectRequest` + `ConnectToAgentAsync` + `AgentConnect` capability on `IContactCenterVoiceProvider` (DialPad declares `AgentDeviceNative`); `CallSession` model/index/store/manager/migration registered in the base feature; `ProviderVoiceEvent` + `IProviderVoiceEventService` idempotent ingestion that advances interaction+call-session and bridges answered outbound calls on server-side ACD; `IContactCenterCallCommandService` accept/decline wired into `VoiceController`; +5 unit tests (41 ContactCenter tests pass, clean `-warnaserror` build). **Completed (2026-07-01):** the soft-phone JS now awaits the Contact Center accept and only answers the agent device when the accepted offer reports `RequiresDeviceAnswer`, so a lost race no longer answers a re-offered call (asset rebuilt); per-provider signed webhook adapters and the transfer/conference taxonomy shipped earlier the same day. G1 is complete.
 - [~] **G2 — Assignment safety (hardens Phases 2/3):** distributed-lock/single-writer assignment + optimistic concurrency on reservation; enforce `MaxConcurrentInteractions`; split a live `AgentSession` from `AgentProfile` with SignalR heartbeat + stale cleanup; drive offer timeout from the real-time layer. *(P0 #6, #7; P1 #13, #14)* — **P0 core shipped (2026-06-30):** per-queue distributed-lock single-writer assignment in `ActivityAssignmentService` (both `AssignNextAsync` and `AssignQueueAsync` acquire the lock; inbound `OfferNextAsync` routes through the same path), and `MaxConcurrentInteractions` enforcement via the new `CapacityRoutingStrategy` (Order 20, between required-skills and longest-idle) backed by `IInteractionManager.CountActiveByAgentAsync`. +6 unit tests (47 ContactCenter tests pass, clean `-warnaserror` build). **P1 #13 shipped (2026-06-30):** the live `AgentSession` aggregate (model/index/store/manager + `IAgentSessionService`) is now split from `AgentProfile`, the `ContactCenterHub` registers each SignalR connection on the session with a per-user distributed lock, the client sends a `Heartbeat` every 30s, and the `AgentSessionCleanupBackgroundTask` signs out + deletes sessions whose heartbeat is older than 90s so routing stops targeting a dead client (a brief reconnect is tolerated by the grace window). **Remaining:** the real-time per-reservation offer timeout (P1 #14) driven from the desktop (the SignalR foundation + `ServerTimeUtc`/`ExpiresUtc` on the offer notification now exist; the background reservation-expiry task remains the safety net). **(Compare-and-set on reservation creation shipped 2026-07-01: `ReserveAsync` re-reads the queue item and aborts unless it is still `Waiting`.)**
@@ -1510,6 +1930,8 @@ Ordered by the "Design review" execution order. Each item is a hard requirement 
 
 ### Change log
 
+- 2026-07-13: Challenged the production-readiness plan with Claude Opus 4.8 and GPT-5.6 Terra. Incorporated tenant-qualified SignalR user targeting, a headless Availability feature, durable after-call deadlines, canonical provider identity, portable WorkState CAS, provider `OutcomeUnknown` commands, finite support/feature matrices, feature quiesce/re-enable, split R0a/R0b reproductions, earlier SLO/ownership decisions, replay-horizon retention rules, fail-closed optional media capabilities, and separate GA versus higher-scale certification.
+- 2026-07-13: Completed an independent production-readiness review across Orchard feature composition, multi-tenancy, domain/persistence, provider/telephony, security, operations, scalability, testing, CI/CD, and documentation. The commercial release decision is blocked. Added evidence-backed P0/P1 gates, a normative target feature graph, canonical state/outbox/inbox decisions, a red-green-refactor remediation sequence R0-R9, required feature/database/browser/distributed/security/load/chaos/upgrade suites, capacity acceptance rules, and production release gates. Reopened historical completion claims where tenant isolation, authorization, feature dependencies, atomicity, provider capability execution, compliance, observability, data governance, or production proof remain incomplete.
 - 2026-07-13: Refined multi-call soft-phone conference and transfer behavior. The conference control appears after two or more active interactions are selected, active-call number/state share one compact row, the Keypad scrolls within a bounded height, and dial input clears after submission and when held-call dialing becomes available. The shared merge contract accepts any number of call ids. Asterisk clears persisted hold markers and adds all selected channels to one mixing bridge; DialPad merges each additional selected call sequentially into the primary call. Every merged participant displays **In conference**. Conference transfer remains hidden until one interaction is explicitly selected. Added the provider-neutral `Directory` capability and `ITelephonyDirectoryProvider`; Asterisk lists ARI endpoints and DialPad lists paginated company users for transfer destination selection.
 - 2026-07-13: Added a real two-party Asterisk dashboard simulation. The dashboard now originates two configurable endpoints into `crestapps-dashboard`, waits for both Stasis channels, creates an ARI mixing bridge, joins both parties, and refreshes live telemetry; partial setup failures clean up channels and bridges. Aspire adds synthetic `Local/2001@crestapps-simulation` and `Local/2002@crestapps-simulation` parties with distinct tone patterns, while the same form can ring configured PJSIP endpoints. A live local Asterisk run produced four Local legs, two connected logical calls, and one shared bridge.
 - 2026-07-13: Started the AI voice implementation with an explicit provider capability seam. `ContactCenterVoiceProviderCapabilities.BidirectionalMedia` now announces true two-way live media support, while the separate `IContactCenterVoiceMediaProvider` and `IContactCenterVoiceMediaSession` contracts keep provider transport and framing outside Contact Center orchestration. Resolution requires both the capability flag and a matching media provider registration. Selected ARI External Media over RTP/UDP as the first Asterisk transport because it has broader version compatibility than newer WebSocket media transports; Asterisk now implements that transport while DialPad remains unavailable for AI media.
@@ -1573,3 +1995,4 @@ Ordered by the "Design review" execution order. Each item is a hard requirement 
 - 2026-07-11: **Softphone, Contact Center, Asterisk, and DialPad reliability hardening completed.** Closed the outstanding review findings and additional race/recovery defects: provider events now reject stale/nonterminal-after-terminal transitions and publish unique semantic idempotency keys; every event is durably enqueued before handler fan-out with per-handler completion checkpoints; inbound provider calls use provider-scoped distributed locks and provider+call-id lookups; agent reservation and reservation lifecycle transitions use distributed locks with accept-versus-expiry revalidation; terminal dial failures/permanent suppressions dequeue work; overnight business hours and fail-closed equal dialer windows are covered; overflow preserves total SLA age while tracking per-queue dwell time and preventing queue cycles; Asterisk listeners are independently supervised, reconnect with backoff, perform provider-scoped serialized reconciliation, recover hold/mute variables, reject unknown channel states, and map bridge-leave transitions; DialPad webhooks fail closed without a usable signing secret and include richer state in idempotency keys. Added regression coverage for outbox restart/partial-handler behavior, provider event ordering/idempotency, inbound duplicate delivery, reservation races/agent locks, dialer terminal behavior, overnight hours/overflow chains, provider restart reconciliation, Asterisk granular state, and DialPad authentication.
 - 2026-07-12: **Live routing, dialer, soft-phone, and Asterisk dashboard validation pass.** Diagnosed the reported queued-call and delayed-dashboard behavior from `blog1` database state, CMS/Asterisk logs, ARI state, and live browser reproduction before changing code. Fixed stale reservation/capacity recovery and repeated queue progression; made loaded dialer activities immediately queue-eligible; prevented duplicate same-scope reservations by flushing reservation state before selecting more work; started Preview attempts from generic offer acceptance; repaired Local DNC schema migration; added the Asterisk Contact Center voice-provider adapter and persisted its actual configured provider alias; supported local E.164 destinations; and verified provider disconnect propagation into interaction termination and agent disposition state. Fixed dashboard latency by assigning Asterisk Web the separate `crestapps-dashboard` ARI application and closing ARI HTTP connections after each request, producing event-triggered SignalR snapshots in about one second instead of waiting for periodic reconciliation. Also added live call/bridge badge updates, consistent initial-snapshot JSON naming, compact no-provider soft-phone layout, Enter-to-dial, persistent connected-number display, explicit queue/campaign placeholders, feature-gated AI batch fields, and null-safe historical activity management. The Aspire test dialplan now uses a generated tone sequence plus Echo rather than relying on absent container sound files.
 - 2026-07-12: **Phase 12 enterprise reporting catalog completed and validated.** Expanded Contact Center Analytics and Omnichannel Management to 79 immediately runnable reports grouped for executives, operations, queue/routing, agents, workforce/payroll, billing usage, CRM/campaigns, compliance/audit, and technical/IT roles. Added a reusable responsive Chart.js report section model and upgraded the executive performance report with KPI cards plus daily volume, channel mix, queue service-level, and agent workload charts; chart data exports as equivalent CSV and Excel tables. Added presence-derived workforce timecards, breaks, utilization, occupancy, payroll inputs, user productivity, measured billing usage, campaign analysis, compliance exceptions, transcript/recording coverage, and call-leg diagnostics without inventing schedules, wages, prices, survey scores, or quality evaluations that are not persisted. Browser validation executed every one of the 79 catalog routes, verified all four executive charts initialize without console errors, and confirmed date, agent, and channel filters materially change browser/CSV results. Final validation passed with a strict Release solution build, all 1,376 tests, the full asset rebuild, and the Docusaurus production build.
+- 2026-07-13: **R1 tenant-targeting and Asterisk simulator security started.** Added the shared `TenantSignalRGroupName` contract and moved every Contact Center, Telephony, and Asterisk soft-phone projection away from globally scoped SignalR user/group destinations. Authorized hub connections now join Orchard-shell-qualified user, queue, and supervisor groups, preventing equal identifiers in different tenants from crossing a shared backplane. Hardened Asterisk diagnostics by removing credential-bearing ARI URIs from logs, adding negative secret-redaction tests, removing committed sample credentials, and refusing to start the standalone destructive dashboard outside Development with loopback defaults. Targeted tenant-routing and Asterisk security coverage passes; R1 remains open for entitlement enforcement, centralized PII redaction, stored-XSS correction, and webhook ingress hardening.
