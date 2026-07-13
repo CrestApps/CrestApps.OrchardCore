@@ -207,6 +207,16 @@ public sealed class AsteriskTelephonyProviderTests
                 $"{BaseUrl}channels/call-2/variable?variable={AsteriskConstants.ConferenceBridgeVariableName}&value=bridge-1");
         Assert.Contains(
             handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}channels/call-1/variable?variable={AsteriskConstants.HoldStateVariableName}&value=False");
+        Assert.Contains(
+            handler.Requests,
+            request => request.Method == HttpMethod.Post &&
+                request.RequestUri.AbsoluteUri ==
+                $"{BaseUrl}channels/call-2/variable?variable={AsteriskConstants.HoldStateVariableName}&value=False");
+        Assert.Contains(
+            handler.Requests,
             request => request.Method == HttpMethod.Delete &&
                 request.RequestUri.AbsoluteUri == $"{BaseUrl}bridges/bridge-1");
     }
@@ -274,6 +284,42 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.True(capabilities.HasFlag(TelephonyCapabilities.Transfer));
         Assert.True(capabilities.HasFlag(TelephonyCapabilities.Merge));
         Assert.True(capabilities.HasFlag(TelephonyCapabilities.Voicemail));
+        Assert.True(capabilities.HasFlag(TelephonyCapabilities.Directory));
+    }
+
+    [Fact]
+    public async Task GetDirectoryAsync_WhenConfigured_MapsAsteriskEndpoints()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "technology": "PJSIP",
+                "resource": "2001",
+                "state": "online",
+                "channel_ids": []
+              },
+              {
+                "technology": "PJSIP",
+                "resource": "sales",
+                "state": "offline",
+                "channel_ids": []
+              }
+            ]
+            """);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetDirectoryAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, result.Entries.Count);
+        Assert.Equal("2001", result.Entries[0].Destination);
+        Assert.Equal("2001", result.Entries[0].Extension);
+        Assert.Equal($"{BaseUrl}endpoints", handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
     [Fact]
@@ -374,6 +420,7 @@ public sealed class AsteriskTelephonyProviderTests
                     """,
                 $"{BaseUrl}channels/call-1/variable?variable=CRESTAPPS_STATE_ONHOLD" => """{"value":"true"}""",
                 $"{BaseUrl}channels/call-1/variable?variable=CRESTAPPS_STATE_MUTED" => """{"value":"true"}""",
+                $"{BaseUrl}channels/call-1/variable?variable=CRESTAPPS_CONFERENCE_BRIDGE_ID" => """{"value":""}""",
                 _ => throw new InvalidOperationException($"Unexpected request: {request.RequestUri}"),
             };
 
@@ -394,7 +441,7 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.NotNull(call);
         Assert.Equal(CallState.OnHold, call.State);
         Assert.True(call.IsMuted);
-        Assert.Equal(4, handler.Requests.Count);
+        Assert.Equal(5, handler.Requests.Count);
     }
 
     [Fact]
@@ -439,7 +486,7 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.True(result.Succeeded);
         Assert.False(result.Found);
         Assert.Null(result.Call);
-        Assert.Equal(4, handler.Requests.Count);
+        Assert.Equal(5, handler.Requests.Count);
     }
 
     [Fact]

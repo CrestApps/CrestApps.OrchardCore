@@ -14,7 +14,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
-internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyCallStateProvider
+internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
@@ -217,6 +217,11 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 callId,
                 AsteriskConstants.MuteStateVariableName,
                 cancellationToken);
+            var conferenceBridgeId = await GetChannelVariableAsync(
+                settings,
+                callId,
+                AsteriskConstants.ConferenceBridgeVariableName,
+                cancellationToken);
 
             using var verificationResponse = await SendAsync(
                 settings,
@@ -280,6 +285,12 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             if (muteState.HasValue)
             {
                 call.Metadata["asteriskMuteState"] = muteState.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(conferenceBridgeId))
+            {
+                call.Metadata["isConference"] = true;
+                call.Metadata["conferenceBridgeId"] = conferenceBridgeId;
             }
 
             return new TelephonyCallLookupResult
@@ -517,16 +528,36 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 AsteriskConstants.ConferenceBridgeVariableName,
                 bridgeId,
                 cancellationToken);
+            var primaryHoldCleared = await SetChannelVariableAsync(
+                settings,
+                request.PrimaryCallId,
+                AsteriskConstants.HoldStateVariableName,
+                bool.FalseString,
+                cancellationToken);
+            var secondaryHoldCleared = await SetChannelVariableAsync(
+                settings,
+                request.SecondaryCallId,
+                AsteriskConstants.HoldStateVariableName,
+                bool.FalseString,
+                cancellationToken);
 
-            if (!primaryTracked || !secondaryTracked)
+            if (!primaryTracked || !secondaryTracked || !primaryHoldCleared || !secondaryHoldCleared)
             {
                 _logger.LogWarning(
-                    "Asterisk merged calls for provider {ProviderName}, but conference bridge cleanup tracking could not be stored on every channel. BridgeId: {BridgeId}.",
+                    "Asterisk merged calls for provider {ProviderName}, but conference state tracking could not be stored on every channel. BridgeId: {BridgeId}.",
                     ProviderName,
                     bridgeId);
             }
 
-            return TelephonyResult.Success(BuildCall(request.PrimaryCallId, CallState.Connected));
+            return TelephonyResult.Success(BuildCall(
+                request.PrimaryCallId,
+                CallState.Connected,
+                metadata: new Dictionary<string, object>
+                {
+                    ["isConference"] = true,
+                    ["conferenceBridgeId"] = bridgeId,
+                    ["participantCount"] = 2,
+                }));
         }
         catch (Exception ex)
         {
@@ -649,6 +680,88 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         };
     }
 
+    public async Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await GetResolvedSettingsAsync(cancellationToken);
+
+        if (!IsConfigured(settings))
+        {
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = NotConfigured().Error,
+            };
+        }
+
+        try
+        {
+            using var response = await SendAsync(settings, HttpMethod.Get, "endpoints", null, null, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Asterisk rejected a directory lookup for provider {ProviderName} with status code {StatusCode}.",
+                    ProviderName,
+                    response.StatusCode);
+
+                return new TelephonyDirectoryResult
+                {
+                    Succeeded = false,
+                    Error = S["Asterisk could not load the directory."].Value,
+                };
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var entries = new List<TelephonyDirectoryEntry>();
+
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var endpoint in document.RootElement.EnumerateArray())
+                {
+                    var resource = ReadString(endpoint, "resource");
+
+                    if (string.IsNullOrWhiteSpace(resource))
+                    {
+                        continue;
+                    }
+
+                    var technology = ReadString(endpoint, "technology");
+                    var state = ReadString(endpoint, "state");
+                    var detailParts = new[] { technology, state }
+                        .Where(value => !string.IsNullOrWhiteSpace(value));
+
+                    entries.Add(new TelephonyDirectoryEntry
+                    {
+                        Id = string.IsNullOrWhiteSpace(technology) ? resource : $"{technology}/{resource}",
+                        DisplayName = resource,
+                        Destination = resource,
+                        Extension = resource.All(char.IsDigit) ? resource : null,
+                        Detail = string.Join(" - ", detailParts),
+                    });
+                }
+            }
+
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = true,
+                Entries = entries
+                    .OrderBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while loading the Asterisk directory for provider {ProviderName}.", ProviderName);
+
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = S["Asterisk could not load the directory."].Value,
+            };
+        }
+    }
+
     protected abstract ValueTask<AsteriskResolvedSettings> GetResolvedSettingsAsync(CancellationToken cancellationToken);
 
     protected static TelephonyCapabilities GetCapabilities(string endpointTemplate, bool hasVoicemailConfiguration)
@@ -661,7 +774,8 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             TelephonyCapabilities.Hold |
             TelephonyCapabilities.Resume |
             TelephonyCapabilities.Mute |
-            TelephonyCapabilities.Merge;
+            TelephonyCapabilities.Merge |
+            TelephonyCapabilities.Directory;
 
         if (AsteriskSettingsUtilities.IsImmediateConnectionEndpoint(endpointTemplate))
         {

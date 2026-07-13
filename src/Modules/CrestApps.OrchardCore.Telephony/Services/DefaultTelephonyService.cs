@@ -88,6 +88,33 @@ public sealed class DefaultTelephonyService : ITelephonyService
     }
 
     /// <inheritdoc/>
+    public async Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        var provider = await _resolver.GetAsync();
+
+        if (provider is null)
+        {
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = S["No telephony provider is configured."].Value,
+            };
+        }
+
+        if (!provider.Capabilities.HasFlag(TelephonyCapabilities.Directory) ||
+            provider is not ITelephonyDirectoryProvider directoryProvider)
+        {
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = S["The configured telephony provider does not support directory lookup."].Value,
+            };
+        }
+
+        return await directoryProvider.GetDirectoryAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<TelephonyCapabilities> GetCapabilitiesAsync(CancellationToken cancellationToken = default)
     {
         var provider = await _resolver.GetAsync();

@@ -164,6 +164,41 @@ public sealed class DialPadTelephonyProviderTests
         Assert.Null(handler.LastRequest);
     }
 
+    [Fact]
+    public async Task GetDirectoryAsync_WhenConfigured_MapsDialPadUsers()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(
+            HttpStatusCode.OK,
+            """
+            {
+              "items": [
+                {
+                  "id": 123,
+                  "first_name": "Alex",
+                  "last_name": "Agent",
+                  "email": "alex@example.test",
+                  "extension": "2001",
+                  "phone_number": "+15550002001"
+                }
+              ]
+            }
+            """);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetDirectoryAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        var entry = Assert.Single(result.Entries);
+        Assert.Equal("123", entry.Id);
+        Assert.Equal("Alex Agent", entry.DisplayName);
+        Assert.Equal("2001", entry.Destination);
+        Assert.Equal("+15550002001", entry.PhoneNumber);
+        Assert.Equal($"{BaseUrl}users", handler.LastRequest.RequestUri.AbsoluteUri);
+    }
+
     private static DialPadTelephonyProvider CreateProvider(StubHttpMessageHandler handler, out IDataProtectionProvider dataProtectionProvider, bool isEnabled)
     {
         dataProtectionProvider = new EphemeralDataProtectionProvider();

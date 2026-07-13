@@ -44,6 +44,12 @@
             ["notConnected"] = T["Not connected"].Value,
             ["invalidNumber"] = T["Enter a phone number to call."].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
+            ["transferTitle"] = T["Transfer call"].Value,
+            ["transferDestination"] = T["Number or extension"].Value,
+            ["directory"] = T["Directory"].Value,
+            ["directoryEmpty"] = T["No directory entries are available."].Value,
+            ["cancel"] = T["Cancel"].Value,
+            ["transfer"] = T["Transfer"].Value,
             ["activeCalls"] = T["Active calls"].Value,
             ["selectCallsToMerge"] = T["Select two calls to conference."].Value,
             ["conference"] = T["Conference selected calls"].Value,
@@ -117,6 +123,23 @@
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
+
+                <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden>
+                    <div class="telephony-soft-phone__transfer-title">@T["Transfer call"]</div>
+                    <input type="tel"
+                           class="telephony-soft-phone__transfer-input"
+                           data-telephony-transfer-input
+                           placeholder="@T["Number or extension"]"
+                           aria-label="@T["Transfer destination"]" />
+                    <div class="telephony-soft-phone__directory" data-telephony-directory hidden>
+                        <div class="telephony-soft-phone__directory-heading">@T["Directory"]</div>
+                        <div class="telephony-soft-phone__directory-list" data-telephony-directory-list></div>
+                    </div>
+                    <div class="telephony-soft-phone__transfer-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-transfer-cancel>@T["Cancel"]</button>
+                        <button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>@T["Transfer"]</button>
+                    </div>
+                </div>
 
                 <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                     <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>

@@ -92,6 +92,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return Task.FromResult((int)_provider.Capabilities);
     }
 
+    public Task<TelephonyDirectoryResult> GetDirectory()
+    {
+        return _provider.GetDirectoryAsync();
+    }
+
     public Task<int> GetDialRequestCount()
     {
         return Task.FromResult(_provider.GetDialRequestCount());
@@ -105,6 +110,11 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
     public Task<int> GetMergeRequestCount()
     {
         return Task.FromResult(_provider.GetMergeRequestCount());
+    }
+
+    public Task<int> GetTransferRequestCount()
+    {
+        return Task.FromResult(_provider.GetTransferRequestCount());
     }
 
     public Task SetDialDelay(int milliseconds)

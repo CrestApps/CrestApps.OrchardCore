@@ -25,7 +25,8 @@
     Merge: 1 << 6,
     SendDigits: 1 << 7,
     ReceiveCalls: 1 << 8,
-    Voicemail: 1 << 9
+    Voicemail: 1 << 9,
+    Directory: 1 << 10
   };
   var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
   function normalizeState(state) {
@@ -151,6 +152,12 @@
       mute: rootElement.querySelector('[data-telephony-mute]'),
       unmute: rootElement.querySelector('[data-telephony-unmute]'),
       transfer: rootElement.querySelector('[data-telephony-transfer]'),
+      transferPanel: rootElement.querySelector('[data-telephony-transfer-panel]'),
+      transferInput: rootElement.querySelector('[data-telephony-transfer-input]'),
+      transferCancel: rootElement.querySelector('[data-telephony-transfer-cancel]'),
+      transferConfirm: rootElement.querySelector('[data-telephony-transfer-confirm]'),
+      directory: rootElement.querySelector('[data-telephony-directory]'),
+      directoryList: rootElement.querySelector('[data-telephony-directory-list]'),
       merge: rootElement.querySelector('[data-telephony-merge]'),
       hangup: rootElement.querySelector('[data-telephony-hangup]'),
       hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
@@ -176,6 +183,9 @@
     var currentCall = null;
     var activeCalls = {};
     var conferenceSelections = {};
+    var directoryEntries = [];
+    var transferOpen = false;
+    var numberIsCallDisplay = false;
     var callStateRevision = 0;
     var incomingContext = null;
     var incomingHandled = false;
@@ -279,6 +289,13 @@
         return call.from || call.to || '';
       }
       return call.to || call.from || '';
+    }
+    function metadataBoolean(call, key) {
+      if (!call || !call.metadata || !Object.prototype.hasOwnProperty.call(call.metadata, key)) {
+        return false;
+      }
+      var value = call.metadata[key];
+      return value === true || value === 1 || value === 'true' || value === 'True';
     }
     function getActiveCalls() {
       return Object.keys(activeCalls).map(function (callId) {
@@ -561,6 +578,9 @@
         return;
       }
       var calls = getActiveCalls();
+      var selectedCallIds = Object.keys(conferenceSelections).filter(function (callId) {
+        return !!activeCalls[callId];
+      });
       show(dom.activeCalls, calls.length > 0);
       dom.activeCallsList.innerHTML = calls.map(function (call) {
         var callId = call.callId || '';
@@ -568,7 +588,8 @@
         var current = currentCall && currentCall.callId === callId;
         var number = formatPhoneNumber(getPeerNumber(call)) || callId;
         var state = statusTextForState(normalizeState(call.state));
-        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
+        var disableSelection = !selected && selectedCallIds.length >= 2;
+        return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' + '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' + escapeHtml(callId) + '"' + (selected ? ' checked' : '') + (disableSelection ? ' disabled' : '') + ' aria-label="' + escapeHtml(strings.conference || 'Conference selected calls') + '" />' + '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' + escapeHtml(callId) + '">' + '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' + '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(state) + '</span>' + '</button></div>';
       }).join('');
       Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-call-select]'), function (button) {
         button.addEventListener('click', function () {
@@ -584,10 +605,34 @@
           var callId = checkbox.getAttribute('data-telephony-conference-call');
           if (checkbox.checked) {
             conferenceSelections[callId] = true;
+            selectCurrentCall(activeCalls[callId]);
           } else {
             delete conferenceSelections[callId];
           }
           render();
+        });
+      });
+    }
+    function renderDirectory() {
+      if (!dom.directory || !dom.directoryList) {
+        return;
+      }
+      show(dom.directory, transferOpen && has(CAPABILITIES.Directory));
+      if (!directoryEntries.length) {
+        dom.directoryList.innerHTML = '<div class="telephony-soft-phone__directory-empty">' + escapeHtml(strings.directoryEmpty || 'No directory entries are available.') + '</div>';
+        return;
+      }
+      dom.directoryList.innerHTML = directoryEntries.map(function (entry) {
+        var destination = entry.destination || entry.extension || entry.phoneNumber || '';
+        var detail = entry.extension || entry.phoneNumber || entry.detail || destination;
+        return '<button type="button" class="telephony-soft-phone__directory-entry" data-telephony-directory-destination="' + escapeHtml(destination) + '">' + '<span class="telephony-soft-phone__directory-name">' + escapeHtml(entry.displayName || destination) + '</span>' + '<span class="telephony-soft-phone__directory-destination">' + escapeHtml(detail) + '</span></button>';
+      }).join('');
+      Array.prototype.forEach.call(dom.directoryList.querySelectorAll('[data-telephony-directory-destination]'), function (button) {
+        button.addEventListener('click', function () {
+          if (dom.transferInput) {
+            dom.transferInput.value = button.getAttribute('data-telephony-directory-destination') || '';
+            dom.transferInput.focus();
+          }
         });
       });
     }
@@ -603,7 +648,10 @@
       var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function (callId) {
         return !!activeCalls[callId];
       });
+      var currentIsConference = metadataBoolean(currentCall, 'isConference');
       renderActiveCalls();
+      renderDirectory();
+      show(dom.transferPanel, transferOpen && liveMedia);
       if (dom.toggleIcon) {
         dom.toggleIcon.className = 'fa-solid fa-phone';
       }
@@ -652,7 +700,11 @@
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
           dom.number.value = formatPhoneNumber(peerNumber);
+          numberIsCallDisplay = true;
         }
+      } else if (dom.number && canDial && numberIsCallDisplay) {
+        dom.number.value = '';
+        numberIsCallDisplay = false;
       }
       show(dom.dial, canDial && has(CAPABILITIES.Dial));
       show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
@@ -662,8 +714,8 @@
       var muted = currentCall && currentCall.isMuted;
       show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
       show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
-      show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer));
-      show(dom.merge, calls.length > 1 && has(CAPABILITIES.Merge));
+      show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
+      show(dom.merge, selectedConferenceCallIds.length === 2 && has(CAPABILITIES.Merge));
       if (dom.number) {
         dom.number.disabled = !canDial || !!activeCommand;
       }
@@ -762,6 +814,10 @@
         showError(strings.invalidNumber || 'Enter a phone number to call.');
         return;
       }
+      if (dom.number) {
+        dom.number.value = '';
+        numberIsCallDisplay = false;
+      }
       invoke('Dial', {
         to: number
       });
@@ -773,7 +829,8 @@
       setActiveTab('keypad');
       togglePanel(true);
       if (dom.number) {
-        dom.number.value = formatPhoneNumber(number);
+        dom.number.value = '';
+        numberIsCallDisplay = false;
       }
       invoke('Dial', {
         to: normalizeDialNumber(number)
@@ -837,14 +894,55 @@
       if (!id) {
         return;
       }
-      var destination = window.prompt(strings.transferPrompt || 'Transfer to number');
-      if (destination) {
-        invoke('Transfer', {
-          callId: id,
-          to: destination,
-          mode: 0
-        });
+      if (!has(CAPABILITIES.Directory) || !dom.transferPanel) {
+        var destination = window.prompt(strings.transferPrompt || 'Transfer to number');
+        if (destination) {
+          invoke('Transfer', {
+            callId: id,
+            to: destination,
+            mode: 0
+          });
+        }
+        return;
       }
+      transferOpen = true;
+      directoryEntries = [];
+      if (dom.transferInput) {
+        dom.transferInput.value = '';
+      }
+      render();
+      connection.invoke('GetDirectory').then(function (result) {
+        if (!result || result.succeeded === false) {
+          showError(result && result.error ? result.error : 'Unable to load the provider directory.');
+          return;
+        }
+        directoryEntries = result.entries || [];
+        render();
+      })["catch"](function (error) {
+        showError(error && error.message ? error.message : String(error));
+      });
+    }
+    function cancelTransfer() {
+      transferOpen = false;
+      directoryEntries = [];
+      render();
+    }
+    function confirmTransfer() {
+      var id = currentCallId();
+      var destination = dom.transferInput ? String(dom.transferInput.value || '').trim() : '';
+      if (!id || !destination) {
+        showError(strings.invalidNumber || 'Enter a phone number to call.');
+        return;
+      }
+      invoke('Transfer', {
+        callId: id,
+        to: destination,
+        mode: 0
+      }).then(function (result) {
+        if (result && result.succeeded !== false) {
+          cancelTransfer();
+        }
+      });
     }
     function merge() {
       var callIds = Object.keys(conferenceSelections).filter(function (callId) {
@@ -857,6 +955,11 @@
       invoke('Merge', {
         primaryCallId: callIds[0],
         secondaryCallId: callIds[1]
+      }).then(function (result) {
+        if (result && result.succeeded !== false) {
+          conferenceSelections = {};
+          render();
+        }
       });
     }
     function pressKey(value) {
@@ -866,7 +969,7 @@
           callId: currentCallId(),
           digits: value
         });
-      } else if (!isActive(stateName) && dom.number) {
+      } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
         dom.number.value = formatPhoneNumber(dom.number.value + value);
       }
     }
@@ -1404,6 +1507,7 @@
       }
       if (dom.number) {
         dom.number.addEventListener('input', function () {
+          numberIsCallDisplay = false;
           dom.number.value = formatPhoneNumber(dom.number.value);
         });
         dom.number.addEventListener('focus', function () {
@@ -1441,6 +1545,12 @@
       }
       if (dom.transfer) {
         dom.transfer.addEventListener('click', transfer);
+      }
+      if (dom.transferCancel) {
+        dom.transferCancel.addEventListener('click', cancelTransfer);
+      }
+      if (dom.transferConfirm) {
+        dom.transferConfirm.addEventListener('click', confirmTransfer);
       }
       if (dom.merge) {
         dom.merge.addEventListener('click', merge);

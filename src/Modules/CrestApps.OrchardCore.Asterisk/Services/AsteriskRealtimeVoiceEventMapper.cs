@@ -51,7 +51,7 @@ internal static class AsteriskRealtimeVoiceEventMapper
             OccurredUtc = occurredUtc,
             IdempotencyKey = BuildIdempotencyKey(providerName, payload),
             IsConference = TryReadParticipantCount(root, out var participantCount)
-                ? participantCount > 2
+                ? participantCount >= 2
                 : null,
             ParticipantCount = participantCount,
             Metadata = metadata,

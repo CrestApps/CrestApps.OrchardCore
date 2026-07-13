@@ -109,4 +109,35 @@ public sealed class AsteriskRealtimeVoiceEventMapperTests
         Assert.False(mapped);
         Assert.Null(voiceEvent);
     }
+
+    [Fact]
+    public void TryMap_WhenSecondChannelEntersBridge_MarksConference()
+    {
+        // Arrange
+        const string payload =
+            """
+            {
+              "type": "ChannelEnteredBridge",
+              "timestamp": "2026-07-13T15:03:00.000Z",
+              "bridge": {
+                "id": "bridge-1",
+                "channels": ["call-1", "call-2"]
+              },
+              "channel": {
+                "id": "call-2",
+                "state": "Up"
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.True(mapped);
+        Assert.NotNull(voiceEvent);
+        Assert.True(voiceEvent.IsConference);
+        Assert.Equal(2, voiceEvent.ParticipantCount);
+        Assert.False(voiceEvent.IsOnHold);
+    }
 }

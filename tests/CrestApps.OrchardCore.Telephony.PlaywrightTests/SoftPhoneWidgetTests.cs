@@ -107,6 +107,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
+        Assert.Equal(string.Empty, await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]
@@ -212,6 +213,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         var number = page.Locator("[data-telephony-number]");
         Assert.False(await number.IsDisabledAsync());
+        Assert.Equal(string.Empty, await number.InputValueAsync());
         await number.FillAsync("+15557654321");
         await page.ClickAsync("[data-telephony-dial]");
         await PublishLatestCallStateAsync(page);
@@ -253,19 +255,80 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         var baselineCount = await page.EvaluateAsync<int>(
             "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount')");
         var merge = page.Locator("[data-telephony-merge]");
-        Assert.True(await merge.IsDisabledAsync());
+        Assert.True(await merge.IsHiddenAsync());
 
         // Act
         var selections = page.Locator("[data-telephony-conference-call]");
         await selections.Nth(0).CheckAsync();
+        Assert.True(await merge.IsHiddenAsync());
         await selections.Nth(1).CheckAsync();
-        Assert.False(await merge.IsDisabledAsync());
+        Assert.True(await merge.IsVisibleAsync());
         await merge.ClickAsync();
 
         // Assert
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetMergeRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
+        Assert.True(await merge.IsHiddenAsync());
+    }
+
+    [Fact]
+    public async Task Transfer_WhenDirectorySupported_ListsEntriesAndTransfersSelectedCall()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.GotoAsync(_server.BaseUrl);
+        await WaitForConnectedAsync(page);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "7024993350");
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+        var baselineCount = await page.EvaluateAsync<int>(
+            "() => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount')");
+
+        // Act
+        await page.ClickAsync("[data-telephony-transfer]");
+        await page.Locator("[data-telephony-directory-destination=\"2001\"]").WaitForAsync();
+        await page.ClickAsync("[data-telephony-directory-destination=\"2001\"]");
+        await page.ClickAsync("[data-telephony-transfer-confirm]");
+
+        // Assert
+        await page.WaitForFunctionAsync(
+            "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === count + 1)",
+            new[] { baselineCount });
+        Assert.True(await page.Locator("[data-telephony-transfer-panel]").IsHiddenAsync());
+    }
+
+    [Fact]
+    public async Task ConferenceCall_HidesTransferUntilOneInteractionIsSelected()
+    {
+        // Arrange
+        var page = await CreateTwoCallPageAsync();
+        var currentCallId = await GetCurrentCallIdAsync(page);
+        await page.EvaluateAsync(
+            """
+            ([callId]) => window.telephonySoftPhone.getInstance().getConnection().invoke(
+                'PublishCallState',
+                {
+                    callId,
+                    to: '+15557654321',
+                    direction: 0,
+                    state: 3,
+                    providerName: 'InMemory',
+                    metadata: { isConference: true }
+                })
+            """,
+            new[] { currentCallId });
+
+        // Assert
+        var transfer = page.Locator("[data-telephony-transfer]");
+        Assert.True(await transfer.IsHiddenAsync());
+
+        // Act
+        await page.Locator($"[data-telephony-conference-call=\"{currentCallId}\"]").CheckAsync();
+
+        // Assert
+        Assert.True(await transfer.IsVisibleAsync());
     }
 
     [Fact]

@@ -183,6 +183,16 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             metadata[item.Key] = item.Value;
         }
 
+        if (voiceEvent.IsConference.HasValue)
+        {
+            metadata["isConference"] = voiceEvent.IsConference.Value;
+        }
+
+        if (voiceEvent.ParticipantCount.HasValue)
+        {
+            metadata["participantCount"] = voiceEvent.ParticipantCount.Value;
+        }
+
         return new TelephonyCall
         {
             CallId = interaction.CallId,

@@ -387,6 +387,47 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         return (int)capabilities;
     }
 
+    /// <summary>
+    /// Gets transfer destinations from the configured provider directory.
+    /// </summary>
+    /// <returns>The provider directory lookup result.</returns>
+    public async Task<TelephonyDirectoryResult> GetDirectory()
+    {
+        var result = new TelephonyDirectoryResult
+        {
+            Succeeded = false,
+            Error = S["Unable to load the provider directory."].Value,
+        };
+        LogHubActionStart("GetDirectory");
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetDirectory");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
+
+                return;
+            }
+
+            var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();
+            result = await service.GetDirectoryAsync(Context.ConnectionAborted);
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Returned={ReturnedCount}, Error={Error}.",
+                "GetDirectory",
+                Context.UserIdentifier ?? "(anonymous)",
+                result.Succeeded,
+                result.Entries.Count,
+                result.Error ?? "(none)");
+        }
+
+        return result;
+    }
+
     private async Task<TelephonyResult> ExecuteAsync(
         string actionName,
         Func<string> requestFactory,

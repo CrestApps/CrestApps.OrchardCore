@@ -87,4 +87,45 @@ public sealed class DefaultTelephonyServiceTests
         // Assert
         Assert.Equal(TelephonyCapabilities.None, capabilities);
     }
+
+    [Fact]
+    public async Task GetDirectoryAsync_WhenProviderSupportsDirectory_ReturnsEntries()
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider
+        {
+            Capabilities = TelephonyCapabilities.Directory,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.GetDirectoryAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("GetDirectory", provider.LastOperation);
+        Assert.Single(result.Entries);
+    }
+
+    [Fact]
+    public async Task GetDirectoryAsync_WhenProviderDoesNotSupportDirectory_ReturnsFailed()
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider
+        {
+            Capabilities = TelephonyCapabilities.Dial,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.GetDirectoryAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.NotEmpty(result.Error);
+    }
 }

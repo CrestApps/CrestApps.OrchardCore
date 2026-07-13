@@ -112,6 +112,13 @@ public interface ITelephonyService
     Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets transfer destinations from the configured provider directory.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The provider directory lookup result.</returns>
+    Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the capabilities of the configured default provider.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

@@ -66,7 +66,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         var config = new Dictionary<string, object>
         {
             ["hubUrl"] = "/telephony",
-            ["capabilities"] = 511,
+            ["capabilities"] = 2047,
             ["strings"] = new Dictionary<string, string>
             {
                 ["idle"] = "Ready",
@@ -79,6 +79,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["disconnectedHub"] = "Disconnected",
                 ["invalidNumber"] = "Enter a phone number to call.",
                 ["transferPrompt"] = "Transfer to number",
+                ["directoryEmpty"] = "No directory entries are available.",
                 ["activeCalls"] = "Active calls",
                 ["selectCallsToMerge"] = "Select two calls to conference.",
                 ["conference"] = "Conference selected calls",
@@ -108,6 +109,14 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                             <input type="tel" data-telephony-number />
                             <div data-telephony-peer></div>
                             <div data-telephony-error hidden></div>
+                            <div data-telephony-transfer-panel hidden>
+                                <input type="tel" data-telephony-transfer-input />
+                                <div data-telephony-directory hidden>
+                                    <div data-telephony-directory-list></div>
+                                </div>
+                                <button type="button" data-telephony-transfer-cancel>Cancel</button>
+                                <button type="button" data-telephony-transfer-confirm>Transfer</button>
+                            </div>
                             <div data-telephony-active-calls hidden>
                                 <div data-telephony-active-calls-list></div>
                             </div>

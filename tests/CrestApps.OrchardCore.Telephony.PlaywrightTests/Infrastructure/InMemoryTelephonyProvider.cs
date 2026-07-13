@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 /// An in-memory telephony provider used by the Playwright harness to exercise the soft phone widget
 /// and the SignalR hub contract without a real provider.
 /// </summary>
-public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCallStateProvider
+public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly ConcurrentDictionary<string, TelephonyCall> _calls = new();
     private readonly ConcurrentDictionary<string, byte> _publishedCallIds = new();
@@ -17,6 +17,7 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     private int _dialRequestCount;
     private int _hangupRequestCount;
     private int _mergeRequestCount;
+    private int _transferRequestCount;
     private int _dialDelayMilliseconds;
     private int _lookupRequestCount;
     private int _lookupDelayMilliseconds;
@@ -36,7 +37,8 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
                 TelephonyCapabilities.Merge |
                 TelephonyCapabilities.SendDigits |
                 TelephonyCapabilities.ReceiveCalls |
-                TelephonyCapabilities.Voicemail;
+                TelephonyCapabilities.Voicemail |
+                TelephonyCapabilities.Directory;
         }
     }
 
@@ -118,6 +120,8 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
 
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _transferRequestCount);
+
         return Update(request?.CallId, c => c.State = CallState.Connected);
     }
 
@@ -155,6 +159,31 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new TelephonyClientCredentials { ProviderName = "InMemory" });
+    }
+
+    public Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new TelephonyDirectoryResult
+        {
+            Succeeded = true,
+            Entries =
+            [
+                new()
+                {
+                    Id = "user-2001",
+                    DisplayName = "Alex Agent",
+                    Destination = "2001",
+                    Extension = "2001",
+                },
+                new()
+                {
+                    Id = "user-2002",
+                    DisplayName = "Sam Supervisor",
+                    Destination = "2002",
+                    Extension = "2002",
+                },
+            ],
+        });
     }
 
     public async Task<TelephonyCallLookupResult> GetCallStateAsync(
@@ -263,6 +292,11 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
     public int GetMergeRequestCount()
     {
         return Volatile.Read(ref _mergeRequestCount);
+    }
+
+    public int GetTransferRequestCount()
+    {
+        return Volatile.Read(ref _transferRequestCount);
     }
 
     public void SetDialDelay(int milliseconds)

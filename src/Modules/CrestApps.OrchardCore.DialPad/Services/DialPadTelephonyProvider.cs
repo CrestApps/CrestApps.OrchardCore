@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// API key and per-user OAuth 2.0 authentication. All call control happens server-side, so the soft
 /// phone client never talks to DialPad directly.
 /// </summary>
-public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider
+public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -83,7 +83,8 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
                 TelephonyCapabilities.Merge |
                 TelephonyCapabilities.SendDigits |
                 TelephonyCapabilities.ReceiveCalls |
-                TelephonyCapabilities.Voicemail;
+                TelephonyCapabilities.Voicemail |
+                TelephonyCapabilities.Directory;
         }
     }
 
@@ -376,6 +377,126 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
             ProviderName = DialPadConstants.ProviderTechnicalName,
             Settings = new Dictionary<string, string>(),
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await GetResolvedSettingsAsync();
+
+        if (!IsConfigured(settings))
+        {
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = NotConfigured().Error,
+            };
+        }
+
+        var bearerToken = await GetBearerTokenAsync(settings, cancellationToken);
+
+        if (string.IsNullOrEmpty(bearerToken))
+        {
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = NotConnected().Error,
+            };
+        }
+
+        try
+        {
+            var client = CreateClient(settings, bearerToken);
+            var entries = new List<TelephonyDirectoryEntry>();
+            var visitedCursors = new HashSet<string>(StringComparer.Ordinal);
+            string cursor = null;
+
+            do
+            {
+                var path = string.IsNullOrWhiteSpace(cursor)
+                    ? "users"
+                    : QueryHelpers.AddQueryString("users", "cursor", cursor);
+                using var response = await client.GetAsync(path, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("DialPad rejected a directory lookup with status code {StatusCode}.", response.StatusCode);
+
+                    return new TelephonyDirectoryResult
+                    {
+                        Succeeded = false,
+                        Error = S["DialPad could not load the directory."].Value,
+                    };
+                }
+
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = document.RootElement;
+
+                if (root.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var user in items.EnumerateArray())
+                    {
+                        var extension = ReadString(user, "extension");
+                        var phoneNumber = ReadString(user, "phone_number");
+                        var destination = !string.IsNullOrWhiteSpace(extension) ? extension : phoneNumber;
+
+                        if (string.IsNullOrWhiteSpace(destination))
+                        {
+                            continue;
+                        }
+
+                        var firstName = ReadString(user, "first_name");
+                        var lastName = ReadString(user, "last_name");
+                        var displayName = string.Join(
+                            " ",
+                            new[] { firstName, lastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+                        if (string.IsNullOrWhiteSpace(displayName))
+                        {
+                            displayName = ReadString(user, "email") ?? destination;
+                        }
+
+                        entries.Add(new TelephonyDirectoryEntry
+                        {
+                            Id = ReadScalarString(user, "id") ?? destination,
+                            DisplayName = displayName,
+                            Destination = destination,
+                            Extension = extension,
+                            PhoneNumber = phoneNumber,
+                            Detail = ReadString(user, "email"),
+                        });
+                    }
+                }
+
+                cursor = ReadString(root, "cursor");
+
+                if (!string.IsNullOrWhiteSpace(cursor) && !visitedCursors.Add(cursor))
+                {
+                    _logger.LogWarning("DialPad returned a repeated directory cursor; pagination stopped to avoid a lookup loop.");
+                    break;
+                }
+            }
+            while (!string.IsNullOrWhiteSpace(cursor));
+
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = true,
+                Entries = entries
+                    .OrderBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while loading the DialPad directory.");
+
+            return new TelephonyDirectoryResult
+            {
+                Succeeded = false,
+                Error = S["DialPad could not load the directory."].Value,
+            };
+        }
     }
 
     /// <inheritdoc/>
@@ -730,6 +851,21 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
         return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+    }
+
+    private static string ReadScalarString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            _ => null,
+        };
     }
 
     private static bool ReadBoolean(JsonElement element, string propertyName)
