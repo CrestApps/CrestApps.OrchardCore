@@ -45,4 +45,27 @@ public sealed class AsteriskSettingsUtilitiesTests
         // Assert
         Assert.Null(uri);
     }
+
+    [Fact]
+    public void CreateEventsUriForLogging_DoesNotContainAriCredentialsOrApiKey()
+    {
+        // Arrange
+        const string secret = "known-ari-secret";
+        var settings = new AsteriskResolvedSettings
+        {
+            BaseUrl = "https://asterisk.test/ari/",
+            UserName = "ari-user",
+            Password = secret,
+            ApplicationName = "contact-center",
+        };
+
+        // Act
+        var uri = AsteriskSettingsUtilities.CreateEventsUriForLogging(settings);
+
+        // Assert
+        Assert.NotNull(uri);
+        Assert.DoesNotContain(secret, uri.ToString());
+        Assert.DoesNotContain("ari-user", uri.ToString());
+        Assert.DoesNotContain("api_key", uri.Query, StringComparison.OrdinalIgnoreCase);
+    }
 }

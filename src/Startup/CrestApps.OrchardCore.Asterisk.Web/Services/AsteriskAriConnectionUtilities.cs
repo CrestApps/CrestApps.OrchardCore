@@ -59,4 +59,26 @@ internal static class AsteriskAriConnectionUtilities
 
         return builder.Uri;
     }
+
+    public static Uri CreateEventsUriForLogging(AsteriskWebOptions options)
+    {
+        var baseUri = CreateBaseUri(options.AsteriskBaseUrl);
+        var builder = new UriBuilder(baseUri)
+        {
+            Scheme = string.Equals(baseUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                ? "wss"
+                : "ws",
+            Path = $"{baseUri.AbsolutePath.TrimEnd('/')}/events",
+        };
+
+        builder.Query = QueryHelpers.AddQueryString(
+            string.Empty,
+            new Dictionary<string, string>
+            {
+                ["app"] = options.AsteriskApplicationName,
+                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+            }).TrimStart('?');
+
+        return builder.Uri;
+    }
 }

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
+AsteriskWebSecurity.EnsureDevelopmentOnly(builder.Environment.EnvironmentName);
+
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();

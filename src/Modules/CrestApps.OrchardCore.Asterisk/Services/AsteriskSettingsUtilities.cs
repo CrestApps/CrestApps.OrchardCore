@@ -175,6 +175,33 @@ internal static class AsteriskSettingsUtilities
         return builder.Uri;
     }
 
+    public static Uri CreateEventsUriForLogging(AsteriskResolvedSettings settings)
+    {
+        if (settings is null || string.IsNullOrWhiteSpace(settings.BaseUrl))
+        {
+            return null;
+        }
+
+        var baseUri = new Uri(NormalizeBaseUrl(settings.BaseUrl), UriKind.Absolute);
+        var builder = new UriBuilder(baseUri)
+        {
+            Scheme = string.Equals(baseUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                ? "wss"
+                : "ws",
+            Path = $"{baseUri.AbsolutePath.TrimEnd('/')}/events",
+        };
+
+        builder.Query = QueryHelpers.AddQueryString(
+            string.Empty,
+            new Dictionary<string, string>
+            {
+                ["app"] = settings.ApplicationName,
+                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+            }).TrimStart('?');
+
+        return builder.Uri;
+    }
+
     public static string ToInvariantString(int value)
         => value.ToString(CultureInfo.InvariantCulture);
 

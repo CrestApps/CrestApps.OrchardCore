@@ -143,7 +143,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
             _logger.LogInformation(
                 "Connecting the Asterisk real-time voice listener for provider {ProviderName} to {EventsUri}.",
                 settings.ProviderName,
-                eventsUri);
+                AsteriskSettingsUtilities.CreateEventsUriForLogging(settings));
         }
 
         await socket.ConnectAsync(eventsUri, cancellationToken);

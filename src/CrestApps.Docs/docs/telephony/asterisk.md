@@ -76,8 +76,8 @@ Use the `OrchardCore:CrestApps:Asterisk:Default` section:
       "Asterisk": {
         "Default": {
           "BaseUrl": "http://localhost:8088/ari/",
-          "UserName": "crestapps",
-          "Password": "crestapps-dev",
+          "UserName": "<your-ari-user>",
+          "Password": "<your-ari-password>",
           "ApplicationName": "crestapps-telephony",
           "EndpointTemplate": "Local/{number}@default",
           "TimeoutSeconds": 30,
@@ -95,8 +95,8 @@ Equivalent environment variables use the standard double-underscore path, for ex
 
 ```text
 OrchardCore__CrestApps__Asterisk__Default__BaseUrl=http://localhost:8088/ari/
-OrchardCore__CrestApps__Asterisk__Default__UserName=crestapps
-OrchardCore__CrestApps__Asterisk__Default__Password=crestapps-dev
+OrchardCore__CrestApps__Asterisk__Default__UserName=<your-ari-user>
+OrchardCore__CrestApps__Asterisk__Default__Password=<your-ari-password>
 OrchardCore__CrestApps__Asterisk__Default__ApplicationName=crestapps-telephony
 OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate=Local/{number}@default
 OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds=30
@@ -123,6 +123,17 @@ The provider uses ARI endpoints such as:
 - `GET /endpoints` to list transfer destinations in the soft-phone directory
 
 Because all requests are issued server-side, the ARI password never reaches the browser.
+
+## Asterisk Web development-only host
+
+`src\Startup\CrestApps.OrchardCore.Asterisk.Web` is a local development harness, not a production dashboard. It refuses to start unless `ASPNETCORE_ENVIRONMENT=Development`, and the development launch profile binds to loopback addresses. To use the standalone host, provide its ARI credentials through user secrets or environment variables instead of committing them to `appsettings.json`:
+
+```bash
+dotnet user-secrets set "AsteriskWeb:AsteriskUserName" "<your-ari-user>"
+dotnet user-secrets set "AsteriskWeb:AsteriskPassword" "<your-ari-password>"
+```
+
+The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `AsteriskWeb__AsteriskPassword`. Override the local listener addresses only when needed with `ASPNETCORE_URLS`, for example `https://127.0.0.1:59496;http://127.0.0.1:59497`. Do not expose this host or its anonymous diagnostics, call-origination, hangup, and bridge-deletion endpoints to an untrusted network.
 
 ## Bidirectional RTP media
 
@@ -202,13 +213,7 @@ This makes the configuration-backed provider available immediately for local ten
 1. The **Asterisk** module is enabled.
 2. The tenant selects **Default Asterisk** as its default telephony provider.
 
-The bundled local development credentials are:
-
-- **ARI user name**: `crestapps`
-- **ARI password**: `crestapps-dev`
-- **ARI base URL**: `http://localhost:8088/ari/`
-
-Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. `http://localhost:8088/ari/` prompts for the credentials above and can be used to verify that ARI is reachable.
+The Aspire host supplies its local-only ARI connection values at runtime. The standalone Asterisk Web sample intentionally keeps ARI credentials out of committed configuration; use user secrets or environment variables as described above. Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. The `/ari/` endpoint can be used to verify that the local ARI service is reachable.
 
 The default Aspire endpoint template uses `Local/{number}@default`, which loops the originated call back into the bundled demo dialplan. Numeric and E.164 destinations beginning with `+` are supported. The dialplan answers, plays a short generated tone sequence, and enters `Echo()` so the simulation does not depend on sound files that are absent from the container image. That local development path still **originates through the configured Stasis application**, so the same live channel remains under ARI control for hold, resume, mute, merge, inbound answer/reject, and Local-route blind transfer while the simulated media stays inside Asterisk.
 
@@ -229,7 +234,7 @@ This simulation validates Asterisk channel origination, Stasis control, media br
 
 For inbound routing tests, use the **Asterisk Web** startup sample (`src\Startup\CrestApps.OrchardCore.Asterisk.Web`). It signs in to Orchard, originates one or more Asterisk channels directly into the configured Stasis application, waits for the matching `StasisStart` events, and then forwards the normalized `InboundVoiceEvent` requests to `POST /api/contact-center/voice/inbound` using the live Asterisk channel ids. The WebSocket reader queues events to concurrent dispatch workers, so one slow Orchard ingress request does not block later calls in a burst, and each forward has a bounded timeout. If the sample listener misses the matching event, the simulator briefly reconciles the originated channel through ARI and forwards it only when the authoritative channel snapshot confirms the configured Stasis application and exact simulation key. This prevents a transient listener gap from turning a successfully originated inbound call into a false HTTP 504 result. The sign-in check also recognizes tenant-prefixed login redirects and fails explicitly instead of continuing with an unauthenticated client. The sample exposes two pages: **Asterisk Dashboard** for live ARI telemetry and two-party bridge testing, and **Inbound Simulator** for Contact Center burst testing. The dashboard uses a dedicated `crestapps-dashboard` ARI application so it does not compete with the CMS `crestapps-telephony` event listener. It treats the Asterisk event stream as the primary update path: channel, bridge, state, dialplan, and variable events request an immediate snapshot, the server coalesces only a short event burst, reads independent ARI diagnostics endpoints concurrently, enriches active channels concurrently, and pushes the snapshot to connected browsers over SignalR. Dashboard ARI HTTP requests close their connections after each response to avoid stale pooled sockets after container restarts. The sample serves the SignalR client from the application instead of depending on an external CDN. While SignalR is connected, browser polling is stopped; a 15-second reconciliation poll starts only while SignalR is unavailable or reconnecting, then stops again after reconnection. Call and bridge count badges update from every snapshot, and the initial page snapshot uses the same web JSON naming policy as live hub messages. The dashboard groups raw local channel legs into logical calls so one Local call is easier to read, shows inferred call direction, surfaces provider-tracked hold and mute state, estimates party counts from bridge membership, and adds a disconnect action so you can simulate caller hangup from the PBX side. Its two-party form can use the bundled synthetic Local endpoints or real PBX endpoints and reports the created bridge and channel ids. The inbound simulator distinguishes calls that were immediately **Offered**, are **Waiting in queue**, or were **Not queued**, so `routed: false` is no longer presented as a rejection when the durable queue accepted the call. Live notifications now sit beside the raw ARI payload drill-down so the active call and bridge tables have more room. In the simulator, configured defaults populate the initial form, the configured provider identity is authoritative and read-only so ingress records match the live ARI listener, **To address** controls which Contact Center entry point or queue mapping the inbound call targets, and **Caller number seed** only changes the generated caller identities. The sample and Aspire host use the root Orchard URL and **Default Asterisk** provider by default; set **Orchard base URL** to the tenant URL, such as `https://localhost:5001/blog1`, when testing a named tenant.
 
-The bundled local configuration is intended for development and connectivity testing. Production deployments should supply their own ARI credentials, dialplan, endpoints, and media/network configuration.
+The bundled local configuration is intended for development and connectivity testing. The Asterisk Web host is development-only and must not be deployed as a production component. Production telephony deployments should supply their own ARI credentials, dialplan, endpoints, and media/network configuration through protected configuration.
 
 ## Verifying local Asterisk activity
 

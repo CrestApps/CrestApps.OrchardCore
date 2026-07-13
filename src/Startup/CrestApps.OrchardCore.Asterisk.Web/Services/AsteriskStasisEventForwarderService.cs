@@ -85,7 +85,7 @@ public sealed class AsteriskStasisEventForwarderService : BackgroundService
         {
             _logger.LogInformation(
                 "Connecting the inbound simulator Stasis listener to {EventsUri}.",
-                eventsUri);
+                AsteriskAriConnectionUtilities.CreateEventsUriForLogging(_options));
         }
 
         await socket.ConnectAsync(eventsUri, cancellationToken);
