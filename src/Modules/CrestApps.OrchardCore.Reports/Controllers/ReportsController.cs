@@ -104,7 +104,7 @@ public sealed class ReportsController : Controller
         var filter = await BuildFilterAsync(id);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
         var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
-        await _displayValueResolver.ResolveAsync(document);
+        await _displayValueResolver.ResolveNonTableValuesAsync(document);
 
         return View(new ReportDisplayViewModel
         {

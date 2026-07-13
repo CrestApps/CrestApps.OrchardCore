@@ -8,7 +8,10 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users.Indexes;
+using OrchardCore.Users.Models;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
@@ -64,6 +67,9 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         var dispositionNames = _definition.Kind == EnterpriseActivityReportKind.CampaignDispositionMix
             ? CatalogReportDisplayNames.ForDispositions(await _dispositionManager.GetAllAsync(cancellationToken))
             : null;
+        var userNames = IsUserReport()
+            ? await ResolveUserNamesAsync(filteredActivities, cancellationToken)
+            : null;
 
         return _definition.Kind switch
         {
@@ -80,18 +86,18 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 filteredActivities,
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
-                activity => ResolveUser(activity.AssignedToUsername)),
+                activity => ResolveUser(activity.AssignedToId, userNames)),
             EnterpriseActivityReportKind.CreatedByPerformance => BuildProgress(
                 filteredActivities,
                 S["Created by"].Value,
                 activity => activity.CreatedById,
-                activity => ResolveUser(activity.CreatedByUsername)),
+                activity => ResolveUser(activity.CreatedById, userNames)),
             EnterpriseActivityReportKind.UserCompletionTime => BuildCompletionDuration(
                 filteredActivities,
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
-                activity => ResolveUser(activity.AssignedToUsername)),
-            EnterpriseActivityReportKind.UserDailyProductivity => BuildDailyUserProductivity(filteredActivities),
+                activity => ResolveUser(activity.AssignedToId, userNames)),
+            EnterpriseActivityReportKind.UserDailyProductivity => BuildDailyUserProductivity(filteredActivities, userNames),
             EnterpriseActivityReportKind.CampaignSourceMix => BuildCampaignDimension(
                 filteredActivities,
                 campaignNames,
@@ -125,7 +131,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 context.ToUtc,
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
-                activity => ResolveUser(activity.AssignedToUsername)),
+                activity => ResolveUser(activity.AssignedToId, userNames)),
             EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(filteredActivities, S["Channel endpoint"].Value, activity => Display(activity.ChannelEndpointId)),
             EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(filteredActivities, S["Customer"].Value, activity => Display(activity.ContactContentItemId)),
             EnterpriseActivityReportKind.ScheduleCompletion => BuildScheduleCompletion(filteredActivities),
@@ -339,7 +345,9 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .Add(ReportSection.ForTable(S["Activity completion time"].Value, columns, rows));
     }
 
-    private ReportDocument BuildDailyUserProductivity(IReadOnlyList<OmnichannelActivityIndex> activities)
+    private ReportDocument BuildDailyUserProductivity(
+        IReadOnlyList<OmnichannelActivityIndex> activities,
+        IReadOnlyDictionary<string, string> userNames)
     {
         var completed = activities.Where(activity => activity.CompletedUtc.HasValue && !string.IsNullOrEmpty(activity.AssignedToId));
         var columns = new[]
@@ -361,7 +369,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
             .Select(group => new ReportRow(
             [
                 group.Key.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                ResolveUser(group.First().AssignedToUsername),
+                ResolveUser(group.Key.AssignedToId, userNames),
                 ReportFormat.Number(group.LongCount()),
                 ReportFormat.Duration(group.Average(activity => Math.Max(0d, (activity.CompletedUtc.Value - activity.CreatedUtc).TotalSeconds))),
                 ReportFormat.Number(group.Sum(activity => Math.Max(0, activity.Attempts))),
@@ -502,14 +510,49 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         return string.IsNullOrWhiteSpace(value) ? S["(Not set)"].Value : value;
     }
 
-    private string ResolveUser(string userName)
+    private async Task<IReadOnlyDictionary<string, string>> ResolveUserNamesAsync(
+        IEnumerable<OmnichannelActivityIndex> activities,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(userName))
+        var userIds = activities
+            .SelectMany(activity => new[] { activity.AssignedToId, activity.CreatedById })
+            .Where(userId => !string.IsNullOrEmpty(userId))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (userIds.Length == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
+            .ListAsync(cancellationToken);
+
+        return users.ToDictionary(user => user.UserId, user => user.UserName, StringComparer.Ordinal);
+    }
+
+    private string ResolveUser(
+        string userId,
+        IReadOnlyDictionary<string, string> userNames)
+    {
+        if (string.IsNullOrEmpty(userId))
         {
             return S["(Not set)"].Value;
         }
 
-        return ReportValue.UserDisplayName(userName, S["(Unknown user)"].Value);
+        return userNames.TryGetValue(userId, out var userName)
+            ? ReportValue.UserDisplayName(userName, S["(Unknown user)"].Value)
+            : S["(Unknown user)"].Value;
+    }
+
+    private bool IsUserReport()
+    {
+        return _definition.Kind is
+            EnterpriseActivityReportKind.AssignedUserPerformance or
+            EnterpriseActivityReportKind.CreatedByPerformance or
+            EnterpriseActivityReportKind.UserCompletionTime or
+            EnterpriseActivityReportKind.UserDailyProductivity or
+            EnterpriseActivityReportKind.OverdueByUser;
     }
 
     private static ActivityProgress Aggregate(IEnumerable<OmnichannelActivityIndex> activities)

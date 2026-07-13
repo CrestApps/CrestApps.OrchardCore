@@ -78,7 +78,18 @@
                                     <tr class="@(row.Emphasize ? "fw-semibold border-top" : null)">
                                         @for (var i = 0; i < row.Cells.Count; i++)
                                         {
-                                            <td class="@(i < alignClasses.Count ? alignClasses[i] : "text-start")">@row.Cells[i]</td>
+                                            var cell = row.Cells[i];
+
+                                            <td class="@(i < alignClasses.Count ? alignClasses[i] : "text-start")">
+                                                @if (ReportValue.TryGetUserName(cell, out var userName))
+                                                {
+                                                    <user-display-name user-name="@userName" display-type="Report" cache-id="report-user-display-name" />
+                                                }
+                                                else
+                                                {
+                                                    @cell
+                                                }
+                                            </td>
                                         }
                                     </tr>
                                 }

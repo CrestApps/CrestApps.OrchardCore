@@ -6,7 +6,7 @@
 @{
     var user = await UserManager.FindByNameAsync((string)Model.UserName);
     var displayName = user is null
-        ? T["Unknown user"].Value
+        ? Model.UserName
         : await DisplayNameProvider.GetAsync(user);
 }
 @displayName

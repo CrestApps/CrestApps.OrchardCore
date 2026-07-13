@@ -19,6 +19,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "CrestApps.OrchardCore.Resources",
-        "CrestApps.OrchardCore.Users.DisplayName",
+        "OrchardCore.Users",
     ]
 )]

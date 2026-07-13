@@ -39,13 +39,7 @@ public sealed class ReportDisplayValueResolver
 
         foreach (var section in document.Sections)
         {
-            for (var index = 0; index < section.Metrics.Count; index++)
-            {
-                var metric = section.Metrics[index];
-                metric.Label = await ResolveAsync(metric.Label, userDisplayNames);
-                metric.Value = await ResolveAsync(metric.Value, userDisplayNames);
-                metric.Hint = await ResolveAsync(metric.Hint, userDisplayNames);
-            }
+            await ResolveNonTableValuesAsync(section, userDisplayNames);
 
             foreach (var row in section.Rows)
             {
@@ -55,25 +49,59 @@ public sealed class ReportDisplayValueResolver
                 }
             }
 
-            for (var index = 0; index < section.Bars.Count; index++)
-            {
-                var bar = section.Bars[index];
-                bar.Label = await ResolveAsync(bar.Label, userDisplayNames);
-                bar.Value = await ResolveAsync(bar.Value, userDisplayNames);
-            }
+        }
+    }
 
-            if (section.Chart is not null)
-            {
-                for (var index = 0; index < section.Chart.Labels.Count; index++)
-                {
-                    section.Chart.Labels[index] = await ResolveAsync(section.Chart.Labels[index], userDisplayNames);
-                }
+    /// <summary>
+    /// Resolves typed values that cannot render an Orchard shape directly in the report view.
+    /// Table cells remain typed so the view can render each user value as its own shape.
+    /// </summary>
+    /// <param name="document">The report document.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ResolveNonTableValuesAsync(ReportDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
 
-                foreach (var dataset in section.Chart.Datasets)
-                {
-                    dataset.Label = await ResolveAsync(dataset.Label, userDisplayNames);
-                }
-            }
+        var userDisplayNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var section in document.Sections)
+        {
+            await ResolveNonTableValuesAsync(section, userDisplayNames);
+        }
+    }
+
+    private async Task ResolveNonTableValuesAsync(
+        ReportSection section,
+        Dictionary<string, string> userDisplayNames)
+    {
+        for (var index = 0; index < section.Metrics.Count; index++)
+        {
+            var metric = section.Metrics[index];
+            metric.Label = await ResolveAsync(metric.Label, userDisplayNames);
+            metric.Value = await ResolveAsync(metric.Value, userDisplayNames);
+            metric.Hint = await ResolveAsync(metric.Hint, userDisplayNames);
+        }
+
+        for (var index = 0; index < section.Bars.Count; index++)
+        {
+            var bar = section.Bars[index];
+            bar.Label = await ResolveAsync(bar.Label, userDisplayNames);
+            bar.Value = await ResolveAsync(bar.Value, userDisplayNames);
+        }
+
+        if (section.Chart is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < section.Chart.Labels.Count; index++)
+        {
+            section.Chart.Labels[index] = await ResolveAsync(section.Chart.Labels[index], userDisplayNames);
+        }
+
+        foreach (var dataset in section.Chart.Datasets)
+        {
+            dataset.Label = await ResolveAsync(dataset.Label, userDisplayNames);
         }
     }
 

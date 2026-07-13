@@ -1,18 +1,12 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
-using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 internal sealed class OmnichannelActivityIndexMigrations : DataMigration
 {
-    private const int ReindexBatchSize = 100;
-
     /// <summary>
     /// Creates a new async.
     /// </summary>
@@ -34,7 +28,6 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<DateTime>("CompletedUtc")
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
-            .Column<string>("AssignedToUsername", column => column.WithLength(255))
             .Column<DateTime>("AssignedToUtc")
             .Column<string>("AssignmentStatus", column => column.WithLength(50))
             .Column<string>("ReservationId", column => column.WithLength(26))
@@ -42,7 +35,6 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<DateTime>("ReservedUtc")
             .Column<DateTime>("ReservationExpiresUtc")
             .Column<string>("CreatedById", column => column.WithLength(26))
-            .Column<string>("CreatedByUsername", column => column.WithLength(255))
             .Column<string>("DispositionId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<string>("UrgencyLevel", column => column.WithLength(50))
@@ -94,7 +86,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -128,50 +120,27 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     }
 
     /// <summary>
-    /// Adds stored usernames used by cached report display-name shapes.
+    /// Skips the superseded username-index migration.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom2Async()
+    public static int UpdateFrom2()
+    {
+        return 4;
+    }
+
+    /// <summary>
+    /// Removes usernames from the activity index because user presentation is resolved by shapes.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
         {
-            table.AddColumn<string>("AssignedToUsername", column => column.WithLength(255));
-            table.AddColumn<string>("CreatedByUsername", column => column.WithLength(255));
+            table.DropColumn("AssignedToUsername");
+            table.DropColumn("CreatedByUsername");
         },
         collection: OmnichannelConstants.CollectionName);
 
-        ShellScope.AddDeferredTask(ReindexActivitiesAsync);
-
-        return 3;
-    }
-
-    private static async Task ReindexActivitiesAsync(ShellScope scope)
-    {
-        var store = scope.ServiceProvider.GetRequiredService<IStore>();
-        var documentId = 0L;
-
-        while (true)
-        {
-            await using var session = store.CreateSession();
-            var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.DocumentId > documentId,
-                collection: OmnichannelConstants.CollectionName)
-                .OrderBy(index => index.DocumentId)
-                .Take(ReindexBatchSize)
-                .ListAsync();
-
-            if (!activities.Any())
-            {
-                return;
-            }
-
-            foreach (var activity in activities)
-            {
-                documentId = activity.Id;
-                await session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
-            }
-
-            await session.SaveChangesAsync();
-        }
+        return 4;
     }
 }

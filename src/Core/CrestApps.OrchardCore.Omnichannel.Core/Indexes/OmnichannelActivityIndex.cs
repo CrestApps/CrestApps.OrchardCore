@@ -79,11 +79,6 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     public string AssignedToId { get; set; }
 
     /// <summary>
-    /// Gets or sets the username of the assigned user.
-    /// </summary>
-    public string AssignedToUsername { get; set; }
-
-    /// <summary>
     /// Gets or sets the assigned to utc.
     /// </summary>
     public DateTime? AssignedToUtc { get; set; }
@@ -117,11 +112,6 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     /// Gets or sets the created by id.
     /// </summary>
     public string CreatedById { get; set; }
-
-    /// <summary>
-    /// Gets or sets the username of the user that created the activity.
-    /// </summary>
-    public string CreatedByUsername { get; set; }
 
     /// <summary>
     /// Gets or sets the disposition id.
