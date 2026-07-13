@@ -120,11 +120,17 @@ public sealed class ReportDisplayValueResolver
         }
 
         var shape = await _shapeFactory.CreateAsync(
-            "ReportUserDisplayName",
+            "UserDisplayName",
             Arguments.From(new
             {
                 UserName = userName,
+                SuppressLayout = true,
             }));
+        shape.Metadata.DisplayType = "Report";
+        shape.Metadata.Cache("report-user-display-name")
+            .AddContext($"username-{userName}")
+            .AddTag("user-display-name", $"user-display-name:{userName}");
+
         var content = await _displayHelper.ShapeExecuteAsync(shape);
         using var writer = new StringWriter();
 
