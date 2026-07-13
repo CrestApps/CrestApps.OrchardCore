@@ -144,6 +144,7 @@
             const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
             const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
             const currentAttempts = @Model.Attempts;
+            const scheduleAtText = @Html.Raw(JsonSerializer.Serialize(T["Schedule at"].Value));
 
             function initFlatpickr(input) {
                 flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
@@ -156,7 +157,7 @@
 
                 if (!dispositionId) {
                     previewContainer.classList.add("d-none");
-                    actionsList.innerHTML = "";
+                    actionsList.replaceChildren();
                     return;
                 }
 
@@ -181,17 +182,21 @@
 
                     if (!actions || actions.length === 0) {
                         previewContainer.classList.add("d-none");
-                        actionsList.innerHTML = "";
+                        actionsList.replaceChildren();
                         return;
                     }
 
-                    actionsList.innerHTML = "";
+                    actionsList.replaceChildren();
 
                     actions.forEach(function (action) {
                         const card = document.createElement("div");
                         card.className = "card mb-2";
+                        const cardBody = document.createElement("div");
+                        cardBody.className = "card-body";
+                        const previewTitle = document.createElement("strong");
+                        previewTitle.textContent = action.previewTitle;
 
-                        let cardBody = '<div class="card-body"><strong>' + action.previewTitle + '</strong>';
+                        cardBody.appendChild(previewTitle);
 
                         if (action.requiresScheduleDate) {
                             const inputId = 'schedule-' + action.actionId;
@@ -199,15 +204,25 @@
                             const defaultDate = action.defaultScheduleDate
                                 ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
                                 : '';
+                            const scheduleContainer = document.createElement("div");
+                            scheduleContainer.className = "mt-2";
+                            const label = document.createElement("label");
+                            label.htmlFor = inputId;
+                            label.className = "form-label";
+                            label.textContent = scheduleAtText;
+                            const input = document.createElement("input");
+                            input.type = "text";
+                            input.id = inputId;
+                            input.name = inputName;
+                            input.value = defaultDate;
+                            input.className = "form-control schedule-date-input";
+                            input.placeholder = scheduleAtText;
 
-                            cardBody += '<div class="mt-2">';
-                            cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule at"]</label>';
-                            cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule at"]" />';
-                            cardBody += '</div>';
+                            scheduleContainer.append(label, input);
+                            cardBody.appendChild(scheduleContainer);
                         }
 
-                        cardBody += '</div>';
-                        card.innerHTML = cardBody;
+                        card.appendChild(cardBody);
                         actionsList.appendChild(card);
 
                         if (action.requiresScheduleDate) {
@@ -220,6 +235,7 @@
 
                     previewContainer.classList.remove("d-none");
                 } catch (e) {
+                    console.error("Unable to load disposition workflow actions.", e);
                     previewContainer.classList.add("d-none");
                 }
             }
