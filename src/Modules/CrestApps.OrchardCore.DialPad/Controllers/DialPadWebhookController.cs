@@ -22,6 +22,11 @@ namespace CrestApps.OrchardCore.DialPad.Controllers;
 [Feature(DialPadConstants.Feature.Dialer)]
 public sealed class DialPadWebhookController : ControllerBase
 {
+    /// <summary>
+    /// The maximum accepted webhook request-body size in bytes.
+    /// </summary>
+    public const long MaximumRequestBodySizeBytes = 1024 * 1024;
+
     private readonly IDialPadWebhookService _webhookService;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -51,6 +56,7 @@ public sealed class DialPadWebhookController : ControllerBase
     /// </summary>
     /// <returns>An HTTP result describing whether the event was accepted.</returns>
     [HttpPost("call")]
+    [RequestSizeLimit(MaximumRequestBodySizeBytes)]
     public async Task<IActionResult> Call()
     {
         var settings = await _siteService.GetSettingsAsync<DialPadSettings>();
@@ -60,8 +66,22 @@ public sealed class DialPadWebhookController : ControllerBase
             return NotFound();
         }
 
-        using var reader = new StreamReader(Request.Body);
-        var body = await reader.ReadToEndAsync(HttpContext.RequestAborted);
+        if (Request.ContentLength is > MaximumRequestBodySizeBytes)
+        {
+            return StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        string body;
+
+        try
+        {
+            using var reader = new StreamReader(Request.Body);
+            body = await reader.ReadToEndAsync(HttpContext.RequestAborted);
+        }
+        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            return StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
 
         if (string.IsNullOrEmpty(settings.WebhookSigningSecret))
         {
@@ -100,7 +120,7 @@ public sealed class DialPadWebhookController : ControllerBase
             return BadRequest();
         }
 
-        var result = await _webhookService.ProcessAsync(callEvent, HttpContext.RequestAborted);
+        var result = await _webhookService.ProcessAsync(callEvent, CancellationToken.None);
 
         return Ok(new { result = result.ToString() });
     }

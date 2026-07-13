@@ -63,6 +63,8 @@ Examples:
 
 The provider never pushes state directly to the browser. It always comes into Orchard first.
 
+The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. Request cancellation remains active while Orchard reads and authenticates the delivery, but an authenticated delivery that has entered state-changing processing is not canceled merely because the provider disconnects. Durable inbox acceptance, replay freshness, and ingress rate/concurrency controls remain required before these endpoints are considered production-complete.
+
 ### 2. Contact Center creates the CRM work item and interaction
 
 `VoiceContactCenterCallRouter` takes the inbound event and:

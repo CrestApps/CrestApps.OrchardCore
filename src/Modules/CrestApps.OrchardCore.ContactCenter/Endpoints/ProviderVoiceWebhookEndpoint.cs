@@ -3,28 +3,46 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 internal static class ProviderVoiceWebhookEndpoint
 {
+    internal const long MaximumRequestBodySizeBytes = 1024 * 1024;
+
     public static IEndpointRouteBuilder AddProviderVoiceWebhookEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("api/contact-center/voice/webhook/{provider}", HandleAsync)
             .AllowAnonymous()
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
 
         return builder;
     }
 
-    private static async Task<IResult> HandleAsync(
+    internal static async Task<IResult> HandleAsync(
         string provider,
         IProviderVoiceWebhookProcessor processor,
         HttpContext httpContext)
     {
-        using var reader = new StreamReader(httpContext.Request.Body);
-        var body = await reader.ReadToEndAsync(httpContext.RequestAborted);
+        if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        string body;
+
+        try
+        {
+            using var reader = new StreamReader(httpContext.Request.Body);
+            body = await reader.ReadToEndAsync(httpContext.RequestAborted);
+        }
+        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
 
         var request = new ProviderVoiceWebhookRequest
         {
@@ -42,7 +60,7 @@ internal static class ProviderVoiceWebhookEndpoint
             request.Query[query.Key] = query.Value.ToString();
         }
 
-        var outcome = await processor.ProcessAsync(request, httpContext.RequestAborted);
+        var outcome = await processor.ProcessAsync(request, CancellationToken.None);
 
         return outcome.Status switch
         {

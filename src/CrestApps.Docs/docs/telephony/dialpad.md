@@ -116,13 +116,7 @@ dialing and call transfer.
 - **Outbound / dialer** — the Contact Center dialer and manual dialing route outbound calls through the
   Voice Contact Center Call Router to DialPad, which places the call and rings the agent's DialPad soft
   phone.
-- **Inbound** — configure a DialPad webhook to `POST` call events to `/api/dialpad/webhook/call`. The
-  webhook is authenticated by the **Webhook signing secret** configured on the DialPad settings screen
-  (DialPad signs the payload as an HS256 JWT). New inbound calls create a CRM activity and a voice
-  interaction, are queued through the matching entry point, and are offered to an available agent; later
-  events (answered, held, muted, recording/conference changes, ended) update the interaction and call
-  session. Missing signing secrets are rejected, and a configured secret that cannot be decrypted returns
-  a service-unavailable response instead of downgrading to unsigned acceptance.
+- **Inbound** — configure a DialPad webhook to `POST` call events to `/api/dialpad/webhook/call`. The webhook is authenticated by the **Webhook signing secret** configured on the DialPad settings screen (DialPad signs the payload as an HS256 JWT). New inbound calls create a CRM activity and a voice interaction, are queued through the matching entry point, and are offered to an available agent; later events (answered, held, muted, recording/conference changes, ended) update the interaction and call session. Missing signing secrets are rejected, and a configured secret that cannot be decrypted returns a service-unavailable response instead of downgrading to unsigned acceptance. Webhook request bodies are limited to 1 MiB, oversized deliveries return HTTP 413, and accepted state-changing processing is not canceled when the sending client disconnects.
 
 Create the call-event webhook subscription in the DialPad administration portal and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the DialPad subscription automatically, so operators should monitor subscription status and delivery failures in DialPad.
 

@@ -1868,7 +1868,8 @@ This checklist is authoritative for current execution order. Historical phase an
   - [x] Tenant-qualified Contact Center and Telephony user/queue/supervisor SignalR destinations, including authorized group joins and provider-event projections.
   - [x] Asterisk ARI credential-log redaction and development-only simulator containment.
   - [x] Stored CRM workflow-preview text rendered through safe DOM text/attribute APIs with a regression test that forbids `innerHTML` in the completion view.
-  - [ ] Queue/campaign entitlement enforcement, centralized operational PII redaction, and webhook ingress hardening.
+  - [x] Generic Contact Center and DialPad webhook request bodies bounded to 1 MiB with HTTP 413 responses, and authenticated state-changing processing detached from caller disconnect cancellation.
+  - [ ] Queue/campaign entitlement enforcement, centralized operational PII redaction, and the remaining webhook ingress controls: rate/concurrency limits, freshness/replay policy, and durable inbox acknowledgement.
 - [ ] **R2 — Orchard feature and package graph:** headless base and Availability, explicit optional/provider features, stable abstraction references, finite activation matrix, quiesce/re-enable behavior, and two-node harness.
 - [ ] **R3 — Atomic consistency and agent lifecycle:** database CAS/constraints, canonical availability, after-call recovery, provider command outbox/compensation, provider inbox, stable handler ids.
 - [ ] **R4 — Executable provider capabilities and high availability:** recording/monitoring contracts, provider stream ownership, monotonic events, command cancellation, media transport hardening.
