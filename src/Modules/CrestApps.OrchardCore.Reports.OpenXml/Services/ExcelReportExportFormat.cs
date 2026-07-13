@@ -172,6 +172,9 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
             case ReportSectionKind.Bars:
                 WriteBarsSection(sheetData, section);
                 break;
+            case ReportSectionKind.Chart:
+                WriteChartSection(sheetData, section.Chart);
+                break;
         }
     }
 
@@ -207,6 +210,32 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
         foreach (var bar in section.Bars)
         {
             AppendTextRow(sheetData, bar.Label, bar.Value, bar.Ratio.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void WriteChartSection(SheetData sheetData, ReportChart chart)
+    {
+        if (chart is null)
+        {
+            return;
+        }
+
+        AppendTextRow(sheetData, ["Label", .. chart.Datasets.Select(dataset => dataset.Label)]);
+
+        for (var labelIndex = 0; labelIndex < chart.Labels.Count; labelIndex++)
+        {
+            var values = new string[chart.Datasets.Count + 1];
+            values[0] = chart.Labels[labelIndex];
+
+            for (var datasetIndex = 0; datasetIndex < chart.Datasets.Count; datasetIndex++)
+            {
+                var dataset = chart.Datasets[datasetIndex];
+                values[datasetIndex + 1] = labelIndex < dataset.Values.Count
+                    ? dataset.Values[labelIndex].ToString(CultureInfo.InvariantCulture)
+                    : string.Empty;
+            }
+
+            AppendTextRow(sheetData, values);
         }
     }
 

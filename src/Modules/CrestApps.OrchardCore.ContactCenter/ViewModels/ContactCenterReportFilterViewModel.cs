@@ -53,6 +53,11 @@ public class ContactCenterReportFilterViewModel
     public bool ShowActivityFilters { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether workforce-specific filters are displayed.
+    /// </summary>
+    public bool ShowWorkforceFilters { get; set; }
+
+    /// <summary>
     /// Gets or sets the queue options.
     /// </summary>
     public IList<SelectListItem> Queues { get; set; } = [];

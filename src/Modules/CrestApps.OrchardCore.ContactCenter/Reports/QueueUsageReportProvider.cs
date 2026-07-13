@@ -32,6 +32,9 @@ public sealed class QueueUsageReportProvider : ContactCenterReportBase
     public override LocalizedString Description => S["Per-queue handled, answered, and abandoned volume, handle time, and current waiting depth."];
 
     /// <inheritdoc/>
+    public override string Category => ReportsConstants.Categories.QueueRouting;
+
+    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var report = await ReportingService.GetQueueUsageAsync(

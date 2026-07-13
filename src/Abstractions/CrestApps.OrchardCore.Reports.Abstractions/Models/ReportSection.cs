@@ -1,8 +1,8 @@
 namespace CrestApps.OrchardCore.Reports.Models;
 
 /// <summary>
-/// Represents a single section of a report document. A section renders either headline metrics, a
-/// table, or a set of bars, allowing reports to combine summary and detail views uniformly.
+/// Represents a single section of a report document. A section renders headline metrics, a table,
+/// bars, or a chart, allowing reports to combine summary and detail views uniformly.
 /// </summary>
 public sealed class ReportSection
 {
@@ -40,6 +40,16 @@ public sealed class ReportSection
     /// Gets or sets the bars, when <see cref="Kind"/> is <see cref="ReportSectionKind.Bars"/>.
     /// </summary>
     public IList<ReportBar> Bars { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the chart, when <see cref="Kind"/> is <see cref="ReportSectionKind.Chart"/>.
+    /// </summary>
+    public ReportChart Chart { get; set; }
+
+    /// <summary>
+    /// Gets or sets the responsive section width on a twelve-column grid.
+    /// </summary>
+    public int Width { get; set; } = 12;
 
     /// <summary>
     /// Creates a metrics section.
@@ -88,6 +98,24 @@ public sealed class ReportSection
             Title = title,
             Kind = ReportSectionKind.Bars,
             Bars = bars is null ? [] : [.. bars],
+        };
+    }
+
+    /// <summary>
+    /// Creates a chart section.
+    /// </summary>
+    /// <param name="title">The section title.</param>
+    /// <param name="chart">The chart configuration and data.</param>
+    /// <param name="width">The responsive section width on a twelve-column grid.</param>
+    /// <returns>The chart section.</returns>
+    public static ReportSection ForChart(string title, ReportChart chart, int width = 6)
+    {
+        return new ReportSection
+        {
+            Title = title,
+            Kind = ReportSectionKind.Chart,
+            Chart = chart,
+            Width = Math.Clamp(width, 1, 12),
         };
     }
 }

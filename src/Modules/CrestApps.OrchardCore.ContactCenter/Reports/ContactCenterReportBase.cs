@@ -46,7 +46,7 @@ public abstract class ContactCenterReportBase : IReport
     public abstract LocalizedString Description { get; }
 
     /// <inheritdoc/>
-    public string Category => ReportsConstants.Categories.ContactCenter;
+    public virtual string Category => ReportsConstants.Categories.Operations;
 
     /// <inheritdoc/>
     public Permission Permission => ContactCenterPermissions.ViewReports;

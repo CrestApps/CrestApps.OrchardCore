@@ -42,6 +42,9 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
     public override LocalizedString Description => S["How completed CRM activities were dispositioned in the reporting period."];
 
     /// <inheritdoc/>
+    public override string Category => ReportsConstants.Categories.ComplianceAudit;
+
+    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var completed = await OmnichannelReportQuery.GetCompletedAsync(

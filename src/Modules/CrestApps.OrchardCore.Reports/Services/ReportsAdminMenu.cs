@@ -43,7 +43,10 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                     .AddClass("reports")
                     .Id("reports");
 
-                foreach (var group in reports.GroupBy(report => report.Category ?? string.Empty))
+                foreach (var group in reports
+                    .GroupBy(report => report.Category ?? string.Empty)
+                    .OrderBy(group => ReportsConstants.Categories.GetOrder(group.Key))
+                    .ThenBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase))
                 {
                     var categoryLabel = string.IsNullOrEmpty(group.Key)
                         ? S["General"]
@@ -53,7 +56,7 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                     {
                         categoryNode.AddClass("report-category");
 
-                        foreach (var report in group)
+                        foreach (var report in group.OrderBy(report => report.DisplayName.Value, StringComparer.CurrentCultureIgnoreCase))
                         {
                             categoryNode.Add(report.DisplayName, report.DisplayName.PrefixPosition(), item => item
                                 .AddClass("report")

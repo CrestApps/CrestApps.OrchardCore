@@ -32,6 +32,9 @@ public sealed class SubjectInventoryReportProvider : ContactCenterReportBase
     public override LocalizedString Description => S["Per-subject completed-versus-pending progress across the activity inventory."];
 
     /// <inheritdoc/>
+    public override string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var report = await ReportingService.GetSubjectInventoryAsync(

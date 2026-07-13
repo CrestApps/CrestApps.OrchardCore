@@ -7,17 +7,17 @@ description: Definitions, formulas, filters, drill paths, exports, permissions, 
 
 # Enterprise Contact Center Report Catalog
 
-The Contact Center Analytics and Omnichannel Management features contribute 31 immediately runnable reports to the shared **Reports** area. The catalog intentionally reports only facts represented by durable Contact Center or CRM data. It does not infer workforce schedules, quality scores, survey responses, or customer-resolution outcomes that have not been collected.
+The Contact Center Analytics and Omnichannel Management features contribute 79 immediately runnable reports to the shared **Reports** area. The admin menu organizes them into **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, and **Technical & IT** groups. The catalog intentionally reports only facts represented by durable Contact Center or CRM data. It does not infer schedules, pay rates, quality scores, survey responses, or customer-resolution outcomes that have not been collected.
 
 ## Shared report behavior
 
 | Capability | Behavior |
 | --- | --- |
 | Reporting population | Unless a report says otherwise, one interaction or CRM activity enters the report when its `CreatedUtc` is within the inclusive UTC bounds resolved from the selected tenant-local date and time range. This cohort rule prevents the same item from moving between periods when it later ends or completes. Backlog and aging are exceptions: they include currently nonterminal activities created on or before **To**, including older open work. |
-| Default filters | Every report has tenant-local **From** and **To** date/time controls. Interaction reports add queue, agent, channel, and direction. Contact Center campaign/subject reports add campaign, channel, source, and activity status. Omnichannel reports add campaign, channel, source, and activity status. The same filter values are applied to browser results and exports. |
+| Default filters | Every report has tenant-local **From** and **To** date/time controls. Interaction reports add queue, agent, channel, and direction. Workforce reports add agent. Contact Center campaign/subject reports add campaign, channel, source, and activity status. Omnichannel reports add campaign, channel, source, and activity status. The same filter values are applied to browser results and exports. |
 | Time grouping | Durable source timestamps are stored and compared in UTC. Date/time controls are displayed in the tenant time zone and converted to UTC before the query runs, including daylight-saving transitions. Daily rows currently use UTC dates. No percentage or average is averaged across displayed rows; totals are recalculated from raw counts and durations. |
 | Sorting | Summary tables default to descending population. Daily tables sort chronologically. Interaction detail sorts newest first. Aging and attempt reports sort by ascending bucket. |
-| Visualizations | The current shared renderer supports KPI cards, tables, and horizontal bars. Trend-line, heat-map, gauge, funnel, Sankey, and timeline renderers are recommended extensions where noted below. |
+| Visualizations | The shared renderer supports KPI cards, tables, horizontal bars, and responsive Chart.js line, bar, stacked-bar, and doughnut charts. Heat-map, gauge, funnel, Sankey, and timeline renderers remain recommended extensions where noted below. |
 | Export | CSV is built in. Excel is available when `CrestApps.OrchardCore.Reports.OpenXml` is enabled. PDF and JSON are not currently provided. |
 | Scheduling | Reports are currently interactive and exportable. Scheduled delivery by email, collaboration channel, or SFTP is not yet implemented; daily, weekly, and monthly schedules are the recommended baseline when scheduling is added. |
 | Permissions | Contact Center reports require **View Contact Center reports** and are granted to supervisors and administrators by default. CRM reports require **View Omnichannel reports** and are granted to administrators by default. Tenant isolation is enforced by Orchard shell scope and tenant-local YesSql collections. |
@@ -45,6 +45,13 @@ These definitions are authoritative across the catalog.
 | Completion rate | `Completed CRM activities / Activities in the group`. Failed, cancelled, purged, pending, and in-progress activities remain in the denominator. Reopened work is represented by a new or nonterminal activity and is not treated as completed. |
 | Average attempts | `Sum(max(Attempts, 0)) / Activities in the group`. |
 | Overdue | A nonterminal activity whose `ScheduledUtc` is before the report's `ToUtc` as-of boundary. |
+| Observed signed-in time | Sum of clipped agent-presence intervals whose current status is not `Offline`. The interval begins at the durable presence transition time, ends at the next transition, and is clipped to the selected report boundaries. Time before the first known transition is unknown and excluded. |
+| Productive presence | `Available + Reserved + Busy + WrapUp` observed presence duration. This is a presence classification, not proof of payroll eligibility or schedule adherence. |
+| Agent utilization | `(Busy + WrapUp) / Observed signed-in time`. Break, away, meeting, training, do-not-disturb, and other signed-in not-ready states remain in the denominator. |
+| Agent occupancy | `(Busy + WrapUp) / (Available + Reserved + Busy + WrapUp)`. Offline and explicitly not-ready states are excluded. This is a presence-derived operational occupancy measure and does not use workforce schedules. |
+| Activity cycle time | For completed CRM activities, `CompletedUtc - CreatedUtc`, clamped to zero. Median is recalculated from the sorted raw duration population. |
+| Usage for billing | Raw interaction count and measured connected, wrap-up, queue-wait, transfer, and recording usage. The platform does not apply prices, contracts, taxes, minimum billing increments, or currency conversion. |
+| Transcript coverage | `Answered interactions with a non-empty transcript reference / Answered interactions`, grouped by channel. A transcript reference indicates availability, not transcript completeness or quality. |
 
 ## Report catalog
 
@@ -55,7 +62,7 @@ Each report uses the shared date/time filter, export, permission, scheduling, an
 1. Enable **Reports** and the feature that contributes the report: **Contact Center Reports & Analytics** or **Omnichannel Management**.
 2. Open **Reports** in the admin menu and select a report.
 3. Set **From** and **To** in the tenant's local time zone. The default is the last 30 days through the end of the current tenant-local day.
-4. Narrow the population with the displayed dimensions. Interaction reports offer queue, agent, channel, and direction. CRM reports offer campaign, channel, source, and status.
+4. Narrow the population with the displayed dimensions. Interaction reports offer queue, agent, channel, and direction; workforce reports offer agent; CRM reports offer campaign, channel, source, and status.
 5. Select **Show**. Every metric, table row, total, percentage, and duration is recalculated from the filtered raw population.
 6. Select **Export CSV** or an enabled Excel export. Export actions submit the same filter form, so downloaded data matches the visible report.
 
@@ -65,7 +72,7 @@ An empty dimension means **All**. If **From** is later than **To**, the report s
 
 | # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Executive performance summary | Gives executives and directors a concise view of accessibility, responsiveness, efficiency, transfers, and recording coverage. Enables capacity, provider, and customer-experience investment decisions. | Historical dashboard; enterprise cohort plus channel rows. | Channel, direction, provider, business unit; channel/day; descending interactions. | Interactions, inbound offered, inbound answered, inbound answer rate, abandoned, abandonment rate, failed, ASA, AHT, transfer rate, recording coverage. | KPI cards + channel table; enterprise → channel → queue → interaction detail → recording/transcript. |
+| 1 | Executive performance dashboard | Gives executives and directors a concise, presentation-ready view of demand, accessibility, responsiveness, efficiency, transfers, recording coverage, channel adoption, queue SLA health, and agent workload. Enables capacity, provider, customer-experience, and operating-model investment decisions. | Historical interactive dashboard; enterprise cohort plus daily, channel, queue, agent, and channel-detail views. | Date/time, queue, agent, channel, and direction; day/channel/queue/agent; chronological trend, highest-volume queues, and highest-volume agents. | Interactions, inbound offered, inbound answered, inbound answer rate, abandoned, abandonment rate, failed, ASA, AHT, transfer rate, recording coverage, daily offered/answered/abandoned, channel volume, queue service level, handled by agent. | KPI hero cards + daily multi-series line chart + channel-mix doughnut + queue service-level bar chart + top-agent workload bar chart + channel detail table; enterprise → channel/queue/agent → interaction detail → recording/transcript. |
 | 2 | Call insights | Gives operations leaders a broad interaction outcome and duration summary with channel/status breakdowns and daily volume. Supports trend and exception review. | Historical dashboard; enterprise cohort and one day per row. | Channel, direction, status, provider; day/channel/status; chronological daily rows. | Total, inbound, outbound, answered, abandoned, failed, answer rate, abandonment rate, AHT, ASA, connected duration, wrap-up duration. | KPI cards + bars + daily trend; day → channel/status → interaction detail. |
 | 3 | Interaction volume trend | Shows demand and outcome movement over time for directors, workforce planners, and analysts. Supports staffing and anomaly detection without claiming a forecast. | Historical trend; one UTC day per row. | Channel, direction, queue, campaign; day/week/month; chronological. | Date, interactions, answered, abandoned, failed. | Trend line + stacked bars; day → interval → interaction detail. |
 | 4 | Interval performance | Combines daily workload, outcomes, rates, ASA, and AHT for operations reviews. Enables interval-level staffing and service remediation. | Historical interval report; one UTC day per row. | Queue, channel, direction, provider; day/week/month; chronological or worst abandonment/ASA. | Date, interactions, answered, abandoned, answer rate, abandonment rate, ASA, AHT. | Trend line + table; day → queue/channel → interaction detail. |
@@ -122,6 +129,84 @@ An empty dimension means **All**. If **From** is later than **To**, the report s
 | 30 | Campaign performance | Gives CRM campaign owners completed-versus-pending progress across activity inventory. Supports campaign pacing and remediation. | Historical; one campaign per row. | Campaign, source, channel, status; campaign/day; descending total. | Campaign, total, completed, pending, in progress, failed, cancelled, completion rate. | Stacked bars + table; campaign → status → activity. |
 | 31 | Disposition breakdown | Shows how completed activities were dispositioned and each disposition's share. Enables outcome governance and workflow review. | Historical by completion date; one disposition per row. | Disposition, campaign, subject, channel, agent; disposition/day; descending completed. | Disposition, completed, share of completed activities. | Donut + table; disposition → completed activity → interaction history. |
 
+### Additional operations, queue, and interaction reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 32 | Hour-of-day performance | Identifies recurring demand and service patterns for intraday operating decisions. | Historical; one UTC hour per row. | Standard interaction filters; hour; chronological. | Standard interaction performance columns including volume, outcomes, rates, ASA, and AHT. | Table; hour → interaction detail. |
+| 33 | Day-of-week performance | Compares recurring weekday workload and outcomes for staffing-pattern review. | Historical; one weekday per row. | Standard interaction filters; weekday; descending volume. | Standard interaction performance columns. | Table; weekday → interaction detail. |
+| 34 | Queue performance summary | Gives floor managers one consistent comparison of workload, outcomes, ASA, and AHT by queue. | Historical; one queue per row. | Date/time, queue, agent, channel, direction; queue; descending volume. | Queue, interactions, answered, abandoned, failed, answer rate, abandonment rate, ASA, AHT. | Table; queue → interaction detail. |
+| 35 | Queue wait time analysis | Quantifies customer waiting effort and queue-time consumption. | Historical; one queue per row. | Standard interaction filters; queue; descending total wait. | Queue, interactions, total wait, average wait, maximum wait. | Table; queue → high-wait detail. |
+| 36 | Queue handle time analysis | Quantifies connected plus after-contact work time consumed by each queue. | Historical; one queue per row. | Standard interaction filters; queue; descending total handle time. | Queue, interactions, total handle time, average handle time, maximum handle time. | Table; queue → interaction detail. |
+| 37 | Queue transfer performance | Finds queues that transfer work frequently and supports routing redesign. | Historical; one queue per row. | Standard interaction filters; queue; descending transfer volume. | Queue, handled, transferred interactions, transfer events, transfer rate. | Table; queue → transfer detail. |
+| 38 | Interaction lifecycle duration | Separates wait, connected, wrap-up, and end-to-end duration by final state. | Historical; one status per row. | Standard interaction filters; status; status order. | Status, interactions, average wait, connected, wrap-up, end-to-end duration. | Table; status → interaction detail. |
+| 39 | Long interaction detail | Supports cost, coaching, and exception review for sessions lasting at least 15 connected minutes. | Historical detail; one interaction per row. | Standard interaction filters; newest first. | Standard interaction detail columns. | Table; interaction → recording/transcript. |
+| 40 | Failed interaction detail | Gives IT and operations an auditable list of failed communication attempts. | Historical detail; one failed interaction per row. | Standard interaction filters; newest first. | Standard interaction detail columns. | Table; interaction → provider/event history. |
+| 41 | Abandoned interaction detail | Gives queue managers the source rows behind abandonment totals. | Historical detail; one abandoned interaction per row. | Standard interaction filters; newest first. | Standard interaction detail columns. | Table; interaction → queue history. |
+| 42 | High-wait interaction detail | Identifies interactions with at least 60 seconds of observed wait. | Historical detail; one interaction per row. | Standard interaction filters; newest first. | Standard interaction detail columns. | Table; interaction → queue history. |
+
+### Additional agent performance reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 43 | Agent interaction volume | Compares workload and supporting outcomes by user. | Historical; one agent per row. | Date/time, agent, queue, channel, direction; agent; descending handled. | Agent, handled, answered, failed, transfers, recorded, AHT. | Table; agent → interaction detail. |
+| 44 | Agent outcome performance | Surfaces agents with high failed interaction volume without treating failure as a quality score. | Historical; one agent per row. | Standard interaction filters; agent; descending failures. | Agent and standard agent performance columns. | Table; agent → failed interactions. |
+| 45 | Agent inbound performance | Isolates inbound workload and outcomes by agent. | Historical; one agent per row. | Standard interaction filters; agent; descending inbound volume. | Agent and standard agent performance columns. | Table; agent → inbound detail. |
+| 46 | Agent outbound performance | Isolates outbound workload and outcomes by agent. | Historical; one agent per row. | Standard interaction filters; agent; descending outbound volume. | Agent and standard agent performance columns. | Table; agent → outbound detail. |
+| 47 | Agent transfer performance | Supports coaching and routing review with transfer volume by agent. | Historical; one agent per row. | Standard interaction filters; agent; descending transfers. | Agent, handled, answered, failed, transfers, recorded, AHT. | Table; agent → transfer detail. |
+| 48 | Agent recording coverage | Finds agent-associated answered interactions lacking recording references. | Historical; one agent per row. | Standard interaction filters; agent; descending recorded volume. | Agent and standard agent performance columns. | Table; agent → uncovered interaction. |
+| 49 | Assigned user performance | Compares CRM activity progress and attempts by assigned user. | Historical; one user per row. | CRM filters; assigned user; descending activity count. | Assigned user and standard activity progress columns. | Table; user → activity detail. |
+| 50 | User completion time | Measures average, median, and maximum CRM activity cycle time by assigned user. | Historical; one user per row. | CRM filters; assigned user; descending average cycle time. | User, completed, average cycle time, median cycle time, maximum cycle time. | Table; user → completed activities. |
+| 51 | Daily user productivity | Shows daily completed work, attempts, and cycle time by assigned user. | Historical; one user/day row. | CRM filters; day/user; chronological. | UTC date, user, completed, average cycle time, attempts. | Table; day/user → activity detail. |
+| 52 | Overdue workload by user | Supports supervisor intervention by showing overdue volume and age per owner. | Current-state as-of report; one user per row. | CRM filters; user; descending overdue count. | User, overdue, unassigned, average overdue age, maximum overdue age. | Table; user → overdue activities. |
+
+### Workforce and payroll reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 53 | Agent time summary | Provides observed on-duty and state-duration inputs for workforce and payroll review. | Historical presence-duration report; one agent per row. | Date/time and agent; agent; descending signed-in time. | Agent, signed-in, available, busy, wrap-up, break, other not-ready, utilization. | Table; agent → presence audit. |
+| 54 | Daily agent timecard | Provides day-level observed timecard inputs without applying schedules or pay rules. | Historical; one UTC day/agent row. | Date/time and agent; day/agent; chronological. | Date, agent, signed-in, productive presence, busy + wrap-up, break + away, first observed, last observed. | Table; day/agent → presence audit. |
+| 55 | Presence status duration | Shows how signed-in time is distributed across every presence state. | Historical; one status per row. | Date/time and agent; status; descending duration. | Presence status, duration, share of signed-in time, intervals. | Donut/table; status → agent intervals. |
+| 56 | Agent break and away analysis | Quantifies break frequency and duration for workforce review. | Historical; one agent per row. | Date/time and agent; agent; descending break time. | Agent, breaks, total break time, average break, longest break. | Table; agent → presence audit. |
+| 57 | Ready versus not-ready time | Separates ready, actively working, and not-ready time. | Historical; one agent per row. | Date/time and agent; agent. | Agent, ready time, working time, not-ready time, ready share. | Stacked bars/table; agent → status durations. |
+| 58 | Agent utilization | Measures busy plus wrap-up time as a share of all observed signed-in time. | Historical; one agent per row. | Date/time and agent; agent; descending utilization. | Agent, working time, signed-in time, utilization. | Bar/table; agent → time summary. |
+| 59 | Agent occupancy | Measures busy plus wrap-up time against available handling time. | Historical; one agent per row. | Date/time and agent; agent; descending occupancy. | Agent, working time, available handling time, occupancy. | Bar/table; agent → time summary. |
+| 60 | Presence reason breakdown | Quantifies time associated with configured break/not-ready reasons. | Historical; one status/reason row. | Date/time and agent; status/reason; descending duration. | Status, reason, duration, intervals. | Table; reason → presence audit. |
+| 61 | Agent presence audit | Provides the durable transition ledger used to reconcile time reports. | Historical detail; one transition per row. | Date/time and agent; newest first. | Changed UTC, agent, previous/current/requested status, reason, queue count, campaign count, event. | Table; transition → event record. |
+| 62 | Queue signed-in hours | Attributes observed signed-in duration to queue memberships active during each presence interval. | Historical; one queue per row. | Date/time and agent; queue; descending duration. | Queue id, signed-in time, agent intervals. | Table; queue → agent presence audit. |
+| 63 | Campaign signed-in hours | Attributes observed signed-in duration to campaign memberships active during each presence interval. | Historical; one campaign per row. | Date/time and agent; campaign; descending duration. | Campaign id, signed-in time, agent intervals. | Table; campaign → agent presence audit. |
+| 64 | Payroll timecard inputs | Exports observed on-duty and state-classification durations for payroll review. It intentionally does not calculate wages. | Historical; one agent per row. | Date/time and agent; agent. | Agent, observed on-duty, productive presence, break + away, meeting + training, other not-ready. | Table/export; agent → daily timecard. |
+
+### Billing and usage reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 65 | Queue usage for billing | Supplies queue-level measured usage for invoice and client chargeback reconciliation. | Historical; one queue per row. | Standard interaction filters; queue; descending connected time. | Queue, interactions, answered, connected, wrap-up, queue wait, transfers, recordings. | Table/export; queue → interaction detail. |
+| 66 | Agent usage for billing | Supplies agent-level measured service time for payroll and internal allocation. | Historical; one agent per row. | Standard interaction filters; agent; descending connected time. | Agent and standard usage columns. | Table/export; agent → interaction detail. |
+| 67 | Provider usage for billing | Reconciles provider invoices against normalized platform usage. | Historical; one provider per row. | Standard interaction filters; provider; descending connected time. | Provider and standard usage columns. | Table/export; provider → interaction detail. |
+| 68 | Channel usage for billing | Allocates measured usage across voice, SMS, email, chat, and future channels. | Historical; one channel per row. | Standard interaction filters; channel; descending connected time. | Channel and standard usage columns. | Table/export; channel → interaction detail. |
+| 69 | Daily usage for billing | Supplies invoice-period daily usage totals for reconciliation. | Historical; one UTC day per row. | Standard interaction filters; day; chronological. | Date and standard usage columns. | Trend/table/export; day → interaction detail. |
+
+### Additional CRM and campaign reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 70 | Activity creation by user | Audits which user or system actor created CRM work and its eventual outcomes. | Historical; one creator per row. | CRM filters; creator; descending total. | Creator and standard activity progress columns. | Table; creator → activity detail. |
+| 71 | Campaign source mix | Compares campaign workload and outcomes by activity source. | Historical; one campaign/source row. | CRM filters; campaign/source; descending total. | Campaign, source, activities, completed, failed, completion rate. | Stacked table; campaign → source → activities. |
+| 72 | Campaign channel mix | Compares campaign workload and outcomes by channel. | Historical; one campaign/channel row. | CRM filters; campaign/channel; descending total. | Campaign, channel, activities, completed, failed, completion rate. | Stacked table; campaign → channel → activities. |
+| 73 | Campaign disposition mix | Shows campaign results by durable disposition. | Historical; one campaign/disposition row. | CRM filters; campaign/disposition; descending total. | Campaign, disposition, activities, completed, failed, completion rate. | Table; campaign → disposition → activities. |
+| 74 | Campaign attempt performance | Shows how campaign outcomes vary by attempt count. | Historical; one campaign/attempt row. | CRM filters; campaign/attempt; descending total. | Campaign, attempts, activities, completed, failed, completion rate. | Funnel/table; campaign → attempt → activities. |
+| 75 | Channel endpoint usage | Supports technical capacity and configuration review by endpoint. | Historical; one endpoint per row. | CRM filters; endpoint; descending total. | Endpoint and standard activity progress columns. | Table; endpoint → activities. |
+| 76 | Customer workload | Shows CRM work volume, outcomes, and attempts per customer record. | Historical; one customer per row. | CRM filters; customer; descending total. | Customer and standard activity progress columns. | Table; customer → CRM timeline. |
+| 77 | Scheduled completion performance | Compares activities completed by their scheduled time with late completions. | Historical; one schedule-result row. | CRM filters; result; result order. | Schedule result, activities, share, average absolute variance. | KPI/table; result → activities. |
+
+### Additional compliance and technical reports
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 78 | Transcript coverage | Finds answered interactions lacking transcript references by channel. | Historical; one channel per row. | Standard interaction filters; channel. | Channel, answered, with transcript, without reference, coverage. | Gauge/table; channel → uncovered interaction. |
+| 79 | Call leg performance | Gives IT teams provider-leg volume, answer state, status, and duration. | Historical; one leg status per row. | Standard interaction filters; leg status. | Leg status, legs, answered, average duration. | Table; status → interaction/provider detail. |
+
 ## Data validation and reconciliation
 
 Use the following acceptance dataset whenever report projections or formulas change:
@@ -139,11 +224,12 @@ Use the following acceptance dataset whenever report projections or formulas cha
 
 The following common report families are intentionally not emitted until their source data exists:
 
-- **Workforce management:** forecast accuracy, staffing requirement, schedule adherence, conformance, occupancy, utilization, and shrinkage require interval forecasts, schedules, paid-time states, and complete agent-state duration projections.
+- **Workforce planning:** forecast accuracy, staffing requirement, schedule adherence, conformance, shrinkage, overtime, and paid-hours compliance require forecasts, schedules, employment calendars, and pay policies. The included occupancy, utilization, and timecard reports use durable observed presence only.
 - **Quality management:** evaluation scorecards, calibration, coaching completion, compliance failures, and evaluator productivity require the planned quality module.
 - **Customer experience:** CSAT, NPS, customer effort, and first-contact resolution require survey responses and a durable case/resolution-reopen correlation model. Disposition alone is not a valid substitute for FCR.
 - **Advanced interaction analytics:** sentiment, topic, silence, interruption, script adherence, and AI summaries require transcript analytics and an enabled provider.
 - **IVR journey analytics:** menu path, containment, self-service completion, and opt-out require multi-step IVR event capture.
 - **Historical backlog reconstruction:** activity reports use the current persisted activity status. Backlog and aging include all currently nonterminal work created by the selected **To** boundary, but they cannot reconstruct whether an activity that is completed today was still open at a past boundary without a dedicated activity-state history projection.
+- **Payroll and billing money:** reports provide measured durations and counts, but wages, premiums, contracted rates, billing increments, taxes, discounts, currency, and invoice totals require organization-specific rate and policy data that is not persisted by these modules.
 
 These exclusions prevent plausible-looking but operationally false enterprise KPIs.

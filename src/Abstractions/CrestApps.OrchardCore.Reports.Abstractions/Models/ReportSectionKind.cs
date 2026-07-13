@@ -19,4 +19,9 @@ public enum ReportSectionKind
     /// The section renders a set of horizontal bars.
     /// </summary>
     Bars,
+
+    /// <summary>
+    /// The section renders an interactive chart.
+    /// </summary>
+    Chart,
 }

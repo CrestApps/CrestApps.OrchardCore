@@ -23,6 +23,21 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         "contact-center-campaign-summary",
         "contact-center-subject-inventory",
     ];
+    private static readonly HashSet<string> _workforceReports =
+    [
+        "contact-center-agent-time-summary",
+        "contact-center-agent-daily-timecard",
+        "contact-center-presence-status-duration",
+        "contact-center-agent-break-analysis",
+        "contact-center-ready-not-ready",
+        "contact-center-agent-utilization",
+        "contact-center-agent-occupancy",
+        "contact-center-presence-reasons",
+        "contact-center-presence-audit",
+        "contact-center-queue-signed-in-hours",
+        "contact-center-campaign-signed-in-hours",
+        "contact-center-payroll-timecard",
+    ];
 
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
@@ -95,7 +110,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.ActivitySource = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivitySource);
         model.ActivityStatus = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivityStatus);
         model.ShowActivityFilters = _activityReports.Contains(filter.ReportName);
-        model.ShowInteractionFilters = !model.ShowActivityFilters;
+        model.ShowWorkforceFilters = _workforceReports.Contains(filter.ReportName);
+        model.ShowInteractionFilters = !model.ShowActivityFilters && !model.ShowWorkforceFilters;
 
         var queues = await _queueManager.GetAllAsync();
         var agents = await _agentManager.GetAllAsync();

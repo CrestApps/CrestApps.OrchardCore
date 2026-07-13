@@ -17,7 +17,17 @@ public sealed class ExcelReportExportFormatTests
         var document = new ReportDocument()
             .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Open conversations", "42", "Current period")]))
             .Add(ReportSection.ForTable("Queues", [new ReportColumn("Queue"), new ReportColumn("Count")], [new ReportRow(["Support", "18"])]))
-            .Add(ReportSection.ForBars("Channel mix", [new ReportBar("Voice", "12", 0.6)]));
+            .Add(ReportSection.ForBars("Channel mix", [new ReportBar("Voice", "12", 0.6)]))
+            .Add(ReportSection.ForChart("Daily trend", new ReportChart
+            {
+                Type = ReportChartType.Line,
+                Labels = ["Monday", "Tuesday"],
+                Datasets =
+                [
+                    new ReportChartDataset("Offered", [12, 18]),
+                    new ReportChartDataset("Answered", [10, 15]),
+                ],
+            }));
 
         var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
 
@@ -32,10 +42,11 @@ public sealed class ExcelReportExportFormatTests
         Assert.NotNull(workbookPart);
 
         var sheets = workbookPart.Workbook.Sheets.Elements<Sheet>().ToArray();
-        Assert.Equal(3, sheets.Length);
+        Assert.Equal(4, sheets.Length);
         Assert.Equal("Summary", sheets[0].Name);
         Assert.Equal("Queues", sheets[1].Name);
         Assert.Equal("Channel mix", sheets[2].Name);
+        Assert.Equal("Daily trend", sheets[3].Name);
 
         var summaryRows = GetSheetRows(workbookPart, sheets[0]);
         Assert.Equal(["Metric", "Value", "Hint"], GetCellValues(summaryRows[0]));
@@ -48,6 +59,11 @@ public sealed class ExcelReportExportFormatTests
         var barRows = GetSheetRows(workbookPart, sheets[2]);
         Assert.Equal(["Label", "Value", "Ratio"], GetCellValues(barRows[0]));
         Assert.Equal(["Voice", "12", "0.6"], GetCellValues(barRows[1]));
+
+        var chartRows = GetSheetRows(workbookPart, sheets[3]);
+        Assert.Equal(["Label", "Offered", "Answered"], GetCellValues(chartRows[0]));
+        Assert.Equal(["Monday", "12", "10"], GetCellValues(chartRows[1]));
+        Assert.Equal(["Tuesday", "18", "15"], GetCellValues(chartRows[2]));
     }
 
     [Fact]

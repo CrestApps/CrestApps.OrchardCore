@@ -36,7 +36,7 @@ public abstract class OmnichannelReportBase : IReport
     public abstract LocalizedString Description { get; }
 
     /// <inheritdoc/>
-    public string Category => ReportsConstants.Categories.Omnichannel;
+    public virtual string Category => ReportsConstants.Categories.CrmCampaigns;
 
     /// <inheritdoc/>
     public Permission Permission => OmnichannelConstants.Permissions.ViewReports;

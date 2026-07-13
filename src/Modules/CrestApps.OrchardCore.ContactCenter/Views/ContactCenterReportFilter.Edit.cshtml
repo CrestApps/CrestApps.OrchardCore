@@ -1,6 +1,15 @@
 @model CrestApps.OrchardCore.ContactCenter.ViewModels.ContactCenterReportFilterViewModel
 
-@if (Model.ShowInteractionFilters)
+@if (Model.ShowWorkforceFilters)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="AgentId">@T["Agent"]</label>
+        <select asp-for="AgentId" asp-items="Model.Agents" class="form-select">
+            <option value="">@T["All agents"]</option>
+        </select>
+    </div>
+}
+else if (Model.ShowInteractionFilters)
 {
     <div class="col p-1">
         <label class="form-label" asp-for="QueueId">@T["Queue"]</label>
@@ -43,9 +52,12 @@ else if (Model.ShowActivityFilters)
     </div>
 }
 
-<div class="col p-1">
-    <label class="form-label" asp-for="Channel">@T["Channel"]</label>
-    <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
-        <option value="">@T["All channels"]</option>
-    </select>
-</div>
+@if (!Model.ShowWorkforceFilters)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="Channel">@T["Channel"]</label>
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
+            <option value="">@T["All channels"]</option>
+        </select>
+    </div>
+}

@@ -32,6 +32,9 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     public override LocalizedString Description => S["Per-agent handled volume, talk time, average handle time, and completed activities."];
 
     /// <inheritdoc/>
+    public override string Category => ReportsConstants.Categories.AgentPerformance;
+
+    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var report = await ReportingService.GetAgentProductivityAsync(

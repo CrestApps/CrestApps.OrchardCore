@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
 /// Serializes a report document to CSV. Every section is written in order: metrics as label/value
-/// pairs, tables as a header row plus data rows, and bars as label/value pairs.
+/// pairs, tables as a header row plus data rows, bars as label/value pairs, and charts as label/series tables.
 /// </summary>
 public sealed class CsvReportExportFormat : IReportExportFormat
 {
@@ -85,10 +86,39 @@ public sealed class CsvReportExportFormat : IReportExportFormat
                     }
 
                     break;
+                case ReportSectionKind.Chart:
+                    AppendChart(builder, section.Chart);
+                    break;
             }
         }
 
         return new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(builder.ToString());
+    }
+
+    private static void AppendChart(StringBuilder builder, ReportChart chart)
+    {
+        if (chart is null)
+        {
+            return;
+        }
+
+        AppendRow(builder, ["Label", .. chart.Datasets.Select(dataset => dataset.Label)]);
+
+        for (var labelIndex = 0; labelIndex < chart.Labels.Count; labelIndex++)
+        {
+            var values = new string[chart.Datasets.Count + 1];
+            values[0] = chart.Labels[labelIndex];
+
+            for (var datasetIndex = 0; datasetIndex < chart.Datasets.Count; datasetIndex++)
+            {
+                var dataset = chart.Datasets[datasetIndex];
+                values[datasetIndex + 1] = labelIndex < dataset.Values.Count
+                    ? dataset.Values[labelIndex].ToString(CultureInfo.InvariantCulture)
+                    : string.Empty;
+            }
+
+            AppendRow(builder, values);
+        }
     }
 
     private static void AppendRow(StringBuilder builder, params string[] values)

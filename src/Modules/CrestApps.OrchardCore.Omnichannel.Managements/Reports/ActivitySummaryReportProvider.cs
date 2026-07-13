@@ -38,6 +38,9 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
     public override LocalizedString Description => S["CRM activity volume and completion, broken down by source, channel, and status, with a daily trend."];
 
     /// <inheritdoc/>
+    public override string Category => ReportsConstants.Categories.Operations;
+
+    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var activities = await OmnichannelReportQuery.GetCreatedAsync(

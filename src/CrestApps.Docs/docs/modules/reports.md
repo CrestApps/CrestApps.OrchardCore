@@ -10,7 +10,7 @@ description: A reusable reporting framework for OrchardCore with a shared admin 
 | **Feature Name** | Reports |
 | **Feature ID** | `CrestApps.OrchardCore.Reports` |
 
-The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, and bars), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same. The built-in Contact Center and Omnichannel definitions are documented in the [Enterprise report catalog](../contact-center/report-catalog.md).
+The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, bars, and interactive charts), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same. The built-in Contact Center and Omnichannel definitions are documented in the [Enterprise report catalog](../contact-center/report-catalog.md).
 
 | | |
 | --- | --- |
@@ -29,12 +29,12 @@ The implementation is split into three layers:
 
 - **`IReport`** — a report definition. It declares a technical `Name`, a `DisplayName`, a `Description`, a `Category` (used to group reports in the menu), a `Permission`, and a `RunAsync` method that returns a `ReportDocument` for a given `ReportContext`.
 - **`ReportFilter`** — the filter applied when a report runs. Every report shares a tenant-local from/to date and time range; additional, report-specific filters are contributed with display drivers and flow through exports unchanged.
-- **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), or a set of horizontal bars. The same document is rendered in the browser and serialized by every exporter.
+- **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), horizontal bars, or a responsive Chart.js line, bar, stacked-bar, or doughnut chart. The same document is rendered in the browser and serialized by every exporter; chart exports use a label-and-dataset table so the underlying values remain portable.
 - **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
 
 ## Reports area
 
-Enabling the feature adds a top-level **Reports** item to the admin menu. Reports with a category are grouped under that heading, while uncategorized reports appear directly under **Reports**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
+Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are alphabetized within consistently ordered role-based groups: **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, **Technical & IT**, and **General**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
 ## Extensible filters
 
@@ -80,7 +80,7 @@ Implement `IReport` and register it as a scoped service:
 services.AddScoped<IReport, MyReport>();
 ```
 
-`RunAsync` builds a `ReportDocument` from the resolved period (`context.FromUtc` / `context.ToUtc`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, and `ReportSection.ForBars` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently.
+`RunAsync` builds a `ReportDocument` from the resolved period (`context.FromUtc` / `context.ToUtc`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, `ReportSection.ForBars`, and `ReportSection.ForChart` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently. Charts accept ordered labels plus one or more numeric datasets; `Width` places sections on the shared responsive twelve-column layout.
 
 ## Enable via recipe
 
