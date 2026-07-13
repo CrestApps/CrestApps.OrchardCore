@@ -125,7 +125,8 @@
 
 @if (Model.Sections.Any(section => section.Kind == ReportSectionKind.Chart))
 {
-    <script at="Foot" depends-on="chart.js">
+    <script asp-name="chart.js" at="Foot"></script>
+    <script asp-name="CrestApps.OrchardCore.Reports.Charts" at="Foot" depends-on="chart.js">
         (() => {
             const renderCharts = () => {
                 const palette = [

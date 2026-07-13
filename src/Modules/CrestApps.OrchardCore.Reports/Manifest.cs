@@ -15,5 +15,9 @@ using OrchardCore.Modules.Manifest;
     Id = ReportsConstants.Feature,
     Name = "Reports",
     Description = "Adds the admin Reports area, the extensible report filter with a from/to date range, the uniform report renderer, and CSV export. Other modules contribute reports to this area.",
-    Category = "Reporting"
+    Category = "Reporting",
+    Dependencies =
+    [
+        "CrestApps.OrchardCore.Resources",
+    ]
 )]

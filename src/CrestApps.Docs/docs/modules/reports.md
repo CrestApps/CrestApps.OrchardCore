@@ -9,8 +9,9 @@ description: A reusable reporting framework for OrchardCore with a shared admin 
 | --- | --- |
 | **Feature Name** | Reports |
 | **Feature ID** | `CrestApps.OrchardCore.Reports` |
+| **Dependency** | `CrestApps.OrchardCore.Resources` |
 
-The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, bars, and interactive charts), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same. The built-in Contact Center and Omnichannel definitions are documented in the [Enterprise report catalog](../contact-center/report-catalog.md).
+The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, bars, and interactive charts), and pluggable exports (CSV built in). The feature depends on **CrestApps Resources** and loads its named `chart.js` resource only when the current report contains a chart section. Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same. The built-in Contact Center and Omnichannel definitions are documented in the [Enterprise report catalog](../contact-center/report-catalog.md).
 
 | | |
 | --- | --- |
