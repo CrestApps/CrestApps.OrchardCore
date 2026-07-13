@@ -50,6 +50,21 @@ public class SubjectFlowSettingsViewModel
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether allow AI to update contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }
@@ -103,4 +118,22 @@ public class SubjectFlowSettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available speech-to-text deployments.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> SpeechToTextDeployments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available text-to-speech deployments.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available text-to-speech voices.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> TextToSpeechVoices { get; set; }
 }

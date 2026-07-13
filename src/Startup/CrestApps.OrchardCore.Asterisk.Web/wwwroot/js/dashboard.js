@@ -95,6 +95,9 @@
             channelsJson: root.querySelector('[data-dashboard-channels-json]'),
             bridgesJson: root.querySelector('[data-dashboard-bridges-json]')
         };
+        var twoPartyForm = root.querySelector('[data-two-party-form]');
+        var twoPartySubmit = root.querySelector('[data-two-party-submit]');
+        var twoPartyStatus = root.querySelector('[data-two-party-status]');
 
         function notificationClass(tone) {
             return tone === 'danger'
@@ -213,7 +216,7 @@
             }
 
             if (!bridges.length) {
-                refs.bridges.innerHTML = '<tr><td colspan="4" class="text-body-secondary">No active bridges.</td></tr>';
+                refs.bridges.innerHTML = '<tr><td colspan="5" class="text-body-secondary">No active bridges.</td></tr>';
 
                 return;
             }
@@ -224,6 +227,7 @@
                     '<td>' + escapeHtml(bridge.bridgeType || '-') + '</td>' +
                     '<td>' + escapeHtml(bridge.channelCount) + '</td>' +
                     '<td>' + escapeHtml(formatDuration(bridge.durationSeconds)) + '</td>' +
+                    '<td><button type="button" class="btn btn-sm btn-outline-danger" data-dashboard-disconnect-bridge data-bridge-id="' + escapeHtml(bridge.id || '') + '">Disconnect</button></td>' +
                 '</tr>';
             }).join('');
         }
@@ -320,6 +324,76 @@
             fallbackPollingTimer = null;
         }
 
+        function startTwoPartySimulation() {
+            if (!twoPartyForm || !config.twoPartySimulationUrl) {
+                return Promise.resolve();
+            }
+
+            var data = new window.FormData(twoPartyForm);
+            var payload = {
+                partyAEndpoint: data.get('partyAEndpoint'),
+                partyACallerId: data.get('partyACallerId'),
+                partyBEndpoint: data.get('partyBEndpoint'),
+                partyBCallerId: data.get('partyBCallerId')
+            };
+
+            if (twoPartySubmit) {
+                twoPartySubmit.disabled = true;
+                twoPartySubmit.textContent = 'Connecting parties...';
+            }
+
+            if (twoPartyStatus) {
+                twoPartyStatus.textContent = 'Originating both endpoints and waiting for Stasis...';
+            }
+
+            return fetch(config.twoPartySimulationUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(function (response) {
+                    if (response.ok) {
+                        return response.json();
+                    }
+
+                    return response.text().then(function (message) {
+                        throw new Error(message || 'The two-party call could not be created.');
+                    });
+                })
+                .then(function (result) {
+                    var message = 'Created bridge ' + result.bridgeId + ' with channels ' +
+                        result.partyAChannelId + ' and ' + result.partyBChannelId + '.';
+
+                    if (twoPartyStatus) {
+                        twoPartyStatus.textContent = message;
+                    }
+
+                    pushNotification(message, 'success');
+                    return fetchSnapshot();
+                })
+                .catch(function (error) {
+                    var message = error && error.message
+                        ? error.message
+                        : 'The two-party call could not be created.';
+
+                    if (twoPartyStatus) {
+                        twoPartyStatus.textContent = message;
+                    }
+
+                    pushNotification(message, 'danger');
+                })
+                .finally(function () {
+                    if (twoPartySubmit) {
+                        twoPartySubmit.disabled = false;
+                        twoPartySubmit.textContent = 'Start two-party call';
+                    }
+                });
+        }
+
         function disconnectChannel(channelId) {
             if (!channelId) {
                 return Promise.resolve();
@@ -342,16 +416,50 @@
                 });
         }
 
+        function disconnectBridge(bridgeId) {
+            if (!bridgeId) {
+                return Promise.resolve();
+            }
+
+            return fetch('/api/asterisk/bridges/' + encodeURIComponent(bridgeId), {
+                method: 'DELETE',
+                credentials: 'same-origin'
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('The bridge could not be disconnected.');
+                    }
+
+                    pushNotification('Disconnected bridge ' + bridgeId + '.', 'warning');
+                    return fetchSnapshot();
+                })
+                .catch(function (error) {
+                    pushNotification(error && error.message ? error.message : 'The bridge could not be disconnected.', 'danger');
+                });
+        }
+
         root.addEventListener('click', function (event) {
-            var button = event.target.closest('[data-dashboard-hangup]');
+            var button = event.target.closest('[data-dashboard-hangup], [data-dashboard-disconnect-bridge]');
 
             if (!button) {
                 return;
             }
 
             event.preventDefault();
-            disconnectChannel(button.getAttribute('data-channel-id'));
+
+            if (button.hasAttribute('data-dashboard-disconnect-bridge')) {
+                disconnectBridge(button.getAttribute('data-bridge-id'));
+            } else {
+                disconnectChannel(button.getAttribute('data-channel-id'));
+            }
         });
+
+        if (twoPartyForm) {
+            twoPartyForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                startTwoPartySimulation();
+            });
+        }
 
         if (window.signalR && config.hubUrl) {
             var connection = new window.signalR.HubConnectionBuilder()

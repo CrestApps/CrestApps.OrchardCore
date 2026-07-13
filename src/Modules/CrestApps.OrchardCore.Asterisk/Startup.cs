@@ -39,7 +39,8 @@ public sealed class Startup : StartupBase
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
-            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>();
+            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
+            .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>();
 
         services
             .AddSingleton<AsteriskRealtimeVoiceListener>()

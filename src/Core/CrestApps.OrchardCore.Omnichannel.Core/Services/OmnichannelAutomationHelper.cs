@@ -49,4 +49,36 @@ public static class OmnichannelAutomationHelper
 
         return utcNow.AddMinutes(flowSettings.NoResponseTimeoutInMinutes.Value);
     }
+
+    /// <summary>
+    /// Resolves the activity-load AI and speech settings from batch overrides and subject-flow defaults.
+    /// </summary>
+    /// <param name="batch">The activity batch.</param>
+    /// <param name="flowSettings">The subject flow settings.</param>
+    /// <returns>The settings to persist on each automated activity.</returns>
+    public static AutomatedVoiceActivitySettings ResolveActivitySettings(
+        OmnichannelActivityBatch batch,
+        SubjectFlowSettings flowSettings)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+
+        return new AutomatedVoiceActivitySettings
+        {
+            AIProfileId = FirstValue(batch.AIProfileId, flowSettings?.ProfileId),
+            SpeechToTextDeploymentName = FirstValue(
+                batch.SpeechToTextDeploymentName,
+                flowSettings?.SpeechToTextDeploymentName),
+            TextToSpeechDeploymentName = FirstValue(
+                batch.TextToSpeechDeploymentName,
+                flowSettings?.TextToSpeechDeploymentName),
+            TextToSpeechVoiceId = FirstValue(
+                batch.TextToSpeechVoiceId,
+                flowSettings?.TextToSpeechVoiceId),
+        };
+    }
+
+    private static string FirstValue(params string[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+    }
 }

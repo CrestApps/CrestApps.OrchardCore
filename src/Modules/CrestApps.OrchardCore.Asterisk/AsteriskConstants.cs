@@ -36,6 +36,21 @@ public static class AsteriskConstants
     public const int DefaultTimeoutSeconds = 30;
 
     /// <summary>
+    /// The media-session metadata key containing the host or IP address Asterisk can reach for RTP.
+    /// </summary>
+    public const string ExternalMediaHostMetadataKey = "externalHost";
+
+    /// <summary>
+    /// The optional media-session metadata key containing the local IP address on which Orchard binds RTP.
+    /// </summary>
+    public const string ExternalMediaBindAddressMetadataKey = "bindAddress";
+
+    /// <summary>
+    /// The optional media-session metadata key containing the UDP port on which Orchard binds RTP.
+    /// </summary>
+    public const string ExternalMediaBindPortMetadataKey = "bindPort";
+
+    /// <summary>
     /// The channel variable used to mirror the hold state back through ARI events.
     /// </summary>
     public const string HoldStateVariableName = "CRESTAPPS_STATE_ONHOLD";

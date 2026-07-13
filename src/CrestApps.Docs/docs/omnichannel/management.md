@@ -56,6 +56,7 @@ When the AI feature is enabled, the subject flow editor also adds AI-specific se
 - the chat AI profile, filtered to profiles with **Add initial prompt** enabled
 - the subject goal
 - AI update permissions for the contact and subject
+- phone automation defaults for speech-to-text deployment, text-to-speech deployment, and voice
 - SMS automation controls such as no-response timeout, response delay, and opt-out keywords
 
 ### Subject Action
@@ -177,7 +178,7 @@ After creating your subject content types and campaigns, go to `Interaction Cent
 3. Select the campaign used for reporting and grouping.
 4. Select the interaction type and channel.
 5. If the subject uses automated interactions, configure the channel endpoint.
-6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, no-response timeout, response delay, and opt-out keyword fields.
+6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
 7. Save the subject flow.
 
 Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, inventory loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
@@ -212,11 +213,14 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
    - Select contact type
    - Select subject type
    - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
+   - For automated loads, optionally override the subject flow's AI profile, speech-to-text deployment, text-to-speech deployment, and voice. Empty speech selections fall back through the subject flow and then the global AI site settings.
    - Assign users when the selected source requires assignment.
    - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
 The inventory load runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
+
+When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
 
 ### Extending inventory load sources
 

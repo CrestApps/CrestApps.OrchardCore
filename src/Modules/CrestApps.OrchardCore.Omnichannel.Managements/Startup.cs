@@ -3,6 +3,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -124,7 +125,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
             .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>()
-            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>();
+            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
+            .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
 
         // Subject Flow Settings.
         services
@@ -205,7 +207,9 @@ public sealed class AISubjectFlowStartup : StartupBase
     {
         services
             .AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>()
-            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>();
+            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>()
+            .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
+            .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
     }
 }
 

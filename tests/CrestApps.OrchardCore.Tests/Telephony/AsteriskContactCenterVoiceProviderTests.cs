@@ -11,6 +11,20 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class AsteriskContactCenterVoiceProviderTests
 {
     [Fact]
+    public void Capabilities_WithRtpMediaImplementation_AdvertisesBidirectionalMedia()
+    {
+        // Arrange
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        var service = CreateService(resolver);
+
+        // Act
+        var capabilities = service.Capabilities;
+
+        // Assert
+        Assert.True(capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.BidirectionalMedia));
+    }
+
+    [Fact]
     public async Task DialAsync_WhenAsteriskProviderSucceeds_ReturnsProviderCallId()
     {
         // Arrange

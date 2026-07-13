@@ -66,6 +66,26 @@ public sealed class AsteriskWebOptions
     public string CallerNamePrefix { get; set; }
 
     /// <summary>
+    /// Gets or sets the default Asterisk endpoint used for party A in a two-party simulation.
+    /// </summary>
+    public string TwoPartyEndpointA { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default caller identifier used for party A in a two-party simulation.
+    /// </summary>
+    public string TwoPartyCallerIdA { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default Asterisk endpoint used for party B in a two-party simulation.
+    /// </summary>
+    public string TwoPartyEndpointB { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default caller identifier used for party B in a two-party simulation.
+    /// </summary>
+    public string TwoPartyCallerIdB { get; set; }
+
+    /// <summary>
     /// Gets or sets the Asterisk ARI base URL used by the diagnostics panel.
     /// </summary>
     public string AsteriskBaseUrl { get; set; }

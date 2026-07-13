@@ -364,6 +364,61 @@ public sealed class ContactCenterReportingServiceTests
     }
 
     [Fact]
+    public void AutomatedOutboundCallBatch_PopulatesCallInsightsAndCampaignSummary()
+    {
+        // Arrange
+        var interactions = new[]
+        {
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ended, answeredAfter: 4, endedAfter: 64),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ended, answeredAfter: 8, endedAfter: 98),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ended, answeredAfter: 6, endedAfter: 36),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Failed, answeredAfter: null, endedAfter: null),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ringing, answeredAfter: null, endedAfter: null),
+        };
+        var activities = new[]
+        {
+            AutomatedCallActivity("campaign-ai-reminders", ActivityStatus.Completed),
+            AutomatedCallActivity("campaign-ai-reminders", ActivityStatus.Completed),
+            AutomatedCallActivity("campaign-ai-reminders", ActivityStatus.Completed),
+            AutomatedCallActivity("campaign-ai-reminders", ActivityStatus.Failed),
+            AutomatedCallActivity("campaign-ai-reminders", ActivityStatus.Dialing),
+        };
+        var campaignNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["campaign-ai-reminders"] = "AI appointment reminders",
+        };
+
+        // Act
+        var calls = ContactCenterReportingService.BuildCallInsights(_from, _to, interactions);
+        var campaigns = ContactCenterReportingService.BuildCampaignSummary(_from, _to, activities, campaignNames);
+
+        // Assert
+        Assert.Equal(5, calls.Total);
+        Assert.Equal(5, calls.Outbound);
+        Assert.Equal(3, calls.Answered);
+        Assert.Equal(1, calls.Failed);
+        Assert.Equal(180d, calls.TotalTalkTimeSeconds);
+        Assert.Equal(60d, calls.AverageHandleTimeSeconds);
+        Assert.Equal(6d, calls.AverageSpeedOfAnswerSeconds);
+
+        var campaign = Assert.Single(campaigns.Rows);
+
+        Assert.Equal("AI appointment reminders", campaign.CampaignName);
+        Assert.Equal(5, campaign.Counts.Total);
+        Assert.Equal(3, campaign.Counts.Completed);
+        Assert.Equal(1, campaign.Counts.InProgress);
+        Assert.Equal(1, campaign.Counts.Failed);
+        Assert.Equal(0.6d, campaign.Counts.CompletionRate);
+        Assert.All(activities, activity =>
+        {
+            Assert.Equal(ActivityInteractionType.Automated, activity.InteractionType);
+            Assert.Equal(ActivitySources.PowerDial, activity.Source);
+            Assert.Equal(OmnichannelConstants.Channels.Phone, activity.Channel);
+            Assert.Equal(1, activity.Attempts);
+        });
+    }
+
+    [Fact]
     public void BuildSubjectInventory_GroupsBySubjectType()
     {
         // Arrange
@@ -441,6 +496,21 @@ public sealed class ContactCenterReportingServiceTests
         return new OmnichannelActivityIndex
         {
             SubjectContentType = subjectContentType,
+            Status = status,
+            CreatedUtc = _day,
+            Attempts = 1,
+        };
+    }
+
+    private static OmnichannelActivityIndex AutomatedCallActivity(string campaignId, ActivityStatus status)
+    {
+        return new OmnichannelActivityIndex
+        {
+            CampaignId = campaignId,
+            Kind = ActivityKind.Call,
+            Source = ActivitySources.PowerDial,
+            InteractionType = ActivityInteractionType.Automated,
+            Channel = OmnichannelConstants.Channels.Phone,
             Status = status,
             CreatedUtc = _day,
             Attempts = 1,

@@ -33,7 +33,9 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
     public LocalizedString Name { get; }
 
     /// <inheritdoc/>
-    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
+    public ContactCenterVoiceProviderCapabilities Capabilities =>
+        ContactCenterVoiceProviderCapabilities.DialerDial |
+        ContactCenterVoiceProviderCapabilities.BidirectionalMedia;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;

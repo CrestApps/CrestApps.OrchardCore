@@ -422,23 +422,27 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 var activitySource = sourceEntry.Source;
                 var campaignId = flowSettings.CampaignId;
                 var interactionType = flowSettings.InteractionType;
-                var aiProfileId = string.IsNullOrWhiteSpace(batch.AIProfileId)
-                    ? flowSettings.ProfileId
-                    : batch.AIProfileId;
+                var automatedSettings = OmnichannelAutomationHelper.ResolveActivitySettings(batch, flowSettings);
 
                 if (dialerProfile is not null)
                 {
                     activitySource = DialerActivitySourceHelper.GetActivitySource(dialerProfile.Mode);
                     campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
-                    aiProfileId = null;
+                    automatedSettings.AIProfileId = null;
+                    automatedSettings.SpeechToTextDeploymentName = null;
+                    automatedSettings.TextToSpeechDeploymentName = null;
+                    automatedSettings.TextToSpeechVoiceId = null;
                 }
 
                 activity.Kind = GetActivityKind(flowSettings.Channel);
                 activity.Source = activitySource;
                 activity.InteractionType = interactionType;
                 activity.Channel = flowSettings.Channel;
-                activity.AIProfileId = aiProfileId;
+                activity.AIProfileId = automatedSettings.AIProfileId;
+                activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
+                activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
+                activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;

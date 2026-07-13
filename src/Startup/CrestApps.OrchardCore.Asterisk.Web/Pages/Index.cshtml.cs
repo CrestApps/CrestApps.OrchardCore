@@ -47,6 +47,31 @@ public sealed class IndexModel : PageModel
     public int DashboardRefreshSeconds => Math.Max(1, _options.AsteriskRefreshSeconds);
 
     /// <summary>
+    /// Gets the two-party simulation API URL.
+    /// </summary>
+    public string TwoPartySimulationUrl => "/api/asterisk/simulations/two-party";
+
+    /// <summary>
+    /// Gets the default first-party endpoint.
+    /// </summary>
+    public string TwoPartyEndpointA => _options.TwoPartyEndpointA;
+
+    /// <summary>
+    /// Gets the default first-party caller identifier.
+    /// </summary>
+    public string TwoPartyCallerIdA => _options.TwoPartyCallerIdA;
+
+    /// <summary>
+    /// Gets the default second-party endpoint.
+    /// </summary>
+    public string TwoPartyEndpointB => _options.TwoPartyEndpointB;
+
+    /// <summary>
+    /// Gets the default second-party caller identifier.
+    /// </summary>
+    public string TwoPartyCallerIdB => _options.TwoPartyCallerIdB;
+
+    /// <summary>
     /// Initializes the page with configuration-backed defaults.
     /// </summary>
     public async Task OnGetAsync()

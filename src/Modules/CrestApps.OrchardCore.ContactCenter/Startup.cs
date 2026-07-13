@@ -342,6 +342,7 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
+            .AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()

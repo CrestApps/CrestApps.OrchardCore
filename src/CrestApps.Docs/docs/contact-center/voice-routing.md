@@ -361,6 +361,8 @@ The current voice flow stays consistent because it combines these protections:
 - `InboundVoiceEvent.ToAddress` must be present for generic inbound routing because the router needs the dialed service address to resolve the entry point or queue.
 - If multiple enabled queues have no explicit inbound mapping, the generic fallback queue resolution intentionally does not guess between them.
 - DialPad currently uses the **agent-device-native** delivery model. Contact Center does not bridge media for it; the provider rings the agent's registered device and later tells Contact Center what really happened.
+- Voice providers must explicitly advertise `ContactCenterVoiceProviderCapabilities.BidirectionalMedia` and register a matching `IContactCenterVoiceMediaProvider` before Contact Center can open a live caller-audio/application-audio session. The media resolver requires both declarations so event-only or partially implemented providers cannot be selected for AI voice.
+- Asterisk advertises bidirectional media through its ARI External Media RTP/UDP adapter. DialPad does not advertise the capability because its public integration does not expose equivalent raw live-media injection.
 - DialPad webhook subscriptions are currently created and monitored in the DialPad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
 - Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
 - Reconciliation currently repairs **known local provider-backed interactions**. It does not yet bootstrap a completely unknown live provider call that never got a local interaction before the restart window.

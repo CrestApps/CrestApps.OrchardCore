@@ -17,5 +17,38 @@
                 <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown. The selected profile is stored on each loaded activity and starts automated conversations."]</span>
             </div>
         </div>
+
+        @if (Model.IsPhoneChannel)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="SpeechToTextDeploymentName" class="ocat-label">@T["Speech-to-text deployment"]</label>
+                <div class="ocat-end">
+                    <select asp-for="SpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select">
+                        <option value="">@T["Use subject flow or site default"]</option>
+                    </select>
+                    <span class="hint">@T["Override the subject flow for activities loaded from this batch. Leave empty to use the subject flow and then the site default."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="TextToSpeechDeploymentName" class="ocat-label">@T["Text-to-speech deployment"]</label>
+                <div class="ocat-end">
+                    <select asp-for="TextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
+                        <option value="">@T["Use subject flow or site default"]</option>
+                    </select>
+                    <span class="hint">@T["Override the subject flow for activities loaded from this batch. Leave empty to use the subject flow and then the site default."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="TextToSpeechVoiceId" class="ocat-label">@T["Voice"]</label>
+                <div class="ocat-end">
+                    <select asp-for="TextToSpeechVoiceId" asp-items="Model.TextToSpeechVoices" class="form-select">
+                        <option value="">@T["Use subject flow or site default"]</option>
+                    </select>
+                    <span class="hint">@T["Override the voice for activities loaded from this batch. Save after changing the text-to-speech deployment to refresh its voice list."]</span>
+                </div>
+            </div>
+        }
     </div>
 </div>

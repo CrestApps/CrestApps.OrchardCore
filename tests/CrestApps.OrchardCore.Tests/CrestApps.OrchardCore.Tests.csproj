@@ -62,6 +62,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.DialPad/CrestApps.OrchardCore.DialPad.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
+    <ProjectReference Include="../../src/Startup/CrestApps.OrchardCore.Asterisk.Web/CrestApps.OrchardCore.Asterisk.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

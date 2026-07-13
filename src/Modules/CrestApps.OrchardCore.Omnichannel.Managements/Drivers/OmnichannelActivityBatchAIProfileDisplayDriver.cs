@@ -1,6 +1,8 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -16,16 +18,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
     private readonly IAIProfileManager _profileManager;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly DefaultSpeechVoicePresenter _speechVoicePresenter;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
 
     public OmnichannelActivityBatchAIProfileDisplayDriver(
         IAIProfileManager profileManager,
+        IAIDeploymentManager deploymentManager,
+        DefaultSpeechVoicePresenter speechVoicePresenter,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<OmnichannelActivityBatchAIProfileDisplayDriver> stringLocalizer)
     {
         _profileManager = profileManager;
+        _deploymentManager = deploymentManager;
+        _speechVoicePresenter = speechVoicePresenter;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
@@ -41,17 +49,45 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
         {
             model.Source = batch.Source;
             model.AIProfileId = batch.AIProfileId;
+            model.SpeechToTextDeploymentName = batch.SpeechToTextDeploymentName;
+            model.TextToSpeechDeploymentName = batch.TextToSpeechDeploymentName;
+            model.TextToSpeechVoiceId = batch.TextToSpeechVoiceId;
 
             var selectedProfileId = model.AIProfileId;
+            SubjectFlowSettings flowSettings = null;
 
-            if (string.IsNullOrWhiteSpace(selectedProfileId) &&
-                !string.IsNullOrWhiteSpace(batch.SubjectContentType))
+            if (!string.IsNullOrWhiteSpace(batch.SubjectContentType))
             {
-                var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
-                selectedProfileId = flowSettings?.ProfileId;
+                flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
+
+                if (string.IsNullOrWhiteSpace(selectedProfileId))
+                {
+                    selectedProfileId = flowSettings?.ProfileId;
+                }
             }
 
+            model.IsPhoneChannel = string.Equals(
+                flowSettings?.Channel,
+                OmnichannelConstants.Channels.Phone,
+                StringComparison.OrdinalIgnoreCase);
             model.AIProfiles = await GetAIProfileOptionsAsync(selectedProfileId);
+            model.SpeechToTextDeployments = BuildDeploymentOptions(
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText),
+                model.SpeechToTextDeploymentName);
+            model.TextToSpeechDeployments = BuildDeploymentOptions(
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.TextToSpeech),
+                model.TextToSpeechDeploymentName);
+
+            var effectiveTextToSpeechDeploymentName = string.IsNullOrWhiteSpace(model.TextToSpeechDeploymentName)
+                ? flowSettings?.TextToSpeechDeploymentName
+                : model.TextToSpeechDeploymentName;
+            var effectiveVoiceId = string.IsNullOrWhiteSpace(model.TextToSpeechVoiceId)
+                ? flowSettings?.TextToSpeechVoiceId
+                : model.TextToSpeechVoiceId;
+
+            model.TextToSpeechVoices = SelectVoice(
+                await _speechVoicePresenter.GetVoiceMenuItemsAsync(effectiveTextToSpeechDeploymentName),
+                effectiveVoiceId);
         }).Location("Content:2");
     }
 
@@ -60,6 +96,9 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
         if (!string.Equals(batch.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
         {
             batch.AIProfileId = null;
+            batch.SpeechToTextDeploymentName = null;
+            batch.TextToSpeechDeploymentName = null;
+            batch.TextToSpeechVoiceId = null;
 
             return null;
         }
@@ -93,6 +132,9 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
         }
 
         batch.AIProfileId = model.AIProfileId?.Trim();
+        batch.SpeechToTextDeploymentName = model.SpeechToTextDeploymentName?.Trim();
+        batch.TextToSpeechDeploymentName = model.TextToSpeechDeploymentName?.Trim();
+        batch.TextToSpeechVoiceId = model.TextToSpeechVoiceId?.Trim();
 
         return Edit(batch, context);
     }
@@ -115,5 +157,30 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
         var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
         return !string.IsNullOrWhiteSpace(metadata.InitialPrompt);
+    }
+
+    private static IEnumerable<SelectListItem> BuildDeploymentOptions(
+        IEnumerable<AIDeployment> deployments,
+        string selectedName)
+    {
+        return deployments
+            .OrderBy(deployment => deployment.ConnectionName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(deployment => new SelectListItem(deployment.Name, deployment.Name)
+            {
+                Selected = string.Equals(deployment.Name, selectedName, StringComparison.OrdinalIgnoreCase),
+            });
+    }
+
+    private static IEnumerable<SelectListItem> SelectVoice(
+        IEnumerable<SelectListItem> voices,
+        string selectedVoiceId)
+    {
+        foreach (var voice in voices)
+        {
+            voice.Selected = string.Equals(voice.Value, selectedVoiceId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return voices;
     }
 }

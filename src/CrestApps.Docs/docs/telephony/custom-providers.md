@@ -11,13 +11,14 @@ Use this guide when you want to add another PBX or telephony backend to CrestApp
 
 ## Architecture at a glance
 
-There are three separate seams, and a provider may implement one, two, or all three:
+There are five separate seams, and a provider may implement any combination supported by its backend:
 
 | Seam | Interface | Responsibility |
 | --- | --- | --- |
 | Soft-phone call control | `ITelephonyProvider` | Dial, hang up, hold, resume, mute, transfer, merge, answer, reject, voicemail, and provider capabilities |
 | Live call-state lookup | `ITelephonyCallStateProvider` | Query the provider's current server truth for a specific call so Contact Center can revalidate offers and reconcile restarts |
 | Contact Center orchestration | `IContactCenterVoiceProvider` | Dialer dialing, server-side agent bridging, provider-side queue ownership, and other Contact Center voice operations |
+| Bidirectional live media | `IContactCenterVoiceMediaProvider` | Receive caller audio and inject application-generated audio into an existing provider call |
 | Provider event ingress | `IProviderVoiceWebhookAdapter` or provider-specific stream listener | Convert provider webhooks or stream events into normalized `ProviderVoiceEvent` instances |
 
 The soft phone stays provider-agnostic because **providers never push UI updates directly to the browser**. Every provider must translate its native events into the internal Contact Center voice-event pipeline first.
@@ -68,7 +69,30 @@ Use this interface when the provider can:
 
 This layer is optional for browser-only or device-native flows, but it is required when Contact Center needs the provider to own more than basic soft-phone actions.
 
-## 3. Normalize provider events into `ProviderVoiceEvent`
+## 3. Implement bidirectional media only when the provider exposes live audio
+
+Providers that can attach an external media stream to an active call may implement `IContactCenterVoiceMediaProvider`. The matching `IContactCenterVoiceProvider` must also advertise `ContactCenterVoiceProviderCapabilities.BidirectionalMedia`.
+
+Both requirements are intentional. `IContactCenterVoiceMediaProviderResolver` returns a provider only when:
+
+1. the voice provider advertises `BidirectionalMedia`
+2. a media implementation with the same technical name is registered
+
+This prevents a capability flag without an implementation from being treated as usable, and it prevents an accidentally registered media service from bypassing the provider's declared capabilities.
+
+An opened `IContactCenterVoiceMediaSession` exposes:
+
+- the provider call and media-session identifiers
+- negotiated incoming and outgoing audio formats
+- an asynchronous stream of ordered incoming audio frames
+- an outgoing audio-frame writer
+- an explicit stop operation that detaches media without ending the underlying call
+
+The initial shared format vocabulary supports linear PCM, G.711 mu-law, and G.711 A-law, including sample rate, channel count, and preferred frame duration. Provider implementations remain responsible for their native transport, framing, codec negotiation, jitter handling, and bridge attachment.
+
+Do not advertise `BidirectionalMedia` for event-only integrations, recording downloads, post-call transcripts, or providers that can receive audio but cannot inject audio into the same live call.
+
+## 4. Normalize provider events into `ProviderVoiceEvent`
 
 This is the most important real-time seam.
 
@@ -90,7 +114,7 @@ When the provider also implements `ITelephonyCallStateProvider`, Contact Center 
 2. reconcile persisted active interactions when the tenant activates after a restart
 3. run a periodic safety reconciliation in case a live provider event was delayed or missed
 
-## 4. Choose the provider transport model
+## 5. Choose the provider transport model
 
 Providers usually fall into one of these transport models:
 
@@ -162,7 +186,7 @@ In other words, yes: the docs now distinguish **inbound to Orchard**, **outbound
 - **Asterisk ARI real-time events** are also **outbound from Orchard** because Orchard opens the `ws`/`wss` connection to Asterisk
 - **Browser soft-phone SignalR** is **bidirectional**
 
-## 5. Keep the soft phone authoritative from server truth
+## 6. Keep the soft phone authoritative from server truth
 
 The browser should send **intents** such as dial, hold, resume, mute, hang up, or accept offer.
 
@@ -178,36 +202,42 @@ Instead:
 
 This keeps hard phones, provider-native devices, and the browser soft phone synchronized from the same server-side truth.
 
-## 6. Registration checklist
+## 7. Registration checklist
 
 For a new provider module, the usual registration checklist is:
 
 1. Register the telephony provider implementation and settings UI
 2. Register `IContactCenterVoiceProvider` if the backend supports Contact Center orchestration features
-3. Register webhook endpoints or the tenant-safe live-stream listener
-4. Implement `ITelephonyCallStateProvider` when the backend can query the current state of a call by id
-5. Normalize every provider event into `ProviderVoiceEvent`
-6. Ensure the provider's current-state lookup and live-event mapping agree on lifecycle semantics so reconciliation never "undoes" provider truth
-7. Add targeted tests for:
+3. Register `IContactCenterVoiceMediaProvider` and advertise `BidirectionalMedia` only when the backend supports bidirectional live audio
+4. Register webhook endpoints or the tenant-safe live-stream listener
+5. Implement `ITelephonyCallStateProvider` when the backend can query the current state of a call by id
+6. Normalize every provider event into `ProviderVoiceEvent`
+7. Ensure the provider's current-state lookup and live-event mapping agree on lifecycle semantics so reconciliation never "undoes" provider truth
+8. Add targeted tests for:
    - state mapping
    - idempotency
    - inbound routing
+   - media capability advertisement and resolver matching
+   - media-session cancellation and cleanup when live media is supported
    - live state updates such as hold, resume, mute, unmute, recording, and multi-party changes
    - call-state lookup and restart reconciliation
-8. Update the docs and changelog with the supported capabilities and ingress model
+9. Update the docs and changelog with the supported capabilities and ingress model
 
 ## Current built-in examples
 
 | Provider | Transport into Orchard | Notes |
 | --- | --- | --- |
-| DialPad | Signed webhook + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id |
-| Asterisk | ARI HTTP control + per-call ARI lookup + tenant-scoped ARI event stream | Handles call control, call-state lookup by channel id, and a live ARI stream that maps server-side channel events back into the normalized voice-event pipeline and the persisted soft-phone interaction store |
+| DialPad | Signed webhook + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id. It does not currently advertise bidirectional media. |
+| Asterisk | ARI HTTP control + per-call ARI lookup + tenant-scoped ARI event stream + External Media RTP/UDP | Handles call control, call-state lookup, live normalized events, and bidirectional G.711 mu-law media sessions attached to call bridges. |
 
 ## Related interfaces
 
 - `ITelephonyProvider`
 - `ITelephonyCallStateProvider`
 - `IContactCenterVoiceProvider`
+- `IContactCenterVoiceMediaProvider`
+- `IContactCenterVoiceMediaProviderResolver`
+- `IContactCenterVoiceMediaSession`
 - `IProviderVoiceWebhookAdapter`
 - `IProviderVoiceEventService`
 - `IIncomingCallContextProvider`

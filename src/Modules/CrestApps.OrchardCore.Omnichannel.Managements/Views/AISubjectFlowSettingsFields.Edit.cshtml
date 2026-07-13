@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
@@ -21,6 +22,36 @@
             <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown because the initial prompt is sent as the first outbound SMS message."]</span>
         </div>
     </div>
+
+    @if (string.Equals(Model.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-label">@T["Voice call automation"]</div>
+            <div class="ocat-end">
+                <div class="mb-3">
+                    <label asp-for="SpeechToTextDeploymentName" class="form-label">@T["Speech-to-text deployment"]</label>
+                    <select asp-for="SpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default speech-to-text deployment configured in Artificial Intelligence settings."]</span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="TextToSpeechDeploymentName" class="form-label">@T["Text-to-speech deployment"]</label>
+                    <select asp-for="TextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default text-to-speech deployment configured in Artificial Intelligence settings."]</span>
+                </div>
+                <div>
+                    <label asp-for="TextToSpeechVoiceId" class="form-label">@T["Voice"]</label>
+                    <select asp-for="TextToSpeechVoiceId" asp-items="Model.TextToSpeechVoices" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default text-to-speech voice. Save after changing the text-to-speech deployment to refresh its voice list."]</span>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="ocat-wrapper">
         <label asp-for="SubjectGoal" class="ocat-label">@T["Subject goal"]</label>

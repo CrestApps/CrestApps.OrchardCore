@@ -628,4 +628,26 @@ public sealed class AsteriskDiagnosticsService
         response.EnsureSuccessStatusCode();
         await RefreshAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Disconnects an active Asterisk bridge.
+    /// </summary>
+    /// <param name="bridgeId">The bridge identifier to disconnect.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task DisconnectBridgeAsync(string bridgeId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(bridgeId);
+
+        if (!AsteriskAriConnectionUtilities.IsConfigured(_options))
+        {
+            throw new InvalidOperationException("Asterisk diagnostics are not configured.");
+        }
+
+        var client = _httpClientFactory.CreateClient(nameof(AsteriskDiagnosticsService));
+        AsteriskAriConnectionUtilities.ApplyBasicAuthentication(client, _options);
+
+        using var response = await client.DeleteAsync($"bridges/{Uri.EscapeDataString(bridgeId)}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await RefreshAsync(cancellationToken);
+    }
 }

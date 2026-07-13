@@ -76,4 +76,10 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can take over a live call from the agent.
     /// </summary>
     TakeOver = 1 << 12,
+
+    /// <summary>
+    /// The provider can open a bidirectional live media session that receives caller audio and injects
+    /// application-generated audio into the same call.
+    /// </summary>
+    BidirectionalMedia = 1 << 13,
 }

@@ -40,6 +40,21 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string AIProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name assigned to automated phone activities.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name assigned to automated phone activities.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier assigned to automated phone activities.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -175,6 +190,9 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
             AIProfileId = AIProfileId,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
+            TextToSpeechDeploymentName = TextToSpeechDeploymentName,
+            TextToSpeechVoiceId = TextToSpeechVoiceId,
             DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,

@@ -64,6 +64,24 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name used for automated phone calls.
+    /// When empty, the site default speech-to-text deployment is used.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name used for automated phone calls.
+    /// When empty, the site default text-to-speech deployment is used.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier used for automated phone calls.
+    /// When empty, the site default voice is used.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to allow AI to update contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }
@@ -128,6 +146,9 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             SubjectGoal = SubjectGoal,
             ProfileId = ProfileId,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
+            TextToSpeechDeploymentName = TextToSpeechDeploymentName,
+            TextToSpeechVoiceId = TextToSpeechVoiceId,
             AllowAIToUpdateContact = AllowAIToUpdateContact,
             AllowAIToUpdateSubject = AllowAIToUpdateSubject,
             NoResponseTimeoutInMinutes = NoResponseTimeoutInMinutes,

@@ -7,6 +7,7 @@
     {
         hubUrl = Model.DashboardHubUrl,
         snapshotUrl = Model.DashboardSnapshotUrl,
+        twoPartySimulationUrl = Model.TwoPartySimulationUrl,
         reconciliationSeconds = Model.DashboardRefreshSeconds,
         initialSnapshot = Model.Diagnostics,
     };
@@ -85,6 +86,43 @@
                                 <div class="small text-body-secondary">Longest active channel age</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card border-primary-subtle shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+                            <div>
+                                <h2 class="h5 mb-1">Two-party call simulation</h2>
+                                <p class="text-body-secondary small mb-0">Originate two real Asterisk endpoints into the dashboard Stasis application and connect them through a mixing bridge. The bundled Local endpoints generate distinct synthetic audio; replace them with registered PJSIP endpoints to ring two actual devices.</p>
+                            </div>
+                            <span class="badge text-bg-primary align-self-start">ARI bridge</span>
+                        </div>
+
+                        <form class="row g-3" data-two-party-form>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="two-party-endpoint-a">Party A endpoint</label>
+                                <input class="form-control" id="two-party-endpoint-a" name="partyAEndpoint" value="@Model.TwoPartyEndpointA" required />
+                                <div class="form-text">Example: <code>Local/2001@crestapps-simulation</code> or <code>PJSIP/1001</code>.</div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="two-party-caller-id-a">Party A caller id</label>
+                                <input class="form-control" id="two-party-caller-id-a" name="partyACallerId" value="@Model.TwoPartyCallerIdA" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="two-party-endpoint-b">Party B endpoint</label>
+                                <input class="form-control" id="two-party-endpoint-b" name="partyBEndpoint" value="@Model.TwoPartyEndpointB" required />
+                                <div class="form-text">Both endpoints must answer before the simulator can bridge them.</div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="two-party-caller-id-b">Party B caller id</label>
+                                <input class="form-control" id="two-party-caller-id-b" name="partyBCallerId" value="@Model.TwoPartyCallerIdB" />
+                            </div>
+                            <div class="col-12 d-flex flex-wrap align-items-center gap-3">
+                                <button type="submit" class="btn btn-primary" data-two-party-submit>Start two-party call</button>
+                                <div class="small text-body-secondary" data-two-party-status>Created channels appear in the live tables below and can be disconnected there.</div>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -183,12 +221,13 @@
                                                 <th>Type</th>
                                                 <th>Channels</th>
                                                 <th>Duration</th>
+                                                <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody data-dashboard-bridges>
                                             @if (Model.Diagnostics.Bridges.Count == 0)
                                             {
-                                                <tr><td colspan="4" class="text-body-secondary">No active bridges.</td></tr>
+                                                <tr><td colspan="5" class="text-body-secondary">No active bridges.</td></tr>
                                             }
                                             else
                                             {
@@ -202,6 +241,11 @@
                                                         <td>@(bridge.BridgeType ?? "-")</td>
                                                         <td>@bridge.ChannelCount</td>
                                                         <td>@TimeSpan.FromSeconds(bridge.DurationSeconds).ToString(@"m\:ss")</td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" data-dashboard-disconnect-bridge data-bridge-id="@bridge.Id">
+                                                                Disconnect
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 }
                                             }

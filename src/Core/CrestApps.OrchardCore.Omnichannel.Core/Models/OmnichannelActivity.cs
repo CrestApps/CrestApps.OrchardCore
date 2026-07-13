@@ -50,6 +50,24 @@ public sealed class OmnichannelActivity : CatalogItem
     public string AIProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }

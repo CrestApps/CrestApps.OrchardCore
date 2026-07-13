@@ -14,6 +14,7 @@ builder.Services.Configure<AsteriskWebOptions>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<OrchardSignInClient>();
 builder.Services.AddSingleton<AsteriskInboundSimulationCoordinator>();
 builder.Services.AddSingleton<InboundCallSimulatorService>();
+builder.Services.AddSingleton<AsteriskTwoPartyCallSimulatorService>();
 builder.Services.AddSingleton<AsteriskDiagnosticsService>();
 builder.Services.AddSingleton<AsteriskDashboardBroadcastService>();
 builder.Services.AddHostedService(static serviceProvider => serviceProvider.GetRequiredService<AsteriskDashboardBroadcastService>());
@@ -44,6 +45,39 @@ app.MapDelete(
         dashboardBroadcastService.RequestRefresh("dashboard disconnect action");
 
         return TypedResults.NoContent();
+    });
+app.MapDelete(
+    "/api/asterisk/bridges/{bridgeId}",
+    async Task<Results<NoContent, BadRequest<string>>> (
+        string bridgeId,
+        AsteriskDiagnosticsService diagnosticsService,
+        AsteriskDashboardBroadcastService dashboardBroadcastService,
+        CancellationToken cancellationToken) =>
+    {
+        if (string.IsNullOrWhiteSpace(bridgeId))
+        {
+            return TypedResults.BadRequest("A bridge id is required.");
+        }
+
+        await diagnosticsService.DisconnectBridgeAsync(bridgeId, cancellationToken);
+        dashboardBroadcastService.RequestRefresh("dashboard bridge disconnect action");
+
+        return TypedResults.NoContent();
+    });
+app.MapPost(
+    "/api/asterisk/simulations/two-party",
+    async Task<Results<Ok<TwoPartyCallSimulationResult>, BadRequest<string>>> (
+        TwoPartyCallSimulationInputModel input,
+        AsteriskTwoPartyCallSimulatorService simulatorService,
+        CancellationToken cancellationToken) =>
+    {
+        if (string.IsNullOrWhiteSpace(input.PartyAEndpoint) ||
+            string.IsNullOrWhiteSpace(input.PartyBEndpoint))
+        {
+            return TypedResults.BadRequest("Both Asterisk party endpoints are required.");
+        }
+
+        return TypedResults.Ok(await simulatorService.SimulateAsync(input, cancellationToken));
     });
 app.MapHub<AsteriskDashboardHub>("/hubs/asterisk-dashboard");
 app.MapRazorPages();
