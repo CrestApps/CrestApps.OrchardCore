@@ -85,7 +85,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Analytics,
     Name = "Contact Center Reports & Analytics",
-    Description = "Adds contact center productivity, call insights, queue usage, and campaign/subject progress reports to the admin Reports area, with CSV export.",
+    Description = "Adds enterprise executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports to the admin Reports area.",
     Category = "Communication",
     Dependencies =
     [

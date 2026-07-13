@@ -34,7 +34,11 @@ public sealed class SubjectInventoryReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var report = await ReportingService.GetSubjectInventoryAsync(context.FromUtc, context.ToUtc, cancellationToken);
+        var report = await ReportingService.GetSubjectInventoryAsync(
+            context.FromUtc,
+            context.ToUtc,
+            ContactCenterReportFilter.GetCriteria(context.Filter),
+            cancellationToken);
 
         var noSubject = S["(No subject)"].Value;
 

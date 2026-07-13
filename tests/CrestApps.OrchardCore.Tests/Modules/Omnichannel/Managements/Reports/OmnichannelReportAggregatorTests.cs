@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Reports;
@@ -82,6 +83,36 @@ public sealed class OmnichannelReportAggregatorTests
         Assert.Equal(2, counts["won"]);
         Assert.Equal(1, counts["lost"]);
         Assert.Equal(1, counts[string.Empty]);
+    }
+
+    [Fact]
+    public void Filter_AppliesCampaignChannelSourceAndStatus()
+    {
+        // Arrange
+        var matching = Activity(ActivityStatus.Completed, ActivitySources.Inbound, OmnichannelConstants.Channels.Phone);
+        matching.CampaignId = "campaign-1";
+
+        var activities = new[]
+        {
+            matching,
+            Activity(ActivityStatus.Completed, ActivitySources.Inbound, OmnichannelConstants.Channels.Sms),
+            Activity(ActivityStatus.Failed, ActivitySources.Inbound, OmnichannelConstants.Channels.Phone),
+            Activity(ActivityStatus.Completed, ActivitySources.Manual, OmnichannelConstants.Channels.Phone),
+        };
+
+        var criteria = new OmnichannelReportCriteria
+        {
+            CampaignId = "campaign-1",
+            Channel = OmnichannelConstants.Channels.Phone,
+            Source = ActivitySources.Inbound,
+            Status = ActivityStatus.Completed,
+        };
+
+        // Act
+        var filtered = OmnichannelReportQuery.Filter(activities, criteria);
+
+        // Assert
+        Assert.Same(matching, Assert.Single(filtered));
     }
 
     private static OmnichannelActivityIndex Activity(ActivityStatus status, string source, string channel)

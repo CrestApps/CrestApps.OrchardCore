@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Builder;
@@ -423,9 +424,17 @@ public sealed class RealTimeStartup : StartupBase
 [Feature(ContactCenterConstants.Feature.Analytics)]
 public sealed class AnalyticsStartup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public AnalyticsStartup(IStringLocalizer<AnalyticsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
+        services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services
             .AddScoped<IReport, CallInsightsReportProvider>()
@@ -433,6 +442,37 @@ public sealed class AnalyticsStartup : StartupBase
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
             .AddScoped<IReport, SubjectInventoryReportProvider>();
+
+        AddEnterpriseReport(services, "contact-center-executive-performance", () => S["Executive performance summary"], () => S["Enterprise interaction volume, customer accessibility, responsiveness, handle time, transfers, and recording coverage."], EnterpriseInteractionReportKind.ExecutiveSummary);
+        AddEnterpriseReport(services, "contact-center-interaction-volume-trend", () => S["Interaction volume trend"], () => S["Daily offered, answered, abandoned, and failed interaction volume."], EnterpriseInteractionReportKind.VolumeTrend);
+        AddEnterpriseReport(services, "contact-center-interval-performance", () => S["Interval performance"], () => S["Daily interaction outcomes, answer and abandonment rates, speed of answer, and handle time."], EnterpriseInteractionReportKind.IntervalPerformance);
+        AddEnterpriseReport(services, "contact-center-channel-performance", () => S["Channel performance"], () => S["Interaction performance grouped by voice, chat, email, SMS, and other supported channels."], EnterpriseInteractionReportKind.ChannelPerformance);
+        AddEnterpriseReport(services, "contact-center-direction-performance", () => S["Direction performance"], () => S["Inbound and outbound interaction performance with consistent outcome and duration metrics."], EnterpriseInteractionReportKind.DirectionPerformance);
+        AddEnterpriseReport(services, "contact-center-provider-performance", () => S["Provider performance"], () => S["Interaction outcomes and duration metrics grouped by executing communications provider."], EnterpriseInteractionReportKind.ProviderPerformance);
+        AddEnterpriseReport(services, "contact-center-outcome-performance", () => S["Interaction outcome summary"], () => S["Interaction volume and response metrics grouped by normalized lifecycle outcome."], EnterpriseInteractionReportKind.OutcomePerformance);
+        AddEnterpriseReport(services, "contact-center-interaction-detail", () => S["Interaction detail"], () => S["One row per interaction with routing, agent, provider, timing, and transfer details."], EnterpriseInteractionReportKind.InteractionDetail);
+        AddEnterpriseReport(services, "contact-center-transfer-analysis", () => S["Transfer analysis"], () => S["Transfer volume, completion, destination type, result, and completion time."], EnterpriseInteractionReportKind.TransferAnalysis);
+        AddEnterpriseReport(services, "contact-center-recording-coverage", () => S["Recording coverage"], () => S["Answered voice interaction recording coverage grouped by provider."], EnterpriseInteractionReportKind.RecordingCoverage);
+        AddEnterpriseReport(services, "contact-center-queue-service-level", () => S["Queue service level"], () => S["Queue service level calculated from answered-within-threshold interactions and eligible offered interactions."], EnterpriseInteractionReportKind.QueueServiceLevel);
+        AddEnterpriseReport(services, "contact-center-queue-abandonment", () => S["Queue abandonment analysis"], () => S["Inbound queue offered, answered, abandoned, abandonment rate, and wait before abandonment."], EnterpriseInteractionReportKind.QueueAbandonment);
+        AddEnterpriseReport(services, "contact-center-agent-handle-time", () => S["Agent handle time analysis"], () => S["Per-agent handled volume, connected time, wrap-up time, and total handle time."], EnterpriseInteractionReportKind.AgentHandleTime);
+        AddEnterpriseReport(services, "contact-center-wrap-up-performance", () => S["Agent wrap-up performance"], () => S["Per-agent wrap-up starts, completions, completion rate, average duration, and total duration."], EnterpriseInteractionReportKind.WrapUpPerformance);
+    }
+
+    private static void AddEnterpriseReport(
+        IServiceCollection services,
+        string name,
+        Func<LocalizedString> displayName,
+        Func<LocalizedString> description,
+        EnterpriseInteractionReportKind kind)
+    {
+        var definition = new EnterpriseInteractionReportDefinition(name, displayName, description, kind);
+
+        services.AddScoped<IReport>(serviceProvider => new EnterpriseInteractionReportProvider(
+            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            serviceProvider.GetRequiredService<IActivityQueueManager>(),
+            definition,
+            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>()));
     }
 }
 

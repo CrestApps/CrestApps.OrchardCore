@@ -36,7 +36,11 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var report = await ReportingService.GetCallInsightsAsync(context.FromUtc, context.ToUtc, cancellationToken);
+        var report = await ReportingService.GetCallInsightsAsync(
+            context.FromUtc,
+            context.ToUtc,
+            ContactCenterReportFilter.GetCriteria(context.Filter),
+            cancellationToken);
 
         var document = new ReportDocument();
 

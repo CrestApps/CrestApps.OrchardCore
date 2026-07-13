@@ -24,6 +24,7 @@ public sealed class ReportsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
@@ -34,13 +35,15 @@ public sealed class ReportsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor used to bind the filter from the request.</param>
     /// <param name="clock">The clock used to compute the default reporting period.</param>
+    /// <param name="localClock">The tenant local clock used to resolve default date boundaries.</param>
     public ReportsController(
         IReportManager reportManager,
         IReportExportManager exportManager,
         IDisplayManager<ReportFilter> filterDisplayManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         _reportManager = reportManager;
         _exportManager = exportManager;
@@ -48,6 +51,7 @@ public sealed class ReportsController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _clock = clock;
+        _localClock = localClock;
     }
 
     /// <summary>
@@ -153,16 +157,21 @@ public sealed class ReportsController : Controller
 
         await _filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
 
-        NormalizeRange(filter);
+        await NormalizeRangeAsync(filter);
 
         return filter;
     }
 
-    private void NormalizeRange(ReportFilter filter)
+    private async Task NormalizeRangeAsync(ReportFilter filter)
     {
-        var today = _clock.UtcNow.Date;
-        var to = filter.ToUtc?.Date ?? today;
-        var from = filter.FromUtc?.Date ?? to.AddDays(-(DefaultRangeDays - 1));
+        var localNow = await _localClock.ConvertToLocalAsync(_clock.UtcNow);
+        var localDate = localNow.Date;
+        var defaultFromLocal = DateTime.SpecifyKind(localDate.AddDays(-(DefaultRangeDays - 1)), DateTimeKind.Unspecified);
+        var defaultToLocal = DateTime.SpecifyKind(localDate.AddDays(1).AddTicks(-1), DateTimeKind.Unspecified);
+        var defaultFromUtc = await _localClock.ConvertToUtcAsync(defaultFromLocal);
+        var defaultToUtc = await _localClock.ConvertToUtcAsync(defaultToLocal);
+        var to = filter.ToUtc ?? defaultToUtc;
+        var from = filter.FromUtc ?? defaultFromUtc;
 
         if (from > to)
         {
@@ -170,6 +179,6 @@ public sealed class ReportsController : Controller
         }
 
         filter.FromUtc = DateTime.SpecifyKind(from, DateTimeKind.Utc);
-        filter.ToUtc = DateTime.SpecifyKind(to.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+        filter.ToUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc);
     }
 }

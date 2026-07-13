@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -232,11 +233,44 @@ public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBas
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public ReportsStartup(IStringLocalizer<ReportsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<IReport, ActivitySummaryReportProvider>()
             .AddScoped<IReport, CampaignPerformanceReportProvider>()
             .AddScoped<IReport, DispositionBreakdownReportProvider>();
+        services.AddDisplayDriver<ReportFilter, OmnichannelReportFilterDisplayDriver>();
+
+        AddEnterpriseReport(services, "omnichannel-activity-backlog", () => S["Activity backlog"], () => S["Open CRM activity inventory, assignment, reservation, and overdue workload."], EnterpriseActivityReportKind.Backlog);
+        AddEnterpriseReport(services, "omnichannel-activity-aging", () => S["Activity aging"], () => S["Open activity workload grouped into enterprise aging bands."], EnterpriseActivityReportKind.Aging);
+        AddEnterpriseReport(services, "omnichannel-source-performance", () => S["Activity source performance"], () => S["Activity progress and attempts grouped by the source that created or drives the work."], EnterpriseActivityReportKind.SourcePerformance);
+        AddEnterpriseReport(services, "omnichannel-channel-performance", () => S["CRM channel performance"], () => S["Activity progress and attempts grouped by communications channel."], EnterpriseActivityReportKind.ChannelPerformance);
+        AddEnterpriseReport(services, "omnichannel-kind-performance", () => S["Activity kind performance"], () => S["Activity progress and attempts grouped by business work kind."], EnterpriseActivityReportKind.KindPerformance);
+        AddEnterpriseReport(services, "omnichannel-assignment-performance", () => S["Activity assignment performance"], () => S["Activity progress and attempts grouped by assignment lifecycle status."], EnterpriseActivityReportKind.AssignmentPerformance);
+        AddEnterpriseReport(services, "omnichannel-attempt-analysis", () => S["Activity attempt analysis"], () => S["Activity outcomes grouped by number of contact or processing attempts."], EnterpriseActivityReportKind.AttemptAnalysis);
+        AddEnterpriseReport(services, "omnichannel-contact-type-workload", () => S["Contact type workload"], () => S["Activity progress and attempts grouped by CRM contact content type."], EnterpriseActivityReportKind.ContactTypeWorkload);
+        AddEnterpriseReport(services, "omnichannel-urgency-performance", () => S["Activity urgency performance"], () => S["Activity progress and attempts grouped by urgency level."], EnterpriseActivityReportKind.UrgencyPerformance);
+    }
+
+    private static void AddEnterpriseReport(
+        IServiceCollection services,
+        string name,
+        Func<LocalizedString> displayName,
+        Func<LocalizedString> description,
+        EnterpriseActivityReportKind kind)
+    {
+        var definition = new EnterpriseActivityReportDefinition(name, displayName, description, kind);
+
+        services.AddScoped<IReport>(serviceProvider => new EnterpriseActivityReportProvider(
+            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            definition,
+            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));
     }
 }

@@ -34,7 +34,11 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var report = await ReportingService.GetAgentProductivityAsync(context.FromUtc, context.ToUtc, cancellationToken);
+        var report = await ReportingService.GetAgentProductivityAsync(
+            context.FromUtc,
+            context.ToUtc,
+            ContactCenterReportFilter.GetCriteria(context.Filter),
+            cancellationToken);
 
         var columns = new[]
         {

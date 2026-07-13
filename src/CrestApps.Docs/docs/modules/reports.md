@@ -10,7 +10,7 @@ description: A reusable reporting framework for OrchardCore with a shared admin 
 | **Feature Name** | Reports |
 | **Feature ID** | `CrestApps.OrchardCore.Reports` |
 
-The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, and bars), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same.
+The **Reports** module is a reusable reporting framework. It provides a single admin **Reports** area and a small contract that any module can implement to surface an industry-standard report — with a shared from/to date-range filter, extensible filters, a uniform renderer (metric cards, tables, and bars), and pluggable exports (CSV built in). Modules such as the [Contact Center](../contact-center/index.md), [Omnichannel](../omnichannel/index.md), and [Phone Number Verifications](phone-number-verifications) contribute their reports through this framework so every report looks and behaves the same. The built-in Contact Center and Omnichannel definitions are documented in the [Enterprise report catalog](../contact-center/report-catalog.md).
 
 | | |
 | --- | --- |
@@ -28,7 +28,7 @@ The implementation is split into three layers:
 ## Concepts
 
 - **`IReport`** — a report definition. It declares a technical `Name`, a `DisplayName`, a `Description`, a `Category` (used to group reports in the menu), a `Permission`, and a `RunAsync` method that returns a `ReportDocument` for a given `ReportContext`.
-- **`ReportFilter`** — the filter applied when a report runs. Every report shares the built-in from/to date range; additional, report-specific filters are contributed with display drivers.
+- **`ReportFilter`** — the filter applied when a report runs. Every report shares a tenant-local from/to date and time range; additional, report-specific filters are contributed with display drivers and flow through exports unchanged.
 - **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), or a set of horizontal bars. The same document is rendered in the browser and serialized by every exporter.
 - **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
 
@@ -38,7 +38,7 @@ Enabling the feature adds a top-level **Reports** item to the admin menu. Report
 
 ## Extensible filters
 
-Every report automatically gets the from/to date range. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
+Every report automatically gets a tenant-local from/to date and time range that is converted to UTC before execution. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
 
 ```csharp
 public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>
@@ -70,7 +70,7 @@ public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>
 }
 ```
 
-The report reads the bound value from `context.Filter.Properties` when it runs.
+The report reads the bound value from `context.Filter.Properties` when it runs. Because browser display and export use the same filter-building path, custom filter values must be applied consistently in both outputs.
 
 ## Contributing a report
 

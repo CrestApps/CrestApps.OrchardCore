@@ -2,9 +2,9 @@
 
 <div class="col p-1">
     <label class="form-label" asp-for="From">@T["From"]</label>
-    <input asp-for="From" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+    <input asp-for="From" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
 </div>
 <div class="col p-1">
     <label class="form-label" asp-for="To">@T["To"]</label>
-    <input asp-for="To" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+    <input asp-for="To" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
 </div>

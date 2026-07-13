@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Reports;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -62,6 +65,132 @@ public sealed class ContactCenterReportingServiceTests
         Assert.Equal(2, first.Total);
         Assert.Equal(1, first.Answered);
         Assert.Equal(1, first.Abandoned);
+    }
+
+    [Fact]
+    public void EnterpriseMetrics_KeepInboundAccessibilitySeparateFromOutboundAttempts()
+    {
+        // Arrange
+        var inboundAnswered = Interaction(InteractionDirection.Inbound, InteractionStatus.Ended, answeredAfter: 10, endedAfter: 70);
+        inboundAnswered.RecordingReference = "recording-1";
+        inboundAnswered.TransferHistory.Add(new InteractionTransferHistoryEntry());
+        inboundAnswered.WrapUpStartedUtc = inboundAnswered.EndedUtc;
+        inboundAnswered.WrapUpCompletedUtc = inboundAnswered.EndedUtc.Value.AddSeconds(30);
+
+        var interactions = new[]
+        {
+            inboundAnswered,
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Ended, answeredAfter: null, endedAfter: null),
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Failed, answeredAfter: null, endedAfter: null),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ended, answeredAfter: 5, endedAfter: 35),
+        };
+
+        // Act
+        var metrics = EnterpriseInteractionReportProvider.Aggregate(interactions);
+
+        // Assert
+        Assert.Equal(4, metrics.Total);
+        Assert.Equal(3, metrics.InboundOffered);
+        Assert.Equal(2, metrics.Answered);
+        Assert.Equal(1, metrics.InboundAnswered);
+        Assert.Equal(1, metrics.Abandoned);
+        Assert.Equal(1, metrics.Failed);
+        Assert.Equal(0.5d, metrics.AnswerRate);
+        Assert.Equal(1d / 3d, metrics.InboundAnswerRate);
+        Assert.Equal(1d / 3d, metrics.AbandonmentRate);
+        Assert.Equal(10d, metrics.AverageSpeedOfAnswerSeconds);
+        Assert.Equal(60d, metrics.AverageHandleTimeSeconds);
+        Assert.Equal(0.5d, metrics.TransferRate);
+        Assert.Equal(0.5d, metrics.RecordingCoverage);
+    }
+
+    [Fact]
+    public void QueueServiceLevel_UsesInboundAnsweredAndAbandonedEligibility()
+    {
+        // Arrange
+        var interactions = new[]
+        {
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Ended, answeredAfter: 10, endedAfter: 70),
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Ended, answeredAfter: 30, endedAfter: 90),
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Ended, answeredAfter: null, endedAfter: null),
+            Interaction(InteractionDirection.Inbound, InteractionStatus.Failed, answeredAfter: null, endedAfter: null),
+            Interaction(InteractionDirection.Outbound, InteractionStatus.Ended, answeredAfter: 5, endedAfter: 35),
+        };
+
+        // Act
+        var metrics = EnterpriseInteractionReportProvider.CalculateQueueServiceLevel(interactions, thresholdSeconds: 20);
+
+        // Assert
+        Assert.True(metrics.HasServiceLevel);
+        Assert.Equal(3, metrics.EligibleOffered);
+        Assert.Equal(2, metrics.Answered);
+        Assert.Equal(1, metrics.AnsweredWithinThreshold);
+        Assert.Equal(1d / 3d, metrics.ServiceLevel);
+        Assert.Equal(20d, metrics.AverageSpeedOfAnswerSeconds);
+    }
+
+    [Fact]
+    public void FilterInteractions_AppliesQueueAgentChannelAndDirection()
+    {
+        // Arrange
+        var matching = AgentInteraction("agent-1", InteractionDirection.Inbound, answeredAfter: 5, endedAfter: 65);
+        matching.QueueId = "queue-1";
+        matching.Channel = InteractionChannel.Voice;
+
+        var otherQueue = AgentInteraction("agent-1", InteractionDirection.Inbound, answeredAfter: 5, endedAfter: 65);
+        otherQueue.QueueId = "queue-2";
+
+        var interactions = new[]
+        {
+            matching,
+            otherQueue,
+            AgentInteraction("agent-2", InteractionDirection.Inbound, answeredAfter: 5, endedAfter: 65),
+            AgentInteraction("agent-1", InteractionDirection.Outbound, answeredAfter: 5, endedAfter: 65),
+        };
+
+        var criteria = new ContactCenterReportCriteria
+        {
+            QueueId = "queue-1",
+            AgentId = "agent-1",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Inbound,
+        };
+
+        // Act
+        var filtered = ContactCenterReportingService.FilterInteractions(interactions, criteria);
+
+        // Assert
+        Assert.Same(matching, Assert.Single(filtered));
+    }
+
+    [Fact]
+    public void FilterActivities_AppliesCampaignSourceChannelAndStatus()
+    {
+        // Arrange
+        var matching = ActivityIndex("campaign-1", ActivityStatus.Completed);
+        matching.Source = ActivitySources.Inbound;
+        matching.Channel = OmnichannelConstants.Channels.Phone;
+
+        var activities = new[]
+        {
+            matching,
+            ActivityIndex("campaign-2", ActivityStatus.Completed),
+            ActivityIndex("campaign-1", ActivityStatus.Failed),
+        };
+
+        var criteria = new ContactCenterReportCriteria
+        {
+            CampaignId = "campaign-1",
+            ActivitySource = ActivitySources.Inbound,
+            Channel = InteractionChannel.Voice,
+            ActivityStatus = ActivityStatus.Completed,
+        };
+
+        // Act
+        var filtered = ContactCenterReportingService.FilterActivities(activities, criteria);
+
+        // Assert
+        Assert.Same(matching, Assert.Single(filtered));
     }
 
     [Fact]

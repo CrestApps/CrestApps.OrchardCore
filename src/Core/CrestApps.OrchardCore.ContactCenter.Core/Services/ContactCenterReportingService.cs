@@ -45,25 +45,72 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     }
 
     /// <inheritdoc/>
-    public async Task<CallInsightsReport> GetCallInsightsAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<CallInsightsReport> GetCallInsightsAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
     {
-        var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
-
-        return BuildCallInsights(fromUtc, toUtc, interactions);
+        return GetCallInsightsAsync(fromUtc, toUtc, criteria: null, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<AgentProductivityReport> GetAgentProductivityAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public async Task<CallInsightsReport> GetCallInsightsAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
-        var completedByUser = await QueryCompletedActivitiesByUserAsync(fromUtc, toUtc, cancellationToken);
-        var agents = await _agentManager.GetAllAsync(cancellationToken);
 
-        return BuildAgentProductivity(fromUtc, toUtc, interactions, completedByUser, agents.ToArray());
+        return BuildCallInsights(fromUtc, toUtc, FilterInteractions(interactions, criteria));
     }
 
     /// <inheritdoc/>
-    public async Task<QueueUsageReport> GetQueueUsageAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<AgentProductivityReport> GetAgentProductivityAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return GetAgentProductivityAsync(fromUtc, toUtc, criteria: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentProductivityReport> GetAgentProductivityAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
+    {
+        var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
+        var agents = (await _agentManager.GetAllAsync(cancellationToken)).ToArray();
+        var filteredAgents = string.IsNullOrEmpty(criteria?.AgentId)
+            ? agents
+            : agents.Where(agent => agent.ItemId == criteria.AgentId).ToArray();
+        var completedByUser = await QueryCompletedActivitiesByUserAsync(
+            fromUtc,
+            toUtc,
+            criteria,
+            filteredAgents,
+            cancellationToken);
+
+        return BuildAgentProductivity(fromUtc, toUtc, FilterInteractions(interactions, criteria), completedByUser, filteredAgents);
+    }
+
+    /// <inheritdoc/>
+    public Task<QueueUsageReport> GetQueueUsageAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return GetQueueUsageAsync(fromUtc, toUtc, criteria: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<QueueUsageReport> GetQueueUsageAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
         var queues = (await _queueManager.GetAllAsync(cancellationToken)).ToArray();
@@ -76,11 +123,24 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             waitingByQueue[queue.ItemId] = waiting.Count;
         }
 
-        return BuildQueueUsage(fromUtc, toUtc, interactions, queues, waitingByQueue);
+        return BuildQueueUsage(fromUtc, toUtc, FilterInteractions(interactions, criteria), FilterQueues(queues, criteria), waitingByQueue);
     }
 
     /// <inheritdoc/>
-    public async Task<CampaignSummaryReport> GetCampaignSummaryAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<CampaignSummaryReport> GetCampaignSummaryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return GetCampaignSummaryAsync(fromUtc, toUtc, criteria: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CampaignSummaryReport> GetCampaignSummaryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
     {
         var activities = await QueryActivityIndexesAsync(fromUtc, toUtc, cancellationToken);
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);
@@ -92,15 +152,95 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             names[campaign.ItemId] = string.IsNullOrWhiteSpace(campaign.DisplayText) ? campaign.ItemId : campaign.DisplayText;
         }
 
-        return BuildCampaignSummary(fromUtc, toUtc, activities, names);
+        return BuildCampaignSummary(fromUtc, toUtc, FilterActivities(activities, criteria), names);
     }
 
     /// <inheritdoc/>
-    public async Task<SubjectInventoryReport> GetSubjectInventoryAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<SubjectInventoryReport> GetSubjectInventoryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return GetSubjectInventoryAsync(fromUtc, toUtc, criteria: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<SubjectInventoryReport> GetSubjectInventoryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
     {
         var activities = await QueryActivityIndexesAsync(fromUtc, toUtc, cancellationToken);
 
-        return BuildSubjectInventory(fromUtc, toUtc, activities);
+        return BuildSubjectInventory(fromUtc, toUtc, FilterActivities(activities, criteria));
+    }
+
+    /// <summary>
+    /// Applies the supplied report criteria to an interaction population.
+    /// </summary>
+    /// <param name="interactions">The interactions to filter.</param>
+    /// <param name="criteria">The optional report criteria.</param>
+    /// <returns>The filtered interactions.</returns>
+    public static IReadOnlyList<Interaction> FilterInteractions(
+        IReadOnlyList<Interaction> interactions,
+        ContactCenterReportCriteria criteria)
+    {
+        if (criteria is null)
+        {
+            return interactions;
+        }
+
+        return interactions
+            .Where(interaction => string.IsNullOrEmpty(criteria.QueueId) || interaction.QueueId == criteria.QueueId)
+            .Where(interaction => string.IsNullOrEmpty(criteria.AgentId) || interaction.AgentId == criteria.AgentId)
+            .Where(interaction => !criteria.Channel.HasValue || interaction.Channel == criteria.Channel.Value)
+            .Where(interaction => !criteria.Direction.HasValue || interaction.Direction == criteria.Direction.Value)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Applies the supplied report criteria to a CRM activity population.
+    /// </summary>
+    /// <param name="activities">The activity indexes to filter.</param>
+    /// <param name="criteria">The optional report criteria.</param>
+    /// <returns>The filtered activity indexes.</returns>
+    public static IReadOnlyList<OmnichannelActivityIndex> FilterActivities(
+        IReadOnlyList<OmnichannelActivityIndex> activities,
+        ContactCenterReportCriteria criteria)
+    {
+        if (criteria is null)
+        {
+            return activities;
+        }
+
+        var channel = criteria.Channel switch
+        {
+            InteractionChannel.Voice => OmnichannelConstants.Channels.Phone,
+            InteractionChannel.Sms => OmnichannelConstants.Channels.Sms,
+            InteractionChannel.Email => OmnichannelConstants.Channels.Email,
+            InteractionChannel.Chat => InteractionChannel.Chat.ToString(),
+            _ => null,
+        };
+
+        return activities
+            .Where(activity => string.IsNullOrEmpty(criteria.CampaignId) || activity.CampaignId == criteria.CampaignId)
+            .Where(activity => string.IsNullOrEmpty(criteria.ActivitySource) || activity.Source == criteria.ActivitySource)
+            .Where(activity => string.IsNullOrEmpty(channel) || string.Equals(activity.Channel, channel, StringComparison.OrdinalIgnoreCase))
+            .Where(activity => !criteria.ActivityStatus.HasValue || activity.Status == criteria.ActivityStatus.Value)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ActivityQueue> FilterQueues(
+        IReadOnlyList<ActivityQueue> queues,
+        ContactCenterReportCriteria criteria)
+    {
+        if (string.IsNullOrEmpty(criteria?.QueueId))
+        {
+            return queues;
+        }
+
+        return queues.Where(queue => queue.ItemId == criteria.QueueId).ToArray();
     }
 
     internal static CallInsightsReport BuildCallInsights(DateTime fromUtc, DateTime toUtc, IReadOnlyList<Interaction> interactions)
@@ -448,20 +588,34 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         return activities.ToArray();
     }
 
-    private async Task<IReadOnlyDictionary<string, long>> QueryCompletedActivitiesByUserAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
+    private async Task<IReadOnlyDictionary<string, long>> QueryCompletedActivitiesByUserAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        IReadOnlyList<AgentProfile> agents,
+        CancellationToken cancellationToken)
     {
+        if (!string.IsNullOrEmpty(criteria?.QueueId) || criteria?.Direction.HasValue == true)
+        {
+            return new Dictionary<string, long>(StringComparer.Ordinal);
+        }
+
         var completed = await _session.QueryIndex<OmnichannelActivityIndex>(
             index => index.Status == ActivityStatus.Completed && index.CompletedUtc >= fromUtc && index.CompletedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
 
         var result = new Dictionary<string, long>(StringComparer.Ordinal);
+        var allowedUserIds = agents
+            .Where(agent => !string.IsNullOrEmpty(agent.UserId))
+            .Select(agent => agent.UserId)
+            .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var activity in completed)
+        foreach (var activity in FilterActivities(completed.ToArray(), criteria))
         {
             var userId = activity.AssignedToId;
 
-            if (string.IsNullOrEmpty(userId))
+            if (string.IsNullOrEmpty(userId) || !allowedUserIds.Contains(userId))
             {
                 continue;
             }

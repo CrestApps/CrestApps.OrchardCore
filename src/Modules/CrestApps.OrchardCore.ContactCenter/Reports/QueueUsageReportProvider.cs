@@ -34,7 +34,11 @@ public sealed class QueueUsageReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var report = await ReportingService.GetQueueUsageAsync(context.FromUtc, context.ToUtc, cancellationToken);
+        var report = await ReportingService.GetQueueUsageAsync(
+            context.FromUtc,
+            context.ToUtc,
+            ContactCenterReportFilter.GetCriteria(context.Filter),
+            cancellationToken);
 
         var noQueue = S["(No queue)"].Value;
 

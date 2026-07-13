@@ -223,6 +223,8 @@ A Subject Flow can mark a subject as **requiring a disposition**. When set, an a
 
 The optional **Contact Center Reports & Analytics** feature (`CrestApps.OrchardCore.ContactCenter.Analytics`) contributes contact center reports to the reusable [Reports](../modules/reports.md) framework, so they appear under the top-level admin **Reports** menu (grouped under **Contact Center**) alongside CRM and other reports. Every report shares the standard from/to date-range filter and a CSV export.
 
+The combined Contact Center and Omnichannel Management catalog now includes 31 runnable executive, interaction, queue, agent, transfer, recording, campaign, subject, and CRM activity reports. See the [Enterprise report catalog](report-catalog.md) for the exact formulas, columns, filters, grouping, sorting, drill paths, permissions, export behavior, validation rules, and known data limitations.
+
 - **Call insights** - inbound/outbound volume, answered, abandoned, and failed counts; average handle time and speed of answer; breakdowns by channel and status; and a daily volume trend.
 - **Agent productivity** - per-agent handled volume (inbound/outbound), talk time, average handle time, and completed activities.
 - **Queue usage** - per-queue handled volume, answered, abandoned, average handle time and speed of answer, current waiting depth, and the configured SLA threshold.

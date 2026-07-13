@@ -44,7 +44,12 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var completed = await OmnichannelReportQuery.GetCompletedAsync(_session, context.FromUtc, context.ToUtc, cancellationToken);
+        var completed = await OmnichannelReportQuery.GetCompletedAsync(
+            _session,
+            context.FromUtc,
+            context.ToUtc,
+            OmnichannelReportFilter.GetCriteria(context.Filter),
+            cancellationToken);
         var counts = OmnichannelReportAggregator.CountByDisposition(completed);
         var dispositions = await _dispositionManager.GetAllAsync(cancellationToken);
 
