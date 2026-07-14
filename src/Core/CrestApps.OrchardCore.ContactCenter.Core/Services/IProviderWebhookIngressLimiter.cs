@@ -21,4 +21,11 @@ public interface IProviderWebhookIngressLimiter
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A lease that must be disposed after the rate-limit decision is consumed.</returns>
     ValueTask<ProviderWebhookIngressLease> AcquireRateAsync(string provider, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines whether a provider-signed UTC event timestamp is inside the configured freshness window.
+    /// </summary>
+    /// <param name="occurredUtc">The provider-signed event occurrence time, or <see langword="null"/> when omitted.</param>
+    /// <returns><see langword="true"/> when the timestamp is present, UTC, and inside the accepted window.</returns>
+    bool IsFresh(DateTime? occurredUtc);
 }

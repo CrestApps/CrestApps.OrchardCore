@@ -376,9 +376,12 @@ public sealed class VoiceStartup : StartupBase
             .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:WebhookIngress"))
             .Validate(
                 options => options.ConcurrencyPermitLimit > 0 &&
-                    options.RatePermitLimit > 0 &&
-                    options.RatePeriodSeconds > 0,
-                "Webhook ingress concurrency, rate permit, and rate period values must be greater than zero.")
+                    options.ConcurrencyPermitLimit <= 1024 &&
+                    options.RatePermitLimit is > 0 and <= 100_000 &&
+                    options.RatePeriodSeconds is > 0 and <= 3600 &&
+                    options.MaximumDeliveryAgeSeconds is > 0 and <= 86_400 &&
+                    options.MaximumFutureSkewSeconds is >= 0 and <= 3600,
+                "Webhook ingress rate, concurrency, period, delivery-age, or future-skew values are outside their supported ranges.")
             .ValidateOnStart();
 
         services

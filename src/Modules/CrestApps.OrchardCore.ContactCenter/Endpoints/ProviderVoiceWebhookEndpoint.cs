@@ -81,6 +81,7 @@ internal static class ProviderVoiceWebhookEndpoint
             ProviderVoiceWebhookStatus.InvalidSignature => TypedResults.Unauthorized(),
             ProviderVoiceWebhookStatus.MissingIdempotencyKey => TypedResults.BadRequest(),
             ProviderVoiceWebhookStatus.RateLimited => CreateRateLimitedResult(httpContext, outcome.RetryAfter),
+            ProviderVoiceWebhookStatus.StaleDelivery => TypedResults.BadRequest(),
             _ => TypedResults.BadRequest(),
         };
     }

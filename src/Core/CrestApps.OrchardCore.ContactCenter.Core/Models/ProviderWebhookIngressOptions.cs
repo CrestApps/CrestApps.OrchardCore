@@ -19,4 +19,14 @@ public sealed class ProviderWebhookIngressOptions
     /// Gets or sets the authenticated provider rate-limit replenishment period in seconds.
     /// </summary>
     public int RatePeriodSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Gets or sets the maximum accepted age of a provider-signed event timestamp in seconds.
+    /// </summary>
+    public int MaximumDeliveryAgeSeconds { get; set; } = 900;
+
+    /// <summary>
+    /// Gets or sets the maximum accepted future clock skew of a provider-signed event timestamp in seconds.
+    /// </summary>
+    public int MaximumFutureSkewSeconds { get; set; } = 120;
 }

@@ -257,7 +257,9 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         synchronizationService
             .Setup(service => service.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
-        using var ingressLimiter = new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions()));
+        using var ingressLimiter = new ProviderWebhookIngressLimiter(
+            Options.Create(new ProviderWebhookIngressOptions()),
+            Mock.Of<IClock>());
         var tenantEvents = new ContactCenterVoiceTenantEvents(
             synchronizationService.Object,
             ingressLimiter,

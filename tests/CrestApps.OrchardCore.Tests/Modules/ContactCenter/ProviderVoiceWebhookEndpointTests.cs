@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -128,9 +129,14 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
 
     private static ProviderWebhookIngressLimiter CreateIngressLimiter(int concurrencyPermitLimit = 8)
     {
-        return new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions
-        {
-            ConcurrencyPermitLimit = concurrencyPermitLimit,
-        }));
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 14, 12, 0, 0, DateTimeKind.Utc));
+
+        return new ProviderWebhookIngressLimiter(
+            Options.Create(new ProviderWebhookIngressOptions
+            {
+                ConcurrencyPermitLimit = concurrencyPermitLimit,
+            }),
+            clock.Object);
     }
 }

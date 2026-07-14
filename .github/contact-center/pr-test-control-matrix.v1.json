@@ -1095,7 +1095,7 @@
       "category": "voice-provider",
       "planFinding": "PR12",
       "gate": "Webhook buffering/request abort coupling",
-      "invariant": "Every provider webhook route must enforce provider-specific body-size and authenticated rate limits plus a tenant-local concurrency ceiling, then accept the event into a durable inbox before returning success independent of the inbound HTTP request. Oversize or over-limit payloads must be rejected, unauthenticated traffic must not consume a provider's authenticated budget, and a client aborting after durable acceptance must never roll back that acceptance.",
+      "invariant": "Every provider webhook route must enforce provider-specific body-size and authenticated rate limits, a tenant-local concurrency ceiling, and a bounded provider-signed freshness window, then accept the event into a durable inbox before returning success independent of the inbound HTTP request. Oversize, over-limit, missing-timestamp, malformed-timestamp, stale, or excessively future payloads must be rejected, unauthenticated traffic must not consume a provider's authenticated budget, and a client aborting after durable acceptance must never roll back that acceptance.",
       "testId": "CC-V003",
       "ciJob": {
         "id": "contact-center-provider-contract-suite",
@@ -1113,7 +1113,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, and DialPadWebhookEndpointTests prove 1 MiB rejection, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, and request-cancellation detachment after authentication. Durable inbox commit before 2xx and disconnect-after-durable-acceptance remain planned:contact-center-provider-contract-suite dependencies."
+      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, and DialPadWebhookEndpointTests prove 1 MiB rejection, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, bounded provider-signed delivery age/future skew with missing/malformed/non-UTC rejection, and request-cancellation detachment after authentication. Durable inbox commit before 2xx, durable replay uniqueness, and disconnect-after-durable-acceptance remain planned:contact-center-provider-contract-suite dependencies."
     },
     {
       "id": "V004",

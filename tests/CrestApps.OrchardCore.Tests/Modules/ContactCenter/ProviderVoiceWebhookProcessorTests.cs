@@ -5,11 +5,13 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
 {
+    private static readonly DateTime _now = new(2026, 7, 14, 12, 0, 0, DateTimeKind.Utc);
     private readonly ProviderWebhookIngressLimiter _ingressLimiter = CreateIngressLimiter();
 
     [Fact]
@@ -21,8 +23,8 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
         {
             Parser = _ =>
             [
-                new ProviderVoiceEvent { ProviderCallId = "c1", IdempotencyKey = "k1" },
-                new ProviderVoiceEvent { ProviderCallId = "c1", IdempotencyKey = "k2" },
+                new ProviderVoiceEvent { ProviderCallId = "c1", IdempotencyKey = "k1", OccurredUtc = _now },
+                new ProviderVoiceEvent { ProviderCallId = "c1", IdempotencyKey = "k2", OccurredUtc = _now },
             ],
         };
 
@@ -143,6 +145,72 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
         eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(-901)]
+    [InlineData(121)]
+    public async Task ProcessAsync_WhenSignedEventIsOutsideFreshnessWindow_RejectsWithoutIngesting(int offsetSeconds)
+    {
+        // Arrange
+        var eventService = new Mock<IProviderVoiceEventService>();
+        var adapter = new FakeAdapter
+        {
+            Parser = _ =>
+            [
+                new ProviderVoiceEvent
+                {
+                    ProviderCallId = "c1",
+                    IdempotencyKey = "k1",
+                    OccurredUtc = _now.AddSeconds(offsetSeconds),
+                },
+            ],
+        };
+        var processor = CreateProcessor(eventService, adapter);
+
+        // Act
+        var outcome = await processor.ProcessAsync(
+            new ProviderVoiceWebhookRequest { Provider = adapter.TechnicalName },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderVoiceWebhookStatus.StaleDelivery, outcome.Status);
+        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task ProcessAsync_WhenSignedEventTimestampIsMissingOrNotUtc_RejectsWithoutIngesting(DateTimeKind? kind)
+    {
+        // Arrange
+        var eventService = new Mock<IProviderVoiceEventService>();
+        var occurredUtc = kind.HasValue
+            ? DateTime.SpecifyKind(_now, kind.Value)
+            : (DateTime?)null;
+        var adapter = new FakeAdapter
+        {
+            Parser = _ =>
+            [
+                new ProviderVoiceEvent
+                {
+                    ProviderCallId = "c1",
+                    IdempotencyKey = "k1",
+                    OccurredUtc = occurredUtc,
+                },
+            ],
+        };
+        var processor = CreateProcessor(eventService, adapter);
+
+        // Act
+        var outcome = await processor.ProcessAsync(
+            new ProviderVoiceWebhookRequest { Provider = adapter.TechnicalName },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderVoiceWebhookStatus.StaleDelivery, outcome.Status);
+        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     public void Dispose()
     {
         _ingressLimiter.Dispose();
@@ -159,10 +227,15 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
 
     private static ProviderWebhookIngressLimiter CreateIngressLimiter(int ratePermitLimit = 120)
     {
-        return new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions
-        {
-            RatePermitLimit = ratePermitLimit,
-        }));
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        return new ProviderWebhookIngressLimiter(
+            Options.Create(new ProviderWebhookIngressOptions
+            {
+                RatePermitLimit = ratePermitLimit,
+            }),
+            clock.Object);
     }
 
     private sealed class FakeAdapter : IProviderVoiceWebhookAdapter

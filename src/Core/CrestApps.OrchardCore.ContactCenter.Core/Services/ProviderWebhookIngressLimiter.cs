@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -13,23 +14,26 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
     private readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _providerRateLimiters = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrencyLimiter _concurrencyLimiter;
     private readonly ProviderWebhookIngressOptions _options;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderWebhookIngressLimiter"/> class.
     /// </summary>
     /// <param name="options">The webhook ingress limit options.</param>
-    public ProviderWebhookIngressLimiter(IOptions<ProviderWebhookIngressOptions> options)
+    /// <param name="clock">The clock used to evaluate signed delivery timestamps.</param>
+    public ProviderWebhookIngressLimiter(
+        IOptions<ProviderWebhookIngressOptions> options,
+        IClock clock)
     {
         _options = options.Value;
+        _clock = clock;
 
-        if (_options.ConcurrencyPermitLimit <= 0 ||
-            _options.RatePermitLimit <= 0 ||
-            _options.RatePeriodSeconds <= 0)
+        if (!AreOptionsValid(_options))
         {
             throw new OptionsValidationException(
                 nameof(ProviderWebhookIngressOptions),
                 typeof(ProviderWebhookIngressOptions),
-                ["Webhook ingress concurrency, rate permit, and rate period values must be greater than zero."]);
+                ["Webhook ingress rate, concurrency, period, delivery-age, or future-skew values are outside their supported ranges."]);
         }
 
         _concurrencyLimiter = new ConcurrencyLimiter(new ConcurrencyLimiterOptions
@@ -60,6 +64,22 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
     }
 
     /// <inheritdoc/>
+    public bool IsFresh(DateTime? occurredUtc)
+    {
+        if (!occurredUtc.HasValue ||
+            occurredUtc.Value == default ||
+            occurredUtc.Value.Kind != DateTimeKind.Utc)
+        {
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        return occurredUtc.Value >= now.AddSeconds(-_options.MaximumDeliveryAgeSeconds) &&
+            occurredUtc.Value <= now.AddSeconds(_options.MaximumFutureSkewSeconds);
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         _concurrencyLimiter.Dispose();
@@ -83,5 +103,14 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
             QueueLimit = 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
         });
+    }
+
+    private static bool AreOptionsValid(ProviderWebhookIngressOptions options)
+    {
+        return options.ConcurrencyPermitLimit is > 0 and <= 1024 &&
+            options.RatePermitLimit is > 0 and <= 100_000 &&
+            options.RatePeriodSeconds is > 0 and <= 3600 &&
+            options.MaximumDeliveryAgeSeconds is > 0 and <= 86_400 &&
+            options.MaximumFutureSkewSeconds is >= 0 and <= 3600;
     }
 }

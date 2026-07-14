@@ -29,4 +29,9 @@ public enum ProviderVoiceWebhookStatus
     /// The authenticated provider exceeded its configured delivery rate.
     /// </summary>
     RateLimited,
+
+    /// <summary>
+    /// The authenticated delivery omitted a UTC event timestamp or fell outside the accepted freshness window.
+    /// </summary>
+    StaleDelivery,
 }

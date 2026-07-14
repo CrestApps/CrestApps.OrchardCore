@@ -13,12 +13,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.DialPad;
 
 public sealed class DialPadWebhookEndpointTests : IDisposable
 {
-    private const string Payload = "{\"call_id\":\"c1\",\"state\":\"ringing\"}";
+    private static readonly DateTime _now = new(2026, 7, 14, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly string _payload = $"{{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":{new DateTimeOffset(_now).ToUnixTimeMilliseconds()}}}";
     private readonly ProviderWebhookIngressLimiter _ingressLimiter = CreateIngressLimiter();
 
     [Fact]
@@ -135,7 +137,7 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             .Setup(service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DialPadWebhookResult.Updated);
         var httpContext = CreateHttpContext();
-        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(Payload, secret)));
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
         httpContext.RequestAborted = new CancellationTokenSource().Token;
         var result = await DialPadWebhookEndpoint.HandleAsync(
             webhookService.Object,
@@ -171,7 +173,7 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             .Protect(secret);
         var webhookService = new Mock<IDialPadWebhookService>();
         var httpContext = CreateHttpContext();
-        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(Payload, secret)));
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
 
         // Act
         var result = await DialPadWebhookEndpoint.HandleAsync(
@@ -189,6 +191,79 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         // Assert
         Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         Assert.False(string.IsNullOrEmpty(httpContext.Response.Headers.RetryAfter));
+        webhookService.Verify(
+            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(-901)]
+    [InlineData(121)]
+    public async Task Call_WhenSignedTimestampIsOutsideFreshnessWindow_ReturnsBadRequest(int offsetSeconds)
+    {
+        // Arrange
+        const string secret = "shhh";
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedSecret = dataProtectionProvider
+            .CreateProtector(DialPadConstants.WebhookProtectorName)
+            .Protect(secret);
+        var webhookService = new Mock<IDialPadWebhookService>();
+        var timestamp = new DateTimeOffset(_now.AddSeconds(offsetSeconds)).ToUnixTimeMilliseconds();
+        var payload = $"{{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":{timestamp}}}";
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
+
+        // Act
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            _ingressLimiter,
+            SiteServiceFactory.Create(new DialPadSettings
+            {
+                IsEnabled = true,
+                WebhookSigningSecret = protectedSecret,
+            }),
+            dataProtectionProvider,
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        webhookService.Verify(
+            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData("{\"call_id\":\"c1\",\"state\":\"ringing\"}")]
+    [InlineData("{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":\"invalid\"}")]
+    [InlineData("{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":9223372036854775807}")]
+    public async Task Call_WhenSignedTimestampIsMissingMalformedOrOutOfRange_ReturnsBadRequest(string payload)
+    {
+        // Arrange
+        const string secret = "shhh";
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedSecret = dataProtectionProvider
+            .CreateProtector(DialPadConstants.WebhookProtectorName)
+            .Protect(secret);
+        var webhookService = new Mock<IDialPadWebhookService>();
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
+
+        // Act
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            _ingressLimiter,
+            SiteServiceFactory.Create(new DialPadSettings
+            {
+                IsEnabled = true,
+                WebhookSigningSecret = protectedSecret,
+            }),
+            dataProtectionProvider,
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -224,9 +299,14 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
     private static ProviderWebhookIngressLimiter CreateIngressLimiter(int ratePermitLimit = 120)
     {
-        return new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions
-        {
-            RatePermitLimit = ratePermitLimit,
-        }));
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        return new ProviderWebhookIngressLimiter(
+            Options.Create(new ProviderWebhookIngressOptions
+            {
+                RatePermitLimit = ratePermitLimit,
+            }),
+            clock.Object);
     }
 }

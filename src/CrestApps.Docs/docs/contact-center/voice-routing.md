@@ -63,7 +63,7 @@ Examples:
 
 The provider never pushes state directly to the browser. It always comes into Orchard first.
 
-The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. Each tenant also enforces a shared pre-buffering concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Request cancellation remains active while Orchard reads and authenticates the delivery, but an authenticated delivery that has entered state-changing processing is not canceled merely because the provider disconnects. Durable inbox acceptance and replay freshness remain required before these endpoints are considered production-complete.
+The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. Each tenant also enforces a shared pre-buffering concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Authenticated deliveries must contain a provider-signed UTC event timestamp within the configured maximum age and future clock-skew window. Generic normalized events use `OccurredUtc`; DialPad JWT payloads use `event_timestamp` in epoch milliseconds. Missing, malformed, non-UTC, stale, or excessively future timestamps are rejected with HTTP 400 before state-changing processing. Request cancellation remains active while Orchard reads and authenticates the delivery, but an authenticated delivery that has entered state-changing processing is not canceled merely because the provider disconnects. Durable inbox acceptance and durable replay uniqueness remain required before these endpoints are considered production-complete.
 
 Configure tenant-local limits in shell configuration:
 
@@ -73,13 +73,15 @@ Configure tenant-local limits in shell configuration:
     "WebhookIngress": {
       "ConcurrencyPermitLimit": 8,
       "RatePermitLimit": 120,
-      "RatePeriodSeconds": 60
+      "RatePeriodSeconds": 60,
+      "MaximumDeliveryAgeSeconds": 900,
+      "MaximumFutureSkewSeconds": 120
     }
   }
 }
 ```
 
-`ConcurrencyPermitLimit` bounds all provider webhook requests buffering or processing on one tenant and application node. `RatePermitLimit` is applied independently to each authenticated canonical provider during `RatePeriodSeconds`. Every value must be greater than zero. In a multi-node deployment, each node enforces its own limits, so the external gateway should also enforce the deployment-wide provider contract.
+`ConcurrencyPermitLimit` bounds all provider webhook requests buffering or processing on one tenant and application node. `RatePermitLimit` is applied independently to each authenticated canonical provider during `RatePeriodSeconds`. `MaximumDeliveryAgeSeconds` rejects authenticated deliveries older than the accepted replay window, and `MaximumFutureSkewSeconds` permits only bounded provider clock skew. Concurrency, rate, period, and delivery age must be greater than zero; future skew may be zero. In a multi-node deployment, each node enforces its own limits, so the external gateway should also enforce the deployment-wide provider contract.
 
 ### 2. Contact Center creates the CRM work item and interaction
 

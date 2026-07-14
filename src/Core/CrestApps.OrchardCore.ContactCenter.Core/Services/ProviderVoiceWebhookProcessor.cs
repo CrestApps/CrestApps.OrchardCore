@@ -72,6 +72,13 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.MissingIdempotencyKey };
         }
 
+        if (events.Any(providerEvent => !_ingressLimiter.IsFresh(providerEvent.OccurredUtc)))
+        {
+            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because a parsed event timestamp was missing, non-UTC, stale, or too far in the future.", adapter.TechnicalName);
+
+            return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.StaleDelivery };
+        }
+
         var processed = 0;
 
         foreach (var providerEvent in events)

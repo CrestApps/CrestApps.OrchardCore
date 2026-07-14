@@ -115,6 +115,15 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.BadRequest();
         }
 
+        if (!callEvent.EventTimestamp.HasValue ||
+            !TryGetOccurredUtc(callEvent.EventTimestamp.Value, out var occurredUtc) ||
+            !ingressLimiter.IsFresh(occurredUtc))
+        {
+            logger.LogWarning("Rejected a DialPad webhook because its signed event timestamp was missing, stale, or too far in the future.");
+
+            return TypedResults.BadRequest();
+        }
+
         var result = await webhookService.ProcessAsync(callEvent, CancellationToken.None);
 
         return TypedResults.Ok(new
@@ -148,6 +157,22 @@ internal static class DialPadWebhookEndpoint
         if (retryAfter.HasValue)
         {
             httpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.Value.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    private static bool TryGetOccurredUtc(long eventTimestamp, out DateTime occurredUtc)
+    {
+        try
+        {
+            occurredUtc = DateTimeOffset.FromUnixTimeMilliseconds(eventTimestamp).UtcDateTime;
+
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            occurredUtc = default;
+
+            return false;
         }
     }
 }
