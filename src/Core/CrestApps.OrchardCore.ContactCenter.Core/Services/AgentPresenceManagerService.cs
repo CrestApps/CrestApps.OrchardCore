@@ -22,6 +22,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IContactCenterRealTimeNotifier _realTimeNotifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentPresenceManagerService"/> class.
@@ -33,6 +34,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// <param name="distributedLock">The distributed lock used to serialize sign-in updates.</param>
     /// <param name="clock">The clock used to stamp presence changes.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="realTimeNotifiers">The optional real-time notifier used to revoke active queue subscriptions.</param>
     public AgentPresenceManagerService(
         IAgentProfileManager agentManager,
         IEnumerable<IAgentSessionManager> sessionManagers,
@@ -40,7 +42,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
         IClock clock,
-        ILogger<AgentPresenceManagerService> logger)
+        ILogger<AgentPresenceManagerService> logger,
+        IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers = null)
     {
         _agentManager = agentManager;
         _sessionManager = sessionManagers.FirstOrDefault();
@@ -49,6 +52,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
+        _realTimeNotifier = realTimeNotifiers?.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -95,10 +99,18 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
+        var entitledQueueIds = AgentEntitlementUtilities.FilterEntitled(selectedQueueIds, profile.AllowedQueueIds);
+        var entitledCampaignIds = AgentEntitlementUtilities.FilterEntitled(selectedCampaignIds, profile.AllowedCampaignIds);
+
+        if (entitledQueueIds.Count == 0 && entitledCampaignIds.Count == 0)
+        {
+            throw new AgentEntitlementDeniedException(userId);
+        }
+
         var previousStatus = profile.PresenceStatus;
 
-        profile.QueueIds = selectedQueueIds;
-        profile.CampaignIds = selectedCampaignIds;
+        profile.QueueIds = entitledQueueIds;
+        profile.CampaignIds = entitledCampaignIds;
         profile.PresenceStatus = AgentPresenceStatus.Available;
         profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
@@ -148,10 +160,18 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        var entitledQueueIds = AgentEntitlementUtilities.FilterEntitled(queueIds, profile.AllowedQueueIds);
+        var entitledCampaignIds = AgentEntitlementUtilities.FilterEntitled(campaignIds, profile.AllowedCampaignIds);
+
+        if (entitledQueueIds.Count == 0 && entitledCampaignIds.Count == 0)
+        {
+            throw new AgentEntitlementDeniedException(userId);
+        }
+
         var previousStatus = profile.PresenceStatus;
 
-        profile.QueueIds = queueIds?.Distinct().ToList() ?? [];
-        profile.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
+        profile.QueueIds = entitledQueueIds;
+        profile.CampaignIds = entitledCampaignIds;
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
@@ -400,6 +420,92 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         return profile;
     }
 
+    /// <inheritdoc/>
+    public async Task<AgentProfile> UpdateEntitlementsAsync(
+        string agentId,
+        IEnumerable<string> allowedQueueIds,
+        IEnumerable<string> allowedCampaignIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(profile.UserId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{profile.UserId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        profile.AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(allowedQueueIds);
+        profile.AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(allowedCampaignIds);
+
+        var previousQueueIds = profile.QueueIds.ToList();
+        var previousCampaignIds = profile.CampaignIds.ToList();
+        var prunedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
+        var prunedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile.CampaignIds, profile.AllowedCampaignIds);
+
+        var membershipChanged = !prunedQueueIds.SequenceEqual(profile.QueueIds, StringComparer.OrdinalIgnoreCase) ||
+            !prunedCampaignIds.SequenceEqual(profile.CampaignIds, StringComparer.OrdinalIgnoreCase);
+
+        profile.QueueIds = prunedQueueIds;
+        profile.CampaignIds = prunedCampaignIds;
+
+        await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
+        var removedQueueIds = previousQueueIds
+            .Except(profile.QueueIds, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var removedCampaignIds = previousCampaignIds
+            .Except(profile.CampaignIds, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        await PublishEntitlementsChangedAsync(
+            profile,
+            removedQueueIds,
+            removedCampaignIds,
+            cancellationToken);
+
+        if (membershipChanged)
+        {
+            await SyncSessionMembershipAsync(profile.UserId, profile.QueueIds, profile.CampaignIds, cancellationToken);
+
+            if (_realTimeNotifier is not null)
+            {
+                await _realTimeNotifier.NotifyAgentMembershipChangedAsync(
+                    profile.UserId,
+                    removedQueueIds,
+                    cancellationToken);
+            }
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Pruned unauthorized Contact Center live queue or campaign membership for agent '{AgentId}' after manager entitlement changes.",
+                    profile.ItemId);
+            }
+        }
+
+        return profile;
+    }
+
     private static bool CanApplyPresenceNow(AgentProfile profile)
     {
         return string.IsNullOrEmpty(profile.ActiveReservationId) &&
@@ -493,6 +599,32 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             QueueIds = profile.QueueIds.ToList(),
             CampaignIds = profile.CampaignIds.ToList(),
             ChangedUtc = profile.PresenceChangedUtc ?? _clock.UtcNow,
+        });
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+
+    private Task PublishEntitlementsChangedAsync(
+        AgentProfile profile,
+        IEnumerable<string> removedQueueIds,
+        IEnumerable<string> removedCampaignIds,
+        CancellationToken cancellationToken)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.AgentEntitlementsChanged,
+            AggregateType = nameof(AgentProfile),
+            AggregateId = profile.ItemId,
+            ActorId = ContactCenterConstants.SystemActor,
+            SourceComponent = ContactCenterConstants.Components.Agents,
+        };
+
+        interactionEvent.SetData(new AgentEntitlementsChangedEventData
+        {
+            AllowedQueueIds = profile.AllowedQueueIds.ToList(),
+            AllowedCampaignIds = profile.AllowedCampaignIds.ToList(),
+            RemovedQueueIds = removedQueueIds.ToList(),
+            RemovedCampaignIds = removedCampaignIds.ToList(),
         });
 
         return _publisher.PublishAsync(interactionEvent, cancellationToken);

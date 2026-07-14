@@ -22,7 +22,14 @@ public sealed class AgentSessionServiceTests
 
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1", DisplayName = "Agent One", QueueIds = ["q1", "q2"] });
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+                DisplayName = "Agent One",
+                QueueIds = ["q1", "q2"],
+                AllowedQueueIds = ["q1", "q2"],
+            });
 
         var service = CreateService(sessionManager, agentManager);
 
@@ -150,6 +157,7 @@ public sealed class AgentSessionServiceTests
                 PresenceReason = "Ready",
                 ActiveReservationId = "r1",
                 QueueIds = ["q1"],
+                AllowedQueueIds = ["q1"],
             });
 
         var service = CreateService(sessionManager, agentManager);
@@ -165,6 +173,66 @@ public sealed class AgentSessionServiceTests
         Assert.Equal(["q1"], snapshot.QueueIds);
         Assert.True(snapshot.IsOnline);
         Assert.Equal(_now, snapshot.ServerTimeUtc);
+    }
+
+    [Fact]
+    public async Task BuildSnapshotAsync_WhenLegacyMembershipIsNotEntitled_ExcludesIt()
+    {
+        // Arrange
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentSession
+            {
+                ItemId = "s1",
+                UserId = "u1",
+                QueueIds = ["q1", "q2"],
+            });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+                QueueIds = ["q1", "q2"],
+                AllowedQueueIds = ["q1"],
+            });
+
+        var service = CreateService(sessionManager, agentManager);
+
+        // Act
+        var snapshot = await service.BuildSnapshotAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["q1"], snapshot.QueueIds);
+    }
+
+    [Fact]
+    public async Task BuildSnapshotAsync_WhenProfileIsMissing_DoesNotTrustSessionMembership()
+    {
+        // Arrange
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentSession
+            {
+                ItemId = "s1",
+                UserId = "u1",
+                QueueIds = ["q1"],
+                CampaignIds = ["c1"],
+            });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentProfile)null);
+
+        var service = CreateService(sessionManager, agentManager);
+
+        // Act
+        var snapshot = await service.BuildSnapshotAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(snapshot.QueueIds);
+        Assert.Empty(snapshot.CampaignIds);
     }
 
     [Fact]

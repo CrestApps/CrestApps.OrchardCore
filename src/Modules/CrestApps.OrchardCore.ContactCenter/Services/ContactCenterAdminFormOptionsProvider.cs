@@ -76,6 +76,21 @@ public sealed class ContactCenterAdminFormOptionsProvider
         return options;
     }
 
+    internal async Task<IList<SelectListItem>> GetQueueOptionsAsync(IEnumerable<string> selectedQueueIds)
+    {
+        var selected = CreateSelectedSet(selectedQueueIds, StringComparer.Ordinal);
+        var queues = await _queueManager.GetAllAsync();
+
+        var options = queues
+            .OrderBy(queue => queue.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(queue => new SelectListItem(queue.Name ?? queue.ItemId, queue.ItemId, selected.Contains(queue.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
+    }
+
     internal async Task<IList<SelectListItem>> GetSkillOptionsAsync(IEnumerable<string> selectedSkills)
     {
         var selected = CreateSelectedSet(selectedSkills, StringComparer.OrdinalIgnoreCase);
@@ -171,6 +186,34 @@ public sealed class ContactCenterAdminFormOptionsProvider
         model.TargetQueueOptions = await GetQueueOptionsAsync(model.TargetQueueId);
         model.OverflowQueueOptions = await GetQueueOptionsAsync(model.OverflowQueueId);
         model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);
+    }
+
+    internal async Task PopulateAgentEntitlementEditorAsync(AgentEntitlementViewModel model)
+    {
+        model.AllowedQueueIds = ContactCenterFormHelpers.NormalizeList(model.AllowedQueueIds);
+        model.QueueOptions = await GetQueueOptionsAsync(model.AllowedQueueIds);
+        model.AllowedCampaignIds = ContactCenterFormHelpers.NormalizeList(model.AllowedCampaignIds);
+        model.CampaignOptions = await GetCampaignOptionsAsync(model.AllowedCampaignIds);
+    }
+
+    internal async Task<IList<string>> FilterExistingQueueIdsAsync(IEnumerable<string> queueIds)
+    {
+        var normalized = ContactCenterFormHelpers.NormalizeList(queueIds);
+        var existing = new HashSet<string>(
+            (await _queueManager.GetAllAsync()).Select(queue => queue.ItemId),
+            StringComparer.OrdinalIgnoreCase);
+
+        return normalized.Where(existing.Contains).ToList();
+    }
+
+    internal async Task<IList<string>> FilterExistingCampaignIdsAsync(IEnumerable<string> campaignIds)
+    {
+        var normalized = ContactCenterFormHelpers.NormalizeList(campaignIds);
+        var existing = new HashSet<string>(
+            (await _campaignManager.GetAllAsync()).Select(campaign => campaign.ItemId),
+            StringComparer.OrdinalIgnoreCase);
+
+        return normalized.Where(existing.Contains).ToList();
     }
 
     private static HashSet<string> CreateSelectedSet(IEnumerable<string> values, StringComparer comparer)

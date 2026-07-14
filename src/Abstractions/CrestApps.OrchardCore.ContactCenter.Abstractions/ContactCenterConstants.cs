@@ -209,6 +209,11 @@ public static class ContactCenterConstants
         public const string AgentPresenceChanged = "AgentPresenceChanged";
 
         /// <summary>
+        /// Raised when manager-owned agent queue or campaign entitlements change.
+        /// </summary>
+        public const string AgentEntitlementsChanged = "AgentEntitlementsChanged";
+
+        /// <summary>
         /// Raised when an agent is reserved for an offer.
         /// </summary>
         public const string AgentReserved = "AgentReserved";

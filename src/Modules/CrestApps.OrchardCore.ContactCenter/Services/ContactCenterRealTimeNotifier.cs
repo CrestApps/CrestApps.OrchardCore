@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.SignalR;
@@ -14,18 +15,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifier
 {
     private readonly IHubContext<ContactCenterHub, IContactCenterHubClient> _hubContext;
+    private readonly IAgentSessionManager _sessionManager;
     private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeNotifier"/> class.
     /// </summary>
     /// <param name="hubContext">The Contact Center hub context used to push events to connected clients.</param>
+    /// <param name="sessionManager">The agent session manager used to resolve active connections.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     public ContactCenterRealTimeNotifier(
         IHubContext<ContactCenterHub, IContactCenterHubClient> hubContext,
+        IAgentSessionManager sessionManager,
         ShellSettings shellSettings)
     {
         _hubContext = hubContext;
+        _sessionManager = sessionManager;
         _tenantName = shellSettings.Name;
     }
 
@@ -91,6 +96,33 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         }
 
         await _hubContext.Clients.Group(SupervisorsGroup).QueueStatsChanged(notification);
+    }
+
+    /// <inheritdoc/>
+    public async Task NotifyAgentMembershipChangedAsync(
+        string userId,
+        IEnumerable<string> removedQueueIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var session = await _sessionManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (session is not null)
+        {
+            foreach (var connectionId in session.ConnectionIds)
+            {
+                foreach (var queueId in removedQueueIds.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    await _hubContext.Groups.RemoveFromGroupAsync(
+                        connectionId,
+                        QueueGroup(queueId),
+                        cancellationToken);
+                }
+            }
+        }
+
+        await _hubContext.Clients.Group(UserGroup(userId)).MembershipChanged();
     }
 
     private string SupervisorsGroup

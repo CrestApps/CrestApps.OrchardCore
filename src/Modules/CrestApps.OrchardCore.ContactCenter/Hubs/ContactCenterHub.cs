@@ -91,6 +91,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
                     }
+
+                    var snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+                    await UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds);
                 }
                 catch (Exception ex)
                 {
@@ -249,7 +252,14 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 throw new HubException("Select at least one queue or campaign before signing in.");
             }
 
-            await presenceManager.SignInAsync(userId, normalizedQueueIds, normalizedCampaignIds, Context.ConnectionAborted);
+            try
+            {
+                await presenceManager.SignInAsync(userId, normalizedQueueIds, normalizedCampaignIds, Context.ConnectionAborted);
+            }
+            catch (AgentEntitlementDeniedException exception)
+            {
+                throw new HubException(exception.Message);
+            }
 
             snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
@@ -310,11 +320,20 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 throw new HubException("Use sign out to leave the final queue or campaign.");
             }
 
-            var profile = await presenceManager.UpdateMembershipsAsync(
-                userId,
-                normalizedQueueIds,
-                normalizedCampaignIds,
-                Context.ConnectionAborted);
+            AgentProfile profile;
+
+            try
+            {
+                profile = await presenceManager.UpdateMembershipsAsync(
+                    userId,
+                    normalizedQueueIds,
+                    normalizedCampaignIds,
+                    Context.ConnectionAborted);
+            }
+            catch (AgentEntitlementDeniedException exception)
+            {
+                throw new HubException(exception.Message);
+            }
 
             if (profile is null)
             {

@@ -43,6 +43,9 @@
         connection.on('OfferReceived', options.onOfferReceived || noop);
         connection.on('OfferRevoked', options.onOfferRevoked || noop);
         connection.on('QueueStatsChanged', options.onQueueStatsChanged || noop);
+        connection.on('MembershipChanged', function () {
+            loadSnapshot().catch(function () { });
+        });
 
         var heartbeatIntervalMs = options.heartbeatIntervalMs || DEFAULT_HEARTBEAT_INTERVAL_MS;
         var heartbeatTimer = null;

@@ -42,6 +42,6 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
             collection: ContactCenterConstants.CollectionName)
             .ListAsync(cancellationToken);
 
-        return available.Where(agent => agent.QueueIds.Contains(queueId)).ToArray();
+        return available.Where(agent => AgentEntitlementUtilities.HasQueueEntitlement(agent, queueId)).ToArray();
     }
 }

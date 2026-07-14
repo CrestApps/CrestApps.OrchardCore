@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+
+@model IList<AgentProfile>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Agent entitlements"])</h1></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="text-end">
+            <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add agent entitlements"]</a>
+        </div>
+    </div>
+</div>
+
+<ul class="list-group">
+    @if (Model.Count > 0)
+    {
+        @foreach (var agent in Model)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@(agent.UserName ?? agent.Name)</strong>
+                    <div class="text-muted small">
+                        @T["{0} queue(s), {1} campaign(s)", agent.AllowedQueueIds?.Count ?? 0, agent.AllowedCampaignIds?.Count ?? 0]
+                    </div>
+                </div>
+                <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-id="@agent.ItemId">@T["Edit"]</a>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item list-group-item-info text-center">
+            @T["No agent entitlements are configured."]
+        </li>
+    }
+</ul>

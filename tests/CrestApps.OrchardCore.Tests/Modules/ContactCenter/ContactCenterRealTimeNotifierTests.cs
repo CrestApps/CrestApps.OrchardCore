@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.SignalR;
@@ -33,7 +35,10 @@ public sealed class ContactCenterRealTimeNotifierTests
         var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
         hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
 
-        var notifier = new ContactCenterRealTimeNotifier(hubContext.Object, shellSettings);
+        var notifier = new ContactCenterRealTimeNotifier(
+            hubContext.Object,
+            new Mock<IAgentSessionManager>().Object,
+            shellSettings);
         var notification = new AgentOfferNotification
         {
             UserId = "u1",
@@ -56,5 +61,60 @@ public sealed class ContactCenterRealTimeNotifierTests
         supervisorClient.Verify(
             client => client.OfferReceived(It.Is<AgentOfferNotification>(offer => !offer.AutoOpenActivity)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task NotifyAgentMembershipChangedAsync_RemovesEveryConnectionFromRevokedQueueGroups()
+    {
+        // Arrange
+        var client = new Mock<IContactCenterHubClient>();
+        var clients = new Mock<IHubClients<IContactCenterHubClient>>();
+        var groupManager = new Mock<IGroupManager>();
+        var shellSettings = new ShellSettings
+        {
+            Name = "TenantA",
+        };
+        var userGroup = TenantSignalRGroupName.ForUser(shellSettings.Name, "u1");
+        var queueGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.QueueGroup("q2"));
+
+        clients.Setup(c => c.Group(userGroup)).Returns(client.Object);
+
+        var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
+        hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
+        hubContext.SetupGet(c => c.Groups).Returns(groupManager.Object);
+
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentSession
+            {
+                UserId = "u1",
+                ConnectionIds = ["connection-1", "connection-2"],
+            });
+
+        var notifier = new ContactCenterRealTimeNotifier(
+            hubContext.Object,
+            sessionManager.Object,
+            shellSettings);
+
+        // Act
+        await notifier.NotifyAgentMembershipChangedAsync(
+            "u1",
+            ["q2"],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        groupManager.Verify(
+            manager => manager.RemoveFromGroupAsync(
+                "connection-1",
+                queueGroup,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        groupManager.Verify(
+            manager => manager.RemoveFromGroupAsync(
+                "connection-2",
+                queueGroup,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        client.Verify(c => c.MembershipChanged(), Times.Once);
     }
 }

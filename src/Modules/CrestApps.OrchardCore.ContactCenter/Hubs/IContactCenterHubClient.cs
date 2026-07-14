@@ -31,4 +31,9 @@ public interface IContactCenterHubClient
     /// </summary>
     /// <param name="notification">The updated queue statistics.</param>
     Task QueueStatsChanged(QueueStatsNotification notification);
+
+    /// <summary>
+    /// Notifies the client that its queue or campaign memberships changed outside the current connection.
+    /// </summary>
+    Task MembershipChanged();
 }

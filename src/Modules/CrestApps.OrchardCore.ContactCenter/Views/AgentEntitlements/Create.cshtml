@@ -1,0 +1,39 @@
+@model AgentEntitlementViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["New agent entitlements"])</h1></zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="mb-3" asp-validation-class-for="UserName">
+        <label asp-for="UserName" class="form-label">@T["User"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "agent-entitlement-user-selector",
+            inputName = Html.NameFor(model => model.UserName),
+            endpoint = Model.UserSearchEndpoint,
+            initialItemsJson = "[]",
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Browse users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["No user selected."].Value,
+            loadingText = T["Loading users..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected user"].Value,
+            availableItemsLabel = T["Available users"].Value
+        })
+        <span asp-validation-for="UserName"></span>
+    </div>
+
+    @await Html.PartialAsync("_EntitlementFields", Model)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

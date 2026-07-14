@@ -19,7 +19,7 @@ public sealed class AgentPresenceManagerServiceTests
         // Arrange
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
-        agentManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1" });
+        agentManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1", AllowedQueueIds = ["q1", "q2"] });
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
         var publisher = new Mock<IContactCenterEventPublisher>();
         var clock = new Mock<IClock>();
@@ -37,12 +37,58 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
-    public async Task SignInAsync_PublishesAgentSignedInEvent_ForQueuedOfferHandlers()
+    public async Task SignInAsync_WhenNoQueueOrCampaignIsEntitled_ThrowsAndDoesNotSignIn()
     {
         // Arrange
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
         agentManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1" });
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<AgentEntitlementDeniedException>(
+            () => service.SignInAsync("u1", ["q1"], [], TestContext.Current.CancellationToken));
+
+        Assert.Equal("u1", exception.UserId);
+        agentManager.Verify(m => m.CreateAsync(It.IsAny<AgentProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+        agentManager.Verify(m => m.UpdateAsync(It.IsAny<AgentProfile>(), null, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SignInAsync_WhenOnlySomeQueuesAreEntitled_FiltersToEntitledQueuesOnly()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            AllowedQueueIds = ["Q1"],
+            AllowedCampaignIds = [],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.SignInAsync("u1", ["q1", "q2"], [], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["q1"], profile.QueueIds);
+    }
+
+    [Fact]
+    public async Task SignInAsync_PublishesAgentSignedInEvent_ForQueuedOfferHandlers()
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
+        agentManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1", AllowedQueueIds = ["q1"] });
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
         var publisher = new Mock<IContactCenterEventPublisher>();
         var clock = new Mock<IClock>();
@@ -75,6 +121,8 @@ public sealed class AgentPresenceManagerServiceTests
             ActiveReservationId = "r1",
             QueueIds = ["q1", "q2"],
             CampaignIds = ["c1"],
+            AllowedQueueIds = ["q1", "q2"],
+            AllowedCampaignIds = ["c1"],
         };
 
         var agentManager = new Mock<IAgentProfileManager>();
@@ -103,6 +151,140 @@ public sealed class AgentPresenceManagerServiceTests
         Assert.Equal("r1", profile.ActiveReservationId);
         Assert.Equal(["q2"], profile.QueueIds);
         Assert.Equal(["c1"], profile.CampaignIds);
+    }
+
+    [Fact]
+    public async Task UpdateMembershipsAsync_WhenQueueIsNotEntitled_ThrowsAndDoesNotUpdate()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+            QueueIds = ["q1"],
+            AllowedQueueIds = ["q1"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<AgentEntitlementDeniedException>(
+            () => service.UpdateMembershipsAsync("u1", ["q2"], [], TestContext.Current.CancellationToken));
+
+        Assert.Equal("u1", exception.UserId);
+        agentManager.Verify(m => m.UpdateAsync(It.IsAny<AgentProfile>(), null, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateEntitlementsAsync_PrunesUnauthorizedLiveMembership_PreservesPresenceAndReservation()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "r1",
+            QueueIds = ["q1", "q2"],
+            CampaignIds = ["c1"],
+            AllowedQueueIds = ["q1", "q2"],
+            AllowedCampaignIds = ["c1"],
+        };
+        var session = new AgentSession
+        {
+            ItemId = "s1",
+            UserId = "u1",
+            QueueIds = ["q1", "q2"],
+            CampaignIds = ["c1"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        InteractionEvent publishedEvent = null;
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher.Setup(m => m.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvent = interactionEvent)
+            .Returns(Task.CompletedTask);
+        var realTimeNotifier = new Mock<IContactCenterRealTimeNotifier>();
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [sessionManager.Object],
+            [],
+            publisher.Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object,
+            [realTimeNotifier.Object]);
+
+        // Act
+        var profile = await service.UpdateEntitlementsAsync("a1", ["q1"], [], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["q1"], profile.AllowedQueueIds);
+        Assert.Empty(profile.AllowedCampaignIds);
+        Assert.Equal(["q1"], profile.QueueIds);
+        Assert.Empty(profile.CampaignIds);
+        Assert.Equal(AgentPresenceStatus.Busy, profile.PresenceStatus);
+        Assert.Equal("r1", profile.ActiveReservationId);
+        Assert.Equal(["q1"], session.QueueIds);
+        Assert.Empty(session.CampaignIds);
+        Assert.NotNull(publishedEvent);
+        Assert.Equal(ContactCenterConstants.Events.AgentEntitlementsChanged, publishedEvent.EventType);
+
+        var eventData = publishedEvent.GetData<AgentEntitlementsChangedEventData>();
+        Assert.Equal(["q1"], eventData.AllowedQueueIds);
+        Assert.Empty(eventData.AllowedCampaignIds);
+        Assert.Equal(["q2"], eventData.RemovedQueueIds);
+        Assert.Equal(["c1"], eventData.RemovedCampaignIds);
+        realTimeNotifier.Verify(
+            notifier => notifier.NotifyAgentMembershipChangedAsync(
+                "u1",
+                It.Is<IEnumerable<string>>(queueIds => queueIds.SequenceEqual(new[] { "q2" })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateEntitlementsAsync_WhenAgentDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("missing", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.UpdateEntitlementsAsync("missing", ["q1"], [], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(profile);
     }
 
     [Fact]
@@ -376,6 +558,7 @@ public sealed class AgentPresenceManagerServiceTests
             UserId = "u1",
             PresenceStatus = AgentPresenceStatus.Available,
             QueueIds = ["q1"],
+            AllowedQueueIds = ["q1", "q2"],
         };
 
         var agentManager = new Mock<IAgentProfileManager>();

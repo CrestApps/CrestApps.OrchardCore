@@ -237,6 +237,8 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
+        services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
+
         services
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
             .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()

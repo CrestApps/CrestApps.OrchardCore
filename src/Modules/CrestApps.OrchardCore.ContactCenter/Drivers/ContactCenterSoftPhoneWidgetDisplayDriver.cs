@@ -69,8 +69,13 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         }
 
         var profile = await _agentProfileManager.FindByUserIdAsync(userId);
-        var selectedCampaignIds = profile?.CampaignIds ?? [];
+        var allowedQueueIds = new HashSet<string>(profile?.AllowedQueueIds ?? [], StringComparer.OrdinalIgnoreCase);
+        var allowedCampaignIds = new HashSet<string>(profile?.AllowedCampaignIds ?? [], StringComparer.OrdinalIgnoreCase);
+        var selectedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile?.CampaignIds, profile?.AllowedCampaignIds);
         var queues = await _queueManager.ListEnabledAsync();
+        var entitledQueues = queues.Where(queue => allowedQueueIds.Contains(queue.ItemId)).ToList();
+        var campaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds);
+        var entitledCampaignOptions = campaignOptions.Where(option => allowedCampaignIds.Contains(option.Value)).ToList();
         var reasonCodes = _reasonCodeManager is null
             ? []
             : await _reasonCodeManager.ListEnabledAsync();
@@ -79,9 +84,9 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         {
             HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
             Profile = profile,
-            AvailableQueues = [.. queues],
-            SelectedQueueIds = profile?.QueueIds ?? [],
-            CampaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds),
+            AvailableQueues = entitledQueues,
+            SelectedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile?.QueueIds, profile?.AllowedQueueIds),
+            CampaignOptions = entitledCampaignOptions,
             SelectedCampaignIds = selectedCampaignIds,
             ReasonCodes = [.. reasonCodes],
         };

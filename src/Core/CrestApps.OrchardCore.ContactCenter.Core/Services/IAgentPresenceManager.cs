@@ -62,4 +62,16 @@ public interface IAgentPresenceManager
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
     Task<AgentProfile> CompleteWorkAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies manager-owned queue and campaign entitlements to the agent profile, pruning any live queue
+    /// or campaign membership that the new entitlements no longer authorize while preserving the agent's
+    /// current presence status and active reservation.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="allowedQueueIds">The queues the agent is allowed to sign in to.</param>
+    /// <param name="allowedCampaignIds">The dialer campaigns the agent is allowed to sign in to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The updated agent profile, or <see langword="null"/> when no profile exists.</returns>
+    Task<AgentProfile> UpdateEntitlementsAsync(string agentId, IEnumerable<string> allowedQueueIds, IEnumerable<string> allowedCampaignIds, CancellationToken cancellationToken = default);
 }

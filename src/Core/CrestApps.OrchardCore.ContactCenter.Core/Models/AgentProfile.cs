@@ -70,6 +70,20 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public IList<string> CampaignIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the manager-owned queue entitlements the agent is allowed to sign in to. This is the
+    /// authoritative allow-list enforced independently of <see cref="QueueIds"/>, which only tracks the
+    /// agent's live sign-in state and can never be broadened by the agent beyond this set.
+    /// </summary>
+    public IList<string> AllowedQueueIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the manager-owned dialer campaign entitlements the agent is allowed to sign in to. This
+    /// is the authoritative allow-list enforced independently of <see cref="CampaignIds"/>, which only tracks
+    /// the agent's live sign-in state and can never be broadened by the agent beyond this set.
+    /// </summary>
+    public IList<string> AllowedCampaignIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the skills the agent can be routed for.
     /// </summary>
     public IList<string> Skills { get; set; } = [];

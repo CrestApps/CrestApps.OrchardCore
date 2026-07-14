@@ -100,8 +100,8 @@ public sealed class AgentSessionService : IAgentSessionService
 
         if (profile is not null)
         {
-            session.QueueIds = [.. profile.QueueIds];
-            session.CampaignIds = [.. profile.CampaignIds];
+            session.QueueIds = AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
+            session.CampaignIds = AgentEntitlementUtilities.FilterEntitled(profile.CampaignIds, profile.AllowedCampaignIds);
 
             if (string.IsNullOrEmpty(session.DisplayName))
             {
@@ -196,8 +196,6 @@ public sealed class AgentSessionService : IAgentSessionService
             snapshot.IsOnline = session.IsOnline;
             snapshot.LastHeartbeatUtc = session.LastHeartbeatUtc;
             snapshot.DisplayName = session.DisplayName;
-            snapshot.QueueIds = [.. session.QueueIds];
-            snapshot.CampaignIds = [.. session.CampaignIds];
         }
 
         if (profile is not null)
@@ -207,8 +205,8 @@ public sealed class AgentSessionService : IAgentSessionService
             snapshot.PresenceReason = profile.PresenceReason;
             snapshot.RequestedPresenceStatus = profile.RequestedPresenceStatus?.ToString();
             snapshot.ActiveReservationId = profile.ActiveReservationId;
-            snapshot.QueueIds = [.. profile.QueueIds];
-            snapshot.CampaignIds = [.. profile.CampaignIds];
+            snapshot.QueueIds = AgentEntitlementUtilities.FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
+            snapshot.CampaignIds = AgentEntitlementUtilities.FilterEntitled(profile.CampaignIds, profile.AllowedCampaignIds);
 
             if (string.IsNullOrEmpty(snapshot.DisplayName))
             {

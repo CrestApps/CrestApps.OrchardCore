@@ -66,7 +66,14 @@ public sealed class AgentSoftPhoneController : Controller
             return BadRequest("Select at least one queue or campaign before signing in.");
         }
 
-        await _presenceManager.SignInAsync(GetUserId(), queues, campaigns);
+        try
+        {
+            await _presenceManager.SignInAsync(GetUserId(), queues, campaigns);
+        }
+        catch (AgentEntitlementDeniedException exception)
+        {
+            return BadRequest(exception.Message);
+        }
 
         return RedirectToReturnLocation(returnUrl);
     }

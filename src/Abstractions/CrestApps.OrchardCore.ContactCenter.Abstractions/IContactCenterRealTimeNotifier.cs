@@ -35,4 +35,15 @@ public interface IContactCenterRealTimeNotifier
     /// <param name="notification">The updated queue statistics.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task NotifyQueueStatsChangedAsync(QueueStatsNotification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes an agent's active connections from revoked queue groups and requests a fresh client snapshot.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="removedQueueIds">The queue memberships that were revoked.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task NotifyAgentMembershipChangedAsync(
+        string userId,
+        IEnumerable<string> removedQueueIds,
+        CancellationToken cancellationToken = default);
 }

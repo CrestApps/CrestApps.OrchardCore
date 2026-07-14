@@ -96,6 +96,26 @@ public sealed class AgentSoftPhoneControllerTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task SignIn_WhenPresenceManagerRejectsEntitlement_ReturnsBadRequest()
+    {
+        // Arrange
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        presenceManager.Setup(manager => manager.SignInAsync(
+                "user-1",
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AgentEntitlementDeniedException("user-1"));
+        var controller = CreateController(true, presenceManager.Object);
+
+        // Act
+        var result = await controller.SignIn(["q1"], [], "/Admin");
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
     private static AgentSoftPhoneController CreateController(
         bool isAuthorized,
         IAgentPresenceManager presenceManager = null)
