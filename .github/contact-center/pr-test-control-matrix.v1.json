@@ -721,7 +721,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRealTimeNotifierTests.cs and ContactCenterHubSecurityTests.cs prove single-node group/user targeting; the two-node offer/watch/reconnect/fan-out proof against a configured backplane is a planned:contact-center-operations-gates dependency."
+      "evidenceLocation": "ContactCenterRealTimeNotifierTests and ContactCenterHubSecurityTests prove single-node group/user targeting. The versioned dependency and retained-evidence contract for the Redis two-shell/two-node proof is scenario redis-backplane-two-shell in .github/contact-center/r0b-harness-dependency-ledger.v1.json; implementation remains planned:contact-center-operations-gates."
     },
     {
       "id": "O003",
@@ -1035,7 +1035,7 @@
           "scale-100k"
         ]
       },
-      "evidenceLocation": "No repeatable Contact Center multi-node/load/chaos harness exists yet; this is a planned:contact-center-distributed-suite dependency."
+      "evidenceLocation": ".github/contact-center/r0b-harness-dependency-ledger.v1.json records the application-node failure, Redis/database partition, duplicate provider stream, listener lease loss, and rolling-version scenarios with prerequisites and retained evidence targets. No scenario is yet implemented or certified; execution remains planned:contact-center-distributed-suite."
     },
     {
       "id": "V001",
@@ -1061,7 +1061,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskRealtimeVoiceEventDispatcherTests.cs and AsteriskRealtimeVoiceEventMapperTests.cs, and tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceEventServiceTests.cs, cover single-node event handling; the two-node duplicate/out-of-order monotonic-state proof is a planned:contact-center-provider-contract-suite dependency."
+      "evidenceLocation": "AsteriskRealtimeVoiceEventDispatcherTests, AsteriskRealtimeVoiceEventMapperTests, and ProviderVoiceEventServiceTests cover single-node event handling. Scenarios duplicate-provider-stream-two-process and listener-lease-loss in .github/contact-center/r0b-harness-dependency-ledger.v1.json define the missing two-process prerequisites and evidence targets; execution remains planned:contact-center-provider-contract-suite."
     },
     {
       "id": "V002",

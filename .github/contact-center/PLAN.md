@@ -1682,7 +1682,7 @@ Tests first:
 - Define percentile SLOs, error budgets, dependency limits, RPO/RTO, and acceptance owners before index, telemetry, or load work begins.
 - Create a PR-to-test control matrix with a DRI, approver, test id, CI job, provider/database/topology, invariant, and retained evidence for every P0/P1 gate.
 - **R0a in-process/shared-database reproductions:** add failing tests for two-shell tenant isolation and authorization; legal feature activation; disconnected-agent and wrap-up capacity; double reservation using two service providers over one shared database; provider-call orphan and `OutcomeUnknown`; duplicate/out-of-order/canonical-provider events; rolling-version outbox handler replay; ambiguous contact attribution; fake recording/monitoring success; webhook limits; secret/PII logs; and development-host exposure.
-- **R0b distributed reproductions:** land a single-host, two-shell test using the production Redis/backplane configuration so R1 can prove tenant-qualified groups/users. Track the genuine multi-process duplicate provider stream, listener lease loss, node failure, and network-partition failures; R2 expands the harness to two or more processes so R3/R4 can turn each into a red test before changing its behavior.
+- **R0b distributed reproductions:** when the production Redis/backplane configuration does not yet exist, record the single-host two-shell proof as an explicit dependency with its owner and evidence target; R1 lands the backplane configuration and fixture while proving tenant-qualified groups/users. Track the genuine multi-process duplicate provider stream, listener lease loss, node failure, and network-partition failures; R2 expands the R1 fixture to two or more processes so R3/R4 can turn each into a red test before changing its behavior.
 - Add an architecture test that extracts manifests/startup ownership and detects required services from undeclared features.
 
 Exit: every P0 has an owned falsification test or an explicit R0b harness dependency, the finite support/capacity contract and SLOs are approved, and no production code is refactored before its applicable red test exists.
@@ -1709,7 +1709,7 @@ Changes:
 - Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
 - Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
 - Make post-commit handler execution and Orchard shell child scopes explicit abstractions instead of scattered service location.
-- Expand the R0 single-host backplane fixture into the minimal two-node Orchard/Redis-backplane/provider-listener harness needed by distributed R0b scenarios.
+- Expand the R1 single-host backplane fixture into the minimal two-node Orchard/Redis-backplane/provider-listener harness needed by distributed R0b scenarios.
 - Define per-feature quiesce/drain/re-enable contracts and test inactive/idle enable-disable behavior before moving registrations. Defer active-call, pending-command, and in-flight-outbox quiesce proof to R3 after durable command state exists.
 
 Exit: every support-matrix feature set boots in a fresh tenant with only declared dependencies, unlisted combinations are rejected or unsupported explicitly, idle disable/re-enable is clean, quiesce contracts exist, the two-node harness runs, and two tenants with different feature sets coexist.
@@ -1863,12 +1863,12 @@ Keep this section current. Use the checklist below to track phase-level progress
 
 This checklist is authoritative for current execution order. Historical phase and G1-G8 checkmarks below record implementation increments only; every affected capability remains production-incomplete until the corresponding remediation and release gates pass.
 
-- [ ] **R0 — Support contract, SLOs, ownership, and failure reproductions:** publish the finite GA matrix and PR-to-test ownership, pin baselines, complete R0a tests, and track R0b harness dependencies.
+- [x] **R0 — Support contract, SLOs, ownership, and failure reproductions:** publish the finite GA matrix and PR-to-test ownership, pin baselines, complete R0a tests, and track R0b harness dependencies.
   - [x] Exact clean-tree baseline pinned in `.github/contact-center/R0-BASELINE.md`: commit `ccb1076d`, strict build, 1,472 unit tests, 24 Telephony browser tests, asset/docs builds, toolchain versions, and test-artifact hashes.
   - [x] Finite versioned GA support/capacity matrix and prohibited combinations published in `.github/contact-center/support-matrix.v1.json` and public production-support documentation, with machine-readable contract tests.
   - [x] Versioned SLOs, error budgets, dependency limits, RPO/RTO, DRI roles, and approver roles published in `.github/contact-center/service-objectives.v1.json`, with contract tests and public documentation. Named people remain a release-candidate assignment gate.
   - [x] PR-to-test control matrix for every P0/P1 gate published in `.github/contact-center/pr-test-control-matrix.v1.json` (41 gates: C001-C008, D001-D009, F001-F006, O001-O006, S001-S005, T001-T003, V001-V004), each resolving a DRI role, approver roles, test id, CI job, provider/database/topology context, falsifiable invariant, and retained evidence location, with contract tests. Most CI jobs remain planned; only the currently enforced/partially enforced gates are marked implemented/partial.
-  - [~] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
+  - [x] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
     - [x] Two-shell in-process tenant isolation and permission-gated Contact Center group-join tests.
     - [x] Static legal feature dependency-closure and undeclared-service characterization test; live tenant activation remains tracked by T001.
     - [x] Disconnected-agent and after-call capacity recovery characterization tests: last-session disconnect leaves an `Available` profile routable, assignment has no live-session dependency, and after-call state has no persisted server-swept deadline. R3 must invert these tests with canonical availability and deterministic deadline recovery.
@@ -1881,7 +1881,7 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Webhook body-limit and request-disconnect tests.
     - [x] Secret/PII log characterizations: Asterisk credential URI redaction is covered, while centralized Telephony/SMS/Contact Center snapshots prove the shared sanitization helper preserves E.164 addresses, agent ids, and token-shaped values and representative logging paths still emit raw customer/agent identifiers. R1 must invert these with centralized classification/redaction and negative snapshots.
     - [x] Development-host Production startup guard tests.
-  - [ ] R0b Redis/backplane and multi-process harness dependency ledger.
+  - [x] R0b Redis/backplane and multi-process harness dependency ledger published in `.github/contact-center/r0b-harness-dependency-ledger.v1.json`, mapping seven distributed scenarios to control ids, blocking phases, required infrastructure, current unit evidence, and retained evidence targets without claiming the harnesses are implemented or certified.
 - [~] **R1 — Security and tenant isolation:** tenant-qualified SignalR, queue/campaign entitlements, secret/PII redaction, simulator containment, XSS correction.
   - [x] Tenant-qualified Contact Center and Telephony user/queue/supervisor SignalR destinations, including authorized group joins and provider-event projections.
   - [x] Asterisk ARI credential-log redaction and development-only simulator containment.
