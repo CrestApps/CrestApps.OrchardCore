@@ -1879,7 +1879,7 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Ambiguous contact attribution characterization: when inbound lookup returns two valid contacts, the router immediately persists the first result as the activity attribution and never loads the second. R5 must invert this with explicit resolution state and blocked contact-bound actions.
     - [x] Fake recording/monitoring success characterization tests.
     - [x] Webhook body-limit and request-disconnect tests.
-    - [~] Secret/PII log tests: Asterisk credential URI covered; centralized customer/agent PII coverage remains.
+    - [x] Secret/PII log characterizations: Asterisk credential URI redaction is covered, while centralized Telephony/SMS/Contact Center snapshots prove the shared sanitization helper preserves E.164 addresses, agent ids, and token-shaped values and representative logging paths still emit raw customer/agent identifiers. R1 must invert these with centralized classification/redaction and negative snapshots.
     - [x] Development-host Production startup guard tests.
   - [ ] R0b Redis/backplane and multi-process harness dependency ledger.
 - [~] **R1 — Security and tenant isolation:** tenant-qualified SignalR, queue/campaign entitlements, secret/PII redaction, simulator containment, XSS correction.

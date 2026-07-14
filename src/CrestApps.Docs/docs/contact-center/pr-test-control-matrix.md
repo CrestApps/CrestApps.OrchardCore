@@ -53,6 +53,8 @@ The C004 R0a outbox characterizations reproduce rolling-version and poison-work 
 
 The C005 R0a inbound-attribution characterization supplies two valid contacts for the same caller and proves the router immediately persists the first lookup result as the activity contact while never loading the second. The current activity contract exposes no unresolved attribution workflow. R5 must invert this test with explicit resolution workflow and prevent contact-bound subject actions until an operator or deterministic policy resolves the match.
 
+The O003 R0a operational-log snapshot combines the existing Asterisk credential-URI tests with centralized Telephony, SMS, and Contact Center characterizations. The current `SanitizeLogValue` helper removes control characters but preserves E.164 addresses, stable agent ids, and token-shaped values; Telephony request descriptions include raw caller/callee addresses; and representative SMS and agent-presence log paths still emit those values without redaction. R1 must invert these tests with centralized sensitivity classification, deterministic redaction, and negative log snapshots across every supported provider path.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

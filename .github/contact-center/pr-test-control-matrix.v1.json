@@ -747,7 +747,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskSettingsUtilitiesTests.cs and AsteriskWebSecurityTests.cs prove the Asterisk URI case only; a centralized redaction helper and negative log tests across every Telephony/SMS/Contact Center path are a planned:contact-center-operations-gates dependency."
+      "evidenceLocation": "AsteriskSettingsUtilitiesTests and AsteriskWebSecurityTests prove ARI credentials are removed from logged URIs. ContactCenterOperationalLogPrivacyTests characterizes the remaining gap across Telephony, SMS, and Contact Center: the shared SanitizeLogValue helper preserves E.164 addresses, stable agent ids, and token-shaped values; Telephony request descriptions include raw customer addresses; and representative customer/agent logging paths still emit those values without redaction. R1 must replace this characterization with centralized classification/redaction and negative log snapshots across every provider path."
     },
     {
       "id": "O004",
