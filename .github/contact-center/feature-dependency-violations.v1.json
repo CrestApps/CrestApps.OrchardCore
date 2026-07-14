@@ -4,8 +4,13 @@
   "acceptedExternalDependencies": [
     {
       "feature": "CrestApps.OrchardCore.ContactCenter",
-      "dependsOn": "OrchardCore.Users",
-      "reason": "The base feature attributes interactions and agent profiles to signed-in Orchard users."
+      "dependsOn": "CrestApps.OrchardCore.Omnichannel",
+      "reason": "The headless base feature owns orchestration records that reference the shared omnichannel work-item model."
+    },
+    {
+      "feature": "CrestApps.OrchardCore.ContactCenter.Admin",
+      "dependsOn": "CrestApps.OrchardCore.Omnichannel.Managements",
+      "reason": "The independently selectable administration integration composes Contact Center with the Omnichannel management experience."
     },
     {
       "feature": "CrestApps.OrchardCore.ContactCenter.RealTime",
@@ -19,15 +24,6 @@
     }
   ],
   "knownViolations": [
-    {
-      "id": "FDV001",
-      "gateId": "F001",
-      "kind": "declared-manifest-coupling",
-      "feature": "CrestApps.OrchardCore.ContactCenter",
-      "dependsOn": "CrestApps.OrchardCore.Omnichannel.Managements",
-      "description": "The headless base Contact Center feature declares a hard manifest dependency on the Omnichannel Managements admin-integration feature, so it cannot boot standalone in a headless tenant.",
-      "sourceLocation": "src/Modules/CrestApps.OrchardCore.ContactCenter/Manifest.cs"
-    },
     {
       "id": "FDV002",
       "gateId": "F002",
@@ -64,6 +60,10 @@
   ],
   "featureDependencyClosures": {
     "CrestApps.OrchardCore.ContactCenter": [
+      "CrestApps.OrchardCore.Omnichannel"
+    ],
+    "CrestApps.OrchardCore.ContactCenter.Admin": [
+      "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.ContentFields",
       "CrestApps.OrchardCore.Omnichannel",
       "CrestApps.OrchardCore.Omnichannel.Managements",
@@ -78,20 +78,11 @@
     ],
     "CrestApps.OrchardCore.ContactCenter.Agents": [
       "CrestApps.OrchardCore.ContactCenter",
-      "CrestApps.OrchardCore.ContentFields",
-      "CrestApps.OrchardCore.Omnichannel",
-      "CrestApps.OrchardCore.Omnichannel.Managements",
-      "CrestApps.OrchardCore.PhoneNumbers",
-      "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.TimeZones",
-      "CrestApps.OrchardCore.Users",
-      "OrchardCore.ContentTypes",
-      "OrchardCore.Contents",
-      "OrchardCore.Flows",
-      "OrchardCore.Users"
+      "CrestApps.OrchardCore.Omnichannel"
     ],
     "CrestApps.OrchardCore.ContactCenter.Queues": [
       "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContentFields",
       "CrestApps.OrchardCore.Omnichannel",
@@ -107,6 +98,7 @@
     ],
     "CrestApps.OrchardCore.ContactCenter.Dialer": [
       "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
       "CrestApps.OrchardCore.ContactCenter.Voice",
@@ -127,6 +119,7 @@
     ],
     "CrestApps.OrchardCore.ContactCenter.Voice": [
       "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
       "CrestApps.OrchardCore.ContentFields",
@@ -146,6 +139,7 @@
     ],
     "CrestApps.OrchardCore.ContactCenter.RealTime": [
       "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
       "CrestApps.OrchardCore.ContentFields",
@@ -163,6 +157,7 @@
     ],
     "CrestApps.OrchardCore.ContactCenter.Analytics": [
       "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
       "CrestApps.OrchardCore.ContentFields",

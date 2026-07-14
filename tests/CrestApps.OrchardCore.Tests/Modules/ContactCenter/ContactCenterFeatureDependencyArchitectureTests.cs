@@ -75,6 +75,32 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void BaseFeature_IsHeadless_AndAdminOwnsOmnichannelManagement()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+
+        // Act
+        var baseDependencies = features["CrestApps.OrchardCore.ContactCenter"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var adminDependencies = features["CrestApps.OrchardCore.ContactCenter.Admin"].Dependencies
+            .Order(StringComparer.Ordinal);
+
+        // Assert
+        Assert.Equal(
+            ["CrestApps.OrchardCore.Omnichannel"],
+            baseDependencies);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter",
+                "CrestApps.OrchardCore.Omnichannel.Managements",
+            ],
+            adminDependencies);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

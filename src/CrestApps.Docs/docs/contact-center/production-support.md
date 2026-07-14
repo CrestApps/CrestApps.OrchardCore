@@ -18,7 +18,7 @@ The first release targets two provider-specific tenant profiles. A tenant select
 | `ga-core-asterisk` | Asterisk | Inbound voice plus Manual and Preview dialing |
 | `ga-core-dialpad` | DialPad | Inbound voice, Manual and Preview dialing, and call transfer |
 
-The feature identifiers in the matrix describe the target feature graph that R2 must implement. They are not a claim that the current feature graph is production-ready.
+The feature identifiers in the matrix describe the target feature graph that R2 must implement. The headless base and separate administration integration are implemented; the remaining graph is not yet production-ready.
 
 ## Database and topology
 

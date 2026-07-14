@@ -16,12 +16,23 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Area,
     Name = "Contact Center",
-    Description = "Provides the interaction lifecycle, the durable domain event log, baseline permissions, and admin navigation.",
+    Description = "Provides the headless interaction lifecycle, durable domain event log, and baseline permissions.",
     Category = "Contact Center",
     Dependencies =
     [
+        OmnichannelConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Admin,
+    Name = "Contact Center Administration",
+    Description = "Integrates Contact Center capabilities with the Omnichannel administration experience.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Area,
         OmnichannelConstants.Features.Managements,
-        "OrchardCore.Users",
     ]
 )]
 
@@ -43,6 +54,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Contact Center",
     Dependencies =
     [
+        ContactCenterConstants.Feature.Admin,
         ContactCenterConstants.Feature.Agents,
     ]
 )]

@@ -31,6 +31,11 @@ public static class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
+        /// The identifier of the Contact Center administration integration feature.
+        /// </summary>
+        public const string Admin = "CrestApps.OrchardCore.ContactCenter.Admin";
+
+        /// <summary>
         /// The identifier of the agent, presence, and queue-membership feature.
         /// </summary>
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";

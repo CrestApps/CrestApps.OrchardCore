@@ -1704,7 +1704,7 @@ Exit: two-tenant isolation tests with the production backplane, authorization bo
 
 Changes:
 
-- Split the headless base from Omnichannel Managements admin integration.
+- [x] Split the headless base from Omnichannel Managements admin integration.
 - Introduce explicit Availability, Routing, Voice.SoftPhone, AgentDesktop, Compliance, Dialer.Automated, Workflows, provider Contact Center adapter, and provider media features.
 - Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
 - Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
@@ -1894,7 +1894,8 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Provider-signed freshness window for generic Contact Center and DialPad webhooks, rejecting missing, malformed, non-UTC, stale, and excessively future timestamps before state-changing processing; durable replay uniqueness remains part of inbox acceptance.
     - [x] Tenant-local YesSql provider webhook inbox commits normalized generic and DialPad deliveries under a distributed provider-delivery idempotency lock before HTTP 2xx, then dispatches independently of caller cancellation with immediate processing, retry/backoff, poison-message isolation, and dead-lettering.
   - [x] Soft-phone queue/campaign selectors use Orchard's named `bootstrap-select` resource through the `contact-center-soft-phone` dependency graph, and initialize only explicitly marked Work-tab controls so the script is emitted once and list-management filters are not reinitialized.
-- [ ] **R2 — Orchard feature and package graph:** headless base and Availability, explicit optional/provider features, stable abstraction references, finite activation matrix, quiesce/re-enable behavior, and two-node harness.
+- [~] **R2 — Orchard feature and package graph:** headless base and Availability, explicit optional/provider features, stable abstraction references, finite activation matrix, quiesce/re-enable behavior, and two-node harness.
+  - [x] The base `CrestApps.OrchardCore.ContactCenter` feature now depends only on headless Omnichannel infrastructure; the independently selectable `CrestApps.OrchardCore.ContactCenter.Admin` feature owns the Omnichannel Managements dependency, and the architecture ledger no longer records FDV001.
 - [ ] **R3 — Atomic consistency and agent lifecycle:** database CAS/constraints, canonical availability, after-call recovery, provider command outbox/compensation, provider inbox, stable handler ids.
 - [ ] **R4 — Executable provider capabilities and high availability:** recording/monitoring contracts, provider stream ownership, monotonic events, command cancellation, media transport hardening.
 - [ ] **R5 — CRM attribution and regulated outbound:** ambiguous-contact workflow, terminal unroutable records, full calling calendars, abandonment/safe-harbor/AMD policy, automated-mode gates.

@@ -8,9 +8,12 @@ description: Provider-agnostic contact center orchestration for Orchard Core - i
 | | |
 | --- | --- |
 | **Feature Name** | Contact Center |
-| **Feature ID** | `CrestApps.OrchardCore.ContactCenter` |
+| **Headless feature ID** | `CrestApps.OrchardCore.ContactCenter` |
+| **Administration integration feature ID** | `CrestApps.OrchardCore.ContactCenter.Admin` |
 
 The **Contact Center** module set turns the CRM into a full contact center that agents and supervisors operate without leaving Orchard Core. It extends the [Omnichannel](../omnichannel/index.md) CRM instead of introducing a second work model, and it sits between the CRM and the [Telephony](../telephony/index.md) soft phone: the CRM owns business work data, the Contact Center owns orchestration, and Telephony owns media execution.
+
+Enable `CrestApps.OrchardCore.ContactCenter` for the headless interaction lifecycle, durable event log, and baseline permissions. Enable `CrestApps.OrchardCore.ContactCenter.Admin` only when the tenant also needs integration with the Omnichannel administration experience; that feature declares the `CrestApps.OrchardCore.Omnichannel.Managements` dependency instead of forcing it into headless tenants.
 
 The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations, and see the [PR-to-test control matrix](pr-test-control-matrix.md) for the DRI, approver, test id, CI job, and evidence tracked for every P0/P1 production-readiness gate.
 
