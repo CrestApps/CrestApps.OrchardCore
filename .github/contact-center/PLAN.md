@@ -1868,7 +1868,19 @@ This checklist is authoritative for current execution order. Historical phase an
   - [x] Finite versioned GA support/capacity matrix and prohibited combinations published in `.github/contact-center/support-matrix.v1.json` and public production-support documentation, with machine-readable contract tests.
   - [x] Versioned SLOs, error budgets, dependency limits, RPO/RTO, DRI roles, and approver roles published in `.github/contact-center/service-objectives.v1.json`, with contract tests and public documentation. Named people remain a release-candidate assignment gate.
   - [x] PR-to-test control matrix for every P0/P1 gate published in `.github/contact-center/pr-test-control-matrix.v1.json` (41 gates: C001-C008, D001-D009, F001-F006, O001-O006, S001-S005, T001-T003, V001-V004), each resolving a DRI role, approver roles, test id, CI job, provider/database/topology context, falsifiable invariant, and retained evidence location, with contract tests. Most CI jobs remain planned; only the currently enforced/partially enforced gates are marked implemented/partial.
-  - [ ] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
+  - [~] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
+    - [x] Two-shell in-process tenant isolation and permission-gated Contact Center group-join tests.
+    - [ ] Legal feature activation and undeclared-service dependency architecture test.
+    - [ ] Disconnected-agent and after-call capacity recovery tests.
+    - [ ] Shared-database double-reservation tests using two service providers.
+    - [ ] Provider-call orphan and `OutcomeUnknown` tests.
+    - [ ] Duplicate/out-of-order/canonical-provider event tests.
+    - [ ] Rolling-version stable outbox-handler replay tests.
+    - [ ] Ambiguous contact attribution tests.
+    - [ ] Fake recording/monitoring success tests.
+    - [x] Webhook body-limit and request-disconnect tests.
+    - [~] Secret/PII log tests: Asterisk credential URI covered; centralized customer/agent PII coverage remains.
+    - [x] Development-host Production startup guard tests.
   - [ ] R0b Redis/backplane and multi-process harness dependency ledger.
 - [~] **R1 — Security and tenant isolation:** tenant-qualified SignalR, queue/campaign entitlements, secret/PII redaction, simulator containment, XSS correction.
   - [x] Tenant-qualified Contact Center and Telephony user/queue/supervisor SignalR destinations, including authorized group joins and provider-event projections.
@@ -1939,6 +1951,7 @@ Ordered by the former design-review execution order. Numbers reference the histo
 
 ### Change log
 
+- 2026-07-13: Added the first R0a in-process falsification for S001: two shell identities now publish through one Contact Center hub context and must resolve to distinct tenant-qualified user and supervisor destinations. Added a source-level group-join ordering guard that requires queue/supervisor authorization before any matching group join and aborts unauthorized connections before adding the tenant-qualified user destination. Production Redis/backplane evidence remains an R0b dependency.
 - 2026-07-13: Published the PR-to-test control matrix in `.github/contact-center/pr-test-control-matrix.v1.json` covering all 41 current P0/P1 gates (C001-C008 correctness, D001-D009 data, F001-F006 feature/package graph, O001-O006 operations, S001-S005 security, T001-T003 test/topology, V001-V004 voice/provider). Every gate resolves a category DRI role, approver roles, a stable test id, a CI job (implemented, partial, or explicitly planned), provider/database/topology execution context, a falsifiable invariant, and a retained-evidence location. Added `ContactCenterPrTestControlMatrixTests` so a missing/duplicate P0-P1 id, an unresolved DRI/approver, or a missing execution-context/evidence field fails the build.
 - 2026-07-13: Pinned the R0 clean-tree baseline at commit `ccb1076d` in `.github/contact-center/R0-BASELINE.md`: strict Release build with zero warnings/errors, 1,472 unit tests, 24 Telephony browser tests, asset and documentation builds, toolchain versions, and SHA-256 hashes for the generated TRX evidence.
 - 2026-07-13: Published `support-matrix.v1.json` as the finite candidate GA contract. Release remains blocked through R8; the initial Tier-1 target is PostgreSQL 16, one region, two to four application nodes with Redis, one Asterisk or DialPad provider profile per tenant, Manual/Preview dialing only, and a 100-agent/50-voice-interaction per-tenant envelope. Added contract tests and public production-support documentation.

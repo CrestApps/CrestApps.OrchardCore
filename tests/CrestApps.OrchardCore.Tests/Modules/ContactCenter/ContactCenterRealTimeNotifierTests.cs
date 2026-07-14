@@ -13,6 +13,68 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class ContactCenterRealTimeNotifierTests
 {
     [Fact]
+    public async Task NotifyPresenceChangedAsync_TwoShells_UseDistinctTenantQualifiedDestinations()
+    {
+        // Arrange
+        var tenantAUserClient = new Mock<IContactCenterHubClient>();
+        var tenantASupervisorClient = new Mock<IContactCenterHubClient>();
+        var tenantBUserClient = new Mock<IContactCenterHubClient>();
+        var tenantBSupervisorClient = new Mock<IContactCenterHubClient>();
+        var clients = new Mock<IHubClients<IContactCenterHubClient>>();
+        var tenantAUserGroup = TenantSignalRGroupName.ForUser("TenantA", "u1");
+        var tenantASupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantA", ContactCenterHub.SupervisorsGroup);
+        var tenantBUserGroup = TenantSignalRGroupName.ForUser("TenantB", "u1");
+        var tenantBSupervisorsGroup = TenantSignalRGroupName.ForGroup("TenantB", ContactCenterHub.SupervisorsGroup);
+
+        clients.Setup(c => c.Group(tenantAUserGroup)).Returns(tenantAUserClient.Object);
+        clients.Setup(c => c.Group(tenantASupervisorsGroup)).Returns(tenantASupervisorClient.Object);
+        clients.Setup(c => c.Group(tenantBUserGroup)).Returns(tenantBUserClient.Object);
+        clients.Setup(c => c.Group(tenantBSupervisorsGroup)).Returns(tenantBSupervisorClient.Object);
+
+        var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
+        hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
+
+        var sessionManager = new Mock<IAgentSessionManager>().Object;
+        var tenantANotifier = new ContactCenterRealTimeNotifier(
+            hubContext.Object,
+            sessionManager,
+            new ShellSettings { Name = "TenantA" });
+        var tenantBNotifier = new ContactCenterRealTimeNotifier(
+            hubContext.Object,
+            sessionManager,
+            new ShellSettings { Name = "TenantB" });
+        var tenantANotification = new AgentPresenceNotification
+        {
+            UserId = "u1",
+            AgentId = "agent-a",
+        };
+        var tenantBNotification = new AgentPresenceNotification
+        {
+            UserId = "u1",
+            AgentId = "agent-b",
+        };
+
+        // Act
+        await tenantANotifier.NotifyPresenceChangedAsync(
+            tenantANotification,
+            TestContext.Current.CancellationToken);
+        await tenantBNotifier.NotifyPresenceChangedAsync(
+            tenantBNotification,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        tenantAUserClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Once);
+        tenantASupervisorClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Once);
+        tenantBUserClient.Verify(c => c.PresenceChanged(tenantBNotification), Times.Once);
+        tenantBSupervisorClient.Verify(c => c.PresenceChanged(tenantBNotification), Times.Once);
+        tenantAUserClient.Verify(c => c.PresenceChanged(tenantBNotification), Times.Never);
+        tenantASupervisorClient.Verify(c => c.PresenceChanged(tenantBNotification), Times.Never);
+        tenantBUserClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Never);
+        tenantBSupervisorClient.Verify(c => c.PresenceChanged(tenantANotification), Times.Never);
+        clients.Verify(c => c.Group(ContactCenterHub.SupervisorsGroup), Times.Never);
+    }
+
+    [Fact]
     public async Task NotifyOfferReceivedAsync_AutoOpenOffer_SendsNavigationOnlyToAssignedUser()
     {
         // Arrange

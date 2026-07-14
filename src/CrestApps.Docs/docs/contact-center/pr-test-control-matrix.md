@@ -35,6 +35,8 @@ The matrix currently tracks 41 gates across every P0/P1 finding in the 2026-07-1
 
 A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, webhook body limits, and the declared recording/monitoring prohibitions in the support matrix). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
 
+The S001 in-process R0a proof now runs two active shell identities through the same hub context and verifies that user and supervisor notifications resolve to different tenant-qualified destinations. A separate R0b production-backplane run is still required before multi-node isolation is approved.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

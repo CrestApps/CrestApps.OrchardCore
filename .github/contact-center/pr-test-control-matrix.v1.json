@@ -851,7 +851,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterHubSecurityTests.cs and ContactCenterRealTimeNotifierTests.cs prove tenant-qualified group/user naming in-process. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained two-shell/production-backplane evidence remains planned: .github/contact-center/evidence/S001/."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRealTimeNotifierTests.cs proves two concurrently active in-process shells use distinct tenant-qualified user/supervisor destinations. ContactCenterHubSecurityTests.cs adds a source-level ordering guard requiring permission checks and unauthorized abort before the corresponding group joins; runtime authorization-denial coverage remains under S002. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained production-backplane evidence remains planned: .github/contact-center/evidence/S001/."
     },
     {
       "id": "S002",
