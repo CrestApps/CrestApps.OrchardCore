@@ -453,7 +453,6 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
-            .AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
@@ -486,6 +485,18 @@ public sealed class VoiceStartup : StartupBase
         routes
             .AddVoiceOfferEndpoints()
             .AddProviderVoiceWebhookEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers provider-capability-gated bidirectional voice-media resolution.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.VoiceMedia)]
+public sealed class VoiceMediaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
     }
 }
 

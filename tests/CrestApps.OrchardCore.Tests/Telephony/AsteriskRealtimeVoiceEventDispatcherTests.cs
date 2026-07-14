@@ -27,7 +27,6 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
     {
         // Arrange
         var store = new Mock<ITelephonyInteractionStore>();
-        var providerVoiceEventService = new Mock<IProviderVoiceEventService>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var client = new Mock<ITelephonyClient>();
@@ -48,9 +47,6 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
             StartedUtc = startedUtc,
         };
 
-        providerVoiceEventService
-            .Setup(service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CallSession)null);
         store
             .Setup(value => value.FindByProviderCallIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
@@ -59,7 +55,7 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
         clock.SetupGet(value => value.UtcNow).Returns(endedUtc);
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
-            [providerVoiceEventService.Object],
+            [],
             store.Object,
             hubContext.Object,
             clock.Object,
@@ -114,9 +110,12 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
                 ProviderCallId = "call-1",
                 ProviderName = "Asterisk",
             });
+        var voiceEventBridge = new AsteriskContactCenterVoiceEventBridge(
+            providerVoiceEventService.Object,
+            NullLogger<AsteriskContactCenterVoiceEventBridge>.Instance);
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
-            [providerVoiceEventService.Object],
+            [voiceEventBridge],
             store.Object,
             hubContext.Object,
             clock.Object,

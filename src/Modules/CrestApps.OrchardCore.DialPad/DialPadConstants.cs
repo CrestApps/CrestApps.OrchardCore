@@ -97,6 +97,6 @@ public static class DialPadConstants
         /// <summary>
         /// The identifier of the DialPad Contact Center voice-provider feature.
         /// </summary>
-        public const string Dialer = "CrestApps.OrchardCore.DialPad.Dialer";
+        public const string ContactCenterVoice = "CrestApps.OrchardCore.DialPad.ContactCenterVoice";
     }
 }

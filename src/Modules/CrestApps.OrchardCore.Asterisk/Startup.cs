@@ -38,13 +38,39 @@ public sealed class Startup : StartupBase
         services
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
-            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
-            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
-            .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>();
+            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>();
 
         services
             .AddSingleton<AsteriskRealtimeVoiceListener>()
             .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskTelephonyProviderStateReconciler>()
             .AddScoped<IModularTenantEvents, AsteriskRealtimeVoiceTenantEvents>();
+    }
+}
+
+/// <summary>
+/// Registers the Asterisk Contact Center voice adapter.
+/// </summary>
+[Feature(AsteriskConstants.Feature.ContactCenterVoice)]
+public sealed class AsteriskContactCenterVoiceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
+            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>();
+    }
+}
+
+/// <summary>
+/// Registers Asterisk bidirectional RTP media for Contact Center voice calls.
+/// </summary>
+[Feature(AsteriskConstants.Feature.ContactCenterMedia)]
+public sealed class AsteriskContactCenterMediaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>();
     }
 }

@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
@@ -222,40 +221,17 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
     {
         await ExecuteInTenantScopeAsync(async serviceProvider =>
         {
-            var contactCenterSynchronizationService = serviceProvider
-                .GetServices<IProviderCallStateSynchronizationService>()
-                .FirstOrDefault();
-
-            if (contactCenterSynchronizationService is not null)
+            foreach (var reconciler in serviceProvider.GetServices<IAsteriskProviderStateReconciler>())
             {
                 try
                 {
-                    await contactCenterSynchronizationService.ReconcileProviderInteractionsAsync(providerName, cancellationToken);
+                    await reconciler.ReconcileAsync(providerName, cancellationToken);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(
                         OperationalLogRedactor.RedactException(ex),
-                        "Contact Center provider-state reconciliation failed after reconnecting the Asterisk real-time listener for provider {ProviderName}.",
-                        providerName);
-                }
-            }
-
-            var telephonySynchronizationService = serviceProvider
-                .GetServices<ITelephonyInteractionSynchronizationService>()
-                .FirstOrDefault();
-
-            if (telephonySynchronizationService is not null)
-            {
-                try
-                {
-                    await telephonySynchronizationService.ReconcileProviderInteractionsAsync(providerName, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        OperationalLogRedactor.RedactException(ex),
-                        "Telephony interaction reconciliation failed after reconnecting the Asterisk real-time listener for provider {ProviderName}.",
+                        "Provider-state reconciliation failed after reconnecting the Asterisk real-time listener for provider {ProviderName}.",
                         providerName);
                 }
             }

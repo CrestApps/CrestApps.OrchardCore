@@ -131,6 +131,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.VoiceMedia,
+    Name = "Contact Center Voice Media",
+    Description = "Adds provider-capability-gated bidirectional media-provider resolution for active voice calls.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Voice,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Recording,
     Name = "Contact Center Recording",
     Description = "Adds provider-capability-gated recording orchestration and recording-state events for voice interactions.",

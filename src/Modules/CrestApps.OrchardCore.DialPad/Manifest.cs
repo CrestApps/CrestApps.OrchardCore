@@ -25,7 +25,7 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = DialPadConstants.Feature.Dialer,
+    Id = DialPadConstants.Feature.ContactCenterVoice,
     Name = "DialPad Contact Center Voice",
     Description = "Implements the Contact Center voice provider boundary over DialPad so the Voice Contact Center Call Router can place outbound calls through DialPad.",
     Category = "Communication",

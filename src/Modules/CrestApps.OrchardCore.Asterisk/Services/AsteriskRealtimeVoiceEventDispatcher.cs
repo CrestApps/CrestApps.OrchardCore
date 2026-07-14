@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
@@ -14,7 +12,7 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskRealtimeVoiceEventDispatcher
 {
-    private readonly IEnumerable<IProviderVoiceEventService> _providerVoiceEventServices;
+    private readonly IEnumerable<IAsteriskRealtimeVoiceEventBridge> _voiceEventBridges;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IClock _clock;
@@ -22,14 +20,14 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
     private readonly string _tenantName;
 
     public AsteriskRealtimeVoiceEventDispatcher(
-        IEnumerable<IProviderVoiceEventService> providerVoiceEventServices,
+        IEnumerable<IAsteriskRealtimeVoiceEventBridge> voiceEventBridges,
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IClock clock,
         ILogger<AsteriskRealtimeVoiceEventDispatcher> logger,
         ShellSettings shellSettings)
     {
-        _providerVoiceEventServices = providerVoiceEventServices;
+        _voiceEventBridges = voiceEventBridges;
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
         _clock = clock;
@@ -46,24 +44,10 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
-        var providerVoiceEventService = _providerVoiceEventServices.FirstOrDefault();
-
-        if (providerVoiceEventService is not null)
+        foreach (var voiceEventBridge in _voiceEventBridges)
         {
-            var session = await providerVoiceEventService.IngestAsync(BuildProviderVoiceEvent(voiceEvent), cancellationToken);
-
-            if (session is not null)
+            if (await voiceEventBridge.TryHandleAsync(voiceEvent, cancellationToken))
             {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} flowed into Contact Center session {SessionId}.",
-                        OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
-                        voiceEvent.ProviderName,
-                        OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
-                        OperationalLogRedactor.Pseudonymize(session.ItemId, OperationalLogIdentifierCategory.Session));
-                }
-
                 return;
             }
         }
@@ -117,24 +101,6 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         }
     }
 
-    private static ProviderVoiceEvent BuildProviderVoiceEvent(AsteriskRealtimeVoiceEvent voiceEvent)
-    {
-        return new ProviderVoiceEvent
-        {
-            ProviderName = voiceEvent.ProviderName,
-            ProviderCallId = voiceEvent.CallId,
-            State = ToContactCenterState(voiceEvent.State),
-            FromAddress = voiceEvent.FromAddress,
-            ToAddress = voiceEvent.ToAddress,
-            OccurredUtc = voiceEvent.OccurredUtc,
-            IdempotencyKey = voiceEvent.IdempotencyKey,
-            IsMuted = voiceEvent.IsMuted,
-            IsConference = voiceEvent.IsConference,
-            ParticipantCount = voiceEvent.ParticipantCount,
-            Metadata = new Dictionary<string, string>(voiceEvent.Metadata, StringComparer.OrdinalIgnoreCase),
-        };
-    }
-
     private void ApplyInteractionState(TelephonyInteraction interaction, AsteriskRealtimeVoiceEvent voiceEvent)
     {
         var now = voiceEvent.OccurredUtc ?? _clock.UtcNow;
@@ -166,20 +132,6 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         interaction.EndedUtc = null;
         interaction.DurationSeconds = 0;
         interaction.Outcome = CallOutcome.InProgress;
-    }
-
-    private static ContactCenterCallState ToContactCenterState(CallState state)
-    {
-        return state switch
-        {
-            CallState.Connecting => ContactCenterCallState.Dialing,
-            CallState.Ringing => ContactCenterCallState.Ringing,
-            CallState.Connected => ContactCenterCallState.Connected,
-            CallState.OnHold => ContactCenterCallState.OnHold,
-            CallState.Disconnected => ContactCenterCallState.Ended,
-            CallState.Failed => ContactCenterCallState.Failed,
-            _ => ContactCenterCallState.Dialing,
-        };
     }
 
     private static TelephonyCall BuildTelephonyCall(TelephonyInteraction interaction, AsteriskRealtimeVoiceEvent voiceEvent)

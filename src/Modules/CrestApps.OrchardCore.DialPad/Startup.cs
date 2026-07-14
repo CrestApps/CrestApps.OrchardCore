@@ -43,7 +43,7 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers DialPad Contact Center voice integration endpoints.
 /// </summary>
-[Feature(DialPadConstants.Feature.Dialer)]
+[Feature(DialPadConstants.Feature.ContactCenterVoice)]
 public sealed class DialPadContactCenterStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

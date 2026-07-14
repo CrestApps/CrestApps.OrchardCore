@@ -15,6 +15,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     private const string ContactCenterManifestPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Manifest.cs";
     private const string ContactCenterModulePath = "src/Modules/CrestApps.OrchardCore.ContactCenter";
     private const string ContactCenterStartupPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs";
+    private const string AsteriskManifestPath = "src/Modules/CrestApps.OrchardCore.Asterisk/Manifest.cs";
+    private const string AsteriskModulePath = "src/Modules/CrestApps.OrchardCore.Asterisk";
+    private const string DialPadManifestPath = "src/Modules/CrestApps.OrchardCore.DialPad/Manifest.cs";
+    private const string DialPadModulePath = "src/Modules/CrestApps.OrchardCore.DialPad";
     private const string SignalRManifestPath = "src/Modules/CrestApps.OrchardCore.SignalR/Manifest.cs";
     private const string SignalRStartupPath = "src/Modules/CrestApps.OrchardCore.SignalR/Startup.cs";
     private const string TelephonyManifestPath = "src/Modules/CrestApps.OrchardCore.Telephony/Manifest.cs";
@@ -499,6 +503,96 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ["CrestApps.OrchardCore.ContactCenter.Voice"],
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Recording", recordingOwner.FeatureId);
+    }
+
+    [Fact]
+    public void VoiceMediaAndProviderAdapters_HaveExplicitFeatureOwnership()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var contactCenterFeatures = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var contactCenterStartups = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            ContactCenterModulePath,
+            "CrestApps.OrchardCore.ContactCenter");
+        var asteriskFeatures = ParseManifestFeatures(repositoryRoot, AsteriskManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var asteriskStartups = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            AsteriskModulePath,
+            "CrestApps.OrchardCore.Asterisk");
+        var dialPadFeatures = ParseManifestFeatures(repositoryRoot, DialPadManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var dialPadStartups = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            DialPadModulePath,
+            "CrestApps.OrchardCore.DialPad");
+
+        // Act
+        var mediaDependencies = contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].Dependencies;
+        var mediaResolverOwner = contactCenterStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>()",
+                StringComparison.Ordinal));
+        var asteriskBaseDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk"].Dependencies;
+        var asteriskVoiceDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterVoice"].Dependencies;
+        var asteriskMediaDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterMedia"].Dependencies;
+        var asteriskVoiceOwner = asteriskStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()",
+                StringComparison.Ordinal));
+        var asteriskEventBridgeOwner = asteriskStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()",
+                StringComparison.Ordinal));
+        var asteriskContactCenterReconcilerOwner = asteriskStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()",
+                StringComparison.Ordinal));
+        var asteriskMediaOwner = asteriskStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()",
+                StringComparison.Ordinal));
+        var dialPadBaseDependencies = dialPadFeatures["CrestApps.OrchardCore.DialPad"].Dependencies;
+        var dialPadVoiceDependencies = dialPadFeatures["CrestApps.OrchardCore.DialPad.ContactCenterVoice"].Dependencies;
+        var dialPadVoiceOwner = dialPadStartups.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialPadContactCenterVoiceProvider>())",
+                StringComparison.Ordinal));
+        var asteriskBaseStartup = asteriskStartups.Single(startup =>
+            startup.FeatureId == "CrestApps.OrchardCore.Asterisk");
+
+        // Assert
+        Assert.Equal(["CrestApps.OrchardCore.ContactCenter.Voice"], mediaDependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.Media", mediaResolverOwner.FeatureId);
+        Assert.Equal(["CrestApps.OrchardCore.Telephony"], asteriskBaseDependencies);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.Asterisk",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+            asteriskVoiceDependencies);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
+                "CrestApps.OrchardCore.ContactCenter.Voice.Media",
+            ],
+            asteriskMediaDependencies);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskVoiceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskEventBridgeOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskContactCenterReconcilerOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", asteriskMediaOwner.FeatureId);
+        Assert.DoesNotContain("IProviderVoiceEventService", asteriskBaseStartup.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderCallStateSynchronizationService", asteriskBaseStartup.Body, StringComparison.Ordinal);
+        Assert.Equal(["CrestApps.OrchardCore.Telephony"], dialPadBaseDependencies);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.DialPad",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+            dialPadVoiceDependencies);
+        Assert.Equal("CrestApps.OrchardCore.DialPad.ContactCenterVoice", dialPadVoiceOwner.FeatureId);
     }
 
     [Fact]

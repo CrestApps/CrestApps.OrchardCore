@@ -254,6 +254,28 @@
       "OrchardCore.Flows",
       "OrchardCore.Users"
     ],
+    "CrestApps.OrchardCore.ContactCenter.Voice.Media": [
+      "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.Admin",
+      "CrestApps.OrchardCore.ContactCenter.Agents",
+      "CrestApps.OrchardCore.ContactCenter.Availability",
+      "CrestApps.OrchardCore.ContactCenter.Queues",
+      "CrestApps.OrchardCore.ContactCenter.Routing",
+      "CrestApps.OrchardCore.ContactCenter.Voice",
+      "CrestApps.OrchardCore.ContentFields",
+      "CrestApps.OrchardCore.Omnichannel",
+      "CrestApps.OrchardCore.Omnichannel.Managements",
+      "CrestApps.OrchardCore.PhoneNumbers",
+      "CrestApps.OrchardCore.Resources",
+      "CrestApps.OrchardCore.SignalR",
+      "CrestApps.OrchardCore.Telephony",
+      "CrestApps.OrchardCore.TimeZones",
+      "CrestApps.OrchardCore.Users",
+      "OrchardCore.ContentTypes",
+      "OrchardCore.Contents",
+      "OrchardCore.Flows",
+      "OrchardCore.Users"
+    ],
     "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone": [
       "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.ContactCenter.Admin",

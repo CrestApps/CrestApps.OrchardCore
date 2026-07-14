@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.DialPad;
 /// <summary>
 /// Registers the DialPad implementation of the Contact Center voice provider boundary.
 /// </summary>
-[Feature(DialPadConstants.Feature.Dialer)]
+[Feature(DialPadConstants.Feature.ContactCenterVoice)]
 public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

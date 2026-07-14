@@ -76,6 +76,11 @@ public static class ContactCenterConstants
         public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
 
         /// <summary>
+        /// The identifier of the Contact Center bidirectional voice-media feature.
+        /// </summary>
+        public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
+
+        /// <summary>
         /// The identifier of the inbound voice entry-point qualification feature.
         /// </summary>
         public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";

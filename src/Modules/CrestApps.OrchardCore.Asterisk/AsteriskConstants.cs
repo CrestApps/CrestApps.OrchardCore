@@ -79,5 +79,15 @@ public static class AsteriskConstants
         /// The identifier of the Asterisk provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Asterisk";
+
+        /// <summary>
+        /// The identifier of the Asterisk Contact Center voice-adapter feature.
+        /// </summary>
+        public const string ContactCenterVoice = "CrestApps.OrchardCore.Asterisk.ContactCenterVoice";
+
+        /// <summary>
+        /// The identifier of the Asterisk Contact Center bidirectional-media feature.
+        /// </summary>
+        public const string ContactCenterMedia = "CrestApps.OrchardCore.Asterisk.ContactCenterMedia";
     }
 }
