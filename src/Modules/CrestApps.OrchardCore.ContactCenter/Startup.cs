@@ -487,9 +487,8 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the real-time agent and supervisor experience: the SignalR hub, the live agent session
-/// store, the heartbeat-driven stale-session cleanup, and the event projection that broadcasts presence,
-/// offer, and queue updates to connected clients.
+/// Registers the shared SignalR hub and event projection that broadcasts presence, offer, and queue
+/// updates to optional real-time user experiences.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.RealTime)]
 public sealed class RealTimeStartup : StartupBase
@@ -501,14 +500,11 @@ public sealed class RealTimeStartup : StartupBase
             .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>();
 
         services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
-        services.AddNavigationProvider<ContactCenterRealTimeAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         HubRouteManager.MapHub<ContactCenterHub>(routes);
-
-        routes.AddSupervisorDashboardEndpoints();
     }
 }
 
@@ -526,6 +522,23 @@ public sealed class AgentDesktopStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddAgentWorkspaceEndpoints();
+    }
+}
+
+/// <summary>
+/// Registers the real-time supervisor dashboard, navigation, and monitoring endpoints.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Supervision)]
+public sealed class SupervisionStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<ContactCenterSupervisionAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddSupervisorDashboardEndpoints();
     }
 }
 

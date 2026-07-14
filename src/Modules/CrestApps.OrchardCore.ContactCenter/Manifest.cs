@@ -134,9 +134,21 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.Supervision,
+    Name = "Contact Center Supervision",
+    Description = "Adds the real-time supervisor dashboard and provider-capability-gated monitoring actions.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.RealTime,
+        ContactCenterConstants.Feature.Voice,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.RealTime,
     Name = "Contact Center Real-Time",
-    Description = "Adds the SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts for the agent desktop and supervisor dashboards.",
+    Description = "Adds the shared SignalR hub and real-time presence, offer, and queue broadcasts consumed by optional user experiences.",
     Category = "Contact Center",
     Dependencies =
     [

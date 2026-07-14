@@ -76,7 +76,12 @@ public static class ContactCenterConstants
         public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";
 
         /// <summary>
-        /// The identifier of the real-time agent and supervisor experience feature.
+        /// The identifier of the real-time supervisor dashboard and monitoring feature.
+        /// </summary>
+        public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
+
+        /// <summary>
+        /// The identifier of the shared Contact Center real-time transport feature.
         /// </summary>
         public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
 

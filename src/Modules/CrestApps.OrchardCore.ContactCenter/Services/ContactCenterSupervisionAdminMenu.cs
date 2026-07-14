@@ -7,15 +7,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// <summary>
 /// Adds the real-time supervisor dashboard to the Contact Center admin navigation.
 /// </summary>
-public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
+public sealed class ContactCenterSupervisionAdminMenu : AdminNavigationProvider
 {
     private readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterRealTimeAdminMenu"/> class.
+    /// Initializes a new instance of the <see cref="ContactCenterSupervisionAdminMenu"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ContactCenterRealTimeAdminMenu(IStringLocalizer<ContactCenterRealTimeAdminMenu> stringLocalizer)
+    public ContactCenterSupervisionAdminMenu(IStringLocalizer<ContactCenterSupervisionAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }

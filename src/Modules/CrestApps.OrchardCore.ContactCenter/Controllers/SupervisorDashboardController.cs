@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Serves the supervisor dashboard page used by managers to monitor operations in real time.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.RealTime)]
+[Feature(ContactCenterConstants.Feature.Supervision)]
 public sealed class SupervisorDashboardController : Controller
 {
     private readonly IAuthorizationService _authorizationService;

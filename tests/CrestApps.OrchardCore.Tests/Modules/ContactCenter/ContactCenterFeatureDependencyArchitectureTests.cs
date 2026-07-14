@@ -334,6 +334,39 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void SupervisionFeature_OwnsDashboardSurface()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Supervision"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var endpointOwner = startupClasses.Single(startup =>
+            startup.Body.Contains("AddSupervisorDashboardEndpoints()", StringComparison.Ordinal));
+        var navigationOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddNavigationProvider<ContactCenterSupervisionAdminMenu>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Supervision", endpointOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Supervision", navigationOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange
