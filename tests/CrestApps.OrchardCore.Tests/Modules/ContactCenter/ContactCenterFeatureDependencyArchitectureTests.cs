@@ -14,6 +14,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 {
     private const string ContactCenterManifestPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Manifest.cs";
     private const string ContactCenterModulePath = "src/Modules/CrestApps.OrchardCore.ContactCenter";
+    private const string ContactCenterStartupPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs";
     private const string SignalRManifestPath = "src/Modules/CrestApps.OrchardCore.SignalR/Manifest.cs";
     private const string SignalRStartupPath = "src/Modules/CrestApps.OrchardCore.SignalR/Startup.cs";
     private const string TelephonyManifestPath = "src/Modules/CrestApps.OrchardCore.Telephony/Manifest.cs";
@@ -98,6 +99,47 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "CrestApps.OrchardCore.Omnichannel.Managements",
             ],
             adminDependencies);
+    }
+
+    [Fact]
+    public void VoiceFeature_IsServerOnly_AndSoftPhoneProjectionHasExplicitFeature()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var voiceDependencies = features["CrestApps.OrchardCore.ContactCenter.Voice"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var softPhoneDependencies = features["CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var softPhoneEventHandlerOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Queues",
+                "CrestApps.OrchardCore.Telephony",
+            ],
+            voiceDependencies);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+                "CrestApps.OrchardCore.Telephony.SoftPhone",
+            ],
+            softPhoneDependencies);
+        Assert.Equal(
+            "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
+            softPhoneEventHandlerOwner.FeatureId);
     }
 
     [Fact]

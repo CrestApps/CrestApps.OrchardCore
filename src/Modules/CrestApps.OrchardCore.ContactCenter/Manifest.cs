@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -78,7 +79,20 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
-        "CrestApps.OrchardCore.Telephony.SoftPhone",
+        TelephonyConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.VoiceSoftPhone,
+    Name = "Contact Center Voice - Soft Phone",
+    Description = "Projects Contact Center voice state into the Telephony soft phone and real-time agent experience.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.RealTime,
+        TelephonyConstants.Feature.SoftPhone,
     ]
 )]
 

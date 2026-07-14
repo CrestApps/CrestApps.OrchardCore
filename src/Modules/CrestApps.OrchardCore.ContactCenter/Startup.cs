@@ -402,7 +402,6 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
-            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
@@ -436,6 +435,18 @@ public sealed class VoiceStartup : StartupBase
             .AddVoiceOfferEndpoints()
             .AddVoiceIngressEndpoint()
             .AddProviderVoiceWebhookEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers the Contact Center projection that synchronizes server-side voice state with the Telephony soft phone.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.VoiceSoftPhone)]
+public sealed class VoiceSoftPhoneStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>();
     }
 }
 
