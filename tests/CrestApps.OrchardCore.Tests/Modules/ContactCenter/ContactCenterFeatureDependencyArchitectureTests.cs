@@ -367,6 +367,73 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void ComplianceFeature_OwnsOutboundEligibilityAndAttempts()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Compliance"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var eligibilityOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()",
+                StringComparison.Ordinal));
+        var attemptOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IDialerAttemptService, DialerAttemptService>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            ["CrestApps.OrchardCore.ContactCenter.Dialer"],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Compliance", eligibilityOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Compliance", attemptOwner.FeatureId);
+    }
+
+    [Fact]
+    public void AutomatedDialerFeature_OwnsStrategiesAndPacing()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Dialer.Automated"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var strategyOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IDialerStrategy, PowerDialerStrategy>()",
+                StringComparison.Ordinal));
+        var pacingOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Compliance",
+                "CrestApps.OrchardCore.ContactCenter.Dialer",
+            ],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Automated", strategyOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Automated", pacingOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

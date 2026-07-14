@@ -61,6 +61,16 @@ public static class ContactCenterConstants
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
 
         /// <summary>
+        /// The identifier of the outbound dialing compliance feature.
+        /// </summary>
+        public const string Compliance = "CrestApps.OrchardCore.ContactCenter.Compliance";
+
+        /// <summary>
+        /// The identifier of automated power and progressive dialing feature.
+        /// </summary>
+        public const string DialerAutomated = "CrestApps.OrchardCore.ContactCenter.Dialer.Automated";
+
+        /// <summary>
         /// The identifier of the inbound voice integration feature.
         /// </summary>
         public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";

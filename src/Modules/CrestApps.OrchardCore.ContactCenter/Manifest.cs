@@ -74,12 +74,35 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Dialer,
     Name = "Contact Center Dialer",
-    Description = "Adds outbound dialing profiles, pacing, and dialer activity batches that route calls through Contact Center Voice providers.",
+    Description = "Adds outbound dialing profiles, callbacks, and Manual or Preview activity batches that route calls through Contact Center Voice providers.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
         ContactCenterConstants.Feature.Routing,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Compliance,
+    Name = "Contact Center Outbound Compliance",
+    Description = "Adds the mandatory outbound eligibility gate, suppression auditing, retry limits, and calling-window enforcement.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Dialer,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.DialerAutomated,
+    Name = "Contact Center Automated Dialer",
+    Description = "Adds compliance-gated Power and Progressive dialing strategies and scheduled pacing.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Dialer,
+        ContactCenterConstants.Feature.Compliance,
     ]
 )]
 
