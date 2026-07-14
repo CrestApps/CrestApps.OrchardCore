@@ -1876,7 +1876,7 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Provider-call orphan and `OutcomeUnknown` characterizations: failed post-dial reservation acceptance discards the successful provider call identity, while a lost provider response is treated as a definitive failure and removes the work. R3 must invert these with durable command intent, reconciliation, and idempotent compensation.
     - [x] Duplicate/out-of-order/canonical-provider event characterizations: concurrent idempotency checks both persist and enqueue the same event, equal-timestamp delivery regresses Connected to Ringing, and provider aliases mutate stored identity. R3 must invert these with inbox uniqueness, sequence/high-water rules, and canonical provider keys.
     - [x] Rolling-version outbox-handler characterizations: registration reorder replays an already completed handler because the checkpoint includes its prior index, and one poison due item blocks later messages in the batch. R3 must invert these with stable versioned handler ids and per-message isolation.
-    - [ ] Ambiguous contact attribution tests.
+    - [x] Ambiguous contact attribution characterization: when inbound lookup returns two valid contacts, the router immediately persists the first result as the activity attribution and never loads the second. R5 must invert this with explicit resolution state and blocked contact-bound actions.
     - [x] Fake recording/monitoring success characterization tests.
     - [x] Webhook body-limit and request-disconnect tests.
     - [~] Secret/PII log tests: Asterisk credential URI covered; centralized customer/agent PII coverage remains.

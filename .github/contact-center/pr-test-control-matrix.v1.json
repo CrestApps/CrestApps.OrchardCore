@@ -197,7 +197,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InboundContactLookupTests.cs proves lookup returns every match without ordering; the router's ambiguous-state persistence and the block on contact-bound subject actions remain a planned:contact-center-domain-invariants dependency."
+      "evidenceLocation": "InboundVoiceServiceTests.HandleInboundAsync_WhenMultipleContactsMatch_AssignsFirstMatchToday proves the router immediately persists the first returned contact as the activity attribution and never loads the other valid match. R5 must invert this characterization with an explicit unresolved/ambiguous attribution state and block contact-bound subject actions until resolution."
     },
     {
       "id": "C006",

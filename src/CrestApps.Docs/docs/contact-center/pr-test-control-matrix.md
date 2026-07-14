@@ -51,6 +51,8 @@ The D003 R0a provider-event characterizations pin three independent ordering and
 
 The C004 R0a outbox characterizations reproduce rolling-version and poison-work failures. Reordering two handler registrations causes a handler that already completed under its old assembly-qualified-name-and-index checkpoint to execute again after the checkpoint is persisted and reloaded. A failure in the first due message also stops the batch before later event payloads are loaded or dispatched. R3 must invert these tests with explicit stable versioned handler ids and per-message failure isolation so deployment and poison work cannot duplicate or starve delivery.
 
+The C005 R0a inbound-attribution characterization supplies two valid contacts for the same caller and proves the router immediately persists the first lookup result as the activity contact while never loading the second. The current activity contract exposes no unresolved attribution workflow. R5 must invert this test with explicit resolution workflow and prevent contact-bound subject actions until an operator or deterministic policy resolves the match.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:
