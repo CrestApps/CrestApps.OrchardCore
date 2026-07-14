@@ -28,6 +28,12 @@
     Voicemail: 1 << 9,
     Directory: 1 << 10
   };
+  var AUDIO_MODES = {
+    None: 0,
+    Browser: 1,
+    ExternalDevice: 2
+  };
+  var mediaAdapters = {};
   var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
   function normalizeState(state) {
     if (typeof state === 'number') {
@@ -179,7 +185,8 @@
       incomingCards: rootElement.querySelector('[data-telephony-incoming-cards]'),
       incomingAnswer: rootElement.querySelector('[data-telephony-incoming-answer]'),
       incomingVoicemail: rootElement.querySelector('[data-telephony-incoming-voicemail]'),
-      incomingIgnore: rootElement.querySelector('[data-telephony-incoming-ignore]')
+      incomingIgnore: rootElement.querySelector('[data-telephony-incoming-ignore]'),
+      remoteAudio: rootElement.querySelector('[data-telephony-remote-audio]')
     };
     var connection = null;
     var currentCall = null;
@@ -201,6 +208,9 @@
     var activeTab = 'keypad';
     var activeCommand = null;
     var suppressToggleClick = false;
+    var browserAudioPromise = null;
+    var browserAudioSession = null;
+    var localAudioStream = null;
     function has(capability) {
       return (capabilities & capability) === capability;
     }
@@ -225,6 +235,105 @@
         dom.error.textContent = '';
         dom.error.hidden = true;
       }
+    }
+    function isBrowserAudioEnabled() {
+      return config.audioMode === AUDIO_MODES.Browser && !!config.browserMediaAdapterName;
+    }
+    function stopLocalAudioStream() {
+      if (!localAudioStream) {
+        return;
+      }
+      localAudioStream.getTracks().forEach(function (track) {
+        track.stop();
+      });
+      localAudioStream = null;
+    }
+    function releaseBrowserAudio() {
+      browserAudioPromise = null;
+      if (browserAudioSession && typeof browserAudioSession.dispose === 'function') {
+        Promise.resolve(browserAudioSession.dispose())["catch"](function () {});
+      }
+      browserAudioSession = null;
+      stopLocalAudioStream();
+      if (dom.remoteAudio) {
+        dom.remoteAudio.srcObject = null;
+      }
+    }
+    function setRemoteAudioStream(stream) {
+      if (!dom.remoteAudio) {
+        return;
+      }
+      dom.remoteAudio.srcObject = stream || null;
+      if (stream && typeof dom.remoteAudio.play === 'function') {
+        Promise.resolve(dom.remoteAudio.play())["catch"](function () {});
+      }
+    }
+    function ensureBrowserAudio() {
+      if (!isBrowserAudioEnabled()) {
+        return Promise.resolve(null);
+      }
+      if (browserAudioSession) {
+        return Promise.resolve(browserAudioSession);
+      }
+      if (browserAudioPromise) {
+        return browserAudioPromise;
+      }
+      var adapter = mediaAdapters[config.browserMediaAdapterName];
+      if (typeof adapter !== 'function') {
+        return Promise.reject(new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.'));
+      }
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return Promise.reject(new Error(strings.microphoneUnavailable || 'The microphone is unavailable.'));
+      }
+      browserAudioPromise = connection.invoke('GetCredentials').then(function (credentials) {
+        if (!credentials || credentials.audioMode !== AUDIO_MODES.Browser || credentials.browserMediaAdapterName !== config.browserMediaAdapterName) {
+          throw new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.');
+        }
+        return navigator.mediaDevices.getUserMedia({
+          audio: true
+        }).then(function (stream) {
+          localAudioStream = stream;
+          return Promise.resolve(adapter({
+            credentials: credentials,
+            localStream: stream,
+            remoteAudioElement: dom.remoteAudio,
+            setRemoteStream: setRemoteAudioStream,
+            showError: showError
+          }));
+        });
+      }).then(function (session) {
+        browserAudioSession = session || {};
+        return browserAudioSession;
+      })["catch"](function (error) {
+        releaseBrowserAudio();
+        throw error;
+      })["finally"](function () {
+        browserAudioPromise = null;
+      });
+      return browserAudioPromise;
+    }
+    function notifyBrowserAudio(call) {
+      if (!browserAudioSession || !localAudioStream) {
+        return;
+      }
+      var stateName = normalizeState(call && call.state);
+      var microphoneEnabled = stateName === 'Connected' && !call.isMuted;
+      localAudioStream.getAudioTracks().forEach(function (track) {
+        track.enabled = microphoneEnabled;
+      });
+      if (typeof browserAudioSession.handleCallState === 'function') {
+        Promise.resolve(browserAudioSession.handleCallState(call || null))["catch"](function (error) {
+          showError(error && error.message ? error.message : String(error));
+        });
+      }
+    }
+    function invokeWithBrowserAudio(method, payload) {
+      return ensureBrowserAudio().then(function () {
+        return invoke(method, payload);
+      })["catch"](function (error) {
+        showError(error && error.message ? error.message : String(error));
+        return null;
+      });
     }
     function showView(name) {
       dom.views.forEach(function (view) {
@@ -781,6 +890,10 @@
         incomingHandled = false;
       }
       render();
+      notifyBrowserAudio(currentCall);
+      if (!currentCall) {
+        releaseBrowserAudio();
+      }
       return currentCall;
     }
     function refreshActiveCalls() {
@@ -835,7 +948,7 @@
         dom.number.value = '';
         numberIsCallDisplay = false;
       }
-      invoke('Dial', {
+      invokeWithBrowserAudio('Dial', {
         to: number
       });
     }
@@ -849,7 +962,7 @@
         dom.number.value = '';
         numberIsCallDisplay = false;
       }
-      invoke('Dial', {
+      invokeWithBrowserAudio('Dial', {
         to: normalizeDialNumber(number)
       });
     }
@@ -1198,6 +1311,14 @@
     }
     function answerIncoming(openUrl) {
       var id = currentCallId();
+      if (isBrowserAudioEnabled() && !browserAudioSession) {
+        ensureBrowserAudio().then(function () {
+          answerIncoming(openUrl);
+        })["catch"](function (error) {
+          showError(error && error.message ? error.message : String(error));
+        });
+        return;
+      }
       if (openUrl) {
         window.open(openUrl, '_blank', 'noopener');
       }
@@ -1207,7 +1328,7 @@
       if (!hasOffer) {
         if (id) {
           togglePanel(true);
-          invoke('Answer', {
+          invokeWithBrowserAudio('Answer', {
             callId: id
           });
         }
@@ -1235,7 +1356,7 @@
         // (agent-device-native). For server-side ACD the provider bridges the call, so no device
         // answer is required.
         if (result.requiresDeviceAnswer !== false && id) {
-          invoke('Answer', {
+          invokeWithBrowserAudio('Answer', {
             callId: id
           });
         }
@@ -1462,10 +1583,15 @@
             }
           }
           render();
+          notifyBrowserAudio(call);
+          if (!getActiveCalls().length) {
+            releaseBrowserAudio();
+          }
           return;
         }
         upsertActiveCall(call, true);
         render();
+        notifyBrowserAudio(call);
       });
       connection.on('IncomingCall', function (call, context) {
         setIncomingOffer(call, context || null);
@@ -1476,6 +1602,7 @@
       connection.on('CredentialsIssued', function () {});
       connection.onclose(function () {
         setStatus(strings.disconnectedHub || 'Disconnected');
+        releaseBrowserAudio();
       });
       if (typeof connection.onreconnected === 'function') {
         connection.onreconnected(function () {
@@ -1615,6 +1742,7 @@
         suppressClick: true
       });
       window.addEventListener('message', onOAuthMessage);
+      window.addEventListener('beforeunload', releaseBrowserAudio);
       window.addEventListener('resize', function () {
         restorePosition();
         syncViewHeight();
@@ -1682,6 +1810,7 @@
         context.startOAuth();
       }
     },
+    mediaAdapters: mediaAdapters,
     dial: function dial(number) {
       var instance = getInstance();
       if (instance) {

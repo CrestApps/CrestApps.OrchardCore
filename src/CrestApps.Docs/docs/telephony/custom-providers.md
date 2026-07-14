@@ -16,6 +16,7 @@ There are five separate seams, and a provider may implement any combination supp
 | Seam | Interface | Responsibility |
 | --- | --- | --- |
 | Soft-phone call control | `ITelephonyProvider` | Dial, hang up, hold, resume, mute, transfer, merge, answer, reject, voicemail, and provider capabilities |
+| Agent audio delivery | `ITelephonyAudioProvider` | Advertise browser and/or external-device audio, expose the configured mode, and name an executable browser media adapter |
 | Live call-state lookup | `ITelephonyCallStateProvider` | Query the provider's current server truth for a specific call so Contact Center can revalidate offers and reconcile restarts |
 | Contact Center orchestration | `IContactCenterVoiceProvider` | Dialer dialing, server-side agent bridging, provider-side queue ownership, and other Contact Center voice operations |
 | Bidirectional live media | `IContactCenterVoiceMediaProvider` | Receive caller audio and inject application-generated audio into an existing provider call |
@@ -59,6 +60,17 @@ At minimum, your provider should:
 5. Register the provider through the Telephony provider options configuration pattern used by the built-in modules
 
 Use `TelephonyCall.Metadata` only for contextual data that should travel with the call without polluting the shared contract with provider-specific fields.
+
+### Declare the agent audio path
+
+Implement `ITelephonyAudioProvider` when the provider has a known, executable agent audio path:
+
+- Advertise `Browser` only when a provider browser SDK or signaling adapter can actually send microphone audio and play live remote audio.
+- Advertise `ExternalDevice` when audio stays on a hard phone, desktop/mobile provider client, or another provider-owned endpoint.
+- Advertise both only when the provider supports both deployments. Add the choice to that provider's settings UI and return it from `ConfiguredAudioMode`.
+- Return a stable `BrowserMediaAdapterName` only for browser audio. The shared resolver fails closed when browser capability has no adapter name.
+
+The provider's browser script registers `window.telephonySoftPhone.mediaAdapters[adapterName]`. The factory receives provider credentials, the acquired microphone stream, the remote audio element, a remote-stream setter, and the shared error callback. It may return `handleCallState(call)` and `dispose()` methods. Call state remains provider-authoritative through the server event pipeline; the adapter is the media executor, not the orchestration authority.
 
 ## 2. Implement the Contact Center voice provider when the backend can do more than keypad calling
 
@@ -215,13 +227,14 @@ This keeps hard phones, provider-native devices, and the browser soft phone sync
 For a new provider module, the usual registration checklist is:
 
 1. Register the telephony provider implementation and settings UI
-2. Register `IContactCenterVoiceProvider` if the backend supports Contact Center orchestration features
-3. Register `IContactCenterVoiceMediaProvider` and advertise `BidirectionalMedia` only when the backend supports bidirectional live audio
-4. Register webhook endpoints or the tenant-safe live-stream listener
-5. Implement `ITelephonyCallStateProvider` when the backend can query the current state of a call by id
-6. Normalize every provider event into `ProviderVoiceEvent`
-7. Ensure the provider's current-state lookup and live-event mapping agree on lifecycle semantics so reconciliation never "undoes" provider truth
-8. Add targeted tests for:
+2. Implement `ITelephonyAudioProvider` and a browser media adapter only for executable agent audio modes
+3. Register `IContactCenterVoiceProvider` if the backend supports Contact Center orchestration features
+4. Register `IContactCenterVoiceMediaProvider` and advertise `BidirectionalMedia` only when the backend supports bidirectional live audio
+5. Register webhook endpoints or the tenant-safe live-stream listener
+6. Implement `ITelephonyCallStateProvider` when the backend can query the current state of a call by id
+7. Normalize every provider event into `ProviderVoiceEvent`
+8. Ensure the provider's current-state lookup and live-event mapping agree on lifecycle semantics so reconciliation never "undoes" provider truth
+9. Add targeted tests for:
    - state mapping
    - idempotency
    - inbound routing
@@ -229,14 +242,14 @@ For a new provider module, the usual registration checklist is:
    - media-session cancellation and cleanup when live media is supported
    - live state updates such as hold, resume, mute, unmute, recording, and multi-party changes
    - call-state lookup and restart reconciliation
-9. Update the docs and changelog with the supported capabilities and ingress model
+10. Update the docs and changelog with the supported capabilities and ingress model
 
 ## Current built-in examples
 
 | Provider | Transport into Orchard | Notes |
 | --- | --- | --- |
-| DialPad | Signed webhook + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id. It does not currently advertise bidirectional media. |
-| Asterisk | ARI HTTP control + per-call ARI lookup + tenant-scoped ARI event stream + External Media RTP/UDP | Handles call control, call-state lookup, live normalized events, and bidirectional G.711 mu-law media sessions attached to call bridges. |
+| DialPad | Signed webhook + per-call REST lookup | Converts call-event webhooks into `ProviderVoiceEvent`, routes new inbound calls, and supports current-state reconciliation by call id. Telephony audio is currently external-device/provider-client only; it does not advertise embedded browser audio or bidirectional Contact Center media. |
+| Asterisk | ARI HTTP control + per-call ARI lookup + tenant-scoped ARI event stream + External Media RTP/UDP | Handles call control, call-state lookup, live normalized events, and server-side bidirectional G.711 mu-law media sessions attached to call bridges. Telephony audio is currently external-device only; the External Media adapter is not browser WebRTC. |
 
 ## Related interfaces
 

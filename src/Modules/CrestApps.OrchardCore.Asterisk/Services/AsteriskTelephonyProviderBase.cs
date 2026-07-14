@@ -15,7 +15,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
-internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
@@ -41,6 +41,15 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
     public virtual TelephonyCapabilities Capabilities
         => GetCapabilities(null, false);
+
+    /// <inheritdoc/>
+    public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.ExternalDevice;
+
+    /// <inheritdoc/>
+    public TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.ExternalDevice;
+
+    /// <inheritdoc/>
+    public string BrowserMediaAdapterName => null;
 
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {

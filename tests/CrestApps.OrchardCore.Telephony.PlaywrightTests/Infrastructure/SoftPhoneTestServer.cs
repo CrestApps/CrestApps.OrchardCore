@@ -35,7 +35,9 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         app.Urls.Add("http://127.0.0.1:0");
 
         app.MapHub<TestTelephonyHub>("/telephony");
-        app.MapGet("/", () => Results.Content(BuildHtml(), "text/html; charset=utf-8"));
+        app.MapGet("/", (HttpContext context) => Results.Content(
+            BuildHtml(context.Request.Query.ContainsKey("browserAudio")),
+            "text/html; charset=utf-8"));
         app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
         app.MapGet("/signalr.js", () => ServeAsset("signalr.js"));
 
@@ -61,12 +63,15 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.File(path, "application/javascript");
     }
 
-    private static string BuildHtml()
+    private static string BuildHtml(bool browserAudio)
     {
         var config = new Dictionary<string, object>
         {
             ["hubUrl"] = "/telephony",
             ["capabilities"] = 2047,
+            ["audioCapabilities"] = browserAudio ? 1 : 2,
+            ["audioMode"] = browserAudio ? 1 : 2,
+            ["browserMediaAdapterName"] = browserAudio ? "in-memory" : null,
             ["strings"] = new Dictionary<string, string>
             {
                 ["idle"] = "Ready",
@@ -86,6 +91,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["selectCallsToMerge"] = "Select two calls to conference.",
                 ["conference"] = "Conference selected calls",
                 ["disconnectAll"] = "Disconnect all calls",
+                ["microphoneUnavailable"] = "The microphone is unavailable.",
+                ["browserAudioUnavailable"] = "The browser audio adapter is unavailable.",
             },
         };
 
@@ -102,6 +109,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             <div id="telephony-soft-phone" data-config='{{configJson}}'>
                 <button type="button" data-telephony-toggle><i class="fa-solid fa-phone" data-telephony-toggle-icon></i></button>
                 <div data-telephony-panel hidden>
+                    <audio data-telephony-remote-audio autoplay></audio>
                     <span data-telephony-status>Ready</span>
                     <button type="button" data-telephony-close>Close</button>
                     <div data-telephony-unavailable hidden><span data-telephony-unavailable-text></span></div>

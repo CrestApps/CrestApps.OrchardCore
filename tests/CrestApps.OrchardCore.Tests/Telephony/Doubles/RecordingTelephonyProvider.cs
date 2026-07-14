@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// <summary>
 /// A telephony provider that records the last invoked operation and returns a configurable result.
 /// </summary>
-internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephonyDirectoryProvider
+internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyDirectoryProvider
 {
     public string LastOperation { get; private set; }
 
@@ -16,6 +16,12 @@ internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephon
     public TelephonyResult ResultToReturn { get; set; } = TelephonyResult.Success();
 
     public TelephonyCapabilities Capabilities { get; set; } = TelephonyCapabilities.Dial | TelephonyCapabilities.Hangup;
+
+    public TelephonyAudioCapabilities AudioCapabilities { get; set; }
+
+    public TelephonyAudioMode ConfiguredAudioMode { get; set; }
+
+    public string BrowserMediaAdapterName { get; set; }
 
     public LocalizedString Name => new("Recording", "Recording");
 

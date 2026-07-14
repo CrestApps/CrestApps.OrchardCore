@@ -98,6 +98,14 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
 
         var provider = await _providerResolver.GetAsync();
         var capabilities = provider is not null ? (int)provider.Capabilities : 0;
+        var audioProvider = provider as ITelephonyAudioProvider;
+        var audioCapabilities = audioProvider?.AudioCapabilities ?? TelephonyAudioCapabilities.None;
+        var audioMode = audioProvider is null
+            ? TelephonyAudioMode.None
+            : TelephonyAudioModeResolver.Resolve(
+                audioCapabilities,
+                audioProvider.ConfiguredAudioMode,
+                audioProvider.BrowserMediaAdapterName);
 
         _resourceManager.RegisterResource("stylesheet", "telephony-soft-phone").AtHead();
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();
@@ -109,11 +117,17 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
                 ? SoftPhoneWidgetSettings.DefaultAccentColor
                 : settings.AccentColor,
             Capabilities = provider?.Capabilities ?? TelephonyCapabilities.None,
+            AudioCapabilities = audioCapabilities,
+            AudioMode = audioMode,
+            BrowserMediaAdapterName = audioProvider?.BrowserMediaAdapterName,
         };
 
         var shape = await _displayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");
         shape.Properties["AccentColor"] = widget.AccentColor;
         shape.Properties["Capabilities"] = capabilities;
+        shape.Properties["AudioCapabilities"] = (int)widget.AudioCapabilities;
+        shape.Properties["AudioMode"] = (int)widget.AudioMode;
+        shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 

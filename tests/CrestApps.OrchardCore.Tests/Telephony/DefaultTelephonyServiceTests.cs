@@ -88,6 +88,32 @@ public sealed class DefaultTelephonyServiceTests
         Assert.Equal(TelephonyCapabilities.None, capabilities);
     }
 
+    [Theory]
+    [InlineData("browser-adapter", TelephonyAudioMode.Browser)]
+    [InlineData(null, TelephonyAudioMode.None)]
+    public async Task GetClientCredentialsAsync_BrowserAudioRequiresExecutableAdapter(
+        string browserMediaAdapterName,
+        TelephonyAudioMode expectedMode)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider
+        {
+            AudioCapabilities = TelephonyAudioCapabilities.Browser,
+            ConfiguredAudioMode = TelephonyAudioMode.Browser,
+            BrowserMediaAdapterName = browserMediaAdapterName,
+        };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var credentials = await service.GetClientCredentialsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expectedMode, credentials.AudioMode);
+        Assert.Equal(browserMediaAdapterName, credentials.BrowserMediaAdapterName);
+    }
+
     [Fact]
     public async Task GetDirectoryAsync_WhenProviderSupportsDirectory_ReturnsEntries()
     {

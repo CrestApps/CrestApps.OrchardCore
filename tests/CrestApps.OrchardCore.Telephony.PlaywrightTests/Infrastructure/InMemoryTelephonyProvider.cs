@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 /// An in-memory telephony provider used by the Playwright harness to exercise the soft phone widget
 /// and the SignalR hub contract without a real provider.
 /// </summary>
-public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly ConcurrentDictionary<string, TelephonyCall> _calls = new();
     private readonly ConcurrentDictionary<string, byte> _publishedCallIds = new();
@@ -41,6 +41,12 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
                 TelephonyCapabilities.Directory;
         }
     }
+
+    public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.Browser;
+
+    public TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.Browser;
+
+    public string BrowserMediaAdapterName => "in-memory";
 
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
@@ -173,7 +179,13 @@ public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyCa
 
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new TelephonyClientCredentials { ProviderName = "InMemory" });
+        return Task.FromResult(new TelephonyClientCredentials
+        {
+            ProviderName = "InMemory",
+            AudioCapabilities = AudioCapabilities,
+            AudioMode = ConfiguredAudioMode,
+            BrowserMediaAdapterName = BrowserMediaAdapterName,
+        });
     }
 
     public Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)

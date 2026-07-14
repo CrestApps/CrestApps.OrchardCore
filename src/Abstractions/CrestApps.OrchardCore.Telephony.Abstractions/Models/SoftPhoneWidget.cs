@@ -14,4 +14,19 @@ public sealed class SoftPhoneWidget
     /// Gets or sets the telephony operations supported by the active provider.
     /// </summary>
     public TelephonyCapabilities Capabilities { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's executable audio delivery capabilities.
+    /// </summary>
+    public TelephonyAudioCapabilities AudioCapabilities { get; set; }
+
+    /// <summary>
+    /// Gets or sets the effective audio delivery mode.
+    /// </summary>
+    public TelephonyAudioMode AudioMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the browser media adapter name when browser audio is active.
+    /// </summary>
+    public string BrowserMediaAdapterName { get; set; }
 }

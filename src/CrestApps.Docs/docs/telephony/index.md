@@ -59,6 +59,15 @@ operations:
 Each provider also advertises the operations it supports through the `Capabilities` property (a
 `TelephonyCapabilities` flags value). The soft phone UI uses these flags to show or hide controls.
 
+Live agent audio is advertised separately through the optional `ITelephonyAudioProvider` contract. `TelephonyAudioCapabilities` distinguishes browser audio from an external device or provider-owned application, and `TelephonyAudioModeResolver` applies these rules:
+
+- A browser-only provider automatically uses browser audio.
+- An external-device-only provider automatically leaves microphone and speaker handling outside Orchard.
+- A provider that supports both must expose a provider setting and return the administrator-selected `ConfiguredAudioMode`.
+- Browser audio fails closed unless the provider also names an executable browser media adapter.
+
+The current built-in DialPad and Asterisk Telephony providers explicitly advertise `ExternalDevice`. DialPad call control currently relies on its REST integration and provider-owned clients, while the Asterisk provider currently controls calls through ARI. Asterisk External Media is a server-side Contact Center media seam and is not an embedded browser WebRTC endpoint. Neither provider currently advertises embedded browser audio.
+
 Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
 `TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange
 routing hints or contextual data for scenarios such as voicemail routing.
@@ -138,6 +147,27 @@ The widget reflects the live connection status reported by the hub and only enab
 - When no provider is enabled, the widget shows a compact warning at the top of the panel that explains how to fix the setup: enable at least one provider and set the default phone provider in site settings. The warning is shown only after the hub resolves the real provider status, so a configured tenant does not flash a false **No provider is configured** warning during page load. The keypad and call buttons stay hidden, and the warning does not stretch to fill the widget.
 - When the provider requires a per-user connection, the widget shows the **Connect to provider** button (see [Authenticating users with a provider](#authenticating-users-with-a-provider)).
 - During an active call the main floating toggle keeps its normal accent color and phone icon; hang-up remains on the keypad itself. The widget exposes hold/resume and transfer when the provider supports them, and only exposes mute/unmute after the selected call has reached the **Connected** state. End-user error messages stay provider-neutral even when the active provider logs provider-specific details on the server.
+
+### Browser audio adapters
+
+When the active provider resolves to `TelephonyAudioMode.Browser`, the soft phone lazily requests microphone permission immediately before the first dial or answer action. It obtains provider bootstrap credentials through the authorized Telephony hub, initializes the provider's registered browser media adapter, supplies the local microphone stream, and provides a remote `<audio>` element and `setRemoteStream` callback for real-time caller audio. Authoritative provider call-state events continue to control the UI and are forwarded to the adapter; local microphone tracks are enabled only for a connected, unmuted call and are stopped when the last call ends, the hub disconnects, or the page unloads.
+
+Provider scripts register a factory by adapter name:
+
+```js
+window.telephonySoftPhone.mediaAdapters.myProvider = function (context) {
+    return {
+        handleCallState: function (call) {
+            // Synchronize the provider SDK session with authoritative call state.
+        },
+        dispose: function () {
+            // Disconnect the provider SDK session and release provider resources.
+        }
+    };
+};
+```
+
+The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRemoteStream`, and `showError`. Registering a JavaScript factory alone is not sufficient: the server provider must implement `ITelephonyAudioProvider`, advertise `Browser`, return the same adapter name, and issue the provider-specific short-lived bootstrap settings needed by that executable adapter.
 
 ### Keypad, recent calls, and extension tabs
 

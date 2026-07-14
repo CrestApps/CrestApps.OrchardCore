@@ -84,7 +84,24 @@ public sealed class DefaultTelephonyService : ITelephonyService
             return null;
         }
 
-        return await provider.GetClientCredentialsAsync(cancellationToken);
+        var credentials = await provider.GetClientCredentialsAsync(cancellationToken);
+
+        if (credentials is null)
+        {
+            return null;
+        }
+
+        if (provider is ITelephonyAudioProvider audioProvider)
+        {
+            credentials.AudioCapabilities = audioProvider.AudioCapabilities;
+            credentials.AudioMode = TelephonyAudioModeResolver.Resolve(
+                audioProvider.AudioCapabilities,
+                audioProvider.ConfiguredAudioMode,
+                audioProvider.BrowserMediaAdapterName);
+            credentials.BrowserMediaAdapterName = audioProvider.BrowserMediaAdapterName;
+        }
+
+        return credentials;
     }
 
     /// <inheritdoc/>

@@ -23,6 +23,22 @@ public sealed class TelephonyClientCredentials
     public DateTimeOffset? ExpiresUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the executable audio delivery modes advertised by the provider.
+    /// </summary>
+    public TelephonyAudioCapabilities AudioCapabilities { get; set; }
+
+    /// <summary>
+    /// Gets or sets the effective audio delivery mode selected for the provider.
+    /// </summary>
+    public TelephonyAudioMode AudioMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the browser media adapter name when <see cref="AudioMode"/> is
+    /// <see cref="TelephonyAudioMode.Browser"/>.
+    /// </summary>
+    public string BrowserMediaAdapterName { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional collection of non-sensitive, provider-specific settings the client
     /// SDK needs in order to initialize.
     /// </summary>

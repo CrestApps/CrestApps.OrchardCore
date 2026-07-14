@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 using Microsoft.Playwright;
 
@@ -42,6 +43,70 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         {
             await _server.DisposeAsync();
         }
+    }
+
+    [Fact]
+    public async Task BrowserAudio_DialInitializesAdapterAndMicrophone()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.AddInitScriptAsync(
+            """
+            window.browserAudioState = {
+                getUserMediaCount: 0,
+                initialized: false,
+                handledStates: [],
+                track: {
+                    enabled: false,
+                    stopped: false,
+                    stop: function () { this.stopped = true; }
+                }
+            };
+            Object.defineProperty(navigator, 'mediaDevices', {
+                configurable: true,
+                value: {
+                    getUserMedia: function () {
+                        window.browserAudioState.getUserMediaCount++;
+                        var track = window.browserAudioState.track;
+                        return Promise.resolve({
+                            getTracks: function () { return [track]; },
+                            getAudioTracks: function () { return [track]; }
+                        });
+                    }
+                }
+            });
+            """);
+        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
+        await WaitForConnectedAsync(page);
+        await page.EvaluateAsync(
+            """
+            () => {
+                window.telephonySoftPhone.mediaAdapters['in-memory'] = function (context) {
+                    window.browserAudioState.initialized = !!context.localStream;
+                    return {
+                        handleCallState: function (call) {
+                            window.browserAudioState.handledStates.push(call ? call.state : null);
+                        },
+                        dispose: function () {
+                            window.browserAudioState.disposed = true;
+                        }
+                    };
+                };
+            }
+            """);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+
+        // Act
+        await page.ClickAsync("[data-telephony-dial]");
+        await PublishLatestCallStateAsync(page);
+
+        // Assert
+        await page.WaitForFunctionAsync("() => window.browserAudioState.handledStates.length > 0");
+        var state = await page.EvaluateAsync<JsonElement>("() => window.browserAudioState");
+        Assert.Equal(1, state.GetProperty("getUserMediaCount").GetInt32());
+        Assert.True(state.GetProperty("initialized").GetBoolean());
+        Assert.True(state.GetProperty("track").GetProperty("enabled").GetBoolean());
     }
 
     [Fact]

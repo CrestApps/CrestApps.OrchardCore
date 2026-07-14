@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// API key and per-user OAuth 2.0 authentication. All call control happens server-side, so the soft
 /// phone client never talks to DialPad directly.
 /// </summary>
-public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -88,6 +88,15 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAut
                 TelephonyCapabilities.Directory;
         }
     }
+
+    /// <inheritdoc/>
+    public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.ExternalDevice;
+
+    /// <inheritdoc/>
+    public TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.ExternalDevice;
+
+    /// <inheritdoc/>
+    public string BrowserMediaAdapterName => null;
 
     /// <inheritdoc/>
     public bool RequiresUserAuthentication
