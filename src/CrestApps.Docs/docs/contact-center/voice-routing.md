@@ -63,7 +63,23 @@ Examples:
 
 The provider never pushes state directly to the browser. It always comes into Orchard first.
 
-The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. Request cancellation remains active while Orchard reads and authenticates the delivery, but an authenticated delivery that has entered state-changing processing is not canceled merely because the provider disconnects. Durable inbox acceptance, replay freshness, and ingress rate/concurrency controls remain required before these endpoints are considered production-complete.
+The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. Each tenant also enforces a shared pre-buffering concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Request cancellation remains active while Orchard reads and authenticates the delivery, but an authenticated delivery that has entered state-changing processing is not canceled merely because the provider disconnects. Durable inbox acceptance and replay freshness remain required before these endpoints are considered production-complete.
+
+Configure tenant-local limits in shell configuration:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "WebhookIngress": {
+      "ConcurrencyPermitLimit": 8,
+      "RatePermitLimit": 120,
+      "RatePeriodSeconds": 60
+    }
+  }
+}
+```
+
+`ConcurrencyPermitLimit` bounds all provider webhook requests buffering or processing on one tenant and application node. `RatePermitLimit` is applied independently to each authenticated canonical provider during `RatePeriodSeconds`. Every value must be greater than zero. In a multi-node deployment, each node enforces its own limits, so the external gateway should also enforce the deployment-wide provider contract.
 
 ### 2. Contact Center creates the CRM work item and interaction
 

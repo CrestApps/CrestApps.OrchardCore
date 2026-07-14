@@ -18,12 +18,15 @@ public sealed class ContactCenterVoiceTenantEvents : ModularTenantEvents
     /// Initializes a new instance of the <see cref="ContactCenterVoiceTenantEvents"/> class.
     /// </summary>
     /// <param name="synchronizationService">The provider call-state synchronization service.</param>
+    /// <param name="ingressLimiter">The provider webhook ingress limiter resolved eagerly during tenant activation.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterVoiceTenantEvents(
         IProviderCallStateSynchronizationService synchronizationService,
+        IProviderWebhookIngressLimiter ingressLimiter,
         ILogger<ContactCenterVoiceTenantEvents> logger)
     {
         _synchronizationService = synchronizationService;
+        _ = ingressLimiter;
         _logger = logger;
     }
 

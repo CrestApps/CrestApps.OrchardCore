@@ -24,4 +24,9 @@ public enum ProviderVoiceWebhookStatus
     /// A parsed event was missing the required idempotency key.
     /// </summary>
     MissingIdempotencyKey,
+
+    /// <summary>
+    /// The authenticated provider exceeded its configured delivery rate.
+    /// </summary>
+    RateLimited,
 }

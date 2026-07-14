@@ -71,7 +71,6 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterConstants.CollectionName));
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
-
         services
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
@@ -359,8 +358,29 @@ public sealed class DialerStartup : StartupBase
 [Feature(ContactCenterConstants.Feature.Voice)]
 public sealed class VoiceStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VoiceStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind voice ingress options.</param>
+    public VoiceStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services
+            .AddOptions<ProviderWebhookIngressOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:WebhookIngress"))
+            .Validate(
+                options => options.ConcurrencyPermitLimit > 0 &&
+                    options.RatePermitLimit > 0 &&
+                    options.RatePeriodSeconds > 0,
+                "Webhook ingress concurrency, rate permit, and rate period values must be greater than zero.")
+            .ValidateOnStart();
+
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
@@ -370,6 +390,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
+            .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()

@@ -1,8 +1,10 @@
+using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
@@ -25,11 +27,21 @@ internal static class ProviderVoiceWebhookEndpoint
     internal static async Task<IResult> HandleAsync(
         string provider,
         IProviderVoiceWebhookProcessor processor,
+        IProviderWebhookIngressLimiter ingressLimiter,
         HttpContext httpContext)
     {
         if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
+
+        if (!concurrencyLease.IsAcquired)
+        {
+            SetRetryAfter(httpContext, concurrencyLease.RetryAfter);
+
+            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         string body;
@@ -68,7 +80,23 @@ internal static class ProviderVoiceWebhookEndpoint
             ProviderVoiceWebhookStatus.UnknownProvider => TypedResults.NotFound(),
             ProviderVoiceWebhookStatus.InvalidSignature => TypedResults.Unauthorized(),
             ProviderVoiceWebhookStatus.MissingIdempotencyKey => TypedResults.BadRequest(),
+            ProviderVoiceWebhookStatus.RateLimited => CreateRateLimitedResult(httpContext, outcome.RetryAfter),
             _ => TypedResults.BadRequest(),
         };
+    }
+
+    private static StatusCodeHttpResult CreateRateLimitedResult(HttpContext httpContext, TimeSpan? retryAfter)
+    {
+        SetRetryAfter(httpContext, retryAfter);
+
+        return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
+    }
+
+    private static void SetRetryAfter(HttpContext httpContext, TimeSpan? retryAfter)
+    {
+        if (retryAfter.HasValue)
+        {
+            httpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.Value.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
     }
 }

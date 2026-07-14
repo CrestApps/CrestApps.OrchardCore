@@ -1095,7 +1095,7 @@
       "category": "voice-provider",
       "planFinding": "PR12",
       "gate": "Webhook buffering/request abort coupling",
-      "invariant": "Every provider webhook route must enforce a provider-specific body-size limit and accept the event into a durable inbox before returning success, independent of the inbound HTTP request; an oversize payload must be rejected, and a client aborting the request after durable acceptance must never roll back that acceptance. `ProviderVoiceWebhookEndpoint.cs:14-45` and `DialPadWebhookController.cs:19-24,63-85` currently buffer whole bodies and tie orchestration to request cancellation.",
+      "invariant": "Every provider webhook route must enforce provider-specific body-size and authenticated rate limits plus a tenant-local concurrency ceiling, then accept the event into a durable inbox before returning success independent of the inbound HTTP request. Oversize or over-limit payloads must be rejected, unauthenticated traffic must not consume a provider's authenticated budget, and a client aborting after durable acceptance must never roll back that acceptance.",
       "testId": "CC-V003",
       "ciJob": {
         "id": "contact-center-provider-contract-suite",
@@ -1113,7 +1113,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceWebhookEndpointTests.cs and ProviderVoiceWebhookProcessorTests.cs cover current ingress/processing; the oversize-payload-rejected and disconnect-after-durable-acceptance proof is a planned:contact-center-provider-contract-suite dependency."
+      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, and DialPadWebhookEndpointTests prove 1 MiB rejection, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, and request-cancellation detachment after authentication. Durable inbox commit before 2xx and disconnect-after-durable-acceptance remain planned:contact-center-provider-contract-suite dependencies."
     },
     {
       "id": "V004",

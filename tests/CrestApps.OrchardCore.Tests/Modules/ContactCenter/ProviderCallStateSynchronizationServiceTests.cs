@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -256,8 +257,10 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         synchronizationService
             .Setup(service => service.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
+        using var ingressLimiter = new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions()));
         var tenantEvents = new ContactCenterVoiceTenantEvents(
             synchronizationService.Object,
+            ingressLimiter,
             NullLogger<ContactCenterVoiceTenantEvents>.Instance);
 
         // Act

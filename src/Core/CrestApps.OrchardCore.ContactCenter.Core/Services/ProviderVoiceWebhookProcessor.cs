@@ -11,6 +11,7 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
 {
     private readonly IEnumerable<IProviderVoiceWebhookAdapter> _adapters;
     private readonly IProviderVoiceEventService _providerVoiceEventService;
+    private readonly IProviderWebhookIngressLimiter _ingressLimiter;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -18,14 +19,17 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
     /// </summary>
     /// <param name="adapters">The registered provider webhook adapters.</param>
     /// <param name="providerVoiceEventService">The provider voice event ingestion service.</param>
+    /// <param name="ingressLimiter">The provider webhook ingress limiter.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceWebhookProcessor(
         IEnumerable<IProviderVoiceWebhookAdapter> adapters,
         IProviderVoiceEventService providerVoiceEventService,
+        IProviderWebhookIngressLimiter ingressLimiter,
         ILogger<ProviderVoiceWebhookProcessor> logger)
     {
         _adapters = adapters;
         _providerVoiceEventService = providerVoiceEventService;
+        _ingressLimiter = ingressLimiter;
         _logger = logger;
     }
 
@@ -46,6 +50,17 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
             _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because the signature failed validation.", adapter.TechnicalName);
 
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.InvalidSignature };
+        }
+
+        using var rateLease = await _ingressLimiter.AcquireRateAsync(adapter.TechnicalName, cancellationToken);
+
+        if (!rateLease.IsAcquired)
+        {
+            return new ProviderVoiceWebhookOutcome
+            {
+                Status = ProviderVoiceWebhookStatus.RateLimited,
+                RetryAfter = rateLease.RetryAfter,
+            };
         }
 
         var events = adapter.Parse(request) ?? [];

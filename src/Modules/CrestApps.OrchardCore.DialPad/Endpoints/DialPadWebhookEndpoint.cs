@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using Microsoft.AspNetCore.Builder;
@@ -28,6 +30,7 @@ internal static class DialPadWebhookEndpoint
 
     internal static async Task<IResult> HandleAsync(
         IDialPadWebhookService webhookService,
+        IProviderWebhookIngressLimiter ingressLimiter,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         ILogger<DialPadContactCenterStartup> logger,
@@ -43,6 +46,15 @@ internal static class DialPadWebhookEndpoint
         if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
+
+        if (!concurrencyLease.IsAcquired)
+        {
+            SetRetryAfter(httpContext, concurrencyLease.RetryAfter);
+
+            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         string body;
@@ -76,6 +88,15 @@ internal static class DialPadWebhookEndpoint
             logger.LogWarning("Rejected a DialPad webhook because the signature could not be validated.");
 
             return TypedResults.Unauthorized();
+        }
+
+        using var rateLease = await ingressLimiter.AcquireRateAsync(DialPadConstants.ProviderTechnicalName, CancellationToken.None);
+
+        if (!rateLease.IsAcquired)
+        {
+            SetRetryAfter(httpContext, rateLease.RetryAfter);
+
+            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         DialPadCallEvent callEvent;
@@ -119,6 +140,14 @@ internal static class DialPadWebhookEndpoint
         catch (CryptographicException)
         {
             return false;
+        }
+    }
+
+    private static void SetRetryAfter(HttpContext httpContext, TimeSpan? retryAfter)
+    {
+        if (retryAfter.HasValue)
+        {
+            httpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.Value.TotalSeconds).ToString(CultureInfo.InvariantCulture);
         }
     }
 }

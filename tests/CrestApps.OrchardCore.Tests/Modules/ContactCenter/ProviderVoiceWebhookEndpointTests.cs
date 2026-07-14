@@ -4,12 +4,15 @@ using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
-public sealed class ProviderVoiceWebhookEndpointTests
+public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
 {
+    private readonly ProviderWebhookIngressLimiter _ingressLimiter = CreateIngressLimiter();
+
     [Fact]
     public async Task HandleAsync_WhenPayloadExceedsLimit_ReturnsPayloadTooLarge()
     {
@@ -19,7 +22,7 @@ public sealed class ProviderVoiceWebhookEndpointTests
         httpContext.Request.ContentLength = ProviderVoiceWebhookEndpoint.MaximumRequestBodySizeBytes + 1;
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
 
         // Assert
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -38,7 +41,7 @@ public sealed class ProviderVoiceWebhookEndpointTests
         httpContext.Request.Body = new PayloadTooLargeStream();
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
 
         // Assert
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -64,7 +67,7 @@ public sealed class ProviderVoiceWebhookEndpointTests
         httpContext.RequestAborted = new CancellationTokenSource().Token;
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
 
         // Assert
         Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -73,5 +76,61 @@ public sealed class ProviderVoiceWebhookEndpointTests
                 It.IsAny<ProviderVoiceWebhookRequest>(),
                 It.Is<CancellationToken>(token => !token.CanBeCanceled)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenConcurrencyLimitIsExhausted_ReturnsTooManyRequests()
+    {
+        // Arrange
+        using var limiter = CreateIngressLimiter(concurrencyPermitLimit: 1);
+        using var heldLease = await limiter.AcquireConcurrencyAsync(TestContext.Current.CancellationToken);
+        var processor = new Mock<IProviderVoiceWebhookProcessor>();
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Body = new MemoryStream("{}"u8.ToArray());
+
+        // Act
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, limiter, httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        processor.Verify(
+            value => value.ProcessAsync(It.IsAny<ProviderVoiceWebhookRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenAuthenticatedProviderIsRateLimited_ReturnsRetryAfter()
+    {
+        // Arrange
+        var processor = new Mock<IProviderVoiceWebhookProcessor>();
+        processor
+            .Setup(value => value.ProcessAsync(It.IsAny<ProviderVoiceWebhookRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderVoiceWebhookOutcome
+            {
+                Status = ProviderVoiceWebhookStatus.RateLimited,
+                RetryAfter = TimeSpan.FromSeconds(12),
+            });
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Body = new MemoryStream("{}"u8.ToArray());
+
+        // Act
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        Assert.Equal("12", httpContext.Response.Headers.RetryAfter);
+    }
+
+    public void Dispose()
+    {
+        _ingressLimiter.Dispose();
+    }
+
+    private static ProviderWebhookIngressLimiter CreateIngressLimiter(int concurrencyPermitLimit = 8)
+    {
+        return new ProviderWebhookIngressLimiter(Options.Create(new ProviderWebhookIngressOptions
+        {
+            ConcurrencyPermitLimit = concurrencyPermitLimit,
+        }));
     }
 }
