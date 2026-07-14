@@ -141,6 +141,7 @@ The resolver receives the `referenceId` and optional metadata, and returns a URL
       "DataSources": [
         {
           "DisplayText": "Articles",
+          "Source": "SearchIndexProfile",
           "SourceIndexProfileName": "articles",
           "AIKnowledgeBaseIndexProfileName": "AIRagKnowledgeBase",
           "KeyFieldName": "ContentItemId",
@@ -152,6 +153,8 @@ The resolver receives the `referenceId` and optional metadata, and returns a URL
   ]
 }
 ```
+
+Set `Source` to the registered source type you want to import. Built-in values include `SearchIndexProfile`, `AzureAISearch`, `Elasticsearch`, and `PostgreSQL` when the corresponding provider modules are enabled. Older recipes can omit `Source`, in which case import still defaults to `SearchIndexProfile`.
 
 When **OrchardCore.Deployment** is enabled, the deployment-plan editor groups the **AIDataSource** export step under the **Artificial Intelligence** category.
 

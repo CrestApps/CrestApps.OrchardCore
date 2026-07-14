@@ -64,6 +64,8 @@ The `AIProfileTemplate` recipe step now extends that catalog with template-speci
 
 The Recipes feature now also exports dedicated step schemas for `AIDataSource`, `McpConnection`, `McpPrompt`, `McpResource`, and `A2AConnection`. Their `Properties` objects document the known built-in metadata envelopes such as `SseMcpConnectionMetadata`, `StdioMcpConnectionMetadata`, `FtpConnectionMetadata`, `SftpConnectionMetadata`, and `A2AConnectionMetadata`, while still allowing extra keys for future extensions.
 
+For `AIDataSource`, the schema also derives the `Source` enum from the currently registered `AIDataSourceSourceOptions` entries, so recipe tooling can suggest only the source types that are actually enabled for the tenant. Recipe imports honor that same `Source` value and still default to `SearchIndexProfile` when older payloads omit it.
+
 More broadly, the exported recipe-step schemas now attach descriptions to the known properties across the built-in CrestApps recipe steps so human authors and AI tools can discover what each property is for directly from the schema surface.
 
 ## Creating a Recipe Step
