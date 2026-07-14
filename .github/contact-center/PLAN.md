@@ -1875,7 +1875,7 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Shared-database double-reservation characterization using two independent service providers and YesSql sessions over one SQLite database; synchronized read-then-write commits persist two distinct pending reservations for the same work when the shared test lock permits overlapping holders. R3 must invert this with portable CAS and unique-active constraints.
     - [x] Provider-call orphan and `OutcomeUnknown` characterizations: failed post-dial reservation acceptance discards the successful provider call identity, while a lost provider response is treated as a definitive failure and removes the work. R3 must invert these with durable command intent, reconciliation, and idempotent compensation.
     - [x] Duplicate/out-of-order/canonical-provider event characterizations: concurrent idempotency checks both persist and enqueue the same event, equal-timestamp delivery regresses Connected to Ringing, and provider aliases mutate stored identity. R3 must invert these with inbox uniqueness, sequence/high-water rules, and canonical provider keys.
-    - [ ] Rolling-version stable outbox-handler replay tests.
+    - [x] Rolling-version outbox-handler characterizations: registration reorder replays an already completed handler because the checkpoint includes its prior index, and one poison due item blocks later messages in the batch. R3 must invert these with stable versioned handler ids and per-message isolation.
     - [ ] Ambiguous contact attribution tests.
     - [x] Fake recording/monitoring success characterization tests.
     - [x] Webhook body-limit and request-disconnect tests.

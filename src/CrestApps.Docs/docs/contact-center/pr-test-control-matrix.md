@@ -49,6 +49,8 @@ The D002 R0a provider-command characterizations pin both sides of the current or
 
 The D003 R0a provider-event characterizations pin three independent ordering and identity gaps. Two concurrent publishers can both observe a missing idempotency key and persist and enqueue the same logical event. An equal-timestamp event can regress a connected call back to ringing because there is no provider sequence or high-water mark. A provider alias can replace the stored provider name instead of resolving to a stable canonical key. R3 must invert these tests with a durable unique provider inbox, monotonic sequence handling, canonical provider identity, and unique provider-call ownership.
 
+The C004 R0a outbox characterizations reproduce rolling-version and poison-work failures. Reordering two handler registrations causes a handler that already completed under its old assembly-qualified-name-and-index checkpoint to execute again after the checkpoint is persisted and reloaded. A failure in the first due message also stops the batch before later event payloads are loaded or dispatched. R3 must invert these tests with explicit stable versioned handler ids and per-message failure isolation so deployment and poison work cannot duplicate or starve delivery.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

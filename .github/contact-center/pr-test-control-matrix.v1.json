@@ -171,7 +171,7 @@
           "rolling-upgrade"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterOutboxTests.cs covers current handler dispatch and poison-item isolation for a stable process; the rolling-reorder replay proof against stable versioned ids is a planned:contact-center-domain-invariants dependency."
+      "evidenceLocation": "ContactCenterOutboxTests.DispatchDueAsync_AfterHandlerOrderChanges_ReplaysCompletedHandlerToday proves a rolling-version registration reorder re-executes a handler already checkpointed under its assembly-qualified name plus prior index. DispatchDueAsync_WhenFirstDueMessageFails_DoesNotProcessLaterMessageToday proves one poison due item blocks later messages in the same batch. R3 must invert these characterizations with explicit stable versioned handler ids and per-message failure isolation."
     },
     {
       "id": "C005",

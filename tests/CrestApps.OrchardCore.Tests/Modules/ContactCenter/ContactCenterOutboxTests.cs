@@ -169,6 +169,139 @@ public sealed class ContactCenterOutboxTests
     }
 
     [Fact]
+    public async Task DispatchDueAsync_AfterHandlerOrderChanges_ReplaysCompletedHandlerToday()
+    {
+        // Arrange
+        var firstHandlerRuns = 0;
+        var secondHandlerRuns = 0;
+        ContactCenterOutboxMessage pending = null;
+        var interactionEvent = new InteractionEvent
+        {
+            ItemId = "e1",
+            EventType = ContactCenterConstants.Events.InteractionCreated,
+        };
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => pending = message)
+            .Returns(ValueTask.CompletedTask);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interactionEvent);
+        var oldFirstHandler = new FirstTestHandler(() =>
+        {
+            firstHandlerRuns++;
+
+            return Task.CompletedTask;
+        });
+        var oldSecondHandler = new SecondTestHandler(() =>
+        {
+            secondHandlerRuns++;
+
+            return Task.FromException(new InvalidOperationException("transient"));
+        });
+        var oldVersionOutbox = CreateOutbox(outboxStore, eventStore, [oldFirstHandler, oldSecondHandler]);
+
+        await oldVersionOutbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken);
+        Assert.Single(pending.CompletedHandlerTypes);
+        var persistedCheckpoint = Clone(pending);
+        Assert.NotSame(pending, persistedCheckpoint);
+        outboxStore
+            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => [Clone(persistedCheckpoint)]);
+
+        var newSecondHandler = new SecondTestHandler(() =>
+        {
+            secondHandlerRuns++;
+
+            return Task.CompletedTask;
+        });
+        var newFirstHandler = new FirstTestHandler(() =>
+        {
+            firstHandlerRuns++;
+
+            return Task.CompletedTask;
+        });
+        var newVersionOutbox = CreateOutbox(outboxStore, eventStore, [newSecondHandler, newFirstHandler]);
+
+        // Act
+        var processed = await newVersionOutbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(2, firstHandlerRuns);
+        Assert.Equal(2, secondHandlerRuns);
+        outboxStore.Verify(
+            store => store.DeleteAsync(
+                It.Is<ContactCenterOutboxMessage>(message =>
+                    message.EventId == "e1" &&
+                    !ReferenceEquals(message, pending)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchDueAsync_WhenFirstDueMessageFails_DoesNotProcessLaterMessageToday()
+    {
+        // Arrange
+        var firstMessage = new ContactCenterOutboxMessage
+        {
+            ItemId = "m1",
+            EventId = "e1",
+            Status = OutboxMessageStatus.Pending,
+        };
+        var secondMessage = new ContactCenterOutboxMessage
+        {
+            ItemId = "m2",
+            EventId = "e2",
+            Status = OutboxMessageStatus.Pending,
+        };
+        var firstEvent = new InteractionEvent { ItemId = "e1" };
+        var secondEvent = new InteractionEvent { ItemId = "e2" };
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstMessage, secondMessage]);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstEvent);
+        eventStore
+            .Setup(store => store.FindByIdAsync("e2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(secondEvent);
+        var handler = new Mock<IContactCenterEventHandler>();
+        handler
+            .Setup(service => service.HandleAsync(firstEvent, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("poison"));
+        handler
+            .Setup(service => service.HandleAsync(secondEvent, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var outbox = CreateOutbox(outboxStore, eventStore, [handler.Object]);
+
+        // Act
+        var processed = await outbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, processed);
+        Assert.Equal(1, firstMessage.AttemptCount);
+        Assert.Equal("poison", firstMessage.LastError);
+        Assert.Equal(_now.AddSeconds(30), firstMessage.NextAttemptUtc);
+        handler.Verify(
+            service => service.HandleAsync(firstEvent, It.IsAny<CancellationToken>()),
+            Times.Once);
+        handler.Verify(
+            service => service.HandleAsync(secondEvent, It.IsAny<CancellationToken>()),
+            Times.Never);
+        outboxStore.Verify(
+            store => store.UpdateAsync(firstMessage, It.IsAny<CancellationToken>()),
+            Times.Once);
+        eventStore.Verify(
+            store => store.FindByIdAsync("e2", It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DispatchDueAsync_WhenRetryFails_IncrementsAttemptAndAppliesBackoff()
     {
         // Arrange
@@ -261,5 +394,38 @@ public sealed class ContactCenterOutboxTests
             eventStore.Object,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance);
+    }
+
+    private static ContactCenterOutboxMessage Clone(ContactCenterOutboxMessage message)
+    {
+        return new ContactCenterOutboxMessage
+        {
+            ItemId = message.ItemId,
+            EventId = message.EventId,
+            EventType = message.EventType,
+            Status = message.Status,
+            AttemptCount = message.AttemptCount,
+            NextAttemptUtc = message.NextAttemptUtc,
+            LastError = message.LastError,
+            CompletedHandlerTypes = [.. message.CompletedHandlerTypes],
+            CreatedUtc = message.CreatedUtc,
+            ModifiedUtc = message.ModifiedUtc,
+        };
+    }
+
+    private sealed class FirstTestHandler(Func<Task> action) : IContactCenterEventHandler
+    {
+        public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+        {
+            return action();
+        }
+    }
+
+    private sealed class SecondTestHandler(Func<Task> action) : IContactCenterEventHandler
+    {
+        public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+        {
+            return action();
+        }
     }
 }
