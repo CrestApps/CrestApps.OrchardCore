@@ -1872,7 +1872,7 @@ This checklist is authoritative for current execution order. Historical phase an
     - [x] Two-shell in-process tenant isolation and permission-gated Contact Center group-join tests.
     - [x] Static legal feature dependency-closure and undeclared-service characterization test; live tenant activation remains tracked by T001.
     - [x] Disconnected-agent and after-call capacity recovery characterization tests: last-session disconnect leaves an `Available` profile routable, assignment has no live-session dependency, and after-call state has no persisted server-swept deadline. R3 must invert these tests with canonical availability and deterministic deadline recovery.
-    - [ ] Shared-database double-reservation tests using two service providers.
+    - [x] Shared-database double-reservation characterization using two independent service providers and YesSql sessions over one SQLite database; synchronized read-then-write commits persist two distinct pending reservations for the same work when the shared test lock permits overlapping holders. R3 must invert this with portable CAS and unique-active constraints.
     - [ ] Provider-call orphan and `OutcomeUnknown` tests.
     - [ ] Duplicate/out-of-order/canonical-provider event tests.
     - [ ] Rolling-version stable outbox-handler replay tests.

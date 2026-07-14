@@ -379,7 +379,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs and ActivityQueueServiceTests.cs characterize today's read-then-write path; the two-node lock-expiry race proof against a database constraint is a planned:contact-center-database-matrix dependency."
+      "evidenceLocation": "ActivityReservationSharedDatabaseTests.ReserveAsync_TwoProvidersReadWaitingState_BothPersistReservationsToday runs two independent service providers and YesSql sessions against one SQLite database, synchronizes both reads before either commit, deliberately permits overlapping lock holders to expose the missing database invariant, and proves two distinct pending reservations persist for one queue item/activity. R3 must invert this characterization with portable row-version/CAS and unique-active constraints across every supported database."
     },
     {
       "id": "D005",

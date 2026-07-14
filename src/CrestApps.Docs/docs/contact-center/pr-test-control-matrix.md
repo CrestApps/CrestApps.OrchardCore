@@ -43,6 +43,8 @@ The C001/C002 R0a characterization names the current capability-truth failure di
 
 The D001/C003 R0a characterizations pin the current capacity failures before R3 changes the lifecycle model. The last agent-session disconnect does not change an `Available` profile, assignment can reserve work without consulting any live session, and `Interaction` has wrap-up start/completion timestamps but no persisted `WrapUpDeadlineUtc` for a server-side sweep. R3 must invert these tests so canonical availability excludes disconnected agents and after-call recovery deterministically releases capacity without a connected browser.
 
+The D004 R0a shared-database characterization runs two independent service providers and YesSql sessions against one SQLite database. It synchronizes both reads while the queue item is still waiting, deliberately permits overlapping lock holders to expose the missing database invariant, commits the two sessions, and proves that two distinct pending reservations persist for the same queue item and activity. R3 must invert this test with database-enforced compare-and-set and unique-active constraints; distributed locking remains only a contention optimization.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:
