@@ -287,6 +287,53 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void AgentDesktopFeature_OwnsWorkspaceSurface()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.AgentDesktop"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var endpointOwner = startupClasses.Single(startup =>
+            startup.Body.Contains("AddAgentWorkspaceEndpoints()", StringComparison.Ordinal));
+        var navigationOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddNavigationProvider<ContactCenterAgentDesktopAdminMenu>()",
+                StringComparison.Ordinal));
+        var softPhoneWorkView = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Modules",
+            "CrestApps.OrchardCore.ContactCenter",
+            "Views",
+            "Items",
+            "ContactCenterSoftPhoneWork.View.cshtml"));
+
+        // Assert
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Availability",
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
+                "CrestApps.OrchardCore.Omnichannel.Managements",
+            ],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.AgentDesktop", endpointOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.AgentDesktop", navigationOwner.FeatureId);
+        Assert.Contains(
+            "Url.Action(\"Index\", \"AgentWorkspace\", new { area = ContactCenterConstants.Feature.Area }) ?? returnUrl",
+            softPhoneWorkView,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

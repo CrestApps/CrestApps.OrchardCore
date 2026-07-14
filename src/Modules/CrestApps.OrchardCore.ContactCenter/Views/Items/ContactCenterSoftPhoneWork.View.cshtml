@@ -10,7 +10,7 @@
 @{
     var viewModel = Model.Value;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
-    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area }) ?? returnUrl;
     var completeActivityUrlTemplate = Url.Action(
         "Complete",
         "Activities",

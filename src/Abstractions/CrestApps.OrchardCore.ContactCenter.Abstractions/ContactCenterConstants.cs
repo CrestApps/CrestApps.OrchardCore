@@ -71,6 +71,11 @@ public static class ContactCenterConstants
         public const string VoiceSoftPhone = "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone";
 
         /// <summary>
+        /// The identifier of the CRM-integrated agent desktop feature.
+        /// </summary>
+        public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";
+
+        /// <summary>
         /// The identifier of the real-time agent and supervisor experience feature.
         /// </summary>
         public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";

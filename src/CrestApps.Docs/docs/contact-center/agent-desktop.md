@@ -14,9 +14,9 @@ Both build on the [real-time SignalR layer](index.md#real-time-experience) and t
 
 ## Enabling the surfaces
 
-Enable the **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`). It depends on **Contact Center Queues** (and therefore **Agents** and the base **Contact Center** feature) and the **SignalR** module, so enabling it pulls in the routing, presence, and reservation core. For voice work, also enable **Contact Center Voice** and a voice provider (for example [DialPad](../telephony/dialpad.md)).
+Enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`) for **My workspace**. It explicitly composes Availability, Real-Time, Voice Soft Phone, and Omnichannel Management so the workspace cannot activate with missing services. Enable **Contact Center Real-Time** (`CrestApps.OrchardCore.ContactCenter.RealTime`) for the **Live dashboard**. Configure a voice provider such as [DialPad](../telephony/dialpad.md) for voice work.
 
-Once enabled, two entries appear under **Interaction Center** in the admin menu:
+The corresponding entries appear independently under **Interaction Center**:
 
 - **My workspace** - the Agent Workspace, available to anyone with the `ContactCenterSignIntoQueues` permission.
 - **Live dashboard** - the Supervisor Dashboard, available to anyone with the `MonitorContactCenter` permission (granted to the built-in **Supervisor** role).

@@ -5,17 +5,17 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the real-time supervisor dashboard to the Contact Center admin navigation.
+/// Adds the agent workspace to the Contact Center admin navigation.
 /// </summary>
-public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
+public sealed class ContactCenterAgentDesktopAdminMenu : AdminNavigationProvider
 {
     private readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterRealTimeAdminMenu"/> class.
+    /// Initializes a new instance of the <see cref="ContactCenterAgentDesktopAdminMenu"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ContactCenterRealTimeAdminMenu(IStringLocalizer<ContactCenterRealTimeAdminMenu> stringLocalizer)
+    public ContactCenterAgentDesktopAdminMenu(IStringLocalizer<ContactCenterAgentDesktopAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -27,11 +27,11 @@ public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
             .Add(S["Contact Center"], "80", contactCenter => contactCenter
                 .AddClass("contact-center")
                 .Id("contactCenter")
-                .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("2"), dashboard => dashboard
-                    .AddClass("contact-center-dashboard")
-                    .Id("contactCenterDashboard")
-                    .Action("Index", "SupervisorDashboard", "CrestApps.OrchardCore.ContactCenter")
-                    .Permission(ContactCenterPermissions.MonitorContactCenter)
+                .Add(S["My workspace"], "-2", workspace => workspace
+                    .AddClass("contact-center-workspace")
+                    .Id("contactCenterWorkspace")
+                    .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
+                    .Permission(ContactCenterPermissions.SignIntoQueues)
                     .LocalNav()
                 ),
                 priority: 2);

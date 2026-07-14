@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Serves the CRM-integrated agent desktop page where an agent spends the shift.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.RealTime)]
+[Feature(ContactCenterConstants.Feature.AgentDesktop)]
 public sealed class AgentWorkspaceController : Controller
 {
     private readonly IAuthorizationService _authorizationService;

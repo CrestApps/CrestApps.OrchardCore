@@ -120,6 +120,20 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.AgentDesktop,
+    Name = "Contact Center Agent Desktop",
+    Description = "Adds the CRM-integrated real-time workspace where agents manage presence, offers, active interactions, and recent work.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Availability,
+        ContactCenterConstants.Feature.RealTime,
+        ContactCenterConstants.Feature.VoiceSoftPhone,
+        "CrestApps.OrchardCore.Omnichannel.Managements",
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.RealTime,
     Name = "Contact Center Real-Time",
     Description = "Adds the SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts for the agent desktop and supervisor dashboards.",
