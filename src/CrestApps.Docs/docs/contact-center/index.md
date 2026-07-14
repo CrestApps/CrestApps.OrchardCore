@@ -177,7 +177,7 @@ Providers and PBX webhooks feed call-state changes in as normalized `ProviderVoi
 
 The **Contact Center Voice** feature adds the server-side Voice Contact Center Call Router for inbound and outbound voice work. It depends on the Queues feature and provider-agnostic [Telephony](../telephony/index.md), so provider routing and webhook processing can run without the Telephony soft-phone UI or the Contact Center real-time experience.
 
-Enable `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` when agents should receive Contact Center call-state projections in the Telephony soft phone. That integration feature explicitly enables Contact Center Real-Time and `CrestApps.OrchardCore.Telephony.SoftPhone`.
+Enable `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` when agents should receive Contact Center call-state projections in the Telephony soft phone. That integration feature explicitly enables Contact Center Real-Time and `CrestApps.OrchardCore.Telephony.SoftPhone`, and exclusively owns the Contact Center soft-phone display driver, resources, and agent endpoints.
 
 When a normalized inbound call arrives, the feature:
 

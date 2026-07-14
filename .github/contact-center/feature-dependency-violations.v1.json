@@ -33,19 +33,7 @@
       "reason": "Analytics intentionally contributes reports to the shared Reports framework."
     }
   ],
-  "knownViolations": [
-    {
-      "id": "FDV003",
-      "gateId": "F002",
-      "kind": "undeclared-required-service",
-      "feature": "CrestApps.OrchardCore.ContactCenter.Queues",
-      "requiredService": "HubRouteManager",
-      "requiredFromFeature": "CrestApps.OrchardCore.SignalR",
-      "viaType": "ContactCenterSoftPhoneWidgetDisplayDriver",
-      "description": "QueuesStartup unconditionally registers ContactCenterSoftPhoneWidgetDisplayDriver, whose constructor requires HubRouteManager. HubRouteManager is only registered when the SignalR feature is enabled, but Queues declares no dependency on SignalR or RealTime.",
-      "sourceLocation": "src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs"
-    }
-  ],
+  "knownViolations": [],
   "acceptedLeafDependencies": [
     "OrchardCore.Users",
     "OrchardCore.ContentTypes",

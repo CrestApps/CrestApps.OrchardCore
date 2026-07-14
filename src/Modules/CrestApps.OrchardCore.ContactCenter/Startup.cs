@@ -253,7 +253,6 @@ public sealed class QueuesStartup : StartupBase
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
             .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
             .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>()
-            .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
@@ -272,14 +271,7 @@ public sealed class QueuesStartup : StartupBase
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
-        services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
         services.AddNavigationProvider<ContactCenterAdminMenu>();
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
-        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
     }
 }
 
@@ -446,7 +438,17 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>();
+        services
+            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
+
+        services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
+        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
     }
 }
 

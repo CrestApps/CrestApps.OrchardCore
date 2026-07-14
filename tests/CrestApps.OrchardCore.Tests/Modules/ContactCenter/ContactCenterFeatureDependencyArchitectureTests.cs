@@ -143,6 +143,36 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void QueuesFeature_DoesNotOwnSoftPhoneIntegration()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var widgetOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>()",
+                StringComparison.Ordinal));
+        var resourceOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>()",
+                StringComparison.Ordinal));
+        var endpointOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix)",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone", widgetOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone", resourceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone", endpointOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange
