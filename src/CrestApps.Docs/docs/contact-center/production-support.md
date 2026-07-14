@@ -7,6 +7,8 @@ description: Finite production support matrix, initial capacity tier, and prohib
 
 The Contact Center commercial release remains blocked until remediation phases R0 through R8 and their release evidence pass. The versioned machine-readable contract is `.github/contact-center/support-matrix.v1.json`; unlisted combinations are unsupported.
 
+The measurable availability, latency, dependency, recovery, and ownership gates are defined in [Service objectives](service-objectives.md).
+
 ## Initial GA-Core profiles
 
 The first release targets two provider-specific tenant profiles. A tenant selects one profile and one voice provider; mixing both provider profiles in one tenant is unsupported.
