@@ -31,6 +31,11 @@
       "feature": "CrestApps.OrchardCore.ContactCenter.Analytics",
       "dependsOn": "CrestApps.OrchardCore.Reports",
       "reason": "Analytics intentionally contributes reports to the shared Reports framework."
+    },
+    {
+      "feature": "CrestApps.OrchardCore.ContactCenter.Workflows",
+      "dependsOn": "OrchardCore.Workflows",
+      "reason": "The independently selectable workflow bridge contributes a Contact Center domain-event activity to Orchard Core Workflows."
     }
   ],
   "knownViolations": [],
@@ -45,7 +50,8 @@
     "CrestApps.OrchardCore.Omnichannel",
     "CrestApps.OrchardCore.PhoneNumbers",
     "CrestApps.OrchardCore.TimeZones",
-    "CrestApps.OrchardCore.Reports"
+    "CrestApps.OrchardCore.Reports",
+    "OrchardCore.Workflows"
   ],
   "featureDependencyClosures": {
     "CrestApps.OrchardCore.ContactCenter": [
@@ -181,6 +187,11 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Users"
+    ],
+    "CrestApps.OrchardCore.ContactCenter.Workflows": [
+      "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.Omnichannel",
+      "OrchardCore.Workflows"
     ]
   }
 }

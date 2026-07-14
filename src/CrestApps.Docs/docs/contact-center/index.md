@@ -65,7 +65,7 @@ The Contact Center is delivered as a set of feature-gated modules so tenants ena
 - **Supervision** - live queue and agent monitoring with audited supervisor call-control intents.
 - **Analytics** - queue, agent, and campaign metrics and historical reporting.
 
-Inbound entry points, call recording orchestration, outbound compliance gates, the optional workflow bridge, live dashboards, and AI-assist extension points are now present. Multi-step IVR decision trees, provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain advanced roadmap items.
+Inbound entry points, call recording orchestration, outbound compliance gates, the independently selectable `CrestApps.OrchardCore.ContactCenter.Workflows` bridge, live dashboards, and AI-assist extension points are now present. Multi-step IVR decision trees, provider-side recording storage, quality scorecards, abandonment caps, and predictive dialing remain advanced roadmap items.
 
 ## Interaction Center admin menu concepts
 

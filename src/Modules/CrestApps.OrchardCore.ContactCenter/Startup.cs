@@ -623,10 +623,10 @@ public sealed class AnalyticsStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the optional OrchardCore Workflows bridge: a Contact Center workflow event activity and the
+/// Registers the Orchard Core Workflows bridge: a Contact Center workflow event activity and the
 /// handler that triggers it for every published domain event.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows")]
+[Feature(ContactCenterConstants.Feature.Workflows)]
 public sealed class ContactCenterWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

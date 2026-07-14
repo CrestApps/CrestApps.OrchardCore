@@ -76,7 +76,7 @@ Use CRM campaigns and activities as the source of outbound work; the dialer prof
 
 ## For contact center managers: workflow automation
 
-The Subject Flow is the primary business workflow for work completion. Use it for required dispositions and disposition-driven actions such as finish, retry, new activity, or communication-preference updates. Enable the optional **OrchardCore.Workflows** bridge only when you need automation from Contact Center domain events such as routing decisions, offer acceptance, call connected/ended, callback scheduled/promoted, or SLA/analytics events. Workflow automation should enrich or react to activity state; it should not bypass queues, reservations, or the source-neutral disposition service.
+The Subject Flow is the primary business workflow for work completion. Use it for required dispositions and disposition-driven actions such as finish, retry, new activity, or communication-preference updates. Enable `CrestApps.OrchardCore.ContactCenter.Workflows` only when you need Orchard workflow automation from Contact Center domain events such as routing decisions, offer acceptance, call connected/ended, callback scheduled/promoted, or SLA/analytics events. The feature explicitly enables `OrchardCore.Workflows`. Workflow automation should enrich or react to activity state; it should not bypass queues, reservations, or the source-neutral disposition service.
 
 ## For contact center agents: the Agent Workspace
 

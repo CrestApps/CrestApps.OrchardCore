@@ -119,3 +119,15 @@ using OrchardCore.Modules.Manifest;
         ReportsConstants.Feature,
     ]
 )]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Workflows,
+    Name = "Contact Center - Workflows",
+    Description = "Adds a Contact Center domain-event activity and bridge for Orchard Core Workflows.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Area,
+        "OrchardCore.Workflows",
+    ]
+)]
