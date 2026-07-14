@@ -11,10 +11,11 @@ This phase adds the operational core of the Contact Center: agent presence, work
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in. |
+| Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, reason codes, skills, and administrator-owned queue/campaign entitlements. |
+| Contact Center Availability | `CrestApps.OrchardCore.ContactCenter.Availability` | Agent presence, capacity state, durable sessions, heartbeat tracking, stale-session recovery, and logout synchronization without requiring SignalR. |
 | Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, reservations, policy-based routing, and availability-based assignment. |
 | Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, pacing, and dialer inventory loads routed through Contact Center Voice. |
-| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts. |
+| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | SignalR hub and real-time presence, offer, queue, agent-workspace, and supervisor-dashboard projections over the Availability state. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Enterprise report catalog under the shared Reports area, including executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.Dialer` | DialPad implementation of the Contact Center voice provider boundary. |
 

@@ -126,8 +126,6 @@ public sealed class AgentsStartup : StartupBase
         services
             .AddScoped<IAgentProfileStore, AgentProfileStore>()
             .AddScoped<IAgentProfileManager, AgentProfileManager>()
-            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
-            .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
@@ -142,6 +140,29 @@ public sealed class AgentsStartup : StartupBase
             .AddDataMigration<AgentStateReasonCodeIndexMigrations>();
 
         services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers durable agent presence, availability sessions, heartbeat recovery, and logout synchronization.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Availability)]
+public sealed class AvailabilityStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
+            .AddScoped<IAgentSessionStore, AgentSessionStore>()
+            .AddScoped<IAgentSessionManager, AgentSessionManager>()
+            .AddScoped<IAgentSessionService, AgentSessionService>();
+
+        services
+            .AddIndexProvider<AgentSessionIndexProvider>()
+            .AddDataMigration<AgentSessionIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -463,17 +484,9 @@ public sealed class RealTimeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IAgentSessionStore, AgentSessionStore>()
-            .AddScoped<IAgentSessionManager, AgentSessionManager>()
-            .AddScoped<IAgentSessionService, AgentSessionService>()
             .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
             .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>();
 
-        services
-            .AddIndexProvider<AgentSessionIndexProvider>()
-            .AddDataMigration<AgentSessionIndexMigrations>();
-
-        services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
         services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
         services.AddNavigationProvider<ContactCenterRealTimeAdminMenu>();
     }

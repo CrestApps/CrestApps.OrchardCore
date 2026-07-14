@@ -204,6 +204,49 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void AvailabilityFeature_OwnsPresenceAndDurableAgentSessions()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var availabilityDependencies = features["CrestApps.OrchardCore.ContactCenter.Availability"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var queueDependencies = features["CrestApps.OrchardCore.ContactCenter.Queues"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var realTimeDependencies = features["CrestApps.OrchardCore.ContactCenter.RealTime"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var presenceOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()",
+                StringComparison.Ordinal));
+        var sessionOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IAgentSessionService, AgentSessionService>()",
+                StringComparison.Ordinal));
+        var cleanupOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            ["CrestApps.OrchardCore.ContactCenter.Agents"],
+            availabilityDependencies);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Availability", queueDependencies);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Availability", realTimeDependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", presenceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", sessionOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", cleanupOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

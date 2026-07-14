@@ -41,6 +41,11 @@ public static class ContactCenterConstants
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
 
         /// <summary>
+        /// The identifier of the agent availability, presence, and durable session feature.
+        /// </summary>
+        public const string Availability = "CrestApps.OrchardCore.ContactCenter.Availability";
+
+        /// <summary>
         /// The identifier of the queue and reservation feature.
         /// </summary>
         public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
