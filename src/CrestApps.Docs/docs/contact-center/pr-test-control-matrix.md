@@ -47,6 +47,8 @@ The D004 R0a shared-database characterization runs two independent service provi
 
 The D002 R0a provider-command characterizations pin both sides of the current orphan risk. A provider can return a successful call id before reservation acceptance fails, after which the interaction is marked failed without retaining that call id for compensation. A provider timeout is treated as a definitive failure, the reservation is canceled, and the queue item is removed even though provider execution may have succeeded. R3 must invert these tests by persisting accepted state and stable command intent before execution, recording `OutcomeUnknown` after lost responses, reconciling before retry, and issuing idempotent compensation when required.
 
+The D003 R0a provider-event characterizations pin three independent ordering and identity gaps. Two concurrent publishers can both observe a missing idempotency key and persist and enqueue the same logical event. An equal-timestamp event can regress a connected call back to ringing because there is no provider sequence or high-water mark. A provider alias can replace the stored provider name instead of resolving to a stable canonical key. R3 must invert these tests with a durable unique provider inbox, monotonic sequence handling, canonical provider identity, and unique provider-call ownership.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

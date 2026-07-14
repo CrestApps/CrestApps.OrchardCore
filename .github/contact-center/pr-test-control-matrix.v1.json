@@ -353,7 +353,7 @@
           "concurrent-writers"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceEventServiceTests.cs characterizes today's check-then-insert dedupe path; the concurrent-duplicate/out-of-order proof against a unique database constraint is a planned:contact-center-database-matrix dependency across every supported database."
+      "evidenceLocation": "DefaultContactCenterEventPublisherTests.PublishAsync_WhenConcurrentDuplicatesBothReadMissing_PersistsBothToday proves concurrent duplicate idempotency checks can both persist and enqueue the same logical event. ProviderVoiceEventServiceTests.IngestAsync_WhenOutOfOrderEventHasEqualTimestamp_RegressesConnectedCallToday proves timestamp-only ordering can regress Connected to Ringing, while IngestAsync_WhenProviderNameChanged_FallsBackByCallIdAndCanonicalizesStoredProvider proves raw provider names are mutated rather than resolved through stable canonical identity. R3 must invert these characterizations with provider inbox uniqueness, provider sequence/high-water rules, and canonical provider keys across the supported database matrix."
     },
     {
       "id": "D004",

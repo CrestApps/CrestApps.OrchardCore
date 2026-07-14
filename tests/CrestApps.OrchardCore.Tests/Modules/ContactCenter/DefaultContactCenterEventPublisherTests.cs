@@ -115,6 +115,53 @@ public sealed class DefaultContactCenterEventPublisherTests
         outbox.Verify(o => o.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task PublishAsync_WhenConcurrentDuplicatesBothReadMissing_PersistsBothToday()
+    {
+        // Arrange
+        var existenceGate = new AsyncGate(2);
+        var store = CreateStore();
+        store
+            .Setup(service => service.ExistsByIdempotencyKeyAsync("duplicate-event", It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>(async (_, _) =>
+            {
+                await existenceGate.SignalAndWaitAsync();
+
+                return false;
+            });
+        var outbox = new Mock<IContactCenterOutbox>();
+        var publisher = CreatePublisher(store.Object, outbox.Object);
+        var firstEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallEnded,
+            InteractionId = "interaction-1",
+            IdempotencyKey = "duplicate-event",
+        };
+        var secondEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallEnded,
+            InteractionId = "interaction-1",
+            IdempotencyKey = "duplicate-event",
+        };
+
+        // Act
+        await Task.WhenAll(
+            publisher.PublishAsync(firstEvent, TestContext.Current.CancellationToken),
+            publisher.PublishAsync(secondEvent, TestContext.Current.CancellationToken));
+
+        // Assert
+        store.Verify(
+            service => service.CreateAsync(
+                It.Is<InteractionEvent>(interactionEvent => interactionEvent.IdempotencyKey == "duplicate-event"),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        outbox.Verify(
+            service => service.EnqueueAsync(
+                It.Is<InteractionEvent>(interactionEvent => interactionEvent.IdempotencyKey == "duplicate-event"),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
     private static Mock<IInteractionEventStore> CreateStore()
     {
         var store = new Mock<IInteractionEventStore>();
@@ -140,5 +187,21 @@ public sealed class DefaultContactCenterEventPublisherTests
             outbox,
             clock.Object,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
+    }
+
+    private sealed class AsyncGate(int participantCount)
+    {
+        private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _arrivals;
+
+        public Task SignalAndWaitAsync()
+        {
+            if (Interlocked.Increment(ref _arrivals) == participantCount)
+            {
+                _completion.TrySetResult();
+            }
+
+            return _completion.Task;
+        }
     }
 }

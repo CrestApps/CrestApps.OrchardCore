@@ -488,6 +488,73 @@ public sealed class ProviderVoiceEventServiceTests
     }
 
     [Fact]
+    public async Task IngestAsync_WhenOutOfOrderEventHasEqualTimestamp_RegressesConnectedCallToday()
+    {
+        // Arrange
+        var occurredUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = occurredUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            AnsweredUtc = occurredUtc,
+            LastProviderEventUtc = occurredUtc,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("ringing-older-sequence", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var service = new ProviderVoiceEventService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ringing,
+            IdempotencyKey = "ringing-older-sequence",
+            OccurredUtc = occurredUtc,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ContactCenterCallState.Ringing, session.State);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(
+                session,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task IngestAsync_WhenSessionIsAlreadyTerminal_DoesNotRepublishLaterTerminalEvent()
     {
         // Arrange
