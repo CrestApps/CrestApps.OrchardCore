@@ -624,6 +624,35 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void OmnichannelManagements_UsesOwnedOptionalDialerContributors()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var project = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj"));
+        var sourceDirectory = Path.Combine(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+
+        // Act
+        var referencesContactCenterImplementation = project.Contains(
+            "CrestApps.OrchardCore.ContactCenter.Core.csproj",
+            StringComparison.Ordinal);
+
+        // Assert
+        Assert.False(referencesContactCenterImplementation);
+        Assert.DoesNotContain("using CrestApps.OrchardCore.ContactCenter", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetService<IDialerProfileManager>", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetService<IActivityQueueService>", source, StringComparison.Ordinal);
+        Assert.Contains("IActivityDialerContributor", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

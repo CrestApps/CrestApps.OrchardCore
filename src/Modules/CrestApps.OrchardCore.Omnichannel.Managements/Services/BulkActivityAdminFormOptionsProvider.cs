@@ -1,9 +1,7 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -14,7 +12,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 public sealed class BulkActivityAdminFormOptionsProvider
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
 
     internal readonly IStringLocalizer S;
 
@@ -22,15 +20,15 @@ public sealed class BulkActivityAdminFormOptionsProvider
     /// Initializes a new instance of the <see cref="BulkActivityAdminFormOptionsProvider"/> class.
     /// </summary>
     /// <param name="campaignManager">The omnichannel campaign manager.</param>
-    /// <param name="serviceProvider">The service provider used for optional dialer services.</param>
+    /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkActivityAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
-        IServiceProvider serviceProvider,
+        IEnumerable<IActivityDialerContributor> dialerContributors,
         IStringLocalizer<BulkActivityAdminFormOptionsProvider> stringLocalizer)
     {
         _campaignManager = campaignManager;
-        _serviceProvider = serviceProvider;
+        _dialerContributors = dialerContributors;
         S = stringLocalizer;
     }
 
@@ -114,9 +112,9 @@ public sealed class BulkActivityAdminFormOptionsProvider
 
     internal async Task<IList<SelectListItem>> GetDialerProfileOptionsAsync(string selectedDialerProfileId, string emptyText)
     {
-        var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
+        var dialerContributor = _dialerContributors.FirstOrDefault();
 
-        if (dialerProfileManager is null)
+        if (dialerContributor is null)
         {
             return
             [
@@ -124,10 +122,10 @@ public sealed class BulkActivityAdminFormOptionsProvider
             ];
         }
 
-        var profiles = await dialerProfileManager.GetAllAsync();
+        var profiles = await dialerContributor.GetProfilesAsync();
         var options = profiles
-            .OrderBy(profile => profile.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(profile => new SelectListItem(profile.Name ?? profile.ItemId, profile.ItemId, string.Equals(selectedDialerProfileId, profile.ItemId, StringComparison.Ordinal)))
+            .OrderBy(profile => profile.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayName, profile.ProfileId, string.Equals(selectedDialerProfileId, profile.ProfileId, StringComparison.Ordinal)))
             .ToList();
 
         options.Insert(0, new SelectListItem(S[emptyText], string.Empty, string.IsNullOrEmpty(selectedDialerProfileId)));
@@ -148,14 +146,14 @@ public sealed class BulkActivityAdminFormOptionsProvider
             return false;
         }
 
-        var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
+        var dialerContributor = _dialerContributors.FirstOrDefault();
 
-        if (dialerProfileManager is null)
+        if (dialerContributor is null)
         {
             return false;
         }
 
-        return await dialerProfileManager.FindByIdAsync(dialerProfileId.Trim()) is not null;
+        return await dialerContributor.FindByIdAsync(dialerProfileId.Trim()) is not null;
     }
 
     private static string GetCampaignText(OmnichannelCampaign campaign)

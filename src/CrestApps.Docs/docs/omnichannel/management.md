@@ -94,6 +94,8 @@ A **Load Inventory** definition stores filters to find contacts and then **loads
 
 The loader runs as a background process to avoid overloading the system and to allow loading large inventory sets safely.
 
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+
 ## Getting started (recommended order)
 
 ### 1) Enable required features

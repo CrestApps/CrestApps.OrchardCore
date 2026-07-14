@@ -1,10 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
-using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -17,7 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -61,6 +56,7 @@ public sealed class ActivitiesController : Controller
     private readonly INotifier _notifier;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -84,6 +80,7 @@ public sealed class ActivitiesController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="displayNameProvider">The user display name provider.</param>
+    /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     public ActivitiesController(
@@ -103,6 +100,7 @@ public sealed class ActivitiesController : Controller
         INotifier notifier,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
+        IEnumerable<IActivityDialerContributor> dialerContributors,
         IStringLocalizer<ActivitiesController> stringLocalizer,
         IHtmlLocalizer<ActivitiesController> htmlLocalizer)
     {
@@ -122,6 +120,7 @@ public sealed class ActivitiesController : Controller
         _notifier = notifier;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
+        _dialerContributors = dialerContributors;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -1187,14 +1186,14 @@ public sealed class ActivitiesController : Controller
             return 0;
         }
 
-        var dialerProfileManager = HttpContext.RequestServices.GetService<IDialerProfileManager>();
+        var dialerContributor = _dialerContributors.FirstOrDefault();
 
-        if (dialerProfileManager is null)
+        if (dialerContributor is null)
         {
             return 0;
         }
 
-        var profile = await dialerProfileManager.FindByIdAsync(dialerProfileId);
+        var profile = await dialerContributor.FindByIdAsync(dialerProfileId);
 
         if (profile is null)
         {
@@ -1206,7 +1205,7 @@ public sealed class ActivitiesController : Controller
         foreach (var activity in activities)
         {
             activity.CampaignId = profile.CampaignId;
-            activity.Source = MapDialerModeToActivitySource(profile.Mode);
+            activity.Source = profile.ActivitySource;
             activity.InteractionType = ActivityInteractionType.Manual;
             activity.AISessionId = null;
 
@@ -1285,7 +1284,4 @@ public sealed class ActivitiesController : Controller
 
         return string.IsNullOrWhiteSpace(displayName) ? S["Unknown user"].Value : displayName;
     }
-
-    private static string MapDialerModeToActivitySource(DialerMode mode)
-        => DialerActivitySourceHelper.GetActivitySource(mode);
 }

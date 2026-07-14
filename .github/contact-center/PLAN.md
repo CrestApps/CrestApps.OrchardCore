@@ -1707,7 +1707,7 @@ Changes:
 - [x] Split the headless base from Omnichannel Managements admin integration.
 - Introduce explicit Availability, Routing, Voice.SoftPhone, AgentDesktop, Compliance, Dialer.Automated, Workflows, provider Contact Center adapter, and provider media features.
 - Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
-- Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
+- [x] Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
 - Make post-commit handler execution and Orchard shell child scopes explicit abstractions instead of scattered service location.
 - Expand the R1 single-host backplane fixture into the minimal two-node Orchard/Redis-backplane/provider-listener harness needed by distributed R0b scenarios.
 - Define per-feature quiesce/drain/re-enable contracts and test inactive/idle enable-disable behavior before moving registrations. Defer active-call, pending-command, and in-flight-outbox quiesce proof to R3 after durable command state exists.
@@ -1908,6 +1908,7 @@ This checklist is authoritative for current execution order. Historical phase an
   - [x] `CrestApps.OrchardCore.ContactCenter.Recording` now independently owns recording orchestration and recording-state events over Voice. Executable provider capability enforcement remains an R4 gate.
   - [x] `CrestApps.OrchardCore.ContactCenter.Voice.Media` now independently owns bidirectional media-provider resolution. Asterisk exposes separate Contact Center voice-adapter and media features, DialPad exposes an explicit Contact Center voice-adapter feature, and both provider base features retain only Telephony dependencies.
   - [x] Provider webhook inbox, ingress limiting, normalized voice-event ingestion, provider-state reconciliation, and inbound voice routing now expose implementation-free contracts from `CrestApps.OrchardCore.ContactCenter.Abstractions`. Asterisk and DialPad no longer compile against Contact Center Core or the Contact Center module.
+  - [x] Omnichannel Core now owns the optional `IActivityDialerContributor` contract and implementation-neutral profile descriptor. Contact Center Dialer contributes profile discovery and queueing, while Omnichannel Managements no longer references Contact Center implementation assemblies or locates dialer services dynamically.
 - [ ] **R3 — Atomic consistency and agent lifecycle:** database CAS/constraints, canonical availability, after-call recovery, provider command outbox/compensation, provider inbox, stable handler ids.
 - [ ] **R4 — Executable provider capabilities and high availability:** recording/monitoring contracts, provider stream ownership, monotonic events, command cancellation, media transport hardening.
 - [ ] **R5 — CRM attribution and regulated outbound:** ambiguous-contact workflow, terminal unroutable records, full calling calendars, abandonment/safe-harbor/AMD policy, automated-mode gates.

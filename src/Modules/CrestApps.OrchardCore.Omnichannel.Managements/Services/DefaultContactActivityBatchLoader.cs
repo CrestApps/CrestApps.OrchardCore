@@ -1,13 +1,9 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Dapper;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -40,7 +36,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IStore _store;
     private readonly IDbConnectionAccessor _dbConnectionAccessor;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
     private readonly ActivityBatchSourceOptions _sourceOptions;
     private readonly ILogger _logger;
 
@@ -55,7 +51,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="store">The store.</param>
     /// <param name="dbConnectionAccessor">The database connection accessor.</param>
-    /// <param name="serviceProvider">The service provider used to resolve optional dialer services.</param>
+    /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="sourceOptions">The configured activity batch sources.</param>
     /// <param name="logger">The logger.</param>
     public DefaultContactActivityBatchLoader(
@@ -67,7 +63,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IOmnichannelActivityManager activityManager,
         IStore store,
         IDbConnectionAccessor dbConnectionAccessor,
-        IServiceProvider serviceProvider,
+        IEnumerable<IActivityDialerContributor> dialerContributors,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         ILogger<DefaultContactActivityBatchLoader> logger)
     {
@@ -79,7 +75,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _activityManager = activityManager;
         _store = store;
         _dbConnectionAccessor = dbConnectionAccessor;
-        _serviceProvider = serviceProvider;
+        _dialerContributors = dialerContributors;
         _sourceOptions = sourceOptions.Value;
         _logger = logger;
     }
@@ -134,8 +130,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             return;
         }
 
-        DialerProfile dialerProfile = null;
-        IActivityQueueService activityQueueService = null;
+        ActivityDialerProfileDescriptor dialerProfile = null;
+        var dialerContributor = _dialerContributors.FirstOrDefault();
 
         if (string.Equals(sourceEntry.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
@@ -149,10 +145,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 return;
             }
 
-            var dialerProfileManager = _serviceProvider.GetService<IDialerProfileManager>();
-            activityQueueService = _serviceProvider.GetService<IActivityQueueService>();
-
-            if (dialerProfileManager is null || activityQueueService is null)
+            if (dialerContributor is null)
             {
                 batch.Status = OmnichannelActivityBatchStatus.New;
 
@@ -162,7 +155,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 return;
             }
 
-            dialerProfile = await dialerProfileManager.FindByIdAsync(batch.DialerProfileId.Trim(), cancellationToken);
+            dialerProfile = await dialerContributor.FindByIdAsync(batch.DialerProfileId.Trim(), cancellationToken);
 
             if (dialerProfile is null)
             {
@@ -426,7 +419,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
-                    activitySource = DialerActivitySourceHelper.GetActivitySource(dialerProfile.Mode);
+                    activitySource = dialerProfile.ActivitySource;
                     campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
                     automatedSettings.AIProfileId = null;
@@ -485,10 +478,9 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
-                    await activityQueueService.EnqueueAsync(
+                    await dialerContributor.EnqueueAsync(
                         activity.ItemId,
-                        dialerProfile.QueueId,
-                        priority: null,
+                        dialerProfile,
                         cancellationToken);
                 }
             }

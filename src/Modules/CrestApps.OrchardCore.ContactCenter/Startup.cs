@@ -331,6 +331,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
             .AddScoped<ICallbackService, CallbackService>()
             .AddScoped<IDialerService, DialerService>()
+            .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
             .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>();
 
         services
