@@ -145,7 +145,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentSessionServiceTests.cs and AgentWorkStateHealingServiceTests.cs cover session/state healing today; the crash-during-wrap-up sweep and deterministic capacity-release proof are a planned:contact-center-domain-invariants dependency."
+      "evidenceLocation": "AgentWorkStateHealingServiceTests.Interaction_AfterCallStateHasNoServerSweptDeadlineToday pins the current missing persisted WrapUpDeadlineUtc contract. AgentSessionServiceTests.DisconnectAsync_WhenLastConnection_DoesNotSignOutAvailableProfileToday proves disconnect does not trigger profile/work-state recovery. R3 must replace these characterizations with a server-swept deadline and deterministic capacity-release proof across all supported databases/topologies."
     },
     {
       "id": "C004",
@@ -301,7 +301,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentPresenceManagerServiceTests.cs and ActivityRoutingServiceTests.cs characterize today's presence-only eligibility; the disconnect-then-no-reservation proof is a planned:contact-center-database-matrix dependency."
+      "evidenceLocation": "AgentSessionServiceTests.DisconnectAsync_WhenLastConnection_DoesNotSignOutAvailableProfileToday proves the last disconnect only marks the session offline, while ActivityAssignmentServiceTests.AssignNextAsync_WhenAvailableProfileHasNoLiveSession_StillReservesToday proves assignment does not consult live-session state. R3 must invert this into a disconnect-then-no-reservation invariant using canonical AgentAvailability across the supported database/topology matrix."
     },
     {
       "id": "D002",

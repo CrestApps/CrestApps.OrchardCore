@@ -87,6 +87,39 @@ public sealed class AgentSessionServiceTests
     }
 
     [Fact]
+    public async Task DisconnectAsync_WhenLastConnection_DoesNotSignOutAvailableProfileToday()
+    {
+        // Arrange
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var profile = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+        };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        var service = CreateService(sessionManager, agentManager, presenceManager);
+
+        // Act
+        var session = await service.DisconnectAsync("u1", "c1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(session.IsOnline);
+        agentManager.Verify(
+            m => m.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        presenceManager.Verify(
+            m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DisconnectAsync_WhenOtherConnectionsRemain_StaysOnline()
     {
         // Arrange

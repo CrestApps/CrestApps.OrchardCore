@@ -1871,7 +1871,7 @@ This checklist is authoritative for current execution order. Historical phase an
   - [~] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
     - [x] Two-shell in-process tenant isolation and permission-gated Contact Center group-join tests.
     - [x] Static legal feature dependency-closure and undeclared-service characterization test; live tenant activation remains tracked by T001.
-    - [ ] Disconnected-agent and after-call capacity recovery tests.
+    - [x] Disconnected-agent and after-call capacity recovery characterization tests: last-session disconnect leaves an `Available` profile routable, assignment has no live-session dependency, and after-call state has no persisted server-swept deadline. R3 must invert these tests with canonical availability and deterministic deadline recovery.
     - [ ] Shared-database double-reservation tests using two service providers.
     - [ ] Provider-call orphan and `OutcomeUnknown` tests.
     - [ ] Duplicate/out-of-order/canonical-provider event tests.

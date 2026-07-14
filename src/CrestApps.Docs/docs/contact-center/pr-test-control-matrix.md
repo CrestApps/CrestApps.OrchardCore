@@ -41,6 +41,8 @@ The F001, F002, and T001 in-process R0a proof, `ContactCenterFeatureDependencyAr
 
 The C001/C002 R0a characterization names the current capability-truth failure directly: recording reports success without an executable provider recording operation, and monitoring reports success from a capability flag without invoking a mode-specific provider contract. These tests intentionally preserve the observed unsafe behavior until R4 makes the corresponding NotSupported/provider-execution tests pass.
 
+The D001/C003 R0a characterizations pin the current capacity failures before R3 changes the lifecycle model. The last agent-session disconnect does not change an `Available` profile, assignment can reserve work without consulting any live session, and `Interaction` has wrap-up start/completion timestamps but no persisted `WrapUpDeadlineUtc` for a server-side sweep. R3 must invert these tests so canonical availability excludes disconnected agents and after-call recovery deterministically releases capacity without a connected browser.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

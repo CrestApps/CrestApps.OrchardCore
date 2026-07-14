@@ -53,6 +53,54 @@ public sealed class ActivityAssignmentServiceTests
     }
 
     [Fact]
+    public async Task AssignNextAsync_WhenAvailableProfileHasNoLiveSession_StillReservesToday()
+    {
+        // Arrange
+        var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([topItem]);
+
+        var disconnectedAgent = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+        };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([disconnectedAgent]);
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue
+            {
+                ItemId = "q1",
+                Enabled = true,
+                ReservationTimeoutSeconds = 30,
+            });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(s => s.ReserveAsync(topItem, disconnectedAgent, 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1" });
+
+        var service = CreateService(queueItemManager, agentManager, queueManager, reservationService);
+
+        // Act
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(reservation);
+        reservationService.Verify(
+            s => s.ReserveAsync(topItem, disconnectedAgent, 30, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task AssignNextAsync_ReservesTopItemForLongestIdleAgent()
     {
         // Arrange

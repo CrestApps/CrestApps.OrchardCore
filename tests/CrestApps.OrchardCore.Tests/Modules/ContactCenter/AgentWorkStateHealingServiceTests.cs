@@ -14,6 +14,23 @@ public sealed class AgentWorkStateHealingServiceTests
     private static readonly DateTime _now = new(2026, 7, 9, 17, 30, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void Interaction_AfterCallStateHasNoServerSweptDeadlineToday()
+    {
+        // Arrange
+        var interactionType = typeof(Interaction);
+
+        // Act
+        var wrapUpStartedProperty = interactionType.GetProperty(nameof(Interaction.WrapUpStartedUtc));
+        var wrapUpCompletedProperty = interactionType.GetProperty(nameof(Interaction.WrapUpCompletedUtc));
+        var wrapUpDeadlineProperty = interactionType.GetProperty("WrapUpDeadlineUtc");
+
+        // Assert
+        Assert.NotNull(wrapUpStartedProperty);
+        Assert.NotNull(wrapUpCompletedProperty);
+        Assert.Null(wrapUpDeadlineProperty);
+    }
+
+    [Fact]
     public async Task HealForAvailabilityAsync_WhenPendingReservationIsStale_CancelsIt()
     {
         // Arrange
