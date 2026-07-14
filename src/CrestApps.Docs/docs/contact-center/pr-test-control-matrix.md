@@ -45,6 +45,8 @@ The D001/C003 R0a characterizations pin the current capacity failures before R3 
 
 The D004 R0a shared-database characterization runs two independent service providers and YesSql sessions against one SQLite database. It synchronizes both reads while the queue item is still waiting, deliberately permits overlapping lock holders to expose the missing database invariant, commits the two sessions, and proves that two distinct pending reservations persist for the same queue item and activity. R3 must invert this test with database-enforced compare-and-set and unique-active constraints; distributed locking remains only a contention optimization.
 
+The D002 R0a provider-command characterizations pin both sides of the current orphan risk. A provider can return a successful call id before reservation acceptance fails, after which the interaction is marked failed without retaining that call id for compensation. A provider timeout is treated as a definitive failure, the reservation is canceled, and the queue item is removed even though provider execution may have succeeded. R3 must invert these tests by persisting accepted state and stable command intent before execution, recording `OutcomeUnknown` after lost responses, reconciling before retry, and issuing idempotent compensation when required.
+
 ## Contract tests
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:

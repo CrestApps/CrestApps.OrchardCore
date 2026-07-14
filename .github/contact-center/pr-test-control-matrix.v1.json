@@ -327,7 +327,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerAttemptServiceTests.cs and ActivityReservationServiceTests.cs characterize today's dial-before-accept ordering; the compensating-hangup-on-failure proof is a planned:contact-center-database-matrix dependency."
+      "evidenceLocation": "DialerAttemptServiceTests.TryDialAsync_WhenProviderSucceedsButReservationAcceptanceFails_DropsProviderCallIdentityToday proves a successful provider call can outlive failed reservation acceptance while its provider call id is discarded, and TryDialAsync_WhenProviderTimesOutAfterUnknownExecution_MarksDefinitiveFailureToday proves an unknown provider outcome is treated as a definitive failure and the work is removed. R3 must invert these characterizations with accept-and-command persistence before execution, durable OutcomeUnknown reconciliation, and idempotent compensation."
     },
     {
       "id": "D003",

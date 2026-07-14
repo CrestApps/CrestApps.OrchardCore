@@ -101,6 +101,78 @@ public sealed class DialerAttemptServiceTests
     }
 
     [Fact]
+    public async Task TryDialAsync_WhenProviderSucceedsButReservationAcceptanceFails_DropsProviderCallIdentityToday()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null);
+        var interaction = new Interaction { ItemId = "int1" };
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
+        var voiceCallRouter = CreateVoiceCallRouter(Success("provider-call-1"));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(interaction),
+            CreateActivityManager(activity),
+            voiceCallRouter);
+
+        // Act
+        var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(started);
+        Assert.Equal(InteractionStatus.Failed, interaction.Status);
+        Assert.Null(interaction.ProviderInteractionId);
+        Assert.Equal("reservation_unavailable", interaction.TechnicalMetadata["providerErrorCode"]);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        voiceCallRouter.Verify(
+            router => router.RouteOutboundAsync(
+                It.IsAny<ContactCenterDialRequest>(),
+                "test",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        reservationService.Verify(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenProviderTimesOutAfterUnknownExecution_MarksDefinitiveFailureToday()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        var queueService = new Mock<IActivityQueueService>();
+        var interaction = new Interaction { ItemId = "int1" };
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
+        var voiceCallRouter = CreateVoiceCallRouter(new TimeoutException("The provider response was lost."));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(interaction),
+            CreateActivityManager(activity),
+            voiceCallRouter,
+            queueService: queueService);
+
+        // Act
+        var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(started);
+        Assert.Equal(InteractionStatus.Failed, interaction.Status);
+        Assert.Equal("provider_exception", interaction.TechnicalMetadata["providerErrorCode"]);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        reservationService.Verify(service => service.CancelAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+        queueService.Verify(
+            service => service.DequeueAsync(
+                It.IsAny<QueueItem>(),
+                QueueItemStatus.Removed,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task TryDialAsync_WhenSuppressedDoNotCall_MarksCancelledReleasesReservationAndAudits()
     {
         // Arrange
@@ -232,6 +304,19 @@ public sealed class DialerAttemptServiceTests
         voiceCallRouter
             .Setup(router => router.RouteOutboundAsync(It.IsAny<ContactCenterDialRequest>(), "test", It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
+
+        return voiceCallRouter;
+    }
+
+    private static Mock<IVoiceContactCenterCallRouter> CreateVoiceCallRouter(Exception exception)
+    {
+        var voiceCallRouter = new Mock<IVoiceContactCenterCallRouter>();
+        voiceCallRouter
+            .Setup(router => router.GetOutboundProviderName("test"))
+            .Returns("test");
+        voiceCallRouter
+            .Setup(router => router.RouteOutboundAsync(It.IsAny<ContactCenterDialRequest>(), "test", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
 
         return voiceCallRouter;
     }
