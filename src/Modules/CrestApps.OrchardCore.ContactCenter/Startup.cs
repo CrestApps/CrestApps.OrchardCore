@@ -257,14 +257,6 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
             .AddScoped<IActivityReservationService, ActivityReservationService>()
-            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
-            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
-            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
@@ -291,8 +283,29 @@ public sealed class QueuesStartup : StartupBase
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
-        services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
         services.AddNavigationProvider<ContactCenterAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers policy-based routing strategies and activity assignment orchestration.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Routing)]
+public sealed class RoutingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
+            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
+            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
+
+        services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
     }
 }
 

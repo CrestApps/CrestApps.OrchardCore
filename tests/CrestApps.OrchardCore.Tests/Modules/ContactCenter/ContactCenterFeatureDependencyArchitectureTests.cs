@@ -126,7 +126,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // Assert
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.ContactCenter.Queues",
+                "CrestApps.OrchardCore.ContactCenter.Routing",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);
@@ -244,6 +244,46 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", presenceOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", sessionOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", cleanupOwner.FeatureId);
+    }
+
+    [Fact]
+    public void RoutingFeature_OwnsStrategiesAndAssignment()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var routingDependencies = features["CrestApps.OrchardCore.ContactCenter.Routing"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var voiceDependencies = features["CrestApps.OrchardCore.ContactCenter.Voice"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var routingServiceOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IActivityRoutingService, ActivityRoutingService>()",
+                StringComparison.Ordinal));
+        var assignmentOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IActivityAssignmentService, ActivityAssignmentService>()",
+                StringComparison.Ordinal));
+        var assignmentTaskOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            ["CrestApps.OrchardCore.ContactCenter.Queues"],
+            routingDependencies);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Routing", voiceDependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", routingServiceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", assignmentOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", assignmentTaskOwner.FeatureId);
     }
 
     [Fact]

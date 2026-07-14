@@ -51,6 +51,11 @@ public static class ContactCenterConstants
         public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
 
         /// <summary>
+        /// The identifier of the routing strategy and assignment orchestration feature.
+        /// </summary>
+        public const string Routing = "CrestApps.OrchardCore.ContactCenter.Routing";
+
+        /// <summary>
         /// The identifier of the outbound dialer feature.
         /// </summary>
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";

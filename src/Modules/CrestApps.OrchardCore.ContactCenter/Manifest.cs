@@ -79,6 +79,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.Routing,
     ]
 )]
 
@@ -89,8 +90,19 @@ using OrchardCore.Modules.Manifest;
     Category = "Contact Center",
     Dependencies =
     [
-        ContactCenterConstants.Feature.Queues,
+        ContactCenterConstants.Feature.Routing,
         TelephonyConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Routing,
+    Name = "Contact Center Routing",
+    Description = "Adds policy-based routing strategies and activity assignment orchestration over Contact Center queues.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Queues,
     ]
 )]
 
