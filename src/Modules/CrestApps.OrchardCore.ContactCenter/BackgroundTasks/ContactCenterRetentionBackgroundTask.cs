@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred while purging expired Contact Center interaction events.");
+            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while purging expired Contact Center interaction events.");
         }
     }
 }

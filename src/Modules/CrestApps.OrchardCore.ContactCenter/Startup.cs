@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
@@ -160,7 +161,9 @@ public sealed class AgentsStartup : StartupBase
             {
                 if (logger.IsEnabled(LogLevel.Information))
                 {
-                    logger.LogInformation("Observed Orchard logout request for user '{UserId}'.", userId);
+                    logger.LogInformation(
+                        "Observed Orchard logout request for user '{UserId}'.",
+                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
                 }
             }
 
@@ -178,7 +181,7 @@ public sealed class AgentsStartup : StartupBase
             {
                 logger.LogInformation(
                     "Completed Contact Center logout synchronization for Orchard user '{UserId}' with response status {StatusCode}.",
-                    userId,
+                    OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
                     context.Response.StatusCode);
             }
         });

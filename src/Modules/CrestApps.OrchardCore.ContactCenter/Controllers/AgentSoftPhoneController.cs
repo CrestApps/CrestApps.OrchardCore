@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -96,14 +97,18 @@ public sealed class AgentSoftPhoneController : Controller
         var userId = GetUserId();
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Received Contact Center soft-phone sign-out request for user '{UserId}'.", userId);
+            _logger.LogInformation(
+                "Received Contact Center soft-phone sign-out request for user '{UserId}'.",
+                OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
         }
 
         await _presenceManager.SignOutAsync(userId);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Completed Contact Center soft-phone sign-out request for user '{UserId}'.", userId);
+            _logger.LogInformation(
+                "Completed Contact Center soft-phone sign-out request for user '{UserId}'.",
+                OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
         }
 
         return RedirectToReturnLocation(returnUrl);

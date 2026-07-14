@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -33,7 +34,7 @@ public sealed class TelephonyInteractionTenantEvents : ModularTenantEvents
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while reconciling telephony interaction state during tenant activation.");
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while reconciling telephony interaction state during tenant activation.");
         }
     }
 }

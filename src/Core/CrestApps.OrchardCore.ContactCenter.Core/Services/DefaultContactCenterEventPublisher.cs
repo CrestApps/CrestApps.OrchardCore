@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -71,7 +72,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
                 _logger.LogDebug(
                     "Skipping duplicate Contact Center event '{EventType}' with idempotency key '{IdempotencyKey}'.",
                     interactionEvent.EventType,
-                    interactionEvent.IdempotencyKey);
+                    OperationalLogRedactor.Pseudonymize(interactionEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event));
             }
 
             return;
@@ -105,7 +106,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         {
             logger.LogWarning(
                 "Skipped deferred Contact Center event dispatch because event '{EventId}' no longer exists.",
-                eventId);
+                OperationalLogRedactor.Pseudonymize(eventId, OperationalLogIdentifierCategory.Event));
 
             return;
         }

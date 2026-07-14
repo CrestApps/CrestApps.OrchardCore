@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -88,7 +89,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Received a provider voice event for call '{ProviderCallId}' that does not match any interaction.",
-                    providerEvent.ProviderCallId);
+                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
             }
 
             return null;
@@ -103,7 +104,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             _logger.LogWarning(
                 "Ignored provider voice event for call '{ProviderCallId}' from provider '{ProviderName}' because the call id matched an interaction owned by active provider '{StoredProviderName}'.",
-                providerEvent.ProviderCallId,
+                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
                 providerEvent.ProviderName,
                 interaction.ProviderName);
 
@@ -115,7 +116,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             _logger.LogWarning(
                 "Provider voice event for call '{ProviderCallId}' used provider '{ProviderName}', but the matching interaction was stored as '{StoredProviderName}'. Canonicalizing the interaction to the event provider.",
-                providerEvent.ProviderCallId,
+                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
                 providerEvent.ProviderName,
                 interaction.ProviderName);
 
@@ -129,7 +130,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Skipping duplicate provider voice event with idempotency key '{IdempotencyKey}'.",
-                    providerEvent.IdempotencyKey);
+                    OperationalLogRedactor.Pseudonymize(providerEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event));
             }
 
             return (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
@@ -150,8 +151,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Ignored stale provider voice event '{IdempotencyKey}' for call '{ProviderCallId}'. Current state: {CurrentState}; incoming state: {IncomingState}; last provider event: {LastProviderEventUtc}; incoming event: {OccurredUtc}.",
-                    providerEvent.IdempotencyKey,
-                    providerEvent.ProviderCallId,
+                    OperationalLogRedactor.Pseudonymize(providerEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event),
+                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
                     session.State,
                     providerEvent.State,
                     session.LastProviderEventUtc,
@@ -551,10 +552,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             _logger.LogError(
                 "The Contact Center voice provider '{Provider}' could not bridge answered outbound call '{ProviderCallId}' to agent '{AgentId}': {ErrorCode} {ErrorMessage}.",
                 provider.TechnicalName,
-                session.ProviderCallId,
-                session.AgentId,
-                connectResult.ErrorCode,
-                connectResult.ErrorMessage);
+                OperationalLogRedactor.Pseudonymize(session.ProviderCallId, OperationalLogIdentifierCategory.Call),
+                OperationalLogRedactor.Pseudonymize(session.AgentId, OperationalLogIdentifierCategory.Agent),
+                OperationalLogRedactor.Redact(connectResult.ErrorCode, OperationalLogFieldKind.FreeText),
+                OperationalLogRedactor.Redact(connectResult.ErrorMessage, OperationalLogFieldKind.FreeText));
         }
     }
 

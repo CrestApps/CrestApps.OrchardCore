@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -89,7 +90,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to unprotect the tenant-configured Asterisk password.");
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Failed to unprotect the tenant-configured Asterisk password.");
 
             return null;
         }

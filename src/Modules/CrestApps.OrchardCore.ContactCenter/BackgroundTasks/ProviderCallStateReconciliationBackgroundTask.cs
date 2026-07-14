@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -29,7 +30,7 @@ public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundT
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred while reconciling Contact Center provider call state.");
+            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while reconciling Contact Center provider call state.");
         }
     }
 }

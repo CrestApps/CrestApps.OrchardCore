@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -323,10 +324,10 @@ public sealed class ActivityReservationService : IActivityReservationService
         {
             _logger.LogWarning(
                 "Skipped releasing expired reservation '{ReservationId}' for activity '{ActivityItemId}' because queue item '{QueueItemId}' is now owned by newer reservation '{CurrentReservationId}'.",
-                reservation.ItemId,
-                reservation.ActivityItemId,
-                queueItem.ItemId,
-                queueItem.ReservationId);
+                OperationalLogRedactor.Pseudonymize(reservation.ItemId, OperationalLogIdentifierCategory.Reservation),
+                OperationalLogRedactor.Pseudonymize(reservation.ActivityItemId, OperationalLogIdentifierCategory.Activity),
+                OperationalLogRedactor.Pseudonymize(queueItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                OperationalLogRedactor.Pseudonymize(queueItem.ReservationId, OperationalLogIdentifierCategory.Reservation));
 
             var obsoleteAgent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
 
@@ -440,7 +441,7 @@ public sealed class ActivityReservationService : IActivityReservationService
             _logger.LogWarning(
                 "The unanswered-offer action '{UnansweredOfferAction}' could not run for activity '{ActivityItemId}' because no provider interaction is available.",
                 unansweredAction,
-                interaction?.ActivityItemId);
+                OperationalLogRedactor.Pseudonymize(interaction?.ActivityItemId, OperationalLogIdentifierCategory.Activity));
 
             return false;
         }
@@ -450,7 +451,7 @@ public sealed class ActivityReservationService : IActivityReservationService
             _logger.LogWarning(
                 "The unanswered-offer action '{UnansweredOfferAction}' could not run for provider call '{ProviderCallId}' because no telephony service is registered.",
                 unansweredAction,
-                interaction.ProviderInteractionId);
+                OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call));
 
             return false;
         }
@@ -475,8 +476,8 @@ public sealed class ActivityReservationService : IActivityReservationService
                 _logger.LogInformation(
                     "Applied the unanswered-offer action '{UnansweredOfferAction}' to provider call '{ProviderCallId}' for queue '{QueueId}'.",
                     unansweredAction,
-                    interaction.ProviderInteractionId,
-                    queue?.ItemId);
+                    OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
+                    OperationalLogRedactor.Pseudonymize(queue?.ItemId, OperationalLogIdentifierCategory.Queue));
             }
 
             return true;
@@ -485,9 +486,9 @@ public sealed class ActivityReservationService : IActivityReservationService
         _logger.LogWarning(
             "The unanswered-offer action '{UnansweredOfferAction}' failed for provider call '{ProviderCallId}' on queue '{QueueId}': {ErrorMessage}",
             unansweredAction,
-            interaction.ProviderInteractionId,
-            queue?.ItemId,
-            result?.Error ?? "No result was returned.");
+            OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
+            OperationalLogRedactor.Pseudonymize(queue?.ItemId, OperationalLogIdentifierCategory.Queue),
+            OperationalLogRedactor.Redact(result?.Error ?? "No result was returned.", OperationalLogFieldKind.FreeText));
 
         return false;
     }

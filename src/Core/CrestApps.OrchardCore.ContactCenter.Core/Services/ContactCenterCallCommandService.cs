@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -172,10 +173,10 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 _logger.LogError(
                     "The Contact Center voice provider '{Provider}' could not connect call '{ProviderCallId}' to agent '{AgentId}': {ErrorCode} {ErrorMessage}.",
                     provider.TechnicalName,
-                    interaction.ProviderInteractionId,
-                    reservation.AgentId,
-                    connectResult.ErrorCode,
-                    connectResult.ErrorMessage);
+                    OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
+                    OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent),
+                    OperationalLogRedactor.Redact(connectResult.ErrorCode, OperationalLogFieldKind.FreeText),
+                    OperationalLogRedactor.Redact(connectResult.ErrorMessage, OperationalLogFieldKind.FreeText));
 
                 await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
 
@@ -198,9 +199,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                     _logger.LogError(
                         "The telephony provider '{Provider}' could not answer inbound Contact Center call '{ProviderCallId}' for agent '{AgentId}': {ErrorMessage}.",
                         interaction.ProviderName,
-                        interaction.ProviderInteractionId,
-                        reservation.AgentId,
-                        answerResult.Error);
+                        OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
+                        OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent),
+                        OperationalLogRedactor.Redact(answerResult.Error, OperationalLogFieldKind.FreeText));
 
                     await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
 

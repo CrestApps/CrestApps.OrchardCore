@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -136,8 +137,8 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         {
             _logger.LogWarning(
                 "Provider truth ended pre-connect interaction '{InteractionId}'. Clearing stale queue and offer state for activity '{ActivityItemId}'.",
-                interaction.ItemId,
-                interaction.ActivityItemId);
+                OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                OperationalLogRedactor.Pseudonymize(interaction.ActivityItemId, OperationalLogIdentifierCategory.Activity));
         }
 
         if (queueItem is not null &&

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -167,8 +168,8 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
 
         _logger.LogWarning(
             "Canceling stale pending reservation '{ReservationId}' for agent '{AgentId}'. ForceCancel={ForceCancel}, Expired={Expired}, QueueItemInvalid={QueueItemInvalid}, ActivityInvalid={ActivityInvalid}, InteractionInvalid={InteractionInvalid}.",
-            pendingReservation.ItemId,
-            agent.ItemId,
+            OperationalLogRedactor.Pseudonymize(pendingReservation.ItemId, OperationalLogIdentifierCategory.Reservation),
+            OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
             forceCancel,
             reservationExpired,
             queueItemInvalid,
@@ -217,8 +218,8 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
                 {
                     _logger.LogDebug(
                         "Leaving provider-backed ringing interaction '{InteractionId}' for agent '{AgentId}' under provider control; reconciliation releases it once the provider confirms it ended.",
-                        interaction.ItemId,
-                        agent.ItemId);
+                        OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                        OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
                 }
 
                 return 0;
@@ -226,8 +227,8 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
 
             _logger.LogWarning(
                 "Clearing stale ringing interaction '{InteractionId}' for agent '{AgentId}' because no active reservation remains.",
-                interaction.ItemId,
-                agent.ItemId);
+                OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
 
             await RequeueInteractionAsync(interaction, cancellationToken);
 
@@ -245,16 +246,16 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         {
             _logger.LogWarning(
                 "Preserving provider-backed active interaction '{InteractionId}' for agent '{AgentId}' while the agent is being reset or marked available.",
-                interaction.ItemId,
-                agent.ItemId);
+                OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
 
             return 0;
         }
 
         _logger.LogWarning(
             "Releasing stale assigned interaction '{InteractionId}' for agent '{AgentId}' because the agent is being reset or marked available while the interaction is still active.",
-            interaction.ItemId,
-            agent.ItemId);
+            OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+            OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
 
         await RequeueInteractionAsync(interaction, cancellationToken);
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -28,7 +29,7 @@ public sealed class CallbackDispatchBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred while promoting due callbacks.");
+            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while promoting due callbacks.");
         }
     }
 }

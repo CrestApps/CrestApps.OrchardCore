@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -86,7 +87,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Skipped assigning the next Contact Center item for queue '{QueueId}' because its assignment lock was not acquired.",
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
 
             return null;
@@ -113,7 +114,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Skipped assigning Contact Center queue '{QueueId}' because its assignment lock was not acquired.",
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
 
             return 0;
@@ -142,7 +143,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Skipped Contact Center assignment for queue '{QueueId}' because the queue is {QueueState}.",
-                    queueId,
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
                     queue is null ? "missing" : "disabled");
             }
 
@@ -157,7 +158,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Skipped Contact Center assignment for queue '{QueueId}' because its business hours are closed.",
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
 
             return null;
@@ -172,7 +173,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogDebug(
                     "No waiting Contact Center item is available for queue '{QueueId}'.",
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
 
             return null;
@@ -184,8 +185,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         {
             _logger.LogInformation(
                 "Evaluating Contact Center queue item '{QueueItemId}' for queue '{QueueId}' against {AvailableAgentCount} available agents.",
-                topItem.ItemId,
-                queueId,
+                OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
                 agents.Count);
         }
 
@@ -198,13 +199,13 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
                 var candidateSummary = string.Join(
                     "; ",
                     decision.Candidates.Select(candidate =>
-                        $"{candidate.Agent.ItemId}: eligible={candidate.IsEligible}, reasons={string.Join(", ", candidate.Reasons)}"));
+                        $"{OperationalLogRedactor.Pseudonymize(candidate.Agent.ItemId, OperationalLogIdentifierCategory.Agent)}: eligible={candidate.IsEligible}, reasonCount={candidate.Reasons.Count}"));
 
                 _logger.LogWarning(
                     "Contact Center routing did not assign queue item '{QueueItemId}' from queue '{QueueId}'. Reason: {Reason}. Candidates: {CandidateSummary}",
-                    topItem.ItemId,
-                    queueId,
-                    decision.Reason,
+                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
+                    OperationalLogRedactor.Redact(decision.Reason, OperationalLogFieldKind.FreeText),
                     candidateSummary);
             }
 
@@ -228,9 +229,9 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Contact Center reservation creation lost a race for queue item '{QueueItemId}' and agent '{AgentId}' in queue '{QueueId}'.",
-                    topItem.ItemId,
-                    decision.Agent.ItemId,
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                    OperationalLogRedactor.Pseudonymize(decision.Agent.ItemId, OperationalLogIdentifierCategory.Agent),
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
         }
         else
@@ -239,10 +240,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Reserved Contact Center queue item '{QueueItemId}' as reservation '{ReservationId}' for agent '{AgentId}' in queue '{QueueId}'.",
-                    topItem.ItemId,
-                    reservation.ItemId,
-                    decision.Agent.ItemId,
-                    queueId);
+                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                    OperationalLogRedactor.Pseudonymize(reservation.ItemId, OperationalLogIdentifierCategory.Reservation),
+                    OperationalLogRedactor.Pseudonymize(decision.Agent.ItemId, OperationalLogIdentifierCategory.Agent),
+                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
             }
         }
 

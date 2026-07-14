@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -219,8 +220,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
             _logger.LogWarning(
                 "Unable to reconcile telephony interaction {InteractionId}: {ErrorMessage}",
-                interaction.InteractionId,
-                error);
+                OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction),
+                OperationalLogRedactor.Redact(error, OperationalLogFieldKind.FreeText));
 
             return (new TelephonyCallLookupResult
             {
@@ -236,10 +237,10 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         {
             _logger.LogWarning(
                 "Unable to reconcile telephony interaction {InteractionId} with provider {ProviderName} call {CallId}: {ErrorMessage}",
-                interaction.InteractionId,
+                OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction),
                 interaction.ProviderName,
-                interaction.CallId,
-                lookup.Error);
+                OperationalLogRedactor.Pseudonymize(interaction.CallId, OperationalLogIdentifierCategory.Call),
+                OperationalLogRedactor.Redact(lookup.Error, OperationalLogFieldKind.FreeText));
 
             return (lookup, false);
         }
@@ -253,9 +254,9 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
                 {
                     _logger.LogDebug(
                         "Deferred removal of new telephony interaction {InteractionId} for provider {ProviderName} call {CallId} while the provider propagates the originated call.",
-                        interaction.InteractionId,
+                        OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction),
                         interaction.ProviderName,
-                        interaction.CallId);
+                        OperationalLogRedactor.Pseudonymize(interaction.CallId, OperationalLogIdentifierCategory.Call));
                 }
 
                 return (lookup, false);
@@ -276,8 +277,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
             _logger.LogWarning(
                 "Unable to reconcile telephony interaction {InteractionId}: {ErrorMessage}",
-                interaction.InteractionId,
-                error);
+                OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction),
+                OperationalLogRedactor.Redact(error, OperationalLogFieldKind.FreeText));
 
             return (new TelephonyCallLookupResult
             {
@@ -331,9 +332,9 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
         _logger.LogWarning(
             "Removed orphaned in-progress telephony interaction {InteractionId} for provider {ProviderName} call {CallId} because {Reason}.",
-            interaction.InteractionId,
+            OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction),
             interaction.ProviderName,
-            interaction.CallId,
+            OperationalLogRedactor.Pseudonymize(interaction.CallId, OperationalLogIdentifierCategory.Call),
             reason);
     }
 

@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.WebUtilities;
@@ -82,7 +83,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 _logger.LogInformation(
                     "Sending an Asterisk dial request for provider {ProviderName}. Endpoint: {Endpoint}. Mode: {DialMode}.",
                     ProviderName,
-                    endpoint,
+                    OperationalLogRedactor.Redact(endpoint, OperationalLogFieldKind.Address),
                     dialMode);
             }
 
@@ -96,7 +97,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     "Asterisk rejected a dial request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
                     response.StatusCode,
-                    responseBody);
+                    OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
                 return TelephonyResult.Failed(S["The call could not be placed."].Value);
             }
@@ -122,7 +123,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while placing an Asterisk call for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while placing an Asterisk call for provider {ProviderName}.", ProviderName);
 
             return TelephonyResult.Failed(S["The call could not be placed."].Value);
         }
@@ -176,9 +177,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 _logger.LogError(
                     "Asterisk rejected a call-state lookup for provider {ProviderName}. CallId: {CallId}. Status code: {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
-                    callId,
+                    OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call),
                     response.StatusCode,
-                    responseBody);
+                    OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
                 return new TelephonyCallLookupResult
                 {
@@ -196,9 +197,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             {
                 _logger.LogWarning(
                     "Asterisk returned an unrecognized channel state '{State}' for provider {ProviderName} call {CallId}; reconciliation was skipped.",
-                    stateText,
+                    OperationalLogRedactor.Redact(stateText, OperationalLogFieldKind.FreeText),
                     ProviderName,
-                    callId);
+                    OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call));
 
                 return new TelephonyCallLookupResult
                 {
@@ -247,9 +248,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 _logger.LogError(
                     "Asterisk could not verify a call-state lookup for provider {ProviderName}. CallId: {CallId}. Status code: {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
-                    callId,
+                    OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call),
                     verificationResponse.StatusCode,
-                    responseBody);
+                    OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
                 return new TelephonyCallLookupResult
                 {
@@ -302,7 +303,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while querying the Asterisk call state for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while querying the Asterisk call state for provider {ProviderName}.", ProviderName);
 
             return new TelephonyCallLookupResult
             {
@@ -478,7 +479,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     "Asterisk rejected a bridge creation request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
                     createBridgeResponse.StatusCode,
-                    await ReadResponseBodyAsync(createBridgeResponse, cancellationToken));
+                    OperationalLogRedactor.Redact(await ReadResponseBodyAsync(createBridgeResponse, cancellationToken), OperationalLogFieldKind.FreeText));
 
                 return TelephonyResult.Failed(S["The calls could not be merged."].Value);
             }
@@ -511,7 +512,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     "Asterisk rejected a bridge add-channel request for provider {ProviderName} with status code {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
                     addChannelResponse.StatusCode,
-                    await ReadResponseBodyAsync(addChannelResponse, cancellationToken));
+                    OperationalLogRedactor.Redact(await ReadResponseBodyAsync(addChannelResponse, cancellationToken), OperationalLogFieldKind.FreeText));
 
                 await DeleteBridgeAsync(settings, bridgeId, cancellationToken);
 
@@ -543,7 +544,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 _logger.LogWarning(
                     "Asterisk merged calls for provider {ProviderName}, but conference state tracking could not be stored on every channel. BridgeId: {BridgeId}.",
                     ProviderName,
-                    bridgeId);
+                    OperationalLogRedactor.Pseudonymize(bridgeId, OperationalLogIdentifierCategory.Call));
             }
 
             return TelephonyResult.Success(BuildCall(
@@ -558,7 +559,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while merging Asterisk calls for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while merging Asterisk calls for provider {ProviderName}.", ProviderName);
 
             return TelephonyResult.Failed(S["The calls could not be merged."].Value);
         }
@@ -655,7 +656,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while routing an Asterisk call to voicemail for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while routing an Asterisk call to voicemail for provider {ProviderName}.", ProviderName);
 
             return TelephonyResult.Failed(S["The call could not be sent to voicemail."].Value);
         }
@@ -749,7 +750,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while loading the Asterisk directory for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while loading the Asterisk directory for provider {ProviderName}.", ProviderName);
 
             return new TelephonyDirectoryResult
             {
@@ -826,7 +827,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                         _logger.LogInformation(
                             "Asterisk call action for provider {ProviderName} reached the requested terminal state because channel {CallId} no longer exists.",
                             ProviderName,
-                            callId);
+                            OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call));
                     }
 
                     return TelephonyResult.Success(onSuccess?.Invoke());
@@ -837,9 +838,9 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 _logger.LogError(
                     "Asterisk rejected a call action request for provider {ProviderName}. Path: {Path}. Status code: {StatusCode}. Response: {ResponseBody}",
                     ProviderName,
-                    path,
+                    pathTemplate,
                     response.StatusCode,
-                    responseBody);
+                    OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
                 return TelephonyResult.Failed(ResolveActionErrorMessage(errorMessage, responseBody));
             }
@@ -850,7 +851,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while executing an Asterisk call action for provider {ProviderName}.", ProviderName);
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while executing an Asterisk call action for provider {ProviderName}.", ProviderName);
 
             return TelephonyResult.Failed(errorMessage);
         }
@@ -921,7 +922,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                 "Asterisk could not query channel variable {VariableName} for provider {ProviderName} call {CallId}. Status code: {StatusCode}.",
                 variableName,
                 ProviderName,
-                callId,
+                OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call),
                 response.StatusCode);
 
             return null;
@@ -1053,10 +1054,10 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
             _logger.LogWarning(
                 "Asterisk rejected a channel-variable request for provider {ProviderName}. CallId: {CallId}. Variable: {Variable}. Status code: {StatusCode}. Response: {ResponseBody}",
                 ProviderName,
-                callId,
+                OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call),
                 variableName,
                 response.StatusCode,
-                responseBody);
+                OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
             return false;
         }
@@ -1086,7 +1087,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         {
             _logger.LogWarning(
                 "Asterisk could not inspect conference bridge {BridgeId} for provider {ProviderName}. Status code: {StatusCode}.",
-                bridgeId,
+                OperationalLogRedactor.Pseudonymize(bridgeId, OperationalLogIdentifierCategory.Call),
                 ProviderName,
                 response.StatusCode);
 
@@ -1123,7 +1124,7 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         {
             _logger.LogWarning(
                 "Asterisk could not delete conference bridge {BridgeId} for provider {ProviderName}. Status code: {StatusCode}.",
-                bridgeId,
+                OperationalLogRedactor.Pseudonymize(bridgeId, OperationalLogIdentifierCategory.Call),
                 ProviderName,
                 response.StatusCode);
         }

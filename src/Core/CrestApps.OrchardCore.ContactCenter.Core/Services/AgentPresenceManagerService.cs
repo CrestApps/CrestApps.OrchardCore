@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -124,8 +125,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         {
             _logger.LogInformation(
                 "Completed Contact Center sign-in for agent '{AgentId}' and user '{UserId}' with presence '{PresenceStatus}'.",
-                profile.ItemId,
-                userId,
+                OperationalLogRedactor.Pseudonymize(profile.ItemId, OperationalLogIdentifierCategory.Agent),
+                OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
                 profile.PresenceStatus);
         }
 
@@ -191,7 +192,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         {
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("Skipped Contact Center sign-out for user '{UserId}' because no agent profile exists.", userId);
+                _logger.LogInformation("Skipped Contact Center sign-out for user '{UserId}' because no agent profile exists.", OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
             }
 
             return null;
@@ -201,8 +202,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         {
             _logger.LogInformation(
                 "Signing Contact Center agent '{AgentId}' for user '{UserId}' out of {QueueCount} queues and {CampaignCount} campaigns.",
-                profile.ItemId,
-                userId,
+                OperationalLogRedactor.Pseudonymize(profile.ItemId, OperationalLogIdentifierCategory.Agent),
+                OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
                 profile.QueueIds.Count,
                 profile.CampaignIds.Count);
         }
@@ -246,7 +247,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Completed Contact Center sign-out for agent '{AgentId}'.", profile.ItemId);
+            _logger.LogInformation("Completed Contact Center sign-out for agent '{AgentId}'.", OperationalLogRedactor.Pseudonymize(profile.ItemId, OperationalLogIdentifierCategory.Agent));
         }
 
         return profile;
@@ -499,7 +500,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             {
                 _logger.LogInformation(
                     "Pruned unauthorized Contact Center live queue or campaign membership for agent '{AgentId}' after manager entitlement changes.",
-                    profile.ItemId);
+                    OperationalLogRedactor.Pseudonymize(profile.ItemId, OperationalLogIdentifierCategory.Agent));
             }
         }
 
@@ -538,7 +539,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             {
                 _logger.LogDebug(
                     "Skipped Contact Center live-session membership synchronization for user '{UserId}' because no session manager is registered.",
-                    userId);
+                    OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
             }
 
             return;
@@ -552,7 +553,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             {
                 _logger.LogInformation(
                     "No live Contact Center agent session exists for user '{UserId}'; profile memberships were saved but no connected session was updated.",
-                    userId);
+                    OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
             }
 
             return;
@@ -568,8 +569,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         {
             _logger.LogInformation(
                 "Synchronized Contact Center session '{SessionId}' for user '{UserId}' with {QueueCount} queues and {CampaignCount} campaigns.",
-                session.ItemId,
-                userId,
+                OperationalLogRedactor.Pseudonymize(session.ItemId, OperationalLogIdentifierCategory.Session),
+                OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
                 session.QueueIds.Count,
                 session.CampaignIds.Count);
         }

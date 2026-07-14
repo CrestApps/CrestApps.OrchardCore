@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
@@ -70,7 +71,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             {
                 _logger.LogDebug(
                     "Skipped queued voice offering because agent was missing, unavailable, or had no queue membership. AgentId={AgentId}, Presence={PresenceStatus}, QueueCount={QueueCount}.",
-                    agent?.ItemId,
+                    OperationalLogRedactor.Pseudonymize(agent?.ItemId, OperationalLogIdentifierCategory.Agent),
                     agent?.PresenceStatus,
                     agent?.QueueIds.Count ?? 0);
             }
@@ -90,8 +91,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             {
                 _logger.LogDebug(
                     "Skipped queued voice offering for agent '{AgentId}' because reservation '{ReservationId}' is active.",
-                    agent.ItemId,
-                    agent.ActiveReservationId);
+                    OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
+                    OperationalLogRedactor.Pseudonymize(agent.ActiveReservationId, OperationalLogIdentifierCategory.Reservation));
             }
 
             return 0;
@@ -115,9 +116,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
                 {
                     _logger.LogInformation(
                         "Offered the next queued voice activity from queue '{QueueId}' to agent '{AgentId}' for user '{UserId}'.",
-                        queueId,
-                        agent.ItemId,
-                        agentUserId);
+                        OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
+                        OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
+                        OperationalLogRedactor.Pseudonymize(agentUserId, OperationalLogIdentifierCategory.User));
                 }
             }
 

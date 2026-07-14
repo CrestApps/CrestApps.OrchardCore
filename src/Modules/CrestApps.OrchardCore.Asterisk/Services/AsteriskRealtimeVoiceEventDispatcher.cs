@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -57,10 +58,10 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
                 {
                     _logger.LogDebug(
                         "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} flowed into Contact Center session {SessionId}.",
-                        voiceEvent.EventType,
+                        OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
                         voiceEvent.ProviderName,
-                        voiceEvent.CallId,
-                        session.ItemId);
+                        OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
+                        OperationalLogRedactor.Pseudonymize(session.ItemId, OperationalLogIdentifierCategory.Session));
                 }
 
                 return;
@@ -75,9 +76,9 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             {
                 _logger.LogDebug(
                     "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} did not match any telephony interaction.",
-                    voiceEvent.EventType,
+                    OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
                     voiceEvent.ProviderName,
-                    voiceEvent.CallId);
+                    OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
             }
 
             return;
@@ -89,10 +90,10 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             {
                 _logger.LogDebug(
                     "Ignored Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} because telephony interaction {InteractionId} is already terminal.",
-                    voiceEvent.EventType,
+                    OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
                     voiceEvent.ProviderName,
-                    voiceEvent.CallId,
-                    interaction.InteractionId);
+                    OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
+                    OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction));
             }
 
             return;
@@ -108,10 +109,10 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         {
             _logger.LogInformation(
                 "Projected Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} to soft-phone user {UserId} as state {State}.",
-                voiceEvent.EventType,
+                OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
                 voiceEvent.ProviderName,
-                voiceEvent.CallId,
-                interaction.UserId,
+                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
+                OperationalLogRedactor.Pseudonymize(interaction.UserId, OperationalLogIdentifierCategory.User),
                 voiceEvent.State);
         }
     }

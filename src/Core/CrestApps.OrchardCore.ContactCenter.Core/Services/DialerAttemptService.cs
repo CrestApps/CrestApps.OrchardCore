@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -119,9 +120,9 @@ public sealed class DialerAttemptService : IDialerAttemptService
         catch (Exception ex)
         {
             _logger.LogError(
-                ex,
+                OperationalLogRedactor.RedactException(ex),
                 "The Voice Contact Center Call Router failed while dialing activity '{ActivityItemId}' for profile '{Profile}'.",
-                activity.ItemId,
+                OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
                 profile.Name);
 
             result = new ContactCenterVoiceProviderResult
@@ -223,7 +224,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             _logger.LogInformation(
                 "Suppressed outbound attempt for activity '{ActivityItemId}' on profile '{Profile}': {Reason}.",
-                activity.ItemId,
+                OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
                 profile.Name,
                 eligibility.Reason);
         }

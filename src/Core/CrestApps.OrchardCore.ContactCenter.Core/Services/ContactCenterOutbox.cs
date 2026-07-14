@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -82,8 +83,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         _logger.LogWarning(
             "Scheduled Contact Center event '{EventType}' ({EventId}) for retry after a handler failure: {Error}",
             interactionEvent.EventType,
-            interactionEvent.ItemId,
-            firstError);
+            OperationalLogRedactor.Pseudonymize(interactionEvent.ItemId, OperationalLogIdentifierCategory.Event),
+            OperationalLogRedactor.Redact(firstError, OperationalLogFieldKind.FreeText));
     }
 
     /// <inheritdoc/>
@@ -189,10 +190,10 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                 firstError ??= ex.Message;
 
                 _logger.LogError(
-                    ex,
+                    OperationalLogRedactor.RedactException(ex),
                     "An error occurred while handling the Contact Center event '{EventType}' for interaction '{InteractionId}' in handler '{Handler}'.",
                     interactionEvent.EventType,
-                    interactionEvent.InteractionId,
+                    OperationalLogRedactor.Pseudonymize(interactionEvent.InteractionId, OperationalLogIdentifierCategory.Interaction),
                     handler.GetType().FullName);
             }
         }
@@ -216,9 +217,9 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             _logger.LogError(
                 "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
                 message.EventType,
-                message.EventId,
+                OperationalLogRedactor.Pseudonymize(message.EventId, OperationalLogIdentifierCategory.Event),
                 message.AttemptCount,
-                error);
+                OperationalLogRedactor.Redact(error, OperationalLogFieldKind.FreeText));
         }
         else
         {
@@ -236,7 +237,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
 
-        _logger.LogError("Dead-lettered Contact Center outbox message '{MessageId}': {Reason}", message.ItemId, reason);
+        _logger.LogError("Dead-lettered Contact Center outbox message '{MessageId}': {Reason}", OperationalLogRedactor.Pseudonymize(message.ItemId, OperationalLogIdentifierCategory.Event), reason);
     }
 
     private static TimeSpan GetBackoff(int attempt)
