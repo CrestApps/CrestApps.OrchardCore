@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
@@ -18,17 +20,20 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 {
     private readonly ISession _session;
     private readonly IAgentProfileManager _agentManager;
+    private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly AgentWorkforceReportDefinition _definition;
     private readonly IStringLocalizer _stringLocalizer;
 
     public AgentWorkforceReportProvider(
         ISession session,
         IAgentProfileManager agentManager,
+        ICatalogManager<OmnichannelCampaign> campaignManager,
         AgentWorkforceReportDefinition definition,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _agentManager = agentManager;
+        _campaignManager = campaignManager;
         _definition = definition;
         _stringLocalizer = stringLocalizer;
     }
@@ -69,6 +74,12 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         var agents = (await _agentManager.GetAllAsync(cancellationToken))
             .ToDictionary(agent => agent.ItemId, StringComparer.Ordinal);
         var intervals = BuildIntervals(events, context.FromUtc, context.ToUtc);
+        var campaignNames = (await _campaignManager.GetAllAsync(cancellationToken))
+            .Where(campaign => !string.IsNullOrEmpty(campaign.ItemId))
+            .ToDictionary(
+                campaign => campaign.ItemId,
+                campaign => campaign.DisplayText ?? campaign.ItemId,
+                StringComparer.Ordinal);
 
         return _definition.Kind switch
         {
@@ -82,7 +93,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             AgentWorkforceReportKind.ReasonBreakdown => BuildReasonBreakdown(intervals),
             AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(events, agents, context.FromUtc, context.ToUtc),
             AgentWorkforceReportKind.QueueMembershipHours => BuildMembershipHours(intervals, queueMembership: true),
-            AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false),
+            AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false, campaignNames),
             AgentWorkforceReportKind.PayrollTimecard => BuildPayrollTimecard(intervals, agents),
             _ => new ReportDocument(),
         };
@@ -577,7 +588,8 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 
     private ReportDocument BuildMembershipHours(
         IReadOnlyList<AgentPresenceInterval> intervals,
-        bool queueMembership)
+        bool queueMembership,
+        IReadOnlyDictionary<string, string> campaignNames = null)
     {
         var memberships = intervals
             .Where(interval => interval.Status != AgentPresenceStatus.Offline)
@@ -601,7 +613,9 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                     Duration = duration,
                     Row = new ReportRow(
                     [
-                        group.Key,
+                        queueMembership
+                            ? group.Key
+                            : campaignNames?.GetValueOrDefault(group.Key) ?? group.Key,
                         ReportFormat.Duration(duration),
                         ReportFormat.Number(group.LongCount()),
                     ]),

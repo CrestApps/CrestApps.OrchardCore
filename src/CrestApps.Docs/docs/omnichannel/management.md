@@ -26,7 +26,7 @@ A **Contact** is any content item that has `OmnichannelContactPart` attached.
 This lets you model customers/leads however you want (name, phone, email, account fields, custom fields, etc.).
 
 ### Subject ("the nature of the interaction")
-A **Subject** is any content type with the `OmnichannelSubject` stereotype.
+A **Subject** is any content type that has `OmnichannelSubjectPart` attached.
 
 Subjects are used to describe the nature of the interaction and to define the data you want agents (human or AI) to capture during the interaction. You can add any fields, parts, or custom data to the subject.
 
@@ -41,7 +41,7 @@ A **Campaign** is now used primarily for **reporting, grouping, and business out
 Campaigns no longer define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings now live on the subject flow so different subjects inside the same campaign can behave differently.
 
 ### Subject Flow
-A **Subject Flow** defines how a specific `OmnichannelSubject` content type behaves.
+A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves.
 
 Each subject flow stores:
 
@@ -155,20 +155,22 @@ When the import file is not already using E.164 phone numbers, select the defaul
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
-2. Create a new content type.
-3. Set stereotype to `OmnichannelSubject`.
-4. Add any fields/parts you want the agent to capture during the interaction.
+2. Create a new content type or edit an existing one.
+3. Attach `OmnichannelSubjectPart` to mark the content type as an Omnichannel subject.
+4. Add any fields or parts you want the agent to capture during the interaction.
+
+The former `OmnichannelSubject` stereotype is no longer recognized. Existing subject content types must remove that stereotype and attach `OmnichannelSubjectPart`.
 
 ### 4) Create Dispositions
 
-1. Go to `Interaction Center` → `Dispositions`.
+1. Go to `Interaction Center` → `Management` → `Dispositions`.
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
 
 ### 5) Create Campaign Groups and Campaigns
 
-1. Optionally go to `Interaction Center` → `Campaign Groups` and create a name and description for a reporting group.
-2. Go to `Interaction Center` → `Campaigns`.
+1. Optionally go to `Interaction Center` → `Management` → `Campaign Groups` and create a name and description for a reporting group.
+2. Go to `Interaction Center` → `Management` → `Campaigns`.
 3. Create the campaign name and description and optionally select its campaign group.
 4. Save the campaign.
 
@@ -176,9 +178,9 @@ Campaign groups let reporting users combine multiple related campaigns without c
 
 ### 6) Configure Subject Flows
 
-After creating your subject content types and campaigns, go to `Interaction Center` → `Subject Flows`.
+After creating your subject content types and campaigns, go to `Interaction Center` → `Management` → `Subject Flows`.
 
-1. Review the list of content types with the `OmnichannelSubject` stereotype.
+1. Review the list of content types that attach `OmnichannelSubjectPart`.
 2. Click **Configure** next to a subject.
 3. Select the campaign used for reporting and grouping.
 4. Select the interaction type and channel.
@@ -210,7 +212,7 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 
 ### 8) Create and Load Inventory
 
-1. Go to `Interaction Center` → `Load Inventory`.
+1. Go to `Interaction Center` → `Management` → `Load Inventory`.
 2. Click **Add Inventory Load** and choose a source:
    - **Manual** loads activities assigned to the selected users immediately.
    - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
@@ -287,7 +289,7 @@ The **Manage Activities** page provides a centralized interface for managing act
 
 ### Accessing the page
 
-Navigate to **Interaction Center → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
+Navigate to **Interaction Center → Management → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
 
 Route: `Admin/omnichannel/manage-activities`
 

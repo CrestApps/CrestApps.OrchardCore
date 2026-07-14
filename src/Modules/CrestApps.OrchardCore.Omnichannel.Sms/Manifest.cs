@@ -14,7 +14,7 @@ using OrchardCore.Modules.Manifest;
     Name = "SMS Omnichannel Automation",
     Id = "CrestApps.OrchardCore.Omnichannel.Sms",
     Description = "Handles automated omnichannel activities through the configured Orchard Core SMS provider.",
-    Category = "Artificial Intelligence",
+    Category = "Contact Center",
     Dependencies =
     [
         AIConstants.Feature.Area,

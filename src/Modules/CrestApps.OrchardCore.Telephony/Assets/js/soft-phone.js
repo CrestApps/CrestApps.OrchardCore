@@ -1862,7 +1862,7 @@
                 return;
             }
 
-            connection.invoke('GetInteractions', 50).then(function (items) {
+            connection.invoke('GetInteractions', config.recentCallsCount || 30).then(function (items) {
                 renderHistory(items || []);
             }).catch(function () {
                 renderHistory([]);
@@ -2239,6 +2239,7 @@
         create: createSoftPhone,
         initializeAll: initializeAll,
         getInstance: getInstance,
+        formatPhoneNumber: formatPhoneNumber,
         // Authentication handlers keyed by scheme. Providers using a different per-user authentication
         // scenario can register their own handler so the widget remains extensible.
         authHandlers: {

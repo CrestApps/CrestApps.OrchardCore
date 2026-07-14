@@ -11,6 +11,11 @@ public sealed class SoftPhoneWidget
     public string AccentColor { get; set; } = "#2f6fed";
 
     /// <summary>
+    /// Gets or sets the maximum number of recent calls displayed in the history tab.
+    /// </summary>
+    public int RecentCallsCount { get; set; } = 30;
+
+    /// <summary>
     /// Gets or sets the telephony operations supported by the active provider.
     /// </summary>
     public TelephonyCapabilities Capabilities { get; set; }

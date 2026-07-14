@@ -752,6 +752,7 @@ public sealed class AnalyticsStartup : StartupBase
         services.AddScoped<IReport>(serviceProvider => new AgentWorkforceReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),
             serviceProvider.GetRequiredService<IAgentProfileManager>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
             definition,
             serviceProvider.GetRequiredService<IStringLocalizer<AgentWorkforceReportProvider>>()));
     }

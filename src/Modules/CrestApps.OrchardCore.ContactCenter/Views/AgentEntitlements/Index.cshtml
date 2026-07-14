@@ -19,7 +19,16 @@
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>@(agent.UserName ?? agent.Name)</strong>
+                    <strong>
+                        @if (!string.IsNullOrEmpty(agent.UserName))
+                        {
+                            <shape type="UserDisplayName" prop-user-name="@agent.UserName" />
+                        }
+                        else
+                        {
+                            @agent.DisplayName
+                        }
+                    </strong>
                     <div class="text-muted small">
                         @T["{0} queue(s), {1} campaign(s)", agent.AllowedQueueIds?.Count ?? 0, agent.AllowedCampaignIds?.Count ?? 0]
                     </div>

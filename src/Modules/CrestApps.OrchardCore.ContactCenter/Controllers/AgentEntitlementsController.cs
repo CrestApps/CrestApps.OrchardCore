@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +27,7 @@ public sealed class AgentEntitlementsController : Controller
     private readonly IAgentPresenceManager _presenceManager;
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -40,6 +42,7 @@ public sealed class AgentEntitlementsController : Controller
     /// <param name="presenceManager">The agent presence manager.</param>
     /// <param name="optionsProvider">The Contact Center form options provider.</param>
     /// <param name="userManager">The Orchard user manager.</param>
+    /// <param name="displayNameProvider">The Orchard user display name provider.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The admin notifier.</param>
     /// <param name="clock">The clock used to stamp new agent profiles.</param>
@@ -50,6 +53,7 @@ public sealed class AgentEntitlementsController : Controller
         IAgentPresenceManager presenceManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
         UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
@@ -60,6 +64,7 @@ public sealed class AgentEntitlementsController : Controller
         _presenceManager = presenceManager;
         _optionsProvider = optionsProvider;
         _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
@@ -186,7 +191,7 @@ public sealed class AgentEntitlementsController : Controller
             return NotFound();
         }
 
-        var model = CreateViewModel(agent);
+        var model = await CreateViewModelAsync(agent);
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
 
         return View(model);
@@ -216,6 +221,7 @@ public sealed class AgentEntitlementsController : Controller
 
         model.Id = agent.ItemId;
         model.UserName = agent.UserName;
+        model.UserDisplayName = await ResolveDisplayNameAsync(agent);
         model.AllowedQueueIds = await _optionsProvider.FilterExistingQueueIdsAsync(model.AllowedQueueIds);
         model.AllowedCampaignIds = await _optionsProvider.FilterExistingCampaignIdsAsync(model.AllowedCampaignIds);
 
@@ -235,14 +241,35 @@ public sealed class AgentEntitlementsController : Controller
         return View(model);
     }
 
-    private static AgentEntitlementViewModel CreateViewModel(AgentProfile agent)
+    private async Task<AgentEntitlementViewModel> CreateViewModelAsync(AgentProfile agent)
     {
         return new AgentEntitlementViewModel
         {
             Id = agent.ItemId,
             UserName = agent.UserName,
+            UserDisplayName = await ResolveDisplayNameAsync(agent),
             AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(agent.AllowedQueueIds),
             AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(agent.AllowedCampaignIds),
         };
+    }
+
+    private async Task<string> ResolveDisplayNameAsync(AgentProfile agent)
+    {
+        if (!string.IsNullOrEmpty(agent.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
+        }
+
+        return agent.UserName ?? agent.DisplayName ?? agent.Name;
     }
 }

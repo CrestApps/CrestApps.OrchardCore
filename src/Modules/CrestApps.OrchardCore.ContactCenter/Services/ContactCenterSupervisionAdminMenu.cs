@@ -24,9 +24,9 @@ public sealed class ContactCenterSupervisionAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Contact Center"], "80", contactCenter => contactCenter
-                .AddClass("contact-center")
-                .Id("contactCenter")
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
                 .Add(S["Live dashboard"], S["Live dashboard"].PrefixPosition("2"), dashboard => dashboard
                     .AddClass("contact-center-dashboard")
                     .Id("contactCenterDashboard")

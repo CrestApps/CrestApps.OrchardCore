@@ -16,6 +16,10 @@ public sealed class ContactCenterSoftPhoneResourceTests
             moduleRoot,
             "Services",
             "ContactCenterSoftPhoneResourceConfiguration.cs"));
+        var displayDriver = File.ReadAllText(Path.Combine(
+            moduleRoot,
+            "Drivers",
+            "ContactCenterSoftPhoneWidgetDisplayDriver.cs"));
         var view = File.ReadAllText(Path.Combine(
             moduleRoot,
             "Views",
@@ -39,8 +43,16 @@ public sealed class ContactCenterSoftPhoneResourceTests
             ".SetDependencies(\"telephony-soft-phone\", \"bootstrap-select\")",
             resourceConfiguration,
             StringComparison.Ordinal);
-        Assert.Contains("<style asp-name=\"crestapps-bootstrap-select\">", view, StringComparison.Ordinal);
-        Assert.DoesNotContain("<style asp-name=\"bootstrap-select\">", view, StringComparison.Ordinal);
+        Assert.Contains(
+            "RegisterResource(\"stylesheet\", \"crestapps-bootstrap-select\").AtHead()",
+            displayDriver,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "RegisterResource(\"script\", \"contact-center-soft-phone\").AtFoot()",
+            displayDriver,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("<style asp-name=\"crestapps-bootstrap-select\">", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script asp-name=\"contact-center-soft-phone\"", view, StringComparison.Ordinal);
         Assert.Equal(2, bulkActionCount);
         Assert.Contains("data-count-selected-text=\"{0} queues selected\"", view, StringComparison.Ordinal);
         Assert.Contains("data-count-selected-text=\"{0} campaigns selected\"", view, StringComparison.Ordinal);

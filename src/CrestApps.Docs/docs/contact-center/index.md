@@ -137,7 +137,7 @@ The [Agent Workspace](agent-desktop.md) is the full-screen desktop where agents 
 
 Managers configure queue membership, campaign assignment, dialer mode, priority, capacity, and compliance rules. Inbound queues, callback queues, preview dial queues, power/progressive/predictive campaigns, and future channels all offer Activities through the same real-time agent-offer model.
 
-The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the Omnichannel Management **Interaction Center** campaign catalog. Routing skills come from **Interaction Center → Skills**, but they are assigned by administrators/supervisors rather than self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and extensible summary/editor shapes so providers and future desktop panels can extend the model without replacing the base UI.
+The current soft-phone **Work** tab lets agents choose queues and campaigns. Campaigns come from the Omnichannel Management **Interaction Center → Management** campaign catalog. Routing skills come from **Interaction Center → Management → Skills**, but they are assigned by administrators/supervisors rather than self-selected by agents. Skill, queue, and dialer profile admin screens use display drivers and extensible summary/editor shapes so providers and future desktop panels can extend the model without replacing the base UI.
 
 ## Voice provider integration
 
@@ -217,7 +217,7 @@ Both inbound and outbound work is an `OmnichannelActivity` with a Subject, and b
 
 The decision of "what happens when this work completes" is owned by the **Subject Flow**, and it is the same for CRM, inbound, and outbound work — there is no separate wrap-up concept:
 
-- The **Subject** (any content type with the `OmnichannelSubject` stereotype) and its **Subject Flow settings** define what the work is (channel, endpoint, interaction type, campaign, AI configuration).
+- The **Subject** (any content type that attaches `OmnichannelSubjectPart`) and its **Subject Flow settings** define what the work is (channel, endpoint, interaction type, campaign, AI configuration).
 - The **Manage Flow** screen defines disposition-driven **Subject Actions** (`(Subject, Disposition) → Finish / Try again / New activity` plus communication-preference updates). This is the decision logic.
 - A **Disposition** is the outcome that selects which Subject Action branch runs.
 - **`IActivityDispositionService.ApplyAsync`** is the one completion path. It applies the disposition, marks the activity `Completed`, and runs the Subject Flow. The disposition can be applied by an agent, AI, or the system — the path is identical, so inbound and outbound complete the same way.
@@ -239,6 +239,8 @@ The combined Contact Center and Omnichannel Management catalog now includes 31 r
 - **Subject inventory** - the same completed-vs-pending progress grouped by subject type.
 
 Reports are derived read models built directly from the durable interaction history and the CRM activity inventory, so they are always consistent with the underlying data. Access is gated by the **View Contact Center reports** (`ViewContactCenterReports`) permission, which is granted to the built-in **Supervisor** role and to administrators by default.
+
+Report tables resolve campaign and campaign-group catalog identifiers to their current display text. User columns render Orchard's `UserDisplayName` shape so an enabled user display-name provider can replace the username without changing the stable grouping key.
 
 ## UI extensibility
 

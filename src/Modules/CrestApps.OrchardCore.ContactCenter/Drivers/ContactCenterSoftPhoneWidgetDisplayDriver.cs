@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using CrestApps.Core.SignalR.Services;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -22,6 +23,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
     private readonly HubRouteManager _hubRouteManager;
+    private readonly IResourceManager _resourceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneWidgetDisplayDriver"/> class.
@@ -31,6 +33,8 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="hubRouteManager">The SignalR hub route manager.</param>
+    /// <param name="resourceManager">The Orchard resource manager.</param>
     /// <param name="reasonCodeManagers">The optional agent state reason code managers, available when the Agents feature is enabled.</param>
     public ContactCenterSoftPhoneWidgetDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -39,6 +43,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         IActivityQueueManager queueManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
         HubRouteManager hubRouteManager,
+        IResourceManager resourceManager,
         IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -47,6 +52,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         _queueManager = queueManager;
         _optionsProvider = optionsProvider;
         _hubRouteManager = hubRouteManager;
+        _resourceManager = resourceManager;
         _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
     }
 
@@ -79,6 +85,10 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         var reasonCodes = _reasonCodeManager is null
             ? []
             : await _reasonCodeManager.ListEnabledAsync();
+
+        _resourceManager.RegisterResource("stylesheet", "crestapps-bootstrap-select").AtHead();
+        _resourceManager.RegisterResource("script", "contact-center-realtime").AtFoot();
+        _resourceManager.RegisterResource("script", "contact-center-soft-phone").AtFoot();
 
         var viewModel = new AgentSoftPhoneViewModel
         {

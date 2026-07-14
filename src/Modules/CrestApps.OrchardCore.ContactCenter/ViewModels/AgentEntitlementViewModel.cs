@@ -19,6 +19,11 @@ public class AgentEntitlementViewModel
     public string UserName { get; set; }
 
     /// <summary>
+    /// Gets or sets the Orchard user's resolved display name.
+    /// </summary>
+    public string UserDisplayName { get; set; }
+
+    /// <summary>
     /// Gets or sets the user-search endpoint used by the agent selector.
     /// </summary>
     public string UserSearchEndpoint { get; set; }

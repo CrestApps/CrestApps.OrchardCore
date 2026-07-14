@@ -7,13 +7,13 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communication"
+    Category = "Contact Center"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel - Azure Event Grid",
     Id = "CrestApps.OrchardCore.Omnichannel.EventGrid",
-    Category = "Communication",
+    Category = "Contact Center",
     Description = "Receives authenticated Azure Event Grid events and dispatches them through the Omnichannel event pipeline.",
     Dependencies =
     [

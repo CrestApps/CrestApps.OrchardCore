@@ -24,9 +24,9 @@ public sealed class ContactCenterAgentDesktopAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Contact Center"], "80", contactCenter => contactCenter
-                .AddClass("contact-center")
-                .Id("contactCenter")
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
                 .Add(S["My workspace"], "-2", workspace => workspace
                     .AddClass("contact-center-workspace")
                     .Id("contactCenterWorkspace")

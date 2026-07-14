@@ -126,6 +126,7 @@ Configure where it appears on the **Soft Phone** tab of the telephony settings:
   by default.
 - **Show the soft phone on the front end** displays the widget on the website.
 - **Accent color** controls the widget's button and control colors.
+- **Recent calls count** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
 
 You can enable the soft phone on the admin, the front end, or both. The widget is rendered when its
 surface is enabled and the current user has the `Use the telephony soft phone` permission, so the
@@ -174,7 +175,7 @@ The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRem
 The widget's footer is a tab bar that switches the panel between built-in and contributed views:
 
 - **Keypad** – the number field, dial pad, and call controls.
-- **Recent** – the call history, listing active calls, recent inbound and outbound interactions, and missed calls (highlighted in red with a direction icon). Phone numbers are formatted for display, active calls stay visually highlighted, and the list does not add a separate **In progress** text label for them. Selecting a recent call dials it again.
+- **Recent** – the call history, listing active calls, recent inbound and outbound interactions, and missed calls (highlighted in red with a direction icon). Phone numbers are formatted for display, active calls stay visually highlighted, and the list does not add a separate **In progress** text label for them. It loads the configured number of calls, `30` by default. Selecting a recent call dials it again.
 - **Contributed tabs** – modules can add their own views through Display Management. For example,
   Contact Center adds a **Work** tab for queue/campaign sign-in and presence.
 

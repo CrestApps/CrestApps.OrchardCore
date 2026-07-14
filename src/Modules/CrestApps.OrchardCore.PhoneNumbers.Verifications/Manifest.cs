@@ -7,13 +7,13 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communication"
+    Category = "Phone Verification"
 )]
 
 [assembly: Feature(
     Name = "Phone Number Verifications",
     Id = PhoneNumberVerificationsConstants.Features.Area,
-    Category = "Communication",
+    Category = "Phone Verification",
     EnabledByDependencyOnly = true,
     Description = "Provides a provider-agnostic framework for verifying phone numbers, storing results on contact content items, and background revalidation.",
     Dependencies =
@@ -26,7 +26,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "AbstractAPI Phone Number Verification",
     Id = PhoneNumberVerificationsConstants.Features.AbstractApi,
-    Category = "Communication",
+    Category = "Phone Verification",
     Description = "Verifies phone numbers using the AbstractAPI Phone Validation service.",
     Dependencies =
     [
@@ -37,7 +37,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Veriphone Phone Number Verification",
     Id = PhoneNumberVerificationsConstants.Features.Veriphone,
-    Category = "Communication",
+    Category = "Phone Verification",
     Description = "Verifies phone numbers using the Veriphone phone number validation service.",
     Dependencies =
     [
@@ -48,7 +48,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Twilio Phone Number Verification",
     Id = PhoneNumberVerificationsConstants.Features.Twilio,
-    Category = "Communication",
+    Category = "Phone Verification",
     Description = "Verifies phone numbers using the Twilio Lookup service.",
     Dependencies =
     [

@@ -60,7 +60,7 @@ Every sign-in, sign-out, and presence transition is stored as a durable Contact 
 
 ## Agent state reason codes
 
-Administrators define **reason codes** from **Interaction Center → Agent states** so agents pick an auditable, standardized reason when they go not ready. A reason code has a unique name, an optional description, the presence state it places the agent in (`AppliesTo` — `Break`, `Away`, `DoNotDisturb`, `Meeting`, `Training`, or `AfterHoursUnavailable`), a sort order, and an enabled flag. The catalog is managed with the same display-driver CRUD pattern as Skills and queues, and the `ManageContactCenterAgents` permission gates it.
+Administrators define **reason codes** from **Interaction Center → Management → Agent states** so agents pick an auditable, standardized reason when they go not ready. A reason code has a unique name, an optional description, the presence state it places the agent in (`AppliesTo` — `Break`, `Away`, `DoNotDisturb`, `Meeting`, `Training`, or `AfterHoursUnavailable`), a sort order, and an enabled flag. The catalog is managed with the same display-driver CRUD pattern as Skills and queues, and the `ManageContactCenterAgents` permission gates it.
 
 When reason codes are configured, the soft-phone presence dropdown lists them (ordered by sort order) in place of the fixed not-ready states; selecting one sets the agent's presence to the reason's `AppliesTo` state and records the reason on the agent profile and the `AgentPresenceChanged` event. If no reason codes exist, the dropdown falls back to the built-in not-ready states.
 
@@ -68,7 +68,7 @@ The Agents feature seeds a standard set of reason codes at setup (short break, l
 
 ## Skills
 
-Administrators manage routeable capabilities from **Interaction Center → Skills**. A skill has a unique name, description, and enabled state. Enabled skills appear in admin assignment surfaces and queue editor selectors; disabled skills remain on existing agents and queues but are hidden from new selections. Agents do not self-select skills from the soft phone because skills are routing eligibility data owned by supervisors/administrators.
+Administrators manage routeable capabilities from **Interaction Center → Management → Skills**. A skill has a unique name, description, and enabled state. Enabled skills appear in admin assignment surfaces and queue editor selectors; disabled skills remain on existing agents and queues but are hidden from new selections. Agents do not self-select skills from the soft phone because skills are routing eligibility data owned by supervisors/administrators.
 
 Queues can require one or more skills. Agents must have every required skill assigned on their agent profile to be eligible for that queue, and the default routing strategy filters out agents missing any required skill before longest-idle scoring runs.
 
@@ -76,7 +76,7 @@ Queues can require one or more skills. Agents must have every required skill ass
 
 A **queue** holds activities waiting for an agent, with a default priority, an SLA threshold, required skills, an optional inbound channel endpoint mapping, a reservation timeout, a routing policy, an optional business-hours calendar, and optional overflow settings. Activities enter a queue as **queue items**; the system pairs the highest-priority, oldest waiting item with an eligible available agent signed in to that queue and creates a short-lived **reservation**.
 
-Administrators can organize queues under **Interaction Center → Queue groups** and select an optional group in each queue editor. Queue groups are catalog and reporting metadata only: they do not provide routing defaults, SLA inheritance, agent entitlements, capacity, overflow, or any other queue behavior. The dedicated **Manage Contact Center queue groups** permission controls the group catalog, while queue configuration remains controlled by **Manage Contact Center queues**.
+Administrators can organize queues under **Interaction Center → Management → Queue groups** and select an optional group in each queue editor. Queue groups are catalog and reporting metadata only: they do not provide routing defaults, SLA inheritance, agent entitlements, capacity, overflow, or any other queue behavior. The dedicated **Manage Contact Center queue groups** permission controls the group catalog, while queue configuration remains controlled by **Manage Contact Center queues**.
 
 Queue-group reports use **current-membership semantics**. An interaction keeps its queue identifier, while the report resolves that queue's group from the current queue catalog when the report runs. Moving a queue to another group therefore changes the group attribution of its historical interactions; it does not rewrite or reroute those interactions. Deleting a queue group makes its assigned queues ungrouped. Queue Usage includes per-queue rows, queue-group aggregate rows, and a recalculated grand total.
 
@@ -102,7 +102,7 @@ Agent capacity is enforced during candidate selection. Each agent profile define
 
 ### Business hours and overflow
 
-A queue can reference a reusable **business-hours calendar** (managed from **Interaction Center → Business hours**). A calendar defines a time zone, a weekly open window per day, and all-day holiday dates. Weekly windows can cross midnight, and equal opening/closing times represent an enabled 24-hour day. While the calendar reports the queue closed, assignment pauses. The queue's **after-hours action** decides what happens to waiting items: *Hold in queue* keeps them until the queue reopens, and *Overflow* moves them to the configured overflow queue.
+A queue can reference a reusable **business-hours calendar** (managed from **Interaction Center → Management → Business hours**). A calendar defines a time zone, a weekly open window per day, and all-day holiday dates. Weekly windows can cross midnight, and equal opening/closing times represent an enabled 24-hour day. While the calendar reports the queue closed, assignment pauses. The queue's **after-hours action** decides what happens to waiting items: *Hold in queue* keeps them until the queue reopens, and *Overflow* moves them to the configured overflow queue.
 
 Independently of business hours, a queue may set an **overflow queue** and an **overflow-after** threshold. Waiting items that exceed the threshold are moved to the overflow queue so long-waiting work can be picked up by a broader team. Contact Center preserves the original enqueue time for SLA aging while separately tracking when the item entered its current queue, so every overflow hop receives its configured dwell time and visited queues cannot form a routing cycle. Overflow moves run each minute alongside reservation expiry and assignment.
 
@@ -156,7 +156,7 @@ Voice providers that support contact-center orchestration beyond soft-phone call
 
 Contact Center management entries live under **Interaction Center**. Queue groups, skills, queues, business-hours calendars, and dialer profile CRUD screens match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and create/edit screens render display-driver editor shapes with the required root edit wrapper templates. Agent sign-in and presence are injected into the Telephony soft phone through `DisplayDriver<SoftPhoneWidget>`, so the operational controls stay with the phone while management screens remain catalog-focused.
 
-Agent state reason codes are a catalog-backed admin surface (**Interaction Center → Agent states**), not a provider-specific dialer setting. The Agents feature seeds standard reason codes during tenant setup by executing the `agent-state-reason-codes` module recipe, and the `AgentStateReasonCode` recipe step lets reason codes be imported or moved between tenants. A dedicated deployment-plan step is a planned follow-up.
+Agent state reason codes are a catalog-backed admin surface (**Interaction Center → Management → Agent states**), not a provider-specific dialer setting. The Agents feature seeds standard reason codes during tenant setup by executing the `agent-state-reason-codes` module recipe, and the `AgentStateReasonCode` recipe step lets reason codes be imported or moved between tenants. A dedicated deployment-plan step is a planned follow-up.
 
 ## Enable via recipe
 

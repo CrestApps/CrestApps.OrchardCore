@@ -120,6 +120,9 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
             AudioCapabilities = audioCapabilities,
             AudioMode = audioMode,
             BrowserMediaAdapterName = audioProvider?.BrowserMediaAdapterName,
+            RecentCallsCount = settings.RecentCallsCount is >= 1 and <= 200
+                ? settings.RecentCallsCount
+                : SoftPhoneWidgetSettings.DefaultRecentCallsCount,
         };
 
         var shape = await _displayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");
@@ -128,6 +131,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         shape.Properties["AudioCapabilities"] = (int)widget.AudioCapabilities;
         shape.Properties["AudioMode"] = (int)widget.AudioMode;
         shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
+        shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 

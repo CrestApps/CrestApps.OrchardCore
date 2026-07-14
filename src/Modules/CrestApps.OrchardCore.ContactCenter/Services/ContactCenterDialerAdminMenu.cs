@@ -24,16 +24,18 @@ public sealed class ContactCenterDialerAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Contact Center"], "80", contactCenter => contactCenter
-                .AddClass("contact-center")
-                .Id("contactCenter")
-                .Add(S["Dialer Profiles"], S["Dialer Profiles"].PrefixPosition(), dialer => dialer
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
+                .Add(S["Management"], "100", management => management
+                    .AddClass("interaction-center-management")
+                    .Id("interactionCenterManagement")
+                    .Add(S["Dialer Profiles"], S["Dialer Profiles"].PrefixPosition(), dialer => dialer
                     .AddClass("dialer-profiles")
                     .Id("dialerProfiles")
                     .Action("Index", "DialerProfiles", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageDialer)
-                    .LocalNav()
-                ),
+                        .LocalNav())),
                 priority: 1);
 
         return ValueTask.CompletedTask;

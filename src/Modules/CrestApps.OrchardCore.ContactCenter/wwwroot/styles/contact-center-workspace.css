@@ -329,11 +329,22 @@
 }
 
 .cc-history__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
     flex: 1 1 auto;
     min-width: 0;
 }
 
+.cc-history__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
 .cc-history__customer {
+    min-width: 0;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;

@@ -10,13 +10,13 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communication"
+    Category = "Contact Center"
 )]
 
 [assembly: Feature(
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,
-    Category = "Communication",
+    Category = "Contact Center",
     Description = "Adds omnichannel contact, campaign, activity, disposition, subject-flow, and channel-endpoint management.",
     Dependencies =
     [

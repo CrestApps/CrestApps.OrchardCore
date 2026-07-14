@@ -282,14 +282,20 @@
 
             refs.history.innerHTML = history.map(function (entry) {
                 var inbound = entry.direction === 'Inbound';
-                var when = parseUtc(entry.createdUtc);
-                var meta = escapeHtml(entry.status) + (when ? ' &middot; ' + new Date(when).toLocaleString() : '');
+                var when = parseUtc(entry.endedUtc || entry.createdUtc);
+                var formattedNumber = window.telephonySoftPhone &&
+                    typeof window.telephonySoftPhone.formatPhoneNumber === 'function'
+                    ? window.telephonySoftPhone.formatPhoneNumber(entry.customerLabel)
+                    : entry.customerLabel;
 
                 return '<li class="cc-history__item">' +
                     '<span class="cc-history__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' +
                     '<span class="cc-history__body">' +
-                        '<span class="cc-history__customer">' + escapeHtml(entry.customerLabel || label('unknownCaller', 'Unknown caller')) + '</span>' +
-                        '<span class="cc-history__meta">' + meta + '</span>' +
+                        '<span class="cc-history__summary">' +
+                            '<span class="cc-history__customer">' + escapeHtml(formattedNumber || label('unknownCaller', 'Unknown caller')) + '</span>' +
+                            '<span class="badge text-bg-secondary">' + escapeHtml(entry.status) + '</span>' +
+                        '</span>' +
+                        (when ? '<span class="cc-history__meta">' + escapeHtml(new Date(when).toLocaleString()) + '</span>' : '') +
                     '</span>' +
                 '</li>';
             }).join('');

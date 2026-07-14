@@ -11,3 +11,14 @@
 .content-field-international-telephone .iti__tel-input {
   min-height: calc(1.5em + 0.75rem + 2px);
 }
+
+.phone-field-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phone-field-editor-row .iti {
+  flex: 1 1 auto;
+  min-width: 0;
+}

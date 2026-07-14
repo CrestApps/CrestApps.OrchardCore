@@ -14,10 +14,9 @@
     var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
 }
 
-<div class="row gx-2 gy-2">
-    <div class="col-12">
-        <h6 class="mb-1">@T["Contact filters"]</h6>
-    </div>
+<fieldset class="border rounded p-3">
+    <legend class="float-none w-auto px-2 fs-6">@T["Contact filters"]</legend>
+    <div class="row gx-2 gy-2">
 
     @if (Model.ContactPublishedOptions.Any())
     {
@@ -59,117 +58,118 @@
                placeholder="@T["Do not call to"]" />
         <span class="hint">@T["Only include contacts marked as do-not-call on or before this date."]</span>
     </div>
-</div>
-
-<div class="row gx-2 gy-2 mt-1">
-    <div class="col-12">
-        <h6 class="mb-1">@T["Activity filters"]</h6>
     </div>
+</fieldset>
 
-    <div class="col-lg-3">
-        <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select form-select-sm"></select>
-    </div>
+<fieldset class="border rounded p-3 mt-3">
+    <legend class="float-none w-auto px-2 fs-6">@T["Activity filters"]</legend>
+    <div class="row gx-2 gy-2">
 
-    <div class="col-lg-3">
-        <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="Channel" asp-items="Model.Channels" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="Source" asp-items="Model.Sources" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="Channel" asp-items="Model.Channels" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="Source" asp-items="Model.Sources" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="Status" asp-items="Model.Statuses" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="AssignmentStatus" asp-items="Model.AssignmentStatuses" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="Status" asp-items="Model.Statuses" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="AssignmentStatus" asp-items="Model.AssignmentStatuses" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <input type="text"
-               id="bulk-scheduled-from"
-               asp-for="ScheduledFrom"
-               class="form-control form-control-sm"
-               placeholder="@T["Scheduled from"]" />
-    </div>
+        <div class="col-lg-3">
+            <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
+        </div>
 
-    <div class="col-lg-3">
-        <input type="text"
-               id="bulk-scheduled-to"
-               asp-for="ScheduledTo"
-               class="form-control form-control-sm"
-               placeholder="@T["Scheduled to"]" />
-    </div>
+        <div class="col-lg-3">
+            <input type="text"
+                   id="bulk-scheduled-from"
+                   asp-for="ScheduledFrom"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Scheduled from"]" />
+        </div>
 
-    <div class="col-lg-3">
-        <input type="text"
-               id="bulk-created-from"
-               asp-for="CreatedFrom"
-               class="form-control form-control-sm"
-               placeholder="@T["Created from"]" />
-    </div>
+        <div class="col-lg-3">
+            <input type="text"
+                   id="bulk-scheduled-to"
+                   asp-for="ScheduledTo"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Scheduled to"]" />
+        </div>
 
-    <div class="col-lg-3">
-        <input type="text"
-               id="bulk-created-to"
-               asp-for="CreatedTo"
-               class="form-control form-control-sm"
-               placeholder="@T["Created to"]" />
-    </div>
+        <div class="col-lg-3">
+            <input type="text"
+                   id="bulk-created-from"
+                   asp-for="CreatedFrom"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Created from"]" />
+        </div>
 
-    <div class="col-lg-3">
-        <label class="form-label form-label-sm mb-1" for="bulk-limit">@T["Limit"]</label>
-        <input type="number"
-               id="bulk-limit"
-               asp-for="Limit"
-               class="form-control form-control-sm"
-               placeholder="@T["Max records"]"
-               min="1" />
-        <span class="hint">@T["Limit the number of records to retrieve."]</span>
-    </div>
+        <div class="col-lg-3">
+            <input type="text"
+                   id="bulk-created-to"
+                   asp-for="CreatedTo"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Created to"]" />
+        </div>
 
-    <div class="col-12 mt-2">
-        <label class="form-label form-label-sm mb-1">@T["Assigned to users"]</label>
-        @await Component.InvokeAsync("ItemSelector", new
-        {
-            id = "bulk-filter-assigned-user-selector",
-            inputName = Html.NameFor(m => m.AssignedToUserIds),
-            endpoint = Model.UserSearchEndpoint,
-            initialItemsJson = Model.SelectedAssignedUsersJson,
-            multiple = true,
-            enableSearch = true,
-            enableSelectAll = false,
-            enableDeselectAll = true,
-            buttonText = T["Assigned to"].Value,
-            searchPlaceholder = T["Search users"].Value,
-            emptyResultsText = T["No users found."].Value,
-            noSelectionText = T["Any user"].Value,
-            loadingText = T["Loading..."].Value,
-            loadErrorText = T["Unable to load users."].Value,
-            resultsTextFormat = T["Found {0} user(s)."].Value,
-            selectedItemsLabel = T["Selected"].Value,
-            availableItemsLabel = T["Available"].Value,
-            searchButtonText = T["Search"].Value,
-        })
+        <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-limit">@T["Limit"]</label>
+            <input type="number"
+                   id="bulk-limit"
+                   asp-for="Limit"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Max records"]"
+                   min="1" />
+            <span class="hint">@T["Limit the number of records to retrieve."]</span>
+        </div>
+
+        <div class="col-12 mt-2">
+            <label class="form-label form-label-sm mb-1">@T["Assigned to users"]</label>
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "bulk-filter-assigned-user-selector",
+                inputName = Html.NameFor(m => m.AssignedToUserIds),
+                endpoint = Model.UserSearchEndpoint,
+                initialItemsJson = Model.SelectedAssignedUsersJson,
+                multiple = true,
+                enableSearch = true,
+                enableSelectAll = false,
+                enableDeselectAll = true,
+                buttonText = T["Assigned to"].Value,
+                searchPlaceholder = T["Search users"].Value,
+                emptyResultsText = T["No users found."].Value,
+                noSelectionText = T["Any user"].Value,
+                loadingText = T["Loading..."].Value,
+                loadErrorText = T["Unable to load users."].Value,
+                resultsTextFormat = T["Found {0} user(s)."].Value,
+                selectedItemsLabel = T["Selected"].Value,
+                availableItemsLabel = T["Available"].Value,
+                searchButtonText = T["Search"].Value,
+            })
+        </div>
     </div>
-</div>
+</fieldset>
 
 <script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {

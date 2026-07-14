@@ -3,10 +3,6 @@
 @using CrestApps.OrchardCore.ContactCenter.Endpoints
 @using CrestApps.OrchardCore.Omnichannel.Core
 
-<style asp-name="crestapps-bootstrap-select"></style>
-<script asp-name="contact-center-realtime" at="Foot"></script>
-<script asp-name="contact-center-soft-phone" at="Foot"></script>
-
 @{
     var viewModel = Model.Value;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";

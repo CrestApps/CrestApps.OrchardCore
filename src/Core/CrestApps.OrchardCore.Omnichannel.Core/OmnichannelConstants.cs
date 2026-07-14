@@ -28,8 +28,6 @@ public static class OmnichannelConstants
     {
         public const string OmnichannelContact = "OmnichannelContact";
 
-        public const string OmnichannelSubject = "OmnichannelSubject";
-
         public const string ContactMethod = "ContactMethod";
     }
 
@@ -41,6 +39,8 @@ public static class OmnichannelConstants
         // public const string OmnichannelContactInfo = "OmnichannelContactInfoPart";
 
         public const string OmnichannelContact = "OmnichannelContactPart";
+
+        public const string OmnichannelSubject = "OmnichannelSubjectPart";
 
         public const string EmailInfo = "EmailInfoPart";
 

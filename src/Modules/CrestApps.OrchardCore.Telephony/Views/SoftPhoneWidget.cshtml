@@ -8,6 +8,9 @@
 @{
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
+    var recentCallsCount = Model.RecentCallsCount is int configuredRecentCallsCount
+        ? configuredRecentCallsCount
+        : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
     var capabilities = 0;
     var audioCapabilities = Model.AudioCapabilities is TelephonyAudioCapabilities configuredAudioCapabilities
         ? (int)configuredAudioCapabilities
@@ -36,6 +39,7 @@
         ["audioCapabilities"] = audioCapabilities,
         ["audioMode"] = audioMode,
         ["browserMediaAdapterName"] = browserMediaAdapterName,
+        ["recentCallsCount"] = recentCallsCount,
         ["connectUrl"] = connectUrl,
         ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",

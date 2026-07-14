@@ -1119,7 +1119,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
     private static string FindSourceFile(string repositoryRoot, string fileName)
     {
-        var matches = Directory.GetFiles(Path.Combine(repositoryRoot, "src"), fileName, SearchOption.AllDirectories);
+        var matches = EnumerateSourceFiles(Path.Combine(repositoryRoot, "src"), fileName)
+            .ToArray();
 
         if (matches.Length != 1)
         {
@@ -1127,6 +1128,41 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         }
 
         return matches[0];
+    }
+
+    private static IEnumerable<string> EnumerateSourceFiles(string sourceRoot, string fileName)
+    {
+        var excludedDirectoryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".docusaurus",
+            "bin",
+            "build",
+            "node_modules",
+            "obj",
+        };
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(sourceRoot);
+
+        while (pendingDirectories.Count > 0)
+        {
+            var directory = pendingDirectories.Pop();
+
+            foreach (var file in Directory.EnumerateFiles(directory, fileName, SearchOption.TopDirectoryOnly))
+            {
+                yield return file;
+            }
+
+            foreach (var childDirectory in Directory.EnumerateDirectories(directory, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (excludedDirectoryNames.Contains(Path.GetFileName(childDirectory)) ||
+                    new DirectoryInfo(childDirectory).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    continue;
+                }
+
+                pendingDirectories.Push(childDirectory);
+            }
+        }
     }
 
     private static int FindMatching(string text, int openIndex, char openChar, char closeChar)

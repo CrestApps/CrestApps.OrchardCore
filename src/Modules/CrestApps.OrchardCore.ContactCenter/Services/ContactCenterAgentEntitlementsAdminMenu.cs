@@ -25,16 +25,18 @@ public sealed class ContactCenterAgentEntitlementsAdminMenu : AdminNavigationPro
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Contact Center"], "80", contactCenter => contactCenter
-                .AddClass("contact-center")
-                .Id("contactCenter")
-                .Add(S["Agent entitlements"], S["Agent entitlements"].PrefixPosition(), entitlements => entitlements
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
+                .Add(S["Management"], "100", management => management
+                    .AddClass("interaction-center-management")
+                    .Id("interactionCenterManagement")
+                    .Add(S["Agent entitlements"], S["Agent entitlements"].PrefixPosition(), entitlements => entitlements
                     .AddClass("contact-center-agent-entitlements")
                     .Id("contactCenterAgentEntitlements")
                     .Action("Index", "AgentEntitlements", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.ManageAgents)
-                    .LocalNav()
-                ),
+                        .LocalNav())),
                 priority: 1);
 
         return ValueTask.CompletedTask;
