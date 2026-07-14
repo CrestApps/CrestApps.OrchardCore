@@ -12,6 +12,8 @@ description: Provider-agnostic contact center orchestration for Orchard Core - i
 
 The **Contact Center** module set turns the CRM into a full contact center that agents and supervisors operate without leaving Orchard Core. It extends the [Omnichannel](../omnichannel/index.md) CRM instead of introducing a second work model, and it sits between the CRM and the [Telephony](../telephony/index.md) soft phone: the CRM owns business work data, the Contact Center owns orchestration, and Telephony owns media execution.
 
+The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations.
+
 The CRM **Activity** remains the universal unit of work. Activities can be created before an owner exists, then later reserved and assigned by a dialer, queue, or agent workflow. An **Interaction** is communication history for a single attempt on that activity - for example a busy call attempt, a no-answer attempt, or a connected call - and it never owns workflow or disposition.
 
 ## Layer boundaries

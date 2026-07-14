@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "releaseStatus": "blocked-until-r0-r8-pass",
+  "capacityTier": {
+    "id": "tier-1",
+    "maxTenantsPerDeployment": 5,
+    "maxConcurrentSignedInAgentsPerTenant": 100,
+    "maxConcurrentVoiceInteractionsPerTenant": 50,
+    "maxNewInteractionsPerSecondPerTenant": 10,
+    "maxConcurrentSignedInAgentsPerDeployment": 250,
+    "maxConcurrentVoiceInteractionsPerDeployment": 100
+  },
+  "databases": [
+    {
+      "id": "postgresql-16",
+      "versions": [
+        "16.x"
+      ],
+      "production": true
+    },
+    {
+      "id": "sqlite",
+      "versions": [
+        "3.x"
+      ],
+      "production": false
+    }
+  ],
+  "topologies": [
+    {
+      "id": "single-region-multi-node",
+      "production": true,
+      "minimumApplicationNodes": 2,
+      "maximumApplicationNodes": 4,
+      "redisBackplaneRequired": true,
+      "sharedRelationalDatabaseRequired": true
+    },
+    {
+      "id": "single-node-development",
+      "production": false,
+      "minimumApplicationNodes": 1,
+      "maximumApplicationNodes": 1,
+      "redisBackplaneRequired": false,
+      "sharedRelationalDatabaseRequired": false
+    }
+  ],
+  "providerProfiles": [
+    {
+      "id": "asterisk-ga-core",
+      "provider": "asterisk",
+      "allowedCapabilities": [
+        "inbound-voice",
+        "manual-dial",
+        "preview-dial"
+      ],
+      "prohibitedCapabilities": [
+        "automated-dial",
+        "predictive-dial",
+        "recording",
+        "monitor",
+        "whisper",
+        "barge",
+        "take-over",
+        "bidirectional-media"
+      ]
+    },
+    {
+      "id": "dialpad-ga-core",
+      "provider": "dialpad",
+      "allowedCapabilities": [
+        "inbound-voice",
+        "manual-dial",
+        "preview-dial",
+        "call-transfer"
+      ],
+      "prohibitedCapabilities": [
+        "automated-dial",
+        "predictive-dial",
+        "recording",
+        "monitor",
+        "whisper",
+        "barge",
+        "take-over",
+        "bidirectional-media"
+      ]
+    }
+  ],
+  "tenantProfiles": [
+    {
+      "id": "ga-core-asterisk",
+      "providerProfile": "asterisk-ga-core",
+      "database": "postgresql-16",
+      "topology": "single-region-multi-node",
+      "features": [
+        "CrestApps.OrchardCore.ContactCenter",
+        "CrestApps.OrchardCore.ContactCenter.Availability",
+        "CrestApps.OrchardCore.ContactCenter.Queues",
+        "CrestApps.OrchardCore.ContactCenter.Routing",
+        "CrestApps.OrchardCore.ContactCenter.Voice",
+        "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
+        "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+        "CrestApps.OrchardCore.ContactCenter.RealTime",
+        "CrestApps.OrchardCore.ContactCenter.Dialer",
+        "CrestApps.OrchardCore.Asterisk",
+        "CrestApps.OrchardCore.Asterisk.ContactCenter"
+      ]
+    },
+    {
+      "id": "ga-core-dialpad",
+      "providerProfile": "dialpad-ga-core",
+      "database": "postgresql-16",
+      "topology": "single-region-multi-node",
+      "features": [
+        "CrestApps.OrchardCore.ContactCenter",
+        "CrestApps.OrchardCore.ContactCenter.Availability",
+        "CrestApps.OrchardCore.ContactCenter.Queues",
+        "CrestApps.OrchardCore.ContactCenter.Routing",
+        "CrestApps.OrchardCore.ContactCenter.Voice",
+        "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
+        "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+        "CrestApps.OrchardCore.ContactCenter.RealTime",
+        "CrestApps.OrchardCore.ContactCenter.Dialer",
+        "CrestApps.OrchardCore.DialPad",
+        "CrestApps.OrchardCore.DialPad.ContactCenter"
+      ]
+    }
+  ],
+  "prohibitedCombinations": [
+    "production with SQLite",
+    "production with a single application node",
+    "multi-node without a Redis SignalR backplane",
+    "multi-region active-active",
+    "more than one voice provider profile in one tenant",
+    "Power, Progressive, or Predictive dialing",
+    "recording, monitor, whisper, barge, take-over, or bidirectional media",
+    "Elasticsearch in routing, assignment, provider ingest, or another correctness path",
+    "unlisted feature, provider, database, or topology combinations"
+  ]
+}
