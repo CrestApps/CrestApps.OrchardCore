@@ -76,7 +76,7 @@ public sealed class ContactCenterHubSecurityTests
             "Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId)",
             StringComparison.Ordinal);
         var freshSnapshot = onConnectedSource.IndexOf(
-            "sessionService.BuildSnapshotAsync(userId",
+            "services.SessionService.BuildSnapshotAsync(userId",
             StringComparison.Ordinal);
         var reconciliation = onConnectedSource.IndexOf(
             "UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds)",

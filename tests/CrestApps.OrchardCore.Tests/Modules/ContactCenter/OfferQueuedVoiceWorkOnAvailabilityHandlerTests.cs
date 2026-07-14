@@ -15,7 +15,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     {
         // Arrange
         var queuedVoiceWorkOfferService = new Mock<IQueuedVoiceWorkOfferService>();
-        var handler = new OfferQueuedVoiceWorkOnAvailabilityHandler(CreateServices(queuedVoiceWorkOfferService.Object));
+        var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
 
         // Act
         await handler.HandleAsync(new InteractionEvent
@@ -33,7 +33,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     {
         // Arrange
         var queuedVoiceWorkOfferService = new Mock<IQueuedVoiceWorkOfferService>();
-        var handler = new OfferQueuedVoiceWorkOnAvailabilityHandler(CreateServices(queuedVoiceWorkOfferService.Object));
+        var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
 
         // Act
         await handler.HandleAsync(new InteractionEvent
@@ -51,7 +51,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     {
         // Arrange
         var queuedVoiceWorkOfferService = new Mock<IQueuedVoiceWorkOfferService>();
-        var handler = new OfferQueuedVoiceWorkOnAvailabilityHandler(CreateServices(queuedVoiceWorkOfferService.Object));
+        var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
         var interactionEvent = new InteractionEvent
         {
         EventType = ContactCenterConstants.Events.AgentPresenceChanged,
@@ -75,7 +75,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     {
         // Arrange
         var queuedVoiceWorkOfferService = new Mock<IQueuedVoiceWorkOfferService>();
-        var handler = new OfferQueuedVoiceWorkOnAvailabilityHandler(CreateServices(queuedVoiceWorkOfferService.Object));
+        var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
         var interactionEvent = new InteractionEvent
         {
         EventType = ContactCenterConstants.Events.AgentPresenceChanged,
@@ -100,7 +100,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     public async Task HandleAsync_WhenQueuedVoiceOfferServiceIsMissing_ReturnsWithoutFailure()
     {
         // Arrange
-        var handler = new OfferQueuedVoiceWorkOnAvailabilityHandler(new ServiceCollection().BuildServiceProvider());
+        var handler = CreateHandler();
 
         // Act
         await handler.HandleAsync(new InteractionEvent
@@ -112,11 +112,21 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
         // Assert
     }
 
-    private static ServiceProvider CreateServices(IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService)
+    private static OfferQueuedVoiceWorkOnAvailabilityHandler CreateHandler(
+        IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService = null)
     {
-        return new ServiceCollection()
-            .AddSingleton(queuedVoiceWorkOfferService)
-            .AddSingleton<IQueuedVoiceWorkOfferService>(queuedVoiceWorkOfferService)
-            .BuildServiceProvider();
+        var services = new ServiceCollection();
+
+        if (queuedVoiceWorkOfferService is not null)
+        {
+            services.AddSingleton(queuedVoiceWorkOfferService);
+            services.AddSingleton<IQueuedVoiceWorkOfferService>(queuedVoiceWorkOfferService);
+        }
+
+        services.AddTransient<QueuedVoiceWorkOfferScopeContext>();
+        var serviceProvider = services.BuildServiceProvider();
+
+        return new OfferQueuedVoiceWorkOnAvailabilityHandler(
+            new TestContactCenterScopeExecutor(serviceProvider));
     }
 }

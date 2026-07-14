@@ -213,11 +213,12 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             .AddSingleton((activityManager ?? new Mock<IOmnichannelActivityManager>()).Object)
             .AddSingleton(MockUserManager().Object)
             .AddSingleton(MockDisplayNameProvider().Object)
+            .AddTransient<ContactCenterRealTimeEventScopeContext>()
             .BuildServiceProvider();
 
         return new ContactCenterRealTimeEventHandler(
             notifier.Object,
-            services,
+            new TestContactCenterScopeExecutor(services),
             clock.Object);
     }
 

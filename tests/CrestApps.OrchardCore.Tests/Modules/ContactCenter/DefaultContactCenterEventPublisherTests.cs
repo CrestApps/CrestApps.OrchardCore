@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Modules;
 
@@ -32,6 +33,55 @@ public sealed class DefaultContactCenterEventPublisherTests
         store.Verify(s => s.CreateAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
         outbox.Verify(o => o.EnqueueAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
         outbox.Verify(o => o.DispatchAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WhenPostCommitScopeIsAvailable_DefersOutboxDispatch()
+    {
+        // Arrange
+        var store = CreateStore();
+        var outbox = new Mock<IContactCenterOutbox>();
+        var services = new ServiceCollection()
+            .AddSingleton(store.Object)
+            .AddSingleton(outbox.Object)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<ContactCenterEventDispatchContext>>(
+                NullLogger<ContactCenterEventDispatchContext>.Instance)
+            .AddTransient<ContactCenterEventDispatchContext>()
+            .BuildServiceProvider();
+        var scopeExecutor = new TestContactCenterScopeExecutor(services)
+        {
+            ScheduleAfterCommitResult = true,
+        };
+        var publisher = CreatePublisher(store.Object, outbox.Object, scopeExecutor);
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.InteractionCreated,
+            InteractionId = "interaction-1",
+        };
+        store
+            .Setup(service => service.FindByIdAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interactionEvent);
+
+        // Act
+        await publisher.PublishAsync(interactionEvent, CancellationToken.None);
+
+        // Assert
+        outbox.Verify(
+            service => service.DispatchAsync(
+                It.IsAny<InteractionEvent>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.NotNull(scopeExecutor.ScheduledOperation);
+
+        await scopeExecutor.ScheduledOperation();
+
+        outbox.Verify(
+            service => service.DispatchAsync(
+                interactionEvent,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -177,7 +227,8 @@ public sealed class DefaultContactCenterEventPublisherTests
 
     private static DefaultContactCenterEventPublisher CreatePublisher(
         IInteractionEventStore store,
-        IContactCenterOutbox outbox)
+        IContactCenterOutbox outbox,
+        IContactCenterScopeExecutor scopeExecutor = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -185,6 +236,7 @@ public sealed class DefaultContactCenterEventPublisherTests
         return new DefaultContactCenterEventPublisher(
             store,
             outbox,
+            scopeExecutor ?? new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
             clock.Object,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
     }

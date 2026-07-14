@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
@@ -605,6 +606,7 @@ public sealed class InboundVoiceServiceTests
                 ProviderCallStateSynchronizationService.Object,
                 OfferSynchronizationService.Object,
                 DistributedLock.Object,
+                new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
                 Session.Object,
                 clock.Object);
         }

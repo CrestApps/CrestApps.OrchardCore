@@ -77,6 +77,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
             .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
             .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
+            .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
+            .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
@@ -530,6 +532,7 @@ public sealed class EntryPointsStartup : StartupBase
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
+            .AddScoped<QueuedVoiceWorkOfferScopeContext>()
             .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
             .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
@@ -577,6 +580,8 @@ public sealed class RealTimeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddScoped<ContactCenterHubScopeContext>()
+            .AddScoped<ContactCenterRealTimeEventScopeContext>()
             .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
             .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>();
 

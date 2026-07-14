@@ -8,14 +8,10 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 
@@ -33,18 +29,22 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     public const string SupervisorsGroup = "cc:supervisors";
 
     private readonly ILogger _logger;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterHub"/> class.
     /// </summary>
     /// <param name="logger">The logger.</param>
+    /// <param name="scopeExecutor">The executor used to isolate hub operations in child shell scopes.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     public ContactCenterHub(
         ILogger<ContactCenterHub> logger,
+        IContactCenterScopeExecutor scopeExecutor,
         ShellSettings shellSettings)
     {
         _logger = logger;
+        _scopeExecutor = scopeExecutor;
         _tenantName = shellSettings.Name;
     }
 
@@ -72,28 +72,30 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         var authorized = false;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            var services = scope.ServiceProvider;
-
             if (await AuthorizeAsync(services, ContactCenterPermissions.SignIntoQueues))
             {
                 authorized = true;
 
                 try
                 {
-                    var sessionService = services.GetRequiredService<IAgentSessionService>();
                     var userName = Context.User?.Identity?.Name;
                     var displayName = await GetDisplayNameAsync(services, userName);
 
-                    var session = await sessionService.ConnectAsync(userId, Context.ConnectionId, userName, displayName, Context.ConnectionAborted);
+                    var session = await services.SessionService.ConnectAsync(
+                        userId,
+                        Context.ConnectionId,
+                        userName,
+                        displayName,
+                        Context.ConnectionAborted);
 
                     foreach (var queueId in session.QueueIds)
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
                     }
 
-                    var snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+                    var snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
                     await UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds);
                 }
                 catch (Exception ex)
@@ -135,13 +137,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (!string.IsNullOrEmpty(userId))
         {
-            await ShellScope.UsingChildScopeAsync(async scope =>
+            await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
             {
-                var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-
                 try
                 {
-                    await sessionService.DisconnectAsync(userId, Context.ConnectionId);
+                    await services.SessionService.DisconnectAsync(userId, Context.ConnectionId);
                 }
                 catch (Exception ex)
                 {
@@ -168,10 +168,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             return Task.CompletedTask;
         }
 
-        return ShellScope.UsingChildScopeAsync(async scope =>
+        return _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            await sessionService.HeartbeatAsync(userId, Context.ConnectionAborted);
+            await services.SessionService.HeartbeatAsync(userId, Context.ConnectionAborted);
         });
     }
 
@@ -190,10 +189,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         AgentDesktopSnapshot snapshot = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
         });
 
         return snapshot;
@@ -210,9 +208,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             return;
         }
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            if (await AuthorizeAsync(scope.ServiceProvider, ContactCenterPermissions.MonitorContactCenter))
+            if (await AuthorizeAsync(services, ContactCenterPermissions.MonitorContactCenter))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
             }
@@ -244,13 +242,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         AgentDesktopSnapshot snapshot = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
-            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
             var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
 
@@ -261,14 +257,18 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
             try
             {
-                await presenceManager.SignInAsync(userId, normalizedQueueIds, normalizedCampaignIds, Context.ConnectionAborted);
+                await services.PresenceManager.SignInAsync(
+                    userId,
+                    normalizedQueueIds,
+                    normalizedCampaignIds,
+                    Context.ConnectionAborted);
             }
             catch (AgentEntitlementDeniedException exception)
             {
                 throw new HubException(exception.Message);
             }
 
-            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -284,17 +284,15 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         AgentDesktopSnapshot snapshot = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
-            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
 
-            await presenceManager.SignOutAsync(userId, Context.ConnectionAborted);
+            await services.PresenceManager.SignOutAsync(userId, Context.ConnectionAborted);
 
-            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -312,13 +310,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         AgentDesktopSnapshot snapshot = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
-            var previousSnapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
             var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
 
@@ -331,7 +327,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
             try
             {
-                profile = await presenceManager.UpdateMembershipsAsync(
+                profile = await services.PresenceManager.UpdateMembershipsAsync(
                     userId,
                     normalizedQueueIds,
                     normalizedCampaignIds,
@@ -347,7 +343,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 throw new HubException("Sign in before changing queue or campaign memberships.");
             }
 
-            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -365,20 +361,17 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         AgentDesktopSnapshot snapshot = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var sessionService = scope.ServiceProvider.GetRequiredService<IAgentSessionService>();
-            var presenceManager = scope.ServiceProvider.GetRequiredService<IAgentPresenceManager>();
-
-            await presenceManager.SetPresenceAsync(
+            await services.PresenceManager.SetPresenceAsync(
                 userId,
                 status,
                 reason,
                 Context.ConnectionAborted);
 
-            snapshot = await sessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
         });
 
         return snapshot;
@@ -393,15 +386,15 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         var offered = 0;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var queuedVoiceWorkOfferService = scope.ServiceProvider.GetServices<IQueuedVoiceWorkOfferService>().FirstOrDefault();
-
-            if (queuedVoiceWorkOfferService is not null)
+            if (services.QueuedVoiceWorkOfferService is not null)
             {
-                offered = await queuedVoiceWorkOfferService.OfferForUserAsync(userId, Context.ConnectionAborted);
+                offered = await services.QueuedVoiceWorkOfferService.OfferForUserAsync(
+                    userId,
+                    Context.ConnectionAborted);
             }
         });
 
@@ -417,22 +410,24 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         var userId = EnsureUserId();
         PendingIncomingCallOffer offer = null;
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await EnsureAuthorizedAsync(scope.ServiceProvider, ContactCenterPermissions.SignIntoQueues);
+            await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var pendingIncomingCallOfferService = scope.ServiceProvider.GetServices<IPendingIncomingCallOfferService>().FirstOrDefault();
-
-            if (pendingIncomingCallOfferService is not null)
+            if (services.PendingIncomingCallOfferService is not null)
             {
-                offer = await pendingIncomingCallOfferService.GetForUserAsync(userId, Context.ConnectionAborted);
+                offer = await services.PendingIncomingCallOfferService.GetForUserAsync(
+                    userId,
+                    Context.ConnectionAborted);
             }
         });
 
         return offer;
     }
 
-    private async Task<bool> AuthorizeAsync(IServiceProvider services, Permission permission)
+    private async Task<bool> AuthorizeAsync(
+        ContactCenterHubScopeContext services,
+        Permission permission)
     {
         var httpContext = Context.GetHttpContext();
 
@@ -441,20 +436,18 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             return false;
         }
 
-        var authorizationService = services.GetRequiredService<IAuthorizationService>();
-
-        return await authorizationService.AuthorizeAsync(httpContext.User, permission);
+        return await services.AuthorizationService.AuthorizeAsync(httpContext.User, permission);
     }
 
-    private async Task<string> GetDisplayNameAsync(IServiceProvider services, string fallback)
+    private async Task<string> GetDisplayNameAsync(
+        ContactCenterHubScopeContext services,
+        string fallback)
     {
-        var userManager = services.GetRequiredService<UserManager<IUser>>();
-        var displayNameProvider = services.GetRequiredService<IDisplayNameProvider>();
-        var user = await userManager.GetUserAsync(Context.User);
+        var user = await services.UserManager.GetUserAsync(Context.User);
 
         if (user is not null)
         {
-            var displayName = await displayNameProvider.GetAsync(user, Context.ConnectionAborted);
+            var displayName = await services.DisplayNameProvider.GetAsync(user, Context.ConnectionAborted);
 
             if (!string.IsNullOrWhiteSpace(displayName))
             {
@@ -477,7 +470,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         return userId;
     }
 
-    private async Task EnsureAuthorizedAsync(IServiceProvider services, Permission permission)
+    private async Task EnsureAuthorizedAsync(
+        ContactCenterHubScopeContext services,
+        Permission permission)
     {
         if (!await AuthorizeAsync(services, permission))
         {

@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.ContentManagement;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -45,6 +44,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly ISession _session;
     private readonly IClock _clock;
 
@@ -69,6 +69,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service used to confirm a queued call still exists before it is offered.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove queued calls that no longer exist on the provider.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
+    /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="session">The YesSql session used to persist queue changes before selecting the next call.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
@@ -90,6 +91,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
+        IContactCenterScopeExecutor scopeExecutor,
         ISession session,
         IClock clock)
     {
@@ -111,6 +113,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
         _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
+        _scopeExecutor = scopeExecutor;
         _session = session;
         _clock = clock;
     }
@@ -184,9 +187,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         try
         {
-            if (ShellScope.Current is not null)
+            if (_scopeExecutor.ScheduleAfterCommit(() => locker.DisposeAsync().AsTask()))
             {
-                ShellScope.AddDeferredTask(_ => locker.DisposeAsync().AsTask());
                 releaseDeferred = true;
             }
 

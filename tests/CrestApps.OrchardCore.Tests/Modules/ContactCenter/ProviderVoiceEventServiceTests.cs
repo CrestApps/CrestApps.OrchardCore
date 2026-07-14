@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -379,6 +380,7 @@ public sealed class ProviderVoiceEventServiceTests
         var publisher = new DefaultContactCenterEventPublisher(
             eventStore.Object,
             outbox.Object,
+            new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
             clock.Object,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
         var service = new ProviderVoiceEventService(

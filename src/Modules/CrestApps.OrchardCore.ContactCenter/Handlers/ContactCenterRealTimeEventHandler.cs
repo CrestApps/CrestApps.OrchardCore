@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 
@@ -21,22 +20,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandler
 {
     private readonly IContactCenterRealTimeNotifier _notifier;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeEventHandler"/> class.
     /// </summary>
     /// <param name="notifier">The real-time notifier used to broadcast updates.</param>
-    /// <param name="serviceProvider">The service provider used to isolate projections from the outbox persistence scope.</param>
+    /// <param name="scopeExecutor">The executor used to isolate projections from the outbox persistence scope.</param>
     /// <param name="clock">The clock used to stamp notifications.</param>
     public ContactCenterRealTimeEventHandler(
         IContactCenterRealTimeNotifier notifier,
-        IServiceProvider serviceProvider,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock)
     {
         _notifier = notifier;
-        _serviceProvider = serviceProvider;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
     }
 
@@ -45,15 +44,15 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var services = scope.ServiceProvider;
-        var agentManager = services.GetRequiredService<IAgentProfileManager>();
-        var reservationManager = services.GetRequiredService<IActivityReservationManager>();
-        var queueItemStore = services.GetRequiredService<IQueueItemStore>();
-        var activityManager = services.GetRequiredService<IOmnichannelActivityManager>();
-        var userManager = services.GetRequiredService<UserManager<IUser>>();
-        var displayNameProvider = services.GetRequiredService<IDisplayNameProvider>();
+        await _scopeExecutor.ExecuteAsync<ContactCenterRealTimeEventScopeContext>(
+            context => HandleInScopeAsync(interactionEvent, context, cancellationToken));
+    }
 
+    private async Task HandleInScopeAsync(
+        InteractionEvent interactionEvent,
+        ContactCenterRealTimeEventScopeContext context,
+        CancellationToken cancellationToken)
+    {
         switch (interactionEvent.EventType)
         {
             case ContactCenterConstants.Events.AgentSignedIn:
@@ -61,19 +60,19 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             case ContactCenterConstants.Events.AgentPresenceChanged:
                 await BroadcastPresenceAsync(
                     interactionEvent,
-                    agentManager,
-                    userManager,
-                    displayNameProvider,
+                    context.AgentManager,
+                    context.UserManager,
+                    context.DisplayNameProvider,
                     cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.AgentReserved:
                 await BroadcastOfferReceivedAsync(
                     interactionEvent,
-                    reservationManager,
-                    agentManager,
-                    queueItemStore,
-                    activityManager,
+                    context.ReservationManager,
+                    context.AgentManager,
+                    context.QueueItemStore,
+                    context.ActivityManager,
                     cancellationToken);
                 break;
 
@@ -81,9 +80,9 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                 await BroadcastOfferRevokedAsync(
                     interactionEvent,
                     AgentOfferRevokedReason.Released,
-                    reservationManager,
-                    agentManager,
-                    queueItemStore,
+                    context.ReservationManager,
+                    context.AgentManager,
+                    context.QueueItemStore,
                     cancellationToken);
                 break;
 
@@ -91,15 +90,18 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                 await BroadcastOfferRevokedAsync(
                     interactionEvent,
                     AgentOfferRevokedReason.Accepted,
-                    reservationManager,
-                    agentManager,
-                    queueItemStore,
+                    context.ReservationManager,
+                    context.AgentManager,
+                    context.QueueItemStore,
                     cancellationToken);
                 break;
 
             case ContactCenterConstants.Events.QueueItemAdded:
             case ContactCenterConstants.Events.QueueItemDequeued:
-                await BroadcastQueueStatsForItemAsync(interactionEvent.AggregateId, queueItemStore, cancellationToken);
+                await BroadcastQueueStatsForItemAsync(
+                    interactionEvent.AggregateId,
+                    context.QueueItemStore,
+                    cancellationToken);
                 break;
         }
     }

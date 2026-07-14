@@ -653,6 +653,43 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void PostCommitAndHubExecution_UseTheContactCenterScopeExecutor()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var sourceFiles = new[]
+        {
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DefaultContactCenterEventPublisher.cs",
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/ContactCenterRealTimeEventHandler.cs",
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/OfferQueuedVoiceWorkOnAvailabilityHandler.cs",
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Hubs/ContactCenterHub.cs",
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Services/VoiceContactCenterCallRouter.cs",
+        };
+
+        // Act
+        var sources = sourceFiles.ToDictionary(
+            path => path,
+            path => File.ReadAllText(Path.Combine(repositoryRoot, path)));
+
+        // Assert
+        foreach (var (path, source) in sources)
+        {
+            Assert.DoesNotContain("ShellScope.", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("CreateAsyncScope(", source, StringComparison.Ordinal);
+            Assert.Contains("IContactCenterScopeExecutor", source, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain(
+            "IServiceProvider",
+            sources["src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/ContactCenterRealTimeEventHandler.cs"],
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "IServiceProvider",
+            sources["src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/OfferQueuedVoiceWorkOnAvailabilityHandler.cs"],
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

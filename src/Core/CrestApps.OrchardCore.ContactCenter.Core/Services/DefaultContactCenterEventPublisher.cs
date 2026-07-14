@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -17,6 +15,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
 {
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterOutbox _outbox;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -25,16 +24,19 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     /// </summary>
     /// <param name="eventStore">The durable interaction event store.</param>
     /// <param name="outbox">The outbox that dispatches events to handlers with durable retry.</param>
+    /// <param name="scopeExecutor">The executor used to schedule post-commit dispatch.</param>
     /// <param name="clock">The clock used to stamp events.</param>
     /// <param name="logger">The logger instance.</param>
     public DefaultContactCenterEventPublisher(
         IInteractionEventStore eventStore,
         IContactCenterOutbox outbox,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<DefaultContactCenterEventPublisher> logger)
     {
         _eventStore = eventStore;
         _outbox = outbox;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
     }
@@ -81,36 +83,10 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
         await _outbox.EnqueueAsync(interactionEvent, cancellationToken);
 
-        if (ShellScope.Current is null)
+        if (!_scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(
+            context => context.DispatchAsync(interactionEvent.ItemId)))
         {
             await _outbox.DispatchAsync(interactionEvent, cancellationToken);
-
-            return;
         }
-
-        ShellScope.AddDeferredTask(scope => DispatchDeferredAsync(scope, interactionEvent.ItemId));
-    }
-
-    private static async Task DispatchDeferredAsync(ShellScope scope, string eventId)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-        ArgumentException.ThrowIfNullOrEmpty(eventId);
-
-        var services = scope.ServiceProvider;
-        var eventStore = services.GetRequiredService<IInteractionEventStore>();
-        var outbox = services.GetRequiredService<IContactCenterOutbox>();
-        var logger = services.GetRequiredService<ILogger<DefaultContactCenterEventPublisher>>();
-        var interactionEvent = await eventStore.FindByIdAsync(eventId);
-
-        if (interactionEvent is null)
-        {
-            logger.LogWarning(
-                "Skipped deferred Contact Center event dispatch because event '{EventId}' no longer exists.",
-                OperationalLogRedactor.Pseudonymize(eventId, OperationalLogIdentifierCategory.Event));
-
-            return;
-        }
-
-        await outbox.DispatchAsync(interactionEvent);
     }
 }

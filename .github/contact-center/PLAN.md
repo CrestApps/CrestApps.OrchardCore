@@ -1705,10 +1705,10 @@ Exit: two-tenant isolation tests with the production backplane, authorization bo
 Changes:
 
 - [x] Split the headless base from Omnichannel Managements admin integration.
-- Introduce explicit Availability, Routing, Voice.SoftPhone, AgentDesktop, Compliance, Dialer.Automated, Workflows, provider Contact Center adapter, and provider media features.
-- Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
+- [x] Introduce explicit Availability, Routing, Voice.SoftPhone, AgentDesktop, Compliance, Dialer.Automated, Workflows, provider Contact Center adapter, and provider media features.
+- [x] Move provider-facing contracts into stable abstractions; eliminate provider references to Contact Center implementation.
 - [x] Replace reverse Omnichannel-to-Contact-Center discovery with Omnichannel-owned contributors.
-- Make post-commit handler execution and Orchard shell child scopes explicit abstractions instead of scattered service location.
+- [x] Make post-commit handler execution and Orchard shell child scopes explicit abstractions instead of scattered service location.
 - Expand the R1 single-host backplane fixture into the minimal two-node Orchard/Redis-backplane/provider-listener harness needed by distributed R0b scenarios.
 - Define per-feature quiesce/drain/re-enable contracts and test inactive/idle enable-disable behavior before moving registrations. Defer active-call, pending-command, and in-flight-outbox quiesce proof to R3 after durable command state exists.
 
@@ -1909,6 +1909,7 @@ This checklist is authoritative for current execution order. Historical phase an
   - [x] `CrestApps.OrchardCore.ContactCenter.Voice.Media` now independently owns bidirectional media-provider resolution. Asterisk exposes separate Contact Center voice-adapter and media features, DialPad exposes an explicit Contact Center voice-adapter feature, and both provider base features retain only Telephony dependencies.
   - [x] Provider webhook inbox, ingress limiting, normalized voice-event ingestion, provider-state reconciliation, and inbound voice routing now expose implementation-free contracts from `CrestApps.OrchardCore.ContactCenter.Abstractions`. Asterisk and DialPad no longer compile against Contact Center Core or the Contact Center module.
   - [x] Omnichannel Core now owns the optional `IActivityDialerContributor` contract and implementation-neutral profile descriptor. Contact Center Dialer contributes profile discovery and queueing, while Omnichannel Managements no longer references Contact Center implementation assemblies or locates dialer services dynamically.
+  - [x] `IContactCenterScopeExecutor` now owns Contact Center child-scope execution and after-commit scheduling. Event dispatch, real-time projection, queued-work recovery, hub operations, and inbound routing lock release resolve explicit typed contexts instead of using scattered `ShellScope`, `IServiceProvider`, or ad hoc child scopes.
 - [ ] **R3 — Atomic consistency and agent lifecycle:** database CAS/constraints, canonical availability, after-call recovery, provider command outbox/compensation, provider inbox, stable handler ids.
 - [ ] **R4 — Executable provider capabilities and high availability:** recording/monitoring contracts, provider stream ownership, monotonic events, command cancellation, media transport hardening.
   - [x] Provider-neutral agent-audio capability foundation distinguishes executable browser audio from external-device/provider-client audio, automatically resolves single-mode providers, requires an explicit provider setting for dual-mode providers, and fails browser audio closed unless a named browser media adapter is registered. The soft phone lazily acquires and releases microphone media around active calls and forwards authoritative call state to the adapter.
