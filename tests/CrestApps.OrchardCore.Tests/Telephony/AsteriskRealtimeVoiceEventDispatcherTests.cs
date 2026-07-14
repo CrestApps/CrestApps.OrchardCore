@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
@@ -96,22 +95,17 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
     {
         // Arrange
         var store = new Mock<ITelephonyInteractionStore>();
-        var providerVoiceEventService = new Mock<IProviderVoiceEventService>();
+        var providerVoiceEventSink = new Mock<IProviderVoiceEventSink>();
         var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
         var clock = new Mock<IClock>();
-        providerVoiceEventService
+        providerVoiceEventSink
             .Setup(service => service.IngestAsync(It.Is<ProviderVoiceEvent>(value =>
                     value.ProviderCallId == "call-1" &&
                     value.State == ContactCenterCallState.Ended),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CallSession
-            {
-                ItemId = "session-1",
-                ProviderCallId = "call-1",
-                ProviderName = "Asterisk",
-            });
+            .ReturnsAsync(true);
         var voiceEventBridge = new AsteriskContactCenterVoiceEventBridge(
-            providerVoiceEventService.Object,
+            providerVoiceEventSink.Object,
             NullLogger<AsteriskContactCenterVoiceEventBridge>.Instance);
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(

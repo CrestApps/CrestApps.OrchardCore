@@ -137,6 +137,8 @@ The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `As
 
 ## Bidirectional RTP media
 
+The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` or `CrestApps.OrchardCore.Asterisk.ContactCenterMedia`.
+
 Enable `CrestApps.OrchardCore.ContactCenter.Voice.Media` and `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` to activate bidirectional media independently from the Asterisk base Telephony provider and Contact Center voice adapter. The Asterisk Contact Center voice provider advertises `BidirectionalMedia`, while the media feature registers `AsteriskContactCenterVoiceMediaProvider`. It uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
 
 Opening a media session:

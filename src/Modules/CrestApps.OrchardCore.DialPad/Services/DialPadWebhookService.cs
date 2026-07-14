@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Modules;
 
@@ -11,23 +11,23 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// </summary>
 public sealed class DialPadWebhookService : IDialPadWebhookService
 {
-    private readonly IProviderVoiceEventService _providerVoiceEventService;
-    private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
+    private readonly IProviderVoiceEventSink _providerVoiceEventSink;
+    private readonly IInboundVoiceEventSink _inboundVoiceEventSink;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialPadWebhookService"/> class.
     /// </summary>
-    /// <param name="providerVoiceEventService">The provider voice event service used to update existing interactions.</param>
-    /// <param name="voiceCallRouter">The voice call router used to route new inbound calls.</param>
+    /// <param name="providerVoiceEventSink">The provider voice event sink used to update existing interactions.</param>
+    /// <param name="inboundVoiceEventSink">The inbound voice event sink used to route new calls.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     public DialPadWebhookService(
-        IProviderVoiceEventService providerVoiceEventService,
-        IVoiceContactCenterCallRouter voiceCallRouter,
+        IProviderVoiceEventSink providerVoiceEventSink,
+        IInboundVoiceEventSink inboundVoiceEventSink,
         IClock clock)
     {
-        _providerVoiceEventService = providerVoiceEventService;
-        _voiceCallRouter = voiceCallRouter;
+        _providerVoiceEventSink = providerVoiceEventSink;
+        _inboundVoiceEventSink = inboundVoiceEventSink;
         _clock = clock;
     }
 
@@ -69,16 +69,16 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             },
         };
 
-        var session = await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
+        var handled = await _providerVoiceEventSink.IngestAsync(providerEvent, cancellationToken);
 
-        if (session is not null)
+        if (handled)
         {
             return DialPadWebhookResult.Updated;
         }
 
         if (IsInbound(callEvent.Direction) && IsLive(state))
         {
-            await _voiceCallRouter.RouteInboundAsync(new InboundVoiceEvent
+            await _inboundVoiceEventSink.RouteAsync(new InboundVoiceEvent
             {
                 ProviderName = DialPadConstants.ProviderTechnicalName,
                 ProviderCallId = callEvent.CallId,

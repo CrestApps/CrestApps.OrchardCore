@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
 /// Enforces tenant-local concurrency and authenticated provider rate limits for webhook ingress.

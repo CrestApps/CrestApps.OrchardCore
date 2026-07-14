@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -8,14 +8,14 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskContactCenterVoiceEventBridge : IAsteriskRealtimeVoiceEventBridge
 {
-    private readonly IProviderVoiceEventService _providerVoiceEventService;
+    private readonly IProviderVoiceEventSink _providerVoiceEventSink;
     private readonly ILogger<AsteriskContactCenterVoiceEventBridge> _logger;
 
     public AsteriskContactCenterVoiceEventBridge(
-        IProviderVoiceEventService providerVoiceEventService,
+        IProviderVoiceEventSink providerVoiceEventSink,
         ILogger<AsteriskContactCenterVoiceEventBridge> logger)
     {
-        _providerVoiceEventService = providerVoiceEventService;
+        _providerVoiceEventSink = providerVoiceEventSink;
         _logger = logger;
     }
 
@@ -25,9 +25,9 @@ internal sealed class AsteriskContactCenterVoiceEventBridge : IAsteriskRealtimeV
     {
         ArgumentNullException.ThrowIfNull(voiceEvent);
 
-        var session = await _providerVoiceEventService.IngestAsync(BuildProviderVoiceEvent(voiceEvent), cancellationToken);
+        var handled = await _providerVoiceEventSink.IngestAsync(BuildProviderVoiceEvent(voiceEvent), cancellationToken);
 
-        if (session is null)
+        if (!handled)
         {
             return false;
         }
@@ -35,11 +35,10 @@ internal sealed class AsteriskContactCenterVoiceEventBridge : IAsteriskRealtimeV
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} flowed into Contact Center session {SessionId}.",
+                "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} flowed into Contact Center.",
                 OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
                 voiceEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
-                OperationalLogRedactor.Pseudonymize(session.ItemId, OperationalLogIdentifierCategory.Session));
+                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
         }
 
         return true;

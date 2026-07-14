@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;

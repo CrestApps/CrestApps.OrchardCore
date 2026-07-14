@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
 /// Durably accepts authenticated provider webhook deliveries and dispatches persisted payloads with retry recovery.

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
 /// Processes one normalized payload from the durable provider webhook inbox.

@@ -17,9 +17,9 @@ DialPad SDK or token.
 
 ## Dependencies
 
-Enabling **DialPad** automatically enables the **Telephony** feature it depends on. The DialPad
-module depends only on `CrestApps.OrchardCore.Telephony.Abstractions`, keeping it decoupled from the
-soft phone and the hub.
+Enabling **DialPad** automatically enables the **Telephony** feature it depends on. The DialPad module compiles only against the Telephony and Contact Center abstraction packages, keeping it decoupled from their implementation assemblies, the soft phone, and the hub.
+
+The base DialPad feature does not require Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.DialPad.ContactCenterVoice`; its manifest dependency then enables Contact Center Voice for that tenant.
 
 ## Configuration
 

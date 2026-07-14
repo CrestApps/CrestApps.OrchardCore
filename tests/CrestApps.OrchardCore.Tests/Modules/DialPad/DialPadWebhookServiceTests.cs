@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using Moq;
@@ -15,13 +14,12 @@ public sealed class DialPadWebhookServiceTests
     public async Task ProcessAsync_NewInboundRingingCall_RoutesInbound()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
-        eventService.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync((CallSession)null);
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-        var router = new Mock<IVoiceContactCenterCallRouter>();
-        router.Setup(r => r.RouteInboundAsync(It.IsAny<InboundVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(new InboundVoiceRoutingResult());
+        var inboundSink = new Mock<IInboundVoiceEventSink>();
 
-        var service = CreateService(eventService, router);
+        var service = CreateService(eventSink, inboundSink);
 
         var callEvent = new DialPadCallEvent
         {
@@ -37,18 +35,22 @@ public sealed class DialPadWebhookServiceTests
 
         // Assert
         Assert.Equal(DialPadWebhookResult.Routed, result);
-        router.Verify(r => r.RouteInboundAsync(It.Is<InboundVoiceEvent>(e => e.ProviderCallId == "c1" && e.FromAddress == "+15551112222"), It.IsAny<CancellationToken>()), Times.Once);
+        inboundSink.Verify(
+            sink => sink.RouteAsync(
+                It.Is<InboundVoiceEvent>(e => e.ProviderCallId == "c1" && e.FromAddress == "+15551112222"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task ProcessAsync_ExistingInteraction_UpdatesWithoutRouting()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
-        eventService.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(new CallSession { ItemId = "cs1" });
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        var router = new Mock<IVoiceContactCenterCallRouter>();
-        var service = CreateService(eventService, router);
+        var inboundSink = new Mock<IInboundVoiceEventSink>();
+        var service = CreateService(eventSink, inboundSink);
 
         var callEvent = new DialPadCallEvent { CallId = "c1", State = "connected", Direction = "inbound" };
 
@@ -57,18 +59,20 @@ public sealed class DialPadWebhookServiceTests
 
         // Assert
         Assert.Equal(DialPadWebhookResult.Updated, result);
-        router.Verify(r => r.RouteInboundAsync(It.IsAny<InboundVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inboundSink.Verify(
+            sink => sink.RouteAsync(It.IsAny<InboundVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task ProcessAsync_OutboundWithNoInteraction_Ignored()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
-        eventService.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync((CallSession)null);
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-        var router = new Mock<IVoiceContactCenterCallRouter>();
-        var service = CreateService(eventService, router);
+        var inboundSink = new Mock<IInboundVoiceEventSink>();
+        var service = CreateService(eventSink, inboundSink);
 
         var callEvent = new DialPadCallEvent { CallId = "c1", State = "connected", Direction = "outbound" };
 
@@ -77,16 +81,18 @@ public sealed class DialPadWebhookServiceTests
 
         // Assert
         Assert.Equal(DialPadWebhookResult.Ignored, result);
-        router.Verify(r => r.RouteInboundAsync(It.IsAny<InboundVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inboundSink.Verify(
+            sink => sink.RouteAsync(It.IsAny<InboundVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task ProcessAsync_UnknownState_IgnoredWithoutIngest()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
-        var router = new Mock<IVoiceContactCenterCallRouter>();
-        var service = CreateService(eventService, router);
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        var inboundSink = new Mock<IInboundVoiceEventSink>();
+        var service = CreateService(eventSink, inboundSink);
 
         var callEvent = new DialPadCallEvent { CallId = "c1", State = "something_odd", Direction = "inbound" };
 
@@ -95,7 +101,7 @@ public sealed class DialPadWebhookServiceTests
 
         // Assert
         Assert.Equal(DialPadWebhookResult.Ignored, result);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        eventSink.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -103,13 +109,13 @@ public sealed class DialPadWebhookServiceTests
     {
         // Arrange
         ProviderVoiceEvent providerEvent = null;
-        var eventService = new Mock<IProviderVoiceEventService>();
-        eventService.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
-            .ReturnsAsync(new CallSession { ItemId = "cs1" });
+            .ReturnsAsync(true);
 
-        var router = new Mock<IVoiceContactCenterCallRouter>();
-        var service = CreateService(eventService, router);
+        var inboundSink = new Mock<IInboundVoiceEventSink>();
+        var service = CreateService(eventSink, inboundSink);
 
         var callEvent = new DialPadCallEvent
         {
@@ -142,12 +148,12 @@ public sealed class DialPadWebhookServiceTests
     {
         // Arrange
         var providerEvents = new List<ProviderVoiceEvent>();
-        var eventService = new Mock<IProviderVoiceEventService>();
-        eventService
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink
             .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvents.Add(value))
-            .ReturnsAsync(new CallSession { ItemId = "cs1" });
-        var service = CreateService(eventService, new Mock<IVoiceContactCenterCallRouter>());
+            .ReturnsAsync(true);
+        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
 
         // Act
         await service.ProcessAsync(new DialPadCallEvent
@@ -170,11 +176,13 @@ public sealed class DialPadWebhookServiceTests
         Assert.NotEqual(providerEvents[0].IdempotencyKey, providerEvents[1].IdempotencyKey);
     }
 
-    private static DialPadWebhookService CreateService(Mock<IProviderVoiceEventService> eventService, Mock<IVoiceContactCenterCallRouter> router)
+    private static DialPadWebhookService CreateService(
+        Mock<IProviderVoiceEventSink> eventSink,
+        Mock<IInboundVoiceEventSink> inboundSink)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-        return new DialPadWebhookService(eventService.Object, router.Object, clock.Object);
+        return new DialPadWebhookService(eventSink.Object, inboundSink.Object, clock.Object);
     }
 }

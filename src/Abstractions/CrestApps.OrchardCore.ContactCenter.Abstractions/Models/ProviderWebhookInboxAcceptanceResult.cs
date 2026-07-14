@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Represents the result of accepting a provider webhook delivery into the durable inbox.

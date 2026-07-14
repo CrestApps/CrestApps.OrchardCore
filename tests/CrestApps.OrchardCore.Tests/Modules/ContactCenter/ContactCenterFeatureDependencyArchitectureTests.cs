@@ -596,6 +596,34 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void ProviderModules_ReferenceOnlyStableContactCenterAbstractions()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var asteriskProject = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj"));
+        var dialPadProject = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.DialPad/CrestApps.OrchardCore.DialPad.csproj"));
+
+        // Act
+        var providerProjects = new[]
+        {
+            asteriskProject,
+            dialPadProject,
+        };
+
+        // Assert
+        Assert.All(providerProjects, project =>
+        {
+            Assert.Contains("CrestApps.OrchardCore.ContactCenter.Abstractions.csproj", project, StringComparison.Ordinal);
+            Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Core.csproj", project, StringComparison.Ordinal);
+            Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.csproj", project, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

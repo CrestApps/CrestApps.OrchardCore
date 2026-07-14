@@ -1,6 +1,6 @@
 using System.Threading.RateLimiting;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Represents an acquired or rejected provider webhook ingress permit.
@@ -9,7 +9,11 @@ public sealed class ProviderWebhookIngressLease : IDisposable
 {
     private readonly RateLimitLease _lease;
 
-    internal ProviderWebhookIngressLease(RateLimitLease lease)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderWebhookIngressLease"/> class.
+    /// </summary>
+    /// <param name="lease">The underlying rate-limit lease.</param>
+    public ProviderWebhookIngressLease(RateLimitLease lease)
     {
         _lease = lease;
 

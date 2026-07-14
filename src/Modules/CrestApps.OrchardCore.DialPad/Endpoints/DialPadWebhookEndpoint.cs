@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using Microsoft.AspNetCore.Builder;

@@ -19,6 +19,10 @@ There are five separate seams, and a provider may implement any combination supp
 | Live call-state lookup | `ITelephonyCallStateProvider` | Query the provider's current server truth for a specific call so Contact Center can revalidate offers and reconcile restarts |
 | Contact Center orchestration | `IContactCenterVoiceProvider` | Dialer dialing, server-side agent bridging, provider-side queue ownership, and other Contact Center voice operations |
 | Bidirectional live media | `IContactCenterVoiceMediaProvider` | Receive caller audio and inject application-generated audio into an existing provider call |
+| Provider event ingestion | `IProviderVoiceEventSink` | Submit normalized provider call-state events without referencing Contact Center persistence models |
+| Inbound provider routing | `IInboundVoiceEventSink` | Route a normalized inbound call into Contact Center work |
+| Provider reconciliation | `IProviderCallStateReconciler` | Reconcile active Contact Center calls against authoritative provider state |
+| Durable webhook ingress | `IProviderWebhookInbox`, `IProviderWebhookInboxHandler`, `IProviderWebhookIngressLimiter` | Commit authenticated deliveries, dispatch provider-owned payload handlers, and enforce ingress limits |
 | Provider event ingress | `IProviderVoiceWebhookAdapter` or provider-specific stream listener | Convert provider webhooks or stream events into normalized `ProviderVoiceEvent` instances |
 
 The soft phone stays provider-agnostic because **providers never push UI updates directly to the browser**. Every provider must translate its native events into the internal Contact Center voice-event pipeline first.
@@ -72,6 +76,10 @@ This layer is optional for browser-only or device-native flows, but it is requir
 ## 3. Implement bidirectional media only when the provider exposes live audio
 
 Providers that can attach an external media stream to an active call may implement `IContactCenterVoiceMediaProvider`. The matching `IContactCenterVoiceProvider` must also advertise `ContactCenterVoiceProviderCapabilities.BidirectionalMedia`.
+
+Provider modules should reference `CrestApps.OrchardCore.ContactCenter.Abstractions` only. Do not reference the Contact Center Core or module assemblies to ingest events, route inbound calls, reconcile provider state, or participate in the durable webhook inbox; use the stable provider-facing contracts above.
+
+Installing a provider package does not implicitly install the Contact Center module. Hosts that enable a provider's Contact Center adapter must also install the Contact Center module package; the adapter feature's manifest dependency then enables the required Contact Center Voice feature for that tenant.
 
 Both requirements are intentional. `IContactCenterVoiceMediaProviderResolver` returns a provider only when:
 

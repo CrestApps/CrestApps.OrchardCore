@@ -1,19 +1,19 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskContactCenterProviderStateReconciler : IAsteriskProviderStateReconciler
 {
-    private readonly IProviderCallStateSynchronizationService _synchronizationService;
+    private readonly IProviderCallStateReconciler _reconciler;
 
     public AsteriskContactCenterProviderStateReconciler(
-        IProviderCallStateSynchronizationService synchronizationService)
+        IProviderCallStateReconciler reconciler)
     {
-        _synchronizationService = synchronizationService;
+        _reconciler = reconciler;
     }
 
     public async Task ReconcileAsync(string providerName, CancellationToken cancellationToken = default)
     {
-        await _synchronizationService.ReconcileProviderInteractionsAsync(providerName, cancellationToken);
+        await _reconciler.ReconcileAsync(providerName, cancellationToken);
     }
 }

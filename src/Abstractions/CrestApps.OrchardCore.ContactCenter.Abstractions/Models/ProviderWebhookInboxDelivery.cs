@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
+namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Represents an authenticated, normalized provider webhook delivery ready for durable acceptance.

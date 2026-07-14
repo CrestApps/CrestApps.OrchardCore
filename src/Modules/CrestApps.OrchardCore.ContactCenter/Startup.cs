@@ -452,10 +452,13 @@ public sealed class VoiceStartup : StartupBase
 
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
+            .AddScoped<IInboundVoiceEventSink, InboundVoiceEventSink>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
+            .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
+            .AddScoped<IProviderVoiceEventSink, ProviderVoiceEventSink>()
             .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
             .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()

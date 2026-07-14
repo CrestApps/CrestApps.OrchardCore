@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.DialPad.Models;
 
 namespace CrestApps.OrchardCore.DialPad.Services;
