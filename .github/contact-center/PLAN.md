@@ -1864,6 +1864,12 @@ Keep this section current. Use the checklist below to track phase-level progress
 This checklist is authoritative for current execution order. Historical phase and G1-G8 checkmarks below record implementation increments only; every affected capability remains production-incomplete until the corresponding remediation and release gates pass.
 
 - [ ] **R0 — Support contract, SLOs, ownership, and failure reproductions:** publish the finite GA matrix and PR-to-test ownership, pin baselines, complete R0a tests, and track R0b harness dependencies.
+  - [x] Exact clean-tree baseline pinned in `.github/contact-center/R0-BASELINE.md`: commit `ccb1076d`, strict build, 1,472 unit tests, 24 Telephony browser tests, asset/docs builds, toolchain versions, and test-artifact hashes.
+  - [ ] Finite GA support/capacity matrix and prohibited combinations.
+  - [ ] SLOs, error budgets, dependency limits, RPO/RTO, DRIs, and approvers.
+  - [ ] PR-to-test control matrix for every P0/P1 gate.
+  - [ ] R0a in-process/shared-database failure reproductions and feature-dependency architecture test.
+  - [ ] R0b Redis/backplane and multi-process harness dependency ledger.
 - [~] **R1 — Security and tenant isolation:** tenant-qualified SignalR, queue/campaign entitlements, secret/PII redaction, simulator containment, XSS correction.
   - [x] Tenant-qualified Contact Center and Telephony user/queue/supervisor SignalR destinations, including authorized group joins and provider-event projections.
   - [x] Asterisk ARI credential-log redaction and development-only simulator containment.
@@ -1933,6 +1939,7 @@ Ordered by the former design-review execution order. Numbers reference the histo
 
 ### Change log
 
+- 2026-07-13: Pinned the R0 clean-tree baseline at commit `ccb1076d` in `.github/contact-center/R0-BASELINE.md`: strict Release build with zero warnings/errors, 1,472 unit tests, 24 Telephony browser tests, asset and documentation builds, toolchain versions, and SHA-256 hashes for the generated TRX evidence.
 - 2026-07-13: Added manager-owned agent queue/campaign entitlements under **Interaction Center → Agent entitlements**. Agent-selected memberships are constrained centrally, soft-phone options and reconnect snapshots expose only entitled memberships, routing requires both live membership and a manager grant, and entitlement removal prunes the live agent session, removes active connections from revoked SignalR queue groups, and refreshes the connected membership snapshot while preserving presence and reservation state.
 - 2026-07-13: Challenged the production-readiness plan with Claude Opus 4.8 and GPT-5.6 Terra. Incorporated tenant-qualified SignalR user targeting, a headless Availability feature, durable after-call deadlines, canonical provider identity, portable WorkState CAS, provider `OutcomeUnknown` commands, finite support/feature matrices, feature quiesce/re-enable, split R0a/R0b reproductions, earlier SLO/ownership decisions, replay-horizon retention rules, fail-closed optional media capabilities, and separate GA versus higher-scale certification.
 - 2026-07-13: Completed an independent production-readiness review across Orchard feature composition, multi-tenancy, domain/persistence, provider/telephony, security, operations, scalability, testing, CI/CD, and documentation. The commercial release decision is blocked. Added evidence-backed P0/P1 gates, a normative target feature graph, canonical state/outbox/inbox decisions, a red-green-refactor remediation sequence R0-R9, required feature/database/browser/distributed/security/load/chaos/upgrade suites, capacity acceptance rules, and production release gates. Reopened historical completion claims where tenant isolation, authorization, feature dependencies, atomicity, provider capability execution, compliance, observability, data governance, or production proof remain incomplete.
