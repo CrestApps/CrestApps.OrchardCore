@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class ContactCenterRecordingAndMonitoringTests
 {
     [Fact]
-    public async Task StartAsync_SetsRecordingStateAndPublishes()
+    public async Task StartAsync_WithoutExecutableProviderContract_StillSetsRecordingStateAndPublishesSuccess()
     {
         // Arrange
         var interaction = new Interaction { ItemId = "int1", RecordingState = RecordingState.None };
@@ -48,7 +48,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
     }
 
     [Fact]
-    public async Task EngageAsync_WhenProviderSupportsMode_Succeeds()
+    public async Task EngageAsync_WithCapabilityFlagButNoExecutableOperation_StillPublishesSuccess()
     {
         // Arrange
         var interaction = new Interaction { ItemId = "int1", ProviderName = "p1" };

@@ -92,7 +92,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares recording prohibited for every GA-Core provider profile (policy-level fail-closed). tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRecordingAndMonitoringTests.cs still characterizes the unfixed state-without-execution runtime behavior; the runtime NotSupported/durable-session proof remains a planned:contact-center-domain-invariants R8 harness dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares recording prohibited for every GA-Core provider profile (policy-level fail-closed). ContactCenterRecordingAndMonitoringTests.StartAsync_WithoutExecutableProviderContract_StillSetsRecordingStateAndPublishesSuccess explicitly reproduces the unfixed state-without-execution runtime behavior; the runtime NotSupported/durable-session proof remains a planned:contact-center-domain-invariants R4/R8 dependency."
     },
     {
       "id": "C002",
@@ -118,7 +118,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares monitor/whisper/barge/take-over prohibited for every GA-Core provider profile (policy-level fail-closed). tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRecordingAndMonitoringTests.cs still characterizes today's capability-flag-only runtime gate; a Whisper-only provider test double that must fail Monitor/Barge/TakeOver at runtime is a planned:contact-center-domain-invariants R8 harness dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares monitor/whisper/barge/take-over prohibited for every GA-Core provider profile (policy-level fail-closed). ContactCenterRecordingAndMonitoringTests.EngageAsync_WithCapabilityFlagButNoExecutableOperation_StillPublishesSuccess explicitly reproduces today's capability-flag-only runtime behavior; a Whisper-only provider test double that must fail Monitor/Barge/TakeOver at runtime is a planned:contact-center-domain-invariants R4/R8 dependency."
     },
     {
       "id": "C003",
