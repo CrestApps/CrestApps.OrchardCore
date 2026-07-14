@@ -1,0 +1,1145 @@
+{
+  "version": "1.0",
+  "releaseStatus": "blocked-until-r0-r8-pass",
+  "sourceReview": "Independent production-readiness review (2026-07-13)",
+  "categories": [
+    {
+      "id": "correctness",
+      "prefix": "C",
+      "driRole": "Contact Center principal engineer",
+      "approverRoles": [
+        "Orchard Core architecture owner",
+        "Quality approver"
+      ]
+    },
+    {
+      "id": "data",
+      "prefix": "D",
+      "driRole": "Contact Center data owner",
+      "approverRoles": [
+        "Database approver",
+        "SRE approver"
+      ]
+    },
+    {
+      "id": "feature-and-package-graph",
+      "prefix": "F",
+      "driRole": "Contact Center principal engineer",
+      "approverRoles": [
+        "Orchard Core architecture owner",
+        "Product owner"
+      ]
+    },
+    {
+      "id": "operations",
+      "prefix": "O",
+      "driRole": "Contact Center SRE owner",
+      "approverRoles": [
+        "SRE approver",
+        "Release engineering approver"
+      ]
+    },
+    {
+      "id": "security",
+      "prefix": "S",
+      "driRole": "Contact Center security owner",
+      "approverRoles": [
+        "Security approver",
+        "Privacy or legal approver"
+      ]
+    },
+    {
+      "id": "test-and-topology",
+      "prefix": "T",
+      "driRole": "Contact Center quality owner",
+      "approverRoles": [
+        "Quality approver",
+        "Release engineering approver"
+      ]
+    },
+    {
+      "id": "voice-provider",
+      "prefix": "V",
+      "driRole": "Contact Center voice provider owner",
+      "approverRoles": [
+        "Security approver",
+        "Quality approver"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "id": "C001",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR9",
+      "gate": "Recording state changes without media execution",
+      "invariant": "A provider that does not register an executable recording contract must return NotSupported and must never publish a recording-started/stopped success event or flip Interaction.RecordingState; a provider that does register the contract must prove a real provider media command was issued and a durable recording session was persisted, not just a state flag. Today `ContactCenterRecordingService.StartAsync`/`StopAsync` flips `RecordingState` and publishes success events with no provider media command (`ContactCenterRecordingService.cs:28-79`) and `IContactCenterVoiceProvider` exposes no recording operation.",
+      "testId": "CC-C001",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares recording prohibited for every GA-Core provider profile (policy-level fail-closed). tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRecordingAndMonitoringTests.cs still characterizes the unfixed state-without-execution runtime behavior; the runtime NotSupported/durable-session proof remains a planned:contact-center-domain-invariants R8 harness dependency."
+    },
+    {
+      "id": "C002",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR9",
+      "gate": "Monitor/whisper/barge/take-over can report success without execution",
+      "invariant": "A provider that advertises only the Whisper capability must expose and execute only Whisper; Monitor, Barge, and TakeOver must each fail with NotSupported unless that specific operation is separately certified and executed by the provider, never inferred from a single combined capability flag. Today `ContactCenterMonitoringService.EngageAsync` checks `ContactCenterVoiceProviderCapabilities` and publishes `SupervisorMonitorStarted` with no per-operation provider execution proof (`ContactCenterMonitoringService.cs:33-74`).",
+      "testId": "CC-C002",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares monitor/whisper/barge/take-over prohibited for every GA-Core provider profile (policy-level fail-closed). tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRecordingAndMonitoringTests.cs still characterizes today's capability-flag-only runtime gate; a Whisper-only provider test double that must fail Monitor/Barge/TakeOver at runtime is a planned:contact-center-domain-invariants R8 harness dependency."
+    },
+    {
+      "id": "C003",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR3",
+      "gate": "Session loss during wrap-up permanently consumes capacity",
+      "invariant": "If the agent client crashes or disconnects during after-call work, the persisted `WrapUpDeadlineUtc`/required-disposition state must be swept server-side after its grace period so the interaction reaches a deterministic, auditable terminal state and the agent's capacity is released; capacity release must never depend on a connected client. Today after-call work is not persisted with a server-swept deadline, so a crash during wrap-up can leave a nonterminal interaction consuming capacity indefinitely (`ContactCenterHub.cs:113-126`; `AgentSessionStore.cs:35-40`).",
+      "testId": "CC-C003",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentSessionServiceTests.cs and AgentWorkStateHealingServiceTests.cs cover session/state healing today; the crash-during-wrap-up sweep and deterministic capacity-release proof are a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "C004",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR5",
+      "gate": "Completed-handler identity unstable across deployment",
+      "invariant": "Outbox completed-handler keys must be stable, explicit, versioned ids; under a rolling deployment that reorders or renames handler registrations, only handlers that were never recorded as completed under their stable id may replay, and a permanently failing (poison) handler must be isolated so it never blocks other due work. Today `ContactCenterOutbox.cs:172` derives the completed-handler key from the assembly-qualified type name plus registration index, so a rolling deployment can replay already-completed handlers or skip due ones.",
+      "testId": "CC-C004",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "rolling-upgrade"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterOutboxTests.cs covers current handler dispatch and poison-item isolation for a stable process; the rolling-reorder replay proof against stable versioned ids is a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "C005",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR8",
+      "gate": "Ambiguous inbound matches attributed to first contact",
+      "invariant": "When inbound contact lookup returns more than one match, the activity must persist an explicit ambiguous-resolution state instead of auto-assigning `contactIds[0]`, and no contact-bound subject action may run until the ambiguity is resolved explicitly. `InboundContactLookup.cs:31-68` can return multiple matches and `VoiceContactCenterCallRouter.cs:464-469` currently chooses the first match with no ordering or ambiguity state.",
+      "testId": "CC-C005",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InboundContactLookupTests.cs proves lookup returns every match without ordering; the router's ambiguous-state persistence and the block on contact-bound subject actions remain a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "C006",
+      "severity": "P0",
+      "category": "correctness",
+      "planFinding": "PR10",
+      "gate": "Calling-window gate insufficient for regulated automated dialing",
+      "invariant": "Outbound dialing eligibility must evaluate the reused business-hours calendar (day-of-week, holidays, minute precision, time zone), rolling abandonment rate, and safe-harbor behavior before any attempt, and the automatic Power/Progressive/Predictive dialing modes must remain unavailable until every one of those checks is certified by tests and legal/product policy. `DefaultDialerEligibilityService.cs:153-173` evaluates only an hour-only window today and omits day-of-week, holidays, minute precision, regional policy, abandonment caps, and safe-harbor behavior.",
+      "testId": "CC-C006",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerEligibilityServiceTests.cs and BusinessHoursServiceTests.cs cover the current hour-only window and business-hours calendar; calendar/holiday/time-zone precision, rolling abandonment caps, safe-harbor behavior, and the automated-mode gate are a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "C007",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "P1-web-api-hardening",
+      "gate": "Raw inbound-event endpoint duplicates ingress and broad privilege",
+      "invariant": "The authenticated `api/contact-center/voice/inbound` endpoint must never let a manager or agent synthesize a provider call under the broad `ManageInteractions` permission, and the simulator path it supports must be unavailable in a Production-configured host. `VoiceIngressEndpoint.cs` authorizes only `ContactCenterPermissions.ManageInteractions` and duplicates the signed provider webhook ingress with no Production/environment guard.",
+      "testId": "CC-C007",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InboundVoiceServiceTests.cs covers routing behavior once the endpoint is invoked; a dedicated non-manager-denied and Production-unavailable proof for `VoiceIngressEndpoint` is a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "C008",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "PR9",
+      "gate": "Capability flags exceed executable contracts",
+      "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that media work occurred. `IContactCenterVoiceMediaProviderResolver` already requires both the `BidirectionalMedia` capability flag and a matching `IContactCenterVoiceMediaProvider` registration before selecting a provider for AI media sessions, but Recording, Monitor, Whisper, Barge, and TakeOver still rely on the capability bitmask alone.",
+      "testId": "CC-C008",
+      "ciJob": {
+        "id": "contact-center-domain-invariants",
+        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterVoiceMediaProviderResolverTests.cs proves the capability-plus-implementation contract for BidirectionalMedia; extending the same registration-time proof to Recording/Monitor/Whisper/Barge/TakeOver is a planned:contact-center-domain-invariants dependency."
+    },
+    {
+      "id": "D001",
+      "severity": "P0",
+      "category": "data",
+      "planFinding": "PR3",
+      "gate": "Disconnected agents remain routable",
+      "invariant": "After an agent's last live connection disconnects, routing must never offer that agent new work, and no reservation may be created for the agent until a session reconnects; canonical eligibility must join a manager-owned `QueueMembership` with a live `AgentAvailability` projection, not a bare `AgentProfile.Available` flag. Today disconnect marks the `AgentSession` offline, but routing selects `AgentProfile` by Available presence without requiring a live session (`ContactCenterHub.cs:113-126`; `AgentProfileStore.cs:40-45`).",
+      "testId": "CC-D001",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentPresenceManagerServiceTests.cs and ActivityRoutingServiceTests.cs characterize today's presence-only eligibility; the disconnect-then-no-reservation proof is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D002",
+      "severity": "P0",
+      "category": "data",
+      "planFinding": "PR4",
+      "gate": "Provider call outlives failed reservation acceptance",
+      "invariant": "A dialer attempt must never call the provider before its reservation is accepted; if provider execution partially succeeds after a failed acceptance, a compensating hangup command must be issued using an idempotent command id so no active call outlives its failed reservation. `DialerAttemptService.cs:93-118,145-170` can dial before reservation acceptance today with no provider hangup compensation on failure.",
+      "testId": "CC-D002",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerAttemptServiceTests.cs and ActivityReservationServiceTests.cs characterize today's dial-before-accept ordering; the compensating-hangup-on-failure proof is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D003",
+      "severity": "P0",
+      "category": "data",
+      "planFinding": "PR5",
+      "gate": "Provider event dedupe check-then-insert",
+      "invariant": "Under two concurrent service instances racing the same shared database with a duplicated or out-of-order provider event, canonical provider identity, a unique `(CanonicalProviderKey, ProviderCallId)` constraint on CallSession, and a unique provider-event-id constraint on the inbox must together guarantee exactly one valid state transition. `ProviderVoiceEventService.cs:125-147,221-257` deduplicates with a check-then-insert read today, and `CallSessionIndexMigrations.cs:32-47` does not enforce a unique provider-call identity.",
+      "testId": "CC-D003",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "concurrent-writers"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceEventServiceTests.cs characterizes today's check-then-insert dedupe path; the concurrent-duplicate/out-of-order proof against a unique database constraint is a planned:contact-center-database-matrix dependency across every supported database."
+    },
+    {
+      "id": "D004",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "PR4",
+      "gate": "Distributed locks lack DB CAS",
+      "invariant": "Under two application nodes racing a distributed-lock expiry on the same queue item or reservation, database row versions/conditional writes and unique active queue-item/reservation constraints must guarantee exactly one accepted reservation; the lock is a contention optimization, never the correctness authority. `ActivityReservationService.cs:79-156` performs read-then-write assignment today without database uniqueness/CAS.",
+      "testId": "CC-D004",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs and ActivityQueueServiceTests.cs characterize today's read-then-write path; the two-node lock-expiry race proof against a database constraint is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D005",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "P1-database-constraints-and-indexes",
+      "gate": "Hot-query indexes mismatch predicates",
+      "invariant": "Every hot queue, outbox, and active-call query must be led by an index that covers its actual filter columns, and the resulting query plan must be verified with an explicit query-count/plan test on every supported database. Hot queue, outbox, and active-call queries are not currently led by their filter columns.",
+      "testId": "CC-D005",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "No query-count/plan contract test exists yet; per-database covering-index verification is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D006",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "P1-database-constraints-and-indexes",
+      "gate": "Routing/live metrics scale linearly",
+      "invariant": "Routing candidate selection and live metrics must use bounded top-N queries and aggregate SQL rather than broad loads with per-agent active-count queries, and must meet the approved SLO at every supported capacity tier: 100, 1,000, 10,000, and 100,000 agents/interactions. Routing today loads broad sets and performs per-agent active-count queries instead of bounded top-N aggregation.",
+      "testId": "CC-D006",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "scale-100",
+          "scale-1k",
+          "scale-10k",
+          "scale-100k"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/CapacityRoutingStrategyTests.cs and QueueItemPrioritizerTests.cs cover routing selection logic at unit scale; the 100/1k/10k/100k SLO load proof is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D007",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "P1-analytics-and-projections",
+      "gate": "Metrics projections not idempotent/rebuildable",
+      "invariant": "Every projection increment must be guarded by a unique `(Projection, EventId)` processed-event record applied through an atomic upsert, and every replayable projection must support a versioned checkpoint, a documented rebuild operation, and a drift-detection check, so a duplicate delivery, concurrent writer, event replay, or poison event can never double-count a metric or diverge from live state. Metric increments have no processed-event guard/checkpoint today and rebuild tooling is incomplete.",
+      "testId": "CC-D007",
+      "ciJob": {
+        "id": "contact-center-database-matrix",
+        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "concurrent-writers"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterMetricsServiceTests.cs and ContactCenterReportingServiceTests.cs cover current metric increments; the duplicate/concurrent/replay/poison idempotency and rebuild/drift-detection proof is a planned:contact-center-database-matrix dependency."
+    },
+    {
+      "id": "D008",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "P1-background-work",
+      "gate": "Callback promotion duplicate-prone/unbounded",
+      "invariant": "Under two background workers crashing and restarting concurrently, callback promotion must claim a bounded batch with owner/lease expiry so exactly one activity/callback results, never a duplicate promotion or an unbounded scan. Callback promotion is unbounded and duplicate-prone today with no lease-based claim.",
+      "testId": "CC-D008",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/CallbackServiceTests.cs characterizes today's promotion logic at unit scale; the two-worker crash/restart exactly-once proof is a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "D009",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "P1-background-work",
+      "gate": "Provider reconciliation unbounded/overlaps",
+      "invariant": "Under a chaos scenario with a slow provider and overlapping worker executions across 100,000 calls, provider reconciliation must checkpoint its scan and rate-limit external lookups so overlapping runs never duplicate work or fall behind unboundedly. Provider reconciliation is unbounded today with no checkpointed, overlap-safe scan.",
+      "testId": "CC-D009",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "scale-100k",
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderCallStateSynchronizationServiceTests.cs and ProviderVoiceOfferSynchronizationServiceTests.cs characterize today's reconciliation logic at unit scale; the slow-provider chaos/overlapping-worker proof at 100,000 calls is a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "F001",
+      "severity": "P0",
+      "category": "feature-and-package-graph",
+      "planFinding": "PR2",
+      "gate": "Base coupled to Omnichannel Managements UI",
+      "invariant": "The base `CrestApps.OrchardCore.ContactCenter` feature must boot and activate in a tenant alone, resolving every service from only its own declared manifest dependencies, without requiring `CrestApps.OrchardCore.Omnichannel.Managements` or any other admin-integration assembly. Today the base feature depends on `CrestApps.OrchardCore.Omnichannel.Managements` (`ContactCenter/Manifest.cs`).",
+      "testId": "CC-F001",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No Orchard tenant/shell feature-activation test exists yet for the base feature booting alone; the declared-dependency boot proof is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "F002",
+      "severity": "P0",
+      "category": "feature-and-package-graph",
+      "planFinding": "PR2",
+      "gate": "Queues/Voice/RealTime/SoftPhone dependencies inconsistent",
+      "invariant": "Every service registered by a feature's Startup class must resolve using only that feature's declared transitive manifest dependencies. A singleton and supported-combination activation matrix must prove that enabling Queues, Voice, RealTime, and SoftPhone in every approved combination never fails to resolve a service. Today `QueuesStartup` registers a Telephony soft-phone driver requiring `HubRouteManager` without declaring Telephony or SignalR/RealTime, and Voice depends on `Telephony.SoftPhone` (`ContactCenter/Startup.cs:210-262,337-420`; `ContactCenterSoftPhoneWidgetDisplayDriver.cs:24-80`).",
+      "testId": "CC-F002",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No singleton/combination feature-activation matrix exists yet; the resolvable-services-per-declared-dependency proof is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "F003",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "P1-package-and-feature-boundaries",
+      "gate": "Workflow bridge not independently feature-gated",
+      "invariant": "A tenant must be able to enable or disable a real `CrestApps.OrchardCore.ContactCenter.Workflows` feature independently of the base Contact Center features. Today the Workflows bridge activates only implicitly through `[RequireFeatures(\"OrchardCore.Workflows\")]` with no independently selectable Contact Center feature.",
+      "testId": "CC-F003",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No independent Workflows-bridge feature or enable/disable test exists yet; this is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "F004",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "P1-package-and-feature-boundaries",
+      "gate": "Provider modules depend on implementation/Asterisk integrations ungated",
+      "invariant": "Asterisk and DialPad provider assemblies must reference only `CrestApps.OrchardCore.ContactCenter.Abstractions` (or another stable abstraction package), never a Contact Center implementation assembly, and each provider's base/adapter features must boot independently. Provider modules currently reference Contact Center implementation assemblies, and Asterisk registers Contact Center adapters from its base feature.",
+      "testId": "CC-F004",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No assembly-reference architecture test or independent provider-base/adapter boot test exists yet; this is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "F005",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "P1-package-and-feature-boundaries",
+      "gate": "Omnichannel Managements dynamically resolves optional CC services",
+      "invariant": "`CrestApps.OrchardCore.Omnichannel.Managements` must run standalone with Contact Center features disabled and must resolve optional Contact Center contributors (for example dialer services) only through an Omnichannel-owned contributor contract, never through reverse references or ad hoc service location that assumes Contact Center is present. Omnichannel Managements currently resolves optional dialer services dynamically via service location.",
+      "testId": "CC-F005",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No Managements-only activation test with Contact Center contributors present/absent exists yet; this is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "F006",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "P1-public-api-and-di",
+      "gate": "Post-commit uses IServiceProvider/ad hoc child scopes",
+      "invariant": "Post-commit handler and hub execution must become an explicit, testable dispatcher abstraction; before that refactor lands, the current `IServiceProvider`/ad hoc shell-child-scope execution path must be characterized by tests so the refactor cannot silently change behavior. Concrete orchestration types and post-commit/hub execution currently hide dependencies behind service location and child scopes.",
+      "testId": "CC-F006",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "No characterization test for the current post-commit/child-scope execution path exists yet; it must land before the explicit-dispatcher refactor as a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "O001",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "P1-observability-and-health",
+      "gate": "No production health/OpenTelemetry",
+      "invariant": "Contact Center must publish an `ActivitySource` with structured correlation, a `Meter` with counters/histograms for routing/queue/reservation/outbox/provider-command outcomes, and a health endpoint reporting degraded/unhealthy state for database, outbox/dead-letter, background-task lag, provider connectivity, listener lease, and SignalR backplane connectivity. No Contact Center `ActivitySource`, `Meter`, liveness, or readiness model exists today; `DialerActivitySourceHelper` only classifies business activity sources, not distributed traces.",
+      "testId": "CC-O001",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "No trace/metric/health contract test exists yet for Contact Center; this is a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "O002",
+      "severity": "P0",
+      "category": "operations",
+      "planFinding": "PR6",
+      "gate": "Multi-node SignalR not configured/proven",
+      "invariant": "Under two application nodes, a hub offer, a supervisor dashboard watch, an agent reconnect, and a supervisor fan-out broadcast must all reach the correct connections through a supported, configured SignalR backplane; in-memory single-node behavior must not be used to claim multi-node correctness. `CrestApps.OrchardCore.SignalR/Startup.cs:26-38` configures `AddSignalR()` with no backplane, and `CrestApps.Aspire.AppHost/Program.cs:18,26-35` does not wire one for Contact Center.",
+      "testId": "CC-O002",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRealTimeNotifierTests.cs and ContactCenterHubSecurityTests.cs prove single-node group/user targeting; the two-node offer/watch/reconnect/fan-out proof against a configured backplane is a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "O003",
+      "severity": "P0",
+      "category": "operations",
+      "planFinding": "PR7",
+      "gate": "Logs contain raw customer/agent IDs",
+      "invariant": "No log entry emitted by a Contact Center or Telephony/SMS provider path may contain an E.164 customer address, another stable personal identifier, a token, or a secret; centralized structured PII classification/redaction must be enforced with negative log tests across every path, not only the Asterisk event-subscription URI. Telephony/SMS logs can currently include raw addresses outside the Asterisk URI case covered by S003.",
+      "testId": "CC-O003",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskSettingsUtilitiesTests.cs and AsteriskWebSecurityTests.cs prove the Asterisk URI case only; a centralized redaction helper and negative log tests across every Telephony/SMS/Contact Center path are a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "O004",
+      "severity": "P0",
+      "category": "operations",
+      "planFinding": "PR7a",
+      "gate": "Asterisk sample host unsafe",
+      "invariant": "The Asterisk dashboard development host must reject startup in a Production-configured process, and any request reaching its diagnostics, origination, hangup, or bridge-deletion endpoints anonymously must be unavailable or return 401/403, not succeed. `AsteriskWebSecurity.EnsureDevelopmentOnly` already throws in Production (`CrestApps.OrchardCore.Asterisk.Web/Program.cs:9`), but the dashboard, channel-disconnect, bridge-disconnect, and simulation endpoints in that Program.cs enforce no per-request authorization, so 401/403 defense-in-depth is still missing if the process guard is ever bypassed.",
+      "testId": "CC-O004",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskWebSecurityTests.cs proves the Production startup guard throws and does not throw in Development. The pr_ci.yml job executes the test but does not yet upload a durable result artifact; retained CI output and per-endpoint 401/403 defense-in-depth remain a planned: .github/contact-center/evidence/O004/ dependency."
+    },
+    {
+      "id": "O005",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "PR11",
+      "gate": "CI omits browser/provider/feature/performance",
+      "invariant": "Each regression class (browser/E2E, provider contract, feature-activation, and performance) must run in its own owning CI workflow and fail with retained diagnostic artifacts when that class regresses; a single generic build-and-unit-test job must not be relied on to catch them. `pr_ci.yml` currently defines only one `build_test` job that runs `dotnet build` and `dotnet test`, with no browser install step, provider-contract job, feature-activation job, or performance/chaos job.",
+      "testId": "CC-O005",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": ".github/workflows/pr_ci.yml retains only the Build & Test artifact today; dedicated browser, provider-contract, feature-activation, and performance workflows with retained per-class artifacts are a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "O006",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "P1-data-governance-and-upgrades",
+      "gate": "Retention/erasure/rolling-upgrade incomplete",
+      "invariant": "Every entity carrying customer data (call sessions, Telephony history, metrics, recordings) must define a retention horizon and an erasure transformation, proven by purge and erasure tests, and every destructive schema migration must be proven safe for a mixed-version rolling upgrade using expand-migrate-contract, or the release must explicitly document a required downtime window. Retention today covers only interaction events; call sessions, Telephony history, metrics, recordings, and PII erasure remain undefined, and destructive migrations are unproven for rolling deployment.",
+      "testId": "CC-O006",
+      "ciJob": {
+        "id": "contact-center-operations-gates",
+        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "rolling-upgrade"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRetentionServiceTests.cs proves purge behavior for interaction events only; per-entity classification/erasure for call sessions, Telephony history, metrics, recordings, and the mixed-version rolling-upgrade migration proof are a planned:contact-center-operations-gates dependency."
+    },
+    {
+      "id": "S001",
+      "severity": "P0",
+      "category": "security",
+      "planFinding": "PR0",
+      "gate": "Global supervisor SignalR group",
+      "invariant": "Given two tenant shells sharing one SignalR hub lifetime manager or production backplane, a supervisor broadcast or user-targeted message scoped to tenant A must never be delivered to any connection belonging to tenant B. `ContactCenterHub` now qualifies the supervisors group and user identifiers with the shell's tenant name through `TenantSignalRGroupName` (`Hubs/ContactCenterHub.cs:32,47,108,121,502-504`).",
+      "testId": "CC-S001",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterHubSecurityTests.cs and ContactCenterRealTimeNotifierTests.cs prove tenant-qualified group/user naming in-process. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained two-shell/production-backplane evidence remains planned: .github/contact-center/evidence/S001/."
+    },
+    {
+      "id": "S002",
+      "severity": "P0",
+      "category": "security",
+      "planFinding": "PR1",
+      "gate": "Agents self-enroll arbitrary queues/campaigns",
+      "invariant": "A hub membership, subscription, or routing-candidacy request for a queue or campaign id must be rejected unless the requesting agent has a manager-owned `QueueMembership`/`CampaignMembership` entitlement for that id; an agent entitled only to queue A must never gain access to queue B.",
+      "testId": "CC-S002",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "all-topologies"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentEntitlementUtilitiesTests.cs, AgentPresenceManagerServiceTests.cs, AgentSessionServiceTests.cs, ActivityRoutingServiceTests.cs, and ContactCenterHubSecurityTests.cs cover entitlement filtering, revocation, snapshot, routing, and hub reconciliation behavior. End-to-end proof through every membership/subscription entry point and a retained CI result artifact remain planned: .github/contact-center/evidence/S002/."
+    },
+    {
+      "id": "S003",
+      "severity": "P0",
+      "category": "security",
+      "planFinding": "PR7",
+      "gate": "Asterisk logs credentials in URI",
+      "invariant": "No log entry produced when subscribing to or logging the Asterisk ARI event stream may contain the `api_key` query-string credential or any other secret; the logged URI representation must have credentials stripped before it reaches any logger.",
+      "testId": "CC-S003",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskSettingsUtilitiesTests.cs and AsteriskWebSecurityTests.cs assert the logging-safe URI never contains `api_key` or ARI credentials. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained CI output is planned: .github/contact-center/evidence/S003/."
+    },
+    {
+      "id": "S004",
+      "severity": "P1",
+      "category": "security",
+      "planFinding": "P1-web-api-hardening",
+      "gate": "Stored subject reaches innerHTML",
+      "invariant": "Stored subject/activity text rendered in the activity completion preview must render as literal text with no script execution even when the stored value contains an HTML/script payload; the view must use encoded DOM/text APIs, never raw `innerHTML` concatenation of untrusted stored text.",
+      "testId": "CC-S004",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/Omnichannel/OmnichannelActivityCompletionViewSecurityTests.cs asserts the preview does not use innerHTML and assigns stored text through textContent. The pr_ci.yml job executes the test but does not yet upload a durable result artifact; retained CI output is planned: .github/contact-center/evidence/S004/."
+    },
+    {
+      "id": "S005",
+      "severity": "P0",
+      "category": "security",
+      "planFinding": "PR7a",
+      "gate": "Asterisk dashboard anonymous destructive controls",
+      "invariant": "The Asterisk dashboard development host must refuse to start in a Production-configured process, so its anonymous diagnostics, call-origination, hangup, and bridge-deletion controls are unavailable in production; the host must never ship as a privileged, anonymously reachable production surface.",
+      "testId": "CC-S005",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskWebSecurityTests.cs proves `EnsureDevelopmentOnly_WhenProduction_Throws` and `EnsureDevelopmentOnly_WhenDevelopment_DoesNotThrow`. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained CI output is planned: .github/contact-center/evidence/S005/. Per-endpoint 401/403 defense-in-depth is tracked separately under O004."
+    },
+    {
+      "id": "T001",
+      "severity": "P0",
+      "category": "test-and-topology",
+      "planFinding": "PR11",
+      "gate": "No Orchard tenant feature matrix",
+      "invariant": "Every Contact Center feature must, on a fresh Orchard tenant, enable, run its migrations, resolve every registered service, participate in routing, and disable cleanly, for every legal manifest combination; no feature may compile while failing as soon as a tenant enables it.",
+      "testId": "CC-T001",
+      "ciJob": {
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "No complete Orchard shell/tenant feature-activation matrix exists yet; this is a planned:contact-center-feature-activation-matrix dependency."
+    },
+    {
+      "id": "T002",
+      "severity": "P1",
+      "category": "test-and-topology",
+      "planFinding": "P1-browser-and-ci-coverage",
+      "gate": "No Orchard Contact Center browser E2E",
+      "invariant": "A Playwright suite must boot a real Orchard tenant with Contact Center features enabled and exercise the hosted key flows: agent sign-in, offer/accept/decline/timeout, supervisor dashboard controls, and two-tenant isolation. The existing Telephony Playwright suite validates only the isolated soft-phone asset against a custom test host and does not boot an Orchard tenant or exercise Contact Center features, permissions, queues, routing, reconnect, or supervisor flows.",
+      "testId": "CC-T002",
+      "ciJob": {
+        "id": "contact-center-browser-suite",
+        "workflow": "planned:.github/workflows/contact_center_browser_suite.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "The 24-test Telephony Playwright suite (documented in R0-BASELINE.md) covers only the soft-phone asset; an Orchard-hosted Contact Center agent/supervisor/provider browser suite is a planned:contact-center-browser-suite dependency."
+    },
+    {
+      "id": "T003",
+      "severity": "P0",
+      "category": "test-and-topology",
+      "planFinding": "PR11",
+      "gate": "No repeatable multi-node/load/chaos gate",
+      "invariant": "A repeatable, automated gate must exercise application-node failure, database/Redis dependency failure, reservation/queue contention, and SignalR fan-out under load, and must publish retained pass/fail evidence; no multi-node, network-partition, provider-outage, Redis-outage, rolling-upgrade, or scale claim is approved without it. No repeatable Contact Center distributed/load/chaos harness exists today.",
+      "testId": "CC-T003",
+      "ciJob": {
+        "id": "contact-center-distributed-suite",
+        "workflow": "planned:.github/workflows/contact_center_distributed_suite.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node",
+          "scale-10k",
+          "scale-100k"
+        ]
+      },
+      "evidenceLocation": "No repeatable Contact Center multi-node/load/chaos harness exists yet; this is a planned:contact-center-distributed-suite dependency."
+    },
+    {
+      "id": "V001",
+      "severity": "P0",
+      "category": "voice-provider",
+      "planFinding": "PR6",
+      "gate": "Asterisk listeners split-brain/stale ordering",
+      "invariant": "Under two application nodes each subscribed to the same Asterisk tenant event stream, a duplicated or out-of-order provider event must never regress call state; canonical idempotency and a provider sequence/high-water mark must produce exactly one monotonic call state regardless of delivery order or node duplication. Every node can subscribe to the same Asterisk tenant event stream today with no single-writer/monotonic sequence guard (`AsteriskRealtimeVoiceListener.cs:139-149`; `AsteriskRealtimeVoiceEventDispatcher.cs`).",
+      "testId": "CC-V001",
+      "ciJob": {
+        "id": "contact-center-provider-contract-suite",
+        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-region-multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskRealtimeVoiceEventDispatcherTests.cs and AsteriskRealtimeVoiceEventMapperTests.cs, and tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceEventServiceTests.cs, cover single-node event handling; the two-node duplicate/out-of-order monotonic-state proof is a planned:contact-center-provider-contract-suite dependency."
+    },
+    {
+      "id": "V002",
+      "severity": "P1",
+      "category": "voice-provider",
+      "planFinding": "P1-provider-command-semantics",
+      "gate": "Client disconnect cancels PBX commands",
+      "invariant": "A state-changing PBX/provider command must use a server-owned idempotent command id and complete to a terminal state independent of the requesting client; aborting the requesting client's SignalR socket while the command is in flight must never cancel it. `ContactCenterHub` methods thread `Context.ConnectionAborted` through session/state-changing calls (`Hubs/ContactCenterHub.cs:88,167,257,288,331,372`), so a client disconnect can cancel a command mid-flight today.",
+      "testId": "CC-V002",
+      "ciJob": {
+        "id": "contact-center-provider-contract-suite",
+        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
+        "status": "planned"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "No test currently aborts the client socket mid-command and asserts the server-side command still reaches a terminal state; this is a planned:contact-center-provider-contract-suite dependency."
+    },
+    {
+      "id": "V003",
+      "severity": "P1",
+      "category": "voice-provider",
+      "planFinding": "PR12",
+      "gate": "Webhook buffering/request abort coupling",
+      "invariant": "Every provider webhook route must enforce a provider-specific body-size limit and accept the event into a durable inbox before returning success, independent of the inbound HTTP request; an oversize payload must be rejected, and a client aborting the request after durable acceptance must never roll back that acceptance. `ProviderVoiceWebhookEndpoint.cs:14-45` and `DialPadWebhookController.cs:19-24,63-85` currently buffer whole bodies and tie orchestration to request cancellation.",
+      "testId": "CC-V003",
+      "ciJob": {
+        "id": "contact-center-provider-contract-suite",
+        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderVoiceWebhookEndpointTests.cs and ProviderVoiceWebhookProcessorTests.cs cover current ingress/processing; the oversize-payload-rejected and disconnect-after-durable-acceptance proof is a planned:contact-center-provider-contract-suite dependency."
+    },
+    {
+      "id": "V004",
+      "severity": "P1",
+      "category": "voice-provider",
+      "planFinding": "P1-provider-command-semantics",
+      "gate": "RTP secure boundary/jitter/reorder missing",
+      "invariant": "Asterisk bidirectional media must reject or ignore RTP packets from a spoofed/unexpected source, tolerate packet loss, reordering, and jitter without corrupting the audio stream or the sequence/timestamp state, and the deployment must document a secure network boundary for the RTP path. Today's RTP codec/media-session tests cover only well-formed round-trip packets; no spoofed-source, loss, reorder, or jitter behavior is proven, and no secure network boundary is documented.",
+      "testId": "CC-V004",
+      "ciJob": {
+        "id": "contact-center-provider-contract-suite",
+        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
+        "status": "partial"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskRtpPacketCodecTests.cs and AsteriskContactCenterVoiceMediaSessionTests.cs prove well-formed packet parsing and sequential outgoing RTP; spoofed-source rejection, loss/reorder/jitter tolerance, and the documented secure network boundary are a planned:contact-center-provider-contract-suite dependency."
+    }
+  ]
+}

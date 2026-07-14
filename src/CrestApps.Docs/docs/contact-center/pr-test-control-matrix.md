@@ -1,0 +1,49 @@
+---
+sidebar_label: PR-to-test control matrix
+sidebar_position: 22
+title: Contact Center PR-to-test control matrix
+description: Ownership, test id, CI job, execution context, invariant, and retained evidence for every current Contact Center P0/P1 production-readiness gate.
+---
+
+The versioned machine-readable contract is `.github/contact-center/pr-test-control-matrix.v1.json`. It maps every P0 and P1 finding from the repository-tracked Contact Center plan's independent production-readiness review to one accountable gate. Release remains blocked until every P0 gate, and every P1 gate in scope for the release profile, passes with retained CI evidence.
+
+Each gate resolves:
+
+- A **category** with an owning DRI role and approver roles.
+- A stable **test id** and a **CI job** (`implemented`, `partial`, or `planned`).
+- The **provider, database, and topology** context the gate must be proven under.
+- A **falsifiable invariant** - a concrete behavior that a test can prove true or false.
+- A **retained evidence location** - an existing test/CI artifact path, or a `planned:` path that the owning remediation phase (R1-R8) must populate.
+
+It is expected and acceptable for most CI jobs and evidence paths to be `planned` this early in the remediation program; every P0/P1 finding must still be represented so no gate can be silently dropped.
+
+## Gate categories
+
+| Prefix | Category | DRI role | Approver roles |
+| --- | --- | --- | --- |
+| `C` | Correctness | Contact Center principal engineer | Orchard Core architecture owner, Quality approver |
+| `D` | Data | Contact Center data owner | Database approver, SRE approver |
+| `F` | Feature and package graph | Contact Center principal engineer | Orchard Core architecture owner, Product owner |
+| `O` | Operations | Contact Center SRE owner | SRE approver, Release engineering approver |
+| `S` | Security | Contact Center security owner | Security approver, Privacy or legal approver |
+| `T` | Test and topology | Contact Center quality owner | Quality approver, Release engineering approver |
+| `V` | Voice/provider | Contact Center voice provider owner | Security approver, Quality approver |
+
+## Current gate count
+
+The matrix currently tracks 41 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review: `C001`-`C008` (correctness), `D001`-`D009` (data), `F001`-`F006` (feature/package graph), `O001`-`O006` (operations), `S001`-`S005` (security), `T001`-`T003` (test/topology), and `V001`-`V004` (voice/provider).
+
+A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, webhook body limits, and the declared recording/monitoring prohibitions in the support matrix). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
+
+## Contract tests
+
+`ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:
+
+- The matrix does not contain exactly 41 gates, or the per-category gate counts drift from the table above.
+- Any gate id is duplicated, or any of the 41 current P0/P1 gate ids is missing, has the wrong severity, or has drifted from its authoritative title in the production-readiness review.
+- A gate's category has no DRI role or no approver roles.
+- A gate's execution context omits providers, databases, or topologies.
+- A gate has no plan-finding citation, title, falsifiable invariant, test id, CI job id/workflow, or retained evidence location.
+- No P0 gate has at least `partial` CI enforcement, which would indicate the remediation program has not started closing any commercial release blocker.
+
+See [Production support](production-support.md) and [Service objectives](service-objectives.md) for the related finite support matrix and measurable service-level contracts.
