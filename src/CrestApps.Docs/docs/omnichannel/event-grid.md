@@ -1,13 +1,13 @@
 ---
 sidebar_label: Azure Event Grid
 sidebar_position: 4
-title: CrestApps Omnichannel (Azure Event Grid)
+title: CrestApps Omnichannel - Azure Event Grid
 description: Receive inbound Omnichannel notifications via Azure Event Grid for decoupling and reliability.
 ---
 
 | | |
 | --- | --- |
-| **Feature Name** | Omnichannel (Azure Event Grid) |
+| **Feature Name** | Omnichannel - Azure Event Grid |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.EventGrid` |
 
 Provides a secure inbound webhook for Azure Event Grid notifications.
@@ -21,7 +21,7 @@ Use this when your SMS (or other channel) provider can publish events to Event G
 ## Enable the feature
 
 1. In Orchard Core Admin, go to `Tools` → `Features`.
-2. Enable `Omnichannel (Azure Event Grid)`.
+2. Enable `Omnichannel - Azure Event Grid`.
 
 ## Webhook endpoint
 

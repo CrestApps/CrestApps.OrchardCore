@@ -93,6 +93,40 @@ public sealed class ExcelReportExportFormatTests
         Assert.Equal(["Queue Overview", "Queue Overview (2)"], sheetNames);
     }
 
+    [Fact]
+    public void Serialize_WhenTableContainsSemanticTotals_ShouldRetainEveryRow()
+    {
+        // Arrange
+        var document = new ReportDocument()
+            .Add(ReportSection.ForTable(
+                "Queues",
+                [new ReportColumn("Queue"), new ReportColumn("Count")],
+                [
+                    new ReportRow(["Support", "2"]),
+                    new ReportRow(["Customer care", "2"], ReportRowKind.Subtotal),
+                    new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal),
+                ]));
+        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+
+        // Act
+        var content = exportFormat.Serialize(document);
+
+        // Assert
+        using var stream = new MemoryStream(content);
+        using var spreadsheetDocument = SpreadsheetDocument.Open(stream, false);
+        var workbookPart = spreadsheetDocument.WorkbookPart;
+
+        Assert.NotNull(workbookPart);
+
+        var sheet = Assert.Single(workbookPart.Workbook.Sheets.Elements<Sheet>());
+        var rows = GetSheetRows(workbookPart, sheet);
+
+        Assert.Equal(["Queue", "Count"], GetCellValues(rows[0]));
+        Assert.Equal(["Support", "2"], GetCellValues(rows[1]));
+        Assert.Equal(["Customer care", "2"], GetCellValues(rows[2]));
+        Assert.Equal(["All queues", "2"], GetCellValues(rows[3]));
+    }
+
     private static Row[] GetSheetRows(WorkbookPart workbookPart, Sheet sheet)
     {
         var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);

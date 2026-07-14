@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds manager-owned agent entitlement configuration to the Interaction Center admin navigation.
+/// Adds manager-owned agent entitlement configuration to the Contact Center admin navigation.
 /// </summary>
 public sealed class ContactCenterAgentEntitlementsAdminMenu : AdminNavigationProvider
 {
@@ -25,9 +25,9 @@ public sealed class ContactCenterAgentEntitlementsAdminMenu : AdminNavigationPro
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
-                .AddClass("interaction-center")
-                .Id("interactionCenter")
+            .Add(S["Contact Center"], "80", contactCenter => contactCenter
+                .AddClass("contact-center")
+                .Id("contactCenter")
                 .Add(S["Agent entitlements"], S["Agent entitlements"].PrefixPosition(), entitlements => entitlements
                     .AddClass("contact-center-agent-entitlements")
                     .Id("contactCenterAgentEntitlements")

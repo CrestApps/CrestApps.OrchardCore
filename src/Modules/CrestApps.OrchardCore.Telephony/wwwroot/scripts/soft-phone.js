@@ -141,7 +141,6 @@
       close: rootElement.querySelector('[data-telephony-close]'),
       status: rootElement.querySelector('[data-telephony-status]'),
       number: rootElement.querySelector('[data-telephony-number]'),
-      peer: rootElement.querySelector('[data-telephony-peer]'),
       error: rootElement.querySelector('[data-telephony-error]'),
       activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
       activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
@@ -152,7 +151,10 @@
       mute: rootElement.querySelector('[data-telephony-mute]'),
       unmute: rootElement.querySelector('[data-telephony-unmute]'),
       transfer: rootElement.querySelector('[data-telephony-transfer]'),
+      transferIcon: rootElement.querySelector('[data-telephony-transfer-icon]'),
+      transferLabel: rootElement.querySelector('[data-telephony-transfer-label]'),
       transferPanel: rootElement.querySelector('[data-telephony-transfer-panel]'),
+      keypadPanel: rootElement.querySelector('[data-telephony-keypad-panel]'),
       transferInput: rootElement.querySelector('[data-telephony-transfer-input]'),
       transferCancel: rootElement.querySelector('[data-telephony-transfer-cancel]'),
       transferConfirm: rootElement.querySelector('[data-telephony-transfer-confirm]'),
@@ -584,7 +586,7 @@
         return;
       }
       var calls = getActiveCalls();
-      show(dom.activeCalls, calls.length > 0);
+      show(dom.activeCalls, calls.length > 1);
       dom.activeCallsList.innerHTML = calls.map(function (call) {
         var callId = call.callId || '';
         var selected = !!conferenceSelections[callId];
@@ -651,9 +653,25 @@
         return !!activeCalls[callId];
       });
       var currentIsConference = metadataBoolean(currentCall, 'isConference');
+      if (transferOpen && !liveMedia) {
+        transferOpen = false;
+        directoryEntries = [];
+      }
       renderActiveCalls();
       renderDirectory();
       show(dom.transferPanel, transferOpen && liveMedia);
+      show(dom.keypadPanel, !transferOpen);
+      if (dom.transfer) {
+        var transferButtonText = transferOpen ? strings.keypad || 'Keypad' : strings.transfer || 'Transfer';
+        dom.transfer.title = transferButtonText;
+        dom.transfer.setAttribute('aria-label', transferButtonText);
+      }
+      if (dom.transferIcon) {
+        dom.transferIcon.className = transferOpen ? 'fa-solid fa-grip' : 'fa-solid fa-arrow-right-arrow-left';
+      }
+      if (dom.transferLabel) {
+        dom.transferLabel.textContent = transferOpen ? strings.keypad || 'Keypad' : strings.transfer || 'Transfer';
+      }
       if (dom.toggleIcon) {
         dom.toggleIcon.className = 'fa-solid fa-phone';
       }
@@ -695,10 +713,7 @@
       updateTabs();
       showView(activeTab);
       setStatus(currentCall ? statusTextForCall(currentCall) : strings.idle || 'Ready');
-      if (dom.peer) {
-        dom.peer.textContent = active && currentCall ? getPeerNumber(currentCall) : '';
-      }
-      if (dom.number && active && currentCall && stateName !== 'OnHold') {
+      if (dom.number && currentCall && (active || stateName === 'OnHold')) {
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
           dom.number.value = formatPhoneNumber(peerNumber);
@@ -894,6 +909,10 @@
     function transfer() {
       var id = currentCallId();
       if (!id) {
+        return;
+      }
+      if (transferOpen) {
+        cancelTransfer();
         return;
       }
       if (!has(CAPABILITIES.Directory) || !dom.transferPanel) {

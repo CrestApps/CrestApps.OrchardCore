@@ -10,14 +10,14 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides the contact center orchestration layer that turns the CRM into a full contact center.",
-    Category = "Communication"
+    Category = "Contact Center"
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Area,
     Name = "Contact Center",
     Description = "Provides the interaction lifecycle, the durable domain event log, baseline permissions, and admin navigation.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         OmnichannelConstants.Features.Managements,
@@ -29,7 +29,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.Agents,
     Name = "Contact Center Agents",
     Description = "Adds agent profiles, presence, capacity, skills, and queue/campaign sign-in.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Area,
@@ -40,7 +40,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.Queues,
     Name = "Contact Center Queues",
     Description = "Adds work queues, queue items, reservations, and availability-based activity assignment.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Agents,
@@ -51,7 +51,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.Dialer,
     Name = "Contact Center Dialer",
     Description = "Adds outbound dialing profiles, pacing, and dialer activity batches that route calls through Contact Center Voice providers.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
@@ -62,7 +62,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.Voice,
     Name = "Contact Center Voice",
     Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
@@ -74,7 +74,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.RealTime,
     Name = "Contact Center Real-Time",
     Description = "Adds the SignalR hub, live agent sessions with heartbeat and stale-session cleanup, and real-time presence, offer, and queue broadcasts for the agent desktop and supervisor dashboards.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
@@ -86,7 +86,7 @@ using OrchardCore.Modules.Manifest;
     Id = ContactCenterConstants.Feature.Analytics,
     Name = "Contact Center Reports & Analytics",
     Description = "Adds enterprise executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports to the admin Reports area.",
-    Category = "Communication",
+    Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,

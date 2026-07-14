@@ -1,20 +1,19 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.DialPad;
-using CrestApps.OrchardCore.DialPad.Controllers;
+using CrestApps.OrchardCore.DialPad.Endpoints;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.DialPad;
 
-public sealed class DialPadWebhookControllerTests
+public sealed class DialPadWebhookEndpointTests
 {
     private const string Payload = "{\"call_id\":\"c1\",\"state\":\"ringing\"}";
 
@@ -23,20 +22,20 @@ public sealed class DialPadWebhookControllerTests
     {
         // Arrange
         var webhookService = new Mock<IDialPadWebhookService>();
-        var controller = CreateController(
-            webhookService,
-            new DialPadSettings
+        var httpContext = CreateHttpContext();
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
                 WebhookSigningSecret = null,
-            },
-            new EphemeralDataProtectionProvider());
-
-        // Act
-        var result = await controller.Call();
+            }),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
 
         // Assert
-        Assert.IsType<UnauthorizedResult>(result);
+        Assert.Equal(StatusCodes.Status401Unauthorized, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -47,21 +46,19 @@ public sealed class DialPadWebhookControllerTests
     {
         // Arrange
         var webhookService = new Mock<IDialPadWebhookService>();
-        var controller = CreateController(
-            webhookService,
-            new DialPadSettings
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
                 WebhookSigningSecret = "not-a-protected-secret",
-            },
-            new EphemeralDataProtectionProvider());
-
-        // Act
-        var result = await controller.Call();
+            }),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            CreateHttpContext());
 
         // Assert
-        var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, statusCodeResult.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -72,22 +69,21 @@ public sealed class DialPadWebhookControllerTests
     {
         // Arrange
         var webhookService = new Mock<IDialPadWebhookService>();
-        var controller = CreateController(
-            webhookService,
-            new DialPadSettings
+        var httpContext = CreateHttpContext();
+        httpContext.Request.ContentLength = DialPadWebhookEndpoint.MaximumRequestBodySizeBytes + 1;
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
                 WebhookSigningSecret = null,
-            },
-            new EphemeralDataProtectionProvider());
-        controller.Request.ContentLength = DialPadWebhookController.MaximumRequestBodySizeBytes + 1;
-
-        // Act
-        var result = await controller.Call();
+            }),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
 
         // Assert
-        var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
-        Assert.Equal(StatusCodes.Status413PayloadTooLarge, statusCodeResult.StatusCode);
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -98,21 +94,20 @@ public sealed class DialPadWebhookControllerTests
     {
         // Arrange
         var webhookService = new Mock<IDialPadWebhookService>();
-        var controller = CreateController(
-            webhookService,
-            new DialPadSettings
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new PayloadTooLargeStream();
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-            },
-            new EphemeralDataProtectionProvider());
-        controller.Request.Body = new PayloadTooLargeStream();
-
-        // Act
-        var result = await controller.Call();
+            }),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
 
         // Assert
-        var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
-        Assert.Equal(StatusCodes.Status413PayloadTooLarge, statusCodeResult.StatusCode);
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -131,22 +126,22 @@ public sealed class DialPadWebhookControllerTests
         webhookService
             .Setup(service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DialPadWebhookResult.Updated);
-        var controller = CreateController(
-            webhookService,
-            new DialPadSettings
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(Payload, secret)));
+        httpContext.RequestAborted = new CancellationTokenSource().Token;
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            webhookService.Object,
+            SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
                 WebhookSigningSecret = protectedSecret,
-            },
-            dataProtectionProvider);
-        controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(Payload, secret)));
-        controller.HttpContext.RequestAborted = new CancellationTokenSource().Token;
-
-        // Act
-        var result = await controller.Call();
+            }),
+            dataProtectionProvider,
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(StatusCodes.Status200OK, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         webhookService.Verify(
             service => service.ProcessAsync(
                 It.IsAny<DialPadCallEvent>(),
@@ -154,23 +149,12 @@ public sealed class DialPadWebhookControllerTests
             Times.Once);
     }
 
-    private static DialPadWebhookController CreateController(
-        Mock<IDialPadWebhookService> webhookService,
-        DialPadSettings settings,
-        IDataProtectionProvider dataProtectionProvider)
+    private static DefaultHttpContext CreateHttpContext()
     {
-        var controller = new DialPadWebhookController(
-            webhookService.Object,
-            SiteServiceFactory.Create(settings),
-            dataProtectionProvider,
-            NullLogger<DialPadWebhookController>.Instance);
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext(),
-        };
-        controller.Request.Body = new MemoryStream("signed-payload"u8.ToArray());
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Body = new MemoryStream("signed-payload"u8.ToArray());
 
-        return controller;
+        return httpContext;
     }
 
     private static string CreateJwt(string payloadJson, string secret)

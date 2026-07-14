@@ -16,6 +16,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly IActivityQueueManager _queueManager;
+    private readonly IActivityQueueGroupManager _queueGroupManager;
     private readonly IContactCenterSkillManager _skillManager;
     private readonly IBusinessHoursCalendarManager _calendarManager;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
@@ -26,6 +27,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// </summary>
     /// <param name="campaignManager">The omnichannel campaign manager.</param>
     /// <param name="queueManager">The activity queue manager.</param>
+    /// <param name="queueGroupManager">The activity queue-group manager.</param>
     /// <param name="skillManager">The Contact Center skill manager.</param>
     /// <param name="calendarManager">The business-hours calendar manager.</param>
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
@@ -33,6 +35,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     public ContactCenterAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         IActivityQueueManager queueManager,
+        IActivityQueueGroupManager queueGroupManager,
         IContactCenterSkillManager skillManager,
         IBusinessHoursCalendarManager calendarManager,
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -40,6 +43,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     {
         _campaignManager = campaignManager;
         _queueManager = queueManager;
+        _queueGroupManager = queueGroupManager;
         _skillManager = skillManager;
         _calendarManager = calendarManager;
         _channelEndpointManager = channelEndpointManager;
@@ -84,6 +88,21 @@ public sealed class ContactCenterAdminFormOptionsProvider
         var options = queues
             .OrderBy(queue => queue.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(queue => new SelectListItem(queue.Name ?? queue.ItemId, queue.ItemId, selected.Contains(queue.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
+    }
+
+    internal async Task<IList<SelectListItem>> GetQueueGroupOptionsAsync(string selectedQueueGroupId)
+    {
+        var selected = CreateSelectedSet([selectedQueueGroupId], StringComparer.Ordinal);
+        var queueGroups = await _queueGroupManager.GetAllAsync();
+
+        var options = queueGroups
+            .OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(group => new SelectListItem(group.Name ?? group.ItemId, group.ItemId, selected.Contains(group.ItemId)))
             .ToList();
 
         AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
@@ -167,6 +186,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task PopulateQueueEditorAsync(QueueViewModel model)
     {
+        model.QueueGroupOptions = await GetQueueGroupOptionsAsync(model.QueueGroupId);
         model.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
         model.SkillOptions = await GetSkillOptionsAsync(model.RequiredSkills);
         model.InboundChannelEndpointOptions = await GetInboundChannelEndpointOptionsAsync(model.InboundChannelEndpointId);

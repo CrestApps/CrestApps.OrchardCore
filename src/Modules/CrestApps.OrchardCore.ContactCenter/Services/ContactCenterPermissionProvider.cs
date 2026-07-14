@@ -16,6 +16,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ViewInteractions,
         ContactCenterPermissions.ManageAgents,
         ContactCenterPermissions.ManageQueues,
+        ContactCenterPermissions.ManageQueueGroups,
         ContactCenterPermissions.ManageSkills,
         ContactCenterPermissions.ManageDialer,
         ContactCenterPermissions.SignIntoQueues,

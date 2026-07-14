@@ -10,6 +10,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 public sealed class ActivityQueue : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
     /// <summary>
+    /// Gets or sets the optional queue-group identifier used for catalog organization and reporting.
+    /// Queue groups do not affect routing, SLA settings, entitlements, or queue behavior.
+    /// </summary>
+    public string QueueGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets the unique name of the queue.
     /// </summary>
     public string Name { get; set; }

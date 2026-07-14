@@ -1,23 +1,26 @@
-@using CrestApps.OrchardCore.ContactCenter.Core.Models
-@using OrchardCore.DisplayManagement.Views
+@using CrestApps.OrchardCore.ContactCenter.ViewModels
 
-@model ShapeViewModel<ActivityQueue>
+@model QueueSummaryViewModel
 
-<h5>@Model.Value.Name</h5>
+<h5>@Model.Queue.Name</h5>
 
-@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+@if (!string.IsNullOrWhiteSpace(Model.Queue.Description))
 {
-    <div class="text-muted">@Model.Value.Description</div>
+    <div class="text-muted">@Model.Queue.Description</div>
 }
 
 <div class="mt-1">
-    <span class="badge text-bg-secondary">@T["Priority: {0}", Model.Value.DefaultPriority]</span>
-    <span class="badge text-bg-secondary">@T["SLA: {0}s", Model.Value.SlaThresholdSeconds]</span>
-    @if (Model.Value.RequiredSkills.Count > 0)
+    @if (!string.IsNullOrWhiteSpace(Model.QueueGroupName))
     {
-        <span class="badge text-bg-secondary">@T["Skills: {0}", string.Join(", ", Model.Value.RequiredSkills)]</span>
+        <span class="badge text-bg-secondary">@T["Group: {0}", Model.QueueGroupName]</span>
     }
-    @if (!Model.Value.Enabled)
+    <span class="badge text-bg-secondary">@T["Priority: {0}", Model.Queue.DefaultPriority]</span>
+    <span class="badge text-bg-secondary">@T["SLA: {0}s", Model.Queue.SlaThresholdSeconds]</span>
+    @if (Model.Queue.RequiredSkills.Count > 0)
+    {
+        <span class="badge text-bg-secondary">@T["Skills: {0}", string.Join(", ", Model.Queue.RequiredSkills)]</span>
+    }
+    @if (!Model.Queue.Enabled)
     {
         <span class="badge text-bg-warning">@T["Disabled"]</span>
     }

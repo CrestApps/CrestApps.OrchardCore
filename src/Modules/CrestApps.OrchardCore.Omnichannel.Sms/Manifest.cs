@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "SMS Omnichannel Automation",
     Id = "CrestApps.OrchardCore.Omnichannel.Sms",
-    Description = "Provides a way handle automated activities using the SMS channel.",
+    Description = "Handles automated omnichannel activities through the configured Orchard Core SMS provider.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

@@ -51,6 +51,7 @@
             ["directoryEmpty"] = T["No directory entries are available."].Value,
             ["cancel"] = T["Cancel"].Value,
             ["transfer"] = T["Transfer"].Value,
+            ["keypad"] = T["Keypad"].Value,
             ["activeCalls"] = T["Active calls"].Value,
             ["selectCallsToMerge"] = T["Select at least two calls to conference."].Value,
             ["conference"] = T["Conference selected calls"].Value,
@@ -81,13 +82,13 @@
      style="--telephony-accent: @accentColor; visibility: hidden;"
      data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
 
-    <button type="button" class="telephony-soft-phone__toggle" data-telephony-toggle title="@T["Soft phone"]" aria-label="@T["Soft phone"]">
+    <button type="button" class="telephony-soft-phone__toggle" data-telephony-toggle title="@T["Phone"]" aria-label="@T["Phone"]">
         <i class="fa-solid fa-phone" data-telephony-toggle-icon></i>
     </button>
 
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
-            <span class="telephony-soft-phone__title">@T["Soft Phone"]</span>
+            <span class="telephony-soft-phone__title">@T["Phone"]</span>
             @if (Model.HeaderActions != null)
             {
                 @await DisplayAsync(Model.HeaderActions)
@@ -120,10 +121,14 @@
                            data-telephony-number
                            placeholder="@T["Enter a number"]"
                            aria-label="@T["Phone number"]" />
-                    <div class="telephony-soft-phone__peer" data-telephony-peer></div>
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
+
+                <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
+                    <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
+                    <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
+                </div>
 
                 <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden>
                     <div class="telephony-soft-phone__transfer-title">@T["Transfer call"]</div>
@@ -142,12 +147,7 @@
                     </div>
                 </div>
 
-                <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
-                    <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
-                    <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
-                </div>
-
-                <div class="telephony-soft-phone__keypad">
+                <div class="telephony-soft-phone__keypad" data-telephony-keypad-panel>
                     @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" })
                     {
                         <button type="button" class="telephony-soft-phone__key" data-telephony-key="@key">@key</button>
@@ -171,7 +171,8 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        <i class="fa-solid fa-arrow-right-arrow-left" data-telephony-transfer-icon></i>
+                        <span class="visually-hidden" data-telephony-transfer-label>@T["Transfer"]</span>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Conference selected calls"]" hidden>
                         <i class="fa-solid fa-code-merge"></i>

@@ -271,14 +271,6 @@
         }
     }
 
-    &__peer {
-        min-height: 1rem;
-        margin-top: 0.35rem;
-        font-size: 0.8rem;
-        color: var(--bs-secondary-color, #6c757d);
-        text-align: center;
-    }
-
     &__connect {
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);

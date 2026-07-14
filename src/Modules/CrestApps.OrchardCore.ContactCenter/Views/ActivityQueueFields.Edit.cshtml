@@ -19,6 +19,17 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="QueueGroupId">
+    <label asp-for="QueueGroupId" class="ocat-label">@T["Queue group"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueGroupId" asp-items="Model.QueueGroupOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue group"]" data-width="100%" title="@T["No queue group"]">
+            <option value="">@T["No queue group"]</option>
+        </select>
+        <span asp-validation-for="QueueGroupId" class="text-danger"></span>
+        <span class="hint">@T["Queue groups organize the catalog and reports only. They do not change routing, SLA settings, entitlements, or queue behavior."]</span>
+    </div>
+</div>
+
 <div class="ocat-limited-wrapper" asp-validation-class-for="DefaultPriority">
     <label asp-for="DefaultPriority" class="ocat-label">@T["Default priority"]</label>
     <div class="ocat-limited">

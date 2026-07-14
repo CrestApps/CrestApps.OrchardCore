@@ -49,49 +49,32 @@
         Array.prototype.forEach.call(select.options, function (option) {
             option.selected = selected.has(option.value);
         });
+
+        refreshMembershipPicker(select);
     }
 
-    function refreshPickers(root) {
-        if (!root) {
+    function refreshMembershipPicker(select) {
+        if (!select || !window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.selectpicker !== 'function') {
             return;
         }
 
-        var pickers = root.querySelectorAll('.selectpicker');
+        var picker = window.jQuery(select);
 
-        Array.prototype.forEach.call(pickers, function (picker) {
-            var $picker = window.jQuery && window.jQuery(picker);
+        if (picker.data('selectpicker')) {
+            picker.selectpicker('refresh');
+        }
+    }
 
-            if ($picker && typeof $picker.selectpicker === 'function') {
-                $picker.selectpicker('val', getSelectedValues(picker));
-                $picker.selectpicker('refresh');
+    function initializeMembershipPickers(root) {
+        if (!root || !window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.selectpicker !== 'function') {
+            return;
+        }
 
-                return;
-            }
+        root.querySelectorAll('[data-contact-center-picker]').forEach(function (select) {
+            var picker = window.jQuery(select);
 
-            var selectedOptions = Array.prototype.filter.call(picker.options, function (option) {
-                return option.selected && !option.disabled;
-            });
-            var selectedText = selectedOptions.map(function (option) {
-                return option.text;
-            });
-            var countText = picker.getAttribute('data-count-selected-text') || '{0} selected';
-            var label = selectedText.length > 2
-                ? countText.replace('{0}', selectedText.length)
-                : selectedText.join(', ');
-
-            if (!label) {
-                label = picker.getAttribute('title') || '';
-            }
-
-            var button = picker.parentElement && picker.parentElement.querySelector('.dropdown-toggle');
-            var buttonLabel = button && button.querySelector('.filter-option-inner-inner');
-
-            if (button) {
-                button.setAttribute('title', label);
-            }
-
-            if (buttonLabel) {
-                buttonLabel.textContent = label;
+            if (!picker.data('selectpicker')) {
+                picker.selectpicker();
             }
         });
     }
@@ -99,6 +82,10 @@
     function setBusy(root, busy) {
         Array.prototype.forEach.call(root.querySelectorAll('button, select'), function (element) {
             element.disabled = busy;
+
+            if (element.matches('select[data-contact-center-picker]')) {
+                refreshMembershipPicker(element);
+            }
         });
     }
 
@@ -242,7 +229,6 @@
         applySelectedValues(campaignSelect, snapshot.campaignIds || []);
         renderMembershipList(root, snapshot, queueSelect, campaignSelect);
         showMembershipError(root, null, null);
-        refreshPickers(root);
     }
 
     function bindPresenceForms(root, api, client) {
@@ -408,6 +394,8 @@
         var signOutForm = root.querySelector('[data-contact-center-sign-out-form]');
         var queueSelect = root.querySelector('select[name="selectedQueueIds"]');
         var campaignSelect = root.querySelector('select[name="selectedCampaignIds"]');
+
+        initializeMembershipPickers(root);
 
         if (signInForm) {
             signInForm.addEventListener('submit', function (event) {

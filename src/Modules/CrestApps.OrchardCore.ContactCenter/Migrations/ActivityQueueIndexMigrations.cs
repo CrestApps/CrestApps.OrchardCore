@@ -18,6 +18,7 @@ internal sealed class ActivityQueueIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ActivityQueueIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("QueueGroupId", column => column.WithLength(26))
             .Column<bool>("Enabled"),
             collection: ContactCenterConstants.CollectionName
         );
@@ -27,6 +28,22 @@ internal sealed class ActivityQueueIndexMigrations : DataMigration
             collection: ContactCenterConstants.CollectionName
         );
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the optional queue-group identifier used by catalog organization and reporting.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ActivityQueueIndex>(table =>
+        {
+            table.AddColumn<string>("QueueGroupId", column => column.WithLength(26));
+        },
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 2;
     }
 }

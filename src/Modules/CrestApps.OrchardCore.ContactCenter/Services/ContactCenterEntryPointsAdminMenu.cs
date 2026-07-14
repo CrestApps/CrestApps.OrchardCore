@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the inbound entry points entry to the Interaction Center admin navigation.
+/// Adds the inbound entry points entry to the Contact Center admin navigation.
 /// </summary>
 public sealed class ContactCenterEntryPointsAdminMenu : AdminNavigationProvider
 {
@@ -24,9 +24,9 @@ public sealed class ContactCenterEntryPointsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
-                .AddClass("interaction-center")
-                .Id("interactionCenter")
+            .Add(S["Contact Center"], "80", contactCenter => contactCenter
+                .AddClass("contact-center")
+                .Id("contactCenter")
                 .Add(S["Inbound entry points"], S["Inbound entry points"].PrefixPosition(), entryPoints => entryPoints
                     .AddClass("contact-center-entry-points")
                     .Id("contactCenterEntryPoints")

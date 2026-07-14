@@ -231,13 +231,6 @@
   background-color: var(--bs-secondary-bg, #e9ecef);
   opacity: 1;
 }
-.telephony-soft-phone__peer {
-  min-height: 1rem;
-  margin-top: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--bs-secondary-color, #6c757d);
-  text-align: center;
-}
 .telephony-soft-phone__connect {
   min-height: var(--telephony-view-height);
   max-height: var(--telephony-view-height);

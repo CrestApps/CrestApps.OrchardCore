@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -130,61 +131,6 @@ public sealed class AgentSoftPhoneController : Controller
         await _presenceManager.SetPresenceAsync(GetUserId(), status, presenceReason);
 
         return RedirectToReturnLocation(returnUrl);
-    }
-
-    /// <summary>
-    /// Re-checks the agent's signed-in queues for already-waiting inbound voice work after the soft phone reconnects.
-    /// </summary>
-    /// <param name="queuedVoiceWorkOfferServices">The optional queued voice offer services.</param>
-    /// <returns>An empty success result.</returns>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SyncQueuedVoiceWork([FromServices] IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
-        {
-            return Forbid();
-        }
-
-        // Resolve the queued-voice service lazily here instead of constructor-injecting it. The Voice
-        // offer pipeline depends on the router/dispatcher graph, and eagerly building that graph from
-        // the queue sign-in controller is what previously reintroduced the circular activation failure.
-        // Keep this endpoint opt-in so sign-in stays lightweight and reconnect recovery still works.
-        var queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
-
-        if (queuedVoiceWorkOfferService is not null)
-        {
-            await queuedVoiceWorkOfferService.OfferForUserAsync(GetUserId());
-        }
-
-        return Ok();
-    }
-
-    /// <summary>
-    /// Gets the current pending inbound offer so the soft-phone incoming modal can be restored after a refresh.
-    /// </summary>
-    /// <param name="pendingIncomingCallOfferServices">The optional pending-offer services.</param>
-    /// <returns>The current pending inbound offer, or <see cref="NotFoundResult"/> when none exists.</returns>
-    [HttpGet]
-    public async Task<IActionResult> CurrentIncomingOffer([FromServices] IEnumerable<IPendingIncomingCallOfferService> pendingIncomingCallOfferServices)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
-        {
-            return Forbid();
-        }
-
-        var pendingIncomingCallOfferService = pendingIncomingCallOfferServices.FirstOrDefault();
-
-        if (pendingIncomingCallOfferService is null)
-        {
-            return NotFound();
-        }
-
-        var offer = await pendingIncomingCallOfferService.GetForUserAsync(GetUserId());
-
-        return offer is null
-            ? NotFound()
-            : Json(offer);
     }
 
     private IActionResult RedirectToReturnLocation(string returnUrl)

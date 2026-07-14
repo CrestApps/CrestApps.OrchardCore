@@ -11,7 +11,10 @@ using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
-using CrestApps.OrchardCore.ContactCenter.Reports;
+using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Models;
+using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
@@ -30,6 +33,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -213,6 +218,8 @@ public sealed class QueuesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddScoped<IActivityQueueGroupStore, ActivityQueueGroupStore>()
+            .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
             .AddScoped<IActivityQueueStore, ActivityQueueStore>()
             .AddScoped<IActivityQueueManager, ActivityQueueManager>()
             .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
@@ -240,13 +247,17 @@ public sealed class QueuesStartup : StartupBase
         services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
 
         services
+            .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
             .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
             .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>()
             .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
             .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, BusinessHoursCalendarHandler>()
+            .AddIndexProvider<ActivityQueueGroupIndexProvider>()
+            .AddDataMigration<ActivityQueueGroupIndexMigrations>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
             .AddDataMigration<ActivityQueueIndexMigrations>()
             .AddIndexProvider<ContactCenterSkillIndexProvider>()
@@ -261,6 +272,12 @@ public sealed class QueuesStartup : StartupBase
         services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
         services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
         services.AddNavigationProvider<ContactCenterAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
+        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
     }
 }
 
@@ -510,7 +527,19 @@ public sealed class AnalyticsStartup : StartupBase
         EnterpriseInteractionReportKind kind,
         string category)
     {
-        var definition = new EnterpriseInteractionReportDefinition(name, displayName, description, kind, category);
+        var definition = new EnterpriseInteractionReportDefinition(
+            name,
+            displayName,
+            description,
+            kind,
+            category,
+            [
+                ContactCenterReportFilter.QueueGroupId,
+                ContactCenterReportFilter.QueueId,
+                ContactCenterReportFilter.AgentId,
+                ContactCenterReportFilter.Channel,
+                ContactCenterReportFilter.Direction,
+            ]);
 
         services.AddScoped<IReport>(serviceProvider => new EnterpriseInteractionReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),
@@ -528,7 +557,13 @@ public sealed class AnalyticsStartup : StartupBase
         AgentWorkforceReportKind kind,
         string category)
     {
-        var definition = new AgentWorkforceReportDefinition(name, displayName, description, kind, category);
+        var definition = new AgentWorkforceReportDefinition(
+            name,
+            displayName,
+            description,
+            kind,
+            category,
+            [ContactCenterReportFilter.AgentId]);
 
         services.AddScoped<IReport>(serviceProvider => new AgentWorkforceReportProvider(
             serviceProvider.GetRequiredService<global::YesSql.ISession>(),

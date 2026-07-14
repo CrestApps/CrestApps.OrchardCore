@@ -14,16 +14,18 @@ using OrchardCore.Modules.Manifest;
     Name = "Omnichannel",
     Id = OmnichannelConstants.Features.Area,
     Category = "Communication",
-    Description = "Provides a unified communication layer that works across any channel (SMS, email, chat, phone, and more)"
+    Description = "Provides shared omnichannel messages, endpoints, preferences, and processing contracts across communication channels."
 )]
 
 [assembly: Feature(
-    Name = "Omnichannel (Azure Communication Services)",
+    Name = "Omnichannel - Azure Communication Services",
     Id = OmnichannelConstants.Features.AzureCommunicationServices,
     Category = "Communication",
-    Description = "Provides way to communicate using Azure Communication Services",
+    Description = "Enables Azure Communication Services email and SMS providers for omnichannel communications.",
     Dependencies =
     [
         OmnichannelConstants.Features.Area,
+        "OrchardCore.Email.Azure",
+        "OrchardCore.Sms.Azure",
     ]
 )]

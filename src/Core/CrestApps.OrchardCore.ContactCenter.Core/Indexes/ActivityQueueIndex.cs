@@ -18,6 +18,11 @@ public sealed class ActivityQueueIndex : CatalogItemIndex
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional queue-group identifier.
+    /// </summary>
+    public string QueueGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the queue is enabled for routing.
     /// </summary>
     public bool Enabled { get; set; }

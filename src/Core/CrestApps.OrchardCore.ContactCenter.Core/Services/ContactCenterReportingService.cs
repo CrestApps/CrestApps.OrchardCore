@@ -17,6 +17,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterReportingService : IContactCenterReportingService
 {
     private readonly ISession _session;
+    private readonly IActivityQueueGroupManager _queueGroupManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
@@ -27,6 +28,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// Initializes a new instance of the <see cref="ContactCenterReportingService"/> class.
     /// </summary>
     /// <param name="session">The YesSql session used to query interactions and activities.</param>
+    /// <param name="queueGroupManager">The queue-group manager used to resolve current catalog membership.</param>
     /// <param name="queueManager">The queue manager used to resolve queue names and settings.</param>
     /// <param name="queueItemManager">The queue item manager used to read live waiting depth.</param>
     /// <param name="agentManager">The agent profile manager used to resolve agent names.</param>
@@ -34,6 +36,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaign reports.</param>
     public ContactCenterReportingService(
         ISession session,
+        IActivityQueueGroupManager queueGroupManager,
         IActivityQueueManager queueManager,
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
@@ -41,6 +44,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager)
     {
         _session = session;
+        _queueGroupManager = queueGroupManager;
         _queueManager = queueManager;
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
@@ -65,6 +69,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         CancellationToken cancellationToken = default)
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
+        await ApplyCurrentQueueGroupCriteriaAsync(criteria, cancellationToken);
 
         return BuildCallInsights(fromUtc, toUtc, FilterInteractions(interactions, criteria));
     }
@@ -86,6 +91,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         CancellationToken cancellationToken = default)
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
+        await ApplyCurrentQueueGroupCriteriaAsync(criteria, cancellationToken);
         var agents = (await _agentManager.GetAllAsync(cancellationToken)).ToArray();
         var filteredAgents = string.IsNullOrEmpty(criteria?.AgentId)
             ? agents
@@ -118,16 +124,25 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
         var queues = (await _queueManager.GetAllAsync(cancellationToken)).ToArray();
+        var queueGroups = (await _queueGroupManager.GetAllAsync(cancellationToken)).ToArray();
+        ApplyCurrentQueueGroupCriteria(criteria, queues);
+        var filteredQueues = FilterQueues(queues, criteria);
 
         var waitingByQueue = new Dictionary<string, int>(StringComparer.Ordinal);
 
-        foreach (var queue in queues)
+        foreach (var queue in filteredQueues)
         {
             var waiting = await _queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
             waitingByQueue[queue.ItemId] = waiting.Count;
         }
 
-        return BuildQueueUsage(fromUtc, toUtc, FilterInteractions(interactions, criteria), FilterQueues(queues, criteria), waitingByQueue);
+        return BuildQueueUsage(
+            fromUtc,
+            toUtc,
+            FilterInteractions(interactions, criteria),
+            filteredQueues,
+            queueGroups,
+            waitingByQueue);
     }
 
     /// <inheritdoc/>
@@ -164,13 +179,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             campaignGroupIds[campaign.ItemId] = campaign.CampaignGroupId;
         }
 
-        if (!string.IsNullOrEmpty(criteria?.CampaignGroupId))
-        {
-            criteria.CampaignIds = campaigns
-                .Where(campaign => campaign.CampaignGroupId == criteria.CampaignGroupId)
-                .Select(campaign => campaign.ItemId)
-                .ToHashSet(StringComparer.Ordinal);
-        }
+        ApplyCurrentCampaignGroupCriteria(criteria, campaigns);
 
         return BuildCampaignSummary(
             fromUtc,
@@ -198,6 +207,11 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         CancellationToken cancellationToken = default)
     {
         var activities = await QueryActivityIndexesAsync(fromUtc, toUtc, cancellationToken);
+        var campaigns = string.IsNullOrEmpty(criteria?.CampaignGroupId)
+            ? []
+            : await _campaignManager.GetAllAsync(cancellationToken);
+
+        ApplyCurrentCampaignGroupCriteria(criteria, campaigns);
 
         return BuildSubjectInventory(fromUtc, toUtc, FilterActivities(activities, criteria));
     }
@@ -219,10 +233,31 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         return interactions
             .Where(interaction => string.IsNullOrEmpty(criteria.QueueId) || interaction.QueueId == criteria.QueueId)
+            .Where(interaction => criteria.QueueIds is null || criteria.QueueIds.Contains(interaction.QueueId ?? string.Empty))
             .Where(interaction => string.IsNullOrEmpty(criteria.AgentId) || interaction.AgentId == criteria.AgentId)
             .Where(interaction => !criteria.Channel.HasValue || interaction.Channel == criteria.Channel.Value)
             .Where(interaction => !criteria.Direction.HasValue || interaction.Direction == criteria.Direction.Value)
             .ToArray();
+    }
+
+    /// <summary>
+    /// Resolves a selected queue group to queue identifiers using the queues' current catalog membership.
+    /// </summary>
+    /// <param name="criteria">The optional report criteria to update.</param>
+    /// <param name="queues">The current queue catalog.</param>
+    public static void ApplyCurrentQueueGroupCriteria(
+        ContactCenterReportCriteria criteria,
+        IReadOnlyList<ActivityQueue> queues)
+    {
+        if (string.IsNullOrEmpty(criteria?.QueueGroupId))
+        {
+            return;
+        }
+
+        criteria.QueueIds = queues
+            .Where(queue => string.Equals(queue.QueueGroupId, criteria.QueueGroupId, StringComparison.Ordinal))
+            .Select(queue => queue.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -258,16 +293,34 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             .ToArray();
     }
 
+    internal static void ApplyCurrentCampaignGroupCriteria(
+        ContactCenterReportCriteria criteria,
+        IEnumerable<OmnichannelCampaign> campaigns)
+    {
+        if (string.IsNullOrEmpty(criteria?.CampaignGroupId))
+        {
+            return;
+        }
+
+        criteria.CampaignIds = campaigns
+            .Where(campaign => campaign.CampaignGroupId == criteria.CampaignGroupId)
+            .Select(campaign => campaign.ItemId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
     private static IReadOnlyList<ActivityQueue> FilterQueues(
         IReadOnlyList<ActivityQueue> queues,
         ContactCenterReportCriteria criteria)
     {
-        if (string.IsNullOrEmpty(criteria?.QueueId))
+        if (criteria is null)
         {
             return queues;
         }
 
-        return queues.Where(queue => queue.ItemId == criteria.QueueId).ToArray();
+        return queues
+            .Where(queue => string.IsNullOrEmpty(criteria.QueueId) || queue.ItemId == criteria.QueueId)
+            .Where(queue => criteria.QueueIds is null || criteria.QueueIds.Contains(queue.ItemId))
+            .ToArray();
     }
 
     internal static CallInsightsReport BuildCallInsights(DateTime fromUtc, DateTime toUtc, IReadOnlyList<Interaction> interactions)
@@ -463,37 +516,38 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         DateTime toUtc,
         IReadOnlyList<Interaction> interactions,
         IReadOnlyList<ActivityQueue> queues,
+        IReadOnlyList<ActivityQueueGroup> queueGroups,
         IReadOnlyDictionary<string, int> waitingByQueue)
     {
         var byQueue = new Dictionary<string, QueueUsageAccumulator>(StringComparer.Ordinal);
+        var byGroup = new Dictionary<string, QueueUsageAccumulator>(StringComparer.Ordinal);
+        var queuesById = queues.ToDictionary(queue => queue.ItemId, StringComparer.Ordinal);
+        var queueGroupNames = queueGroups.ToDictionary(group => group.ItemId, group => group.Name, StringComparer.Ordinal);
+        var totals = new QueueUsageAccumulator();
 
         foreach (var interaction in interactions)
         {
-            var key = interaction.QueueId ?? string.Empty;
+            var queueId = interaction.QueueId ?? string.Empty;
 
-            if (!byQueue.TryGetValue(key, out var accumulator))
+            if (!byQueue.TryGetValue(queueId, out var queueAccumulator))
             {
-                accumulator = new QueueUsageAccumulator();
-                byQueue[key] = accumulator;
+                queueAccumulator = new QueueUsageAccumulator();
+                byQueue[queueId] = queueAccumulator;
             }
 
-            accumulator.Handled++;
+            var queueGroupId = queuesById.TryGetValue(queueId, out var queue)
+                ? queue.QueueGroupId ?? string.Empty
+                : string.Empty;
 
-            if (interaction.AnsweredUtc.HasValue)
+            if (!byGroup.TryGetValue(queueGroupId, out var groupAccumulator))
             {
-                accumulator.Answered++;
-                accumulator.AnswerSpeedTotal += Math.Max(0d, (interaction.AnsweredUtc.Value - interaction.CreatedUtc).TotalSeconds);
+                groupAccumulator = new QueueUsageAccumulator();
+                byGroup[queueGroupId] = groupAccumulator;
+            }
 
-                if (interaction.EndedUtc.HasValue && interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value)
-                {
-                    accumulator.TalkTimeTotal += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
-                    accumulator.AnsweredWithHandleTime++;
-                }
-            }
-            else if (interaction.Direction == InteractionDirection.Inbound && interaction.Status == InteractionStatus.Ended)
-            {
-                accumulator.Abandoned++;
-            }
+            AccumulateInteraction(queueAccumulator, interaction);
+            AccumulateInteraction(groupAccumulator, interaction);
+            AccumulateInteraction(totals, interaction);
         }
 
         var report = new QueueUsageReport
@@ -506,26 +560,57 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         {
             byQueue.TryGetValue(queue.ItemId, out var accumulator);
             var waiting = waitingByQueue.GetValueOrDefault(queue.ItemId);
+            var queueGroupId = queue.QueueGroupId ?? string.Empty;
+
+            if (!byGroup.TryGetValue(queueGroupId, out var groupAccumulator))
+            {
+                groupAccumulator = new QueueUsageAccumulator();
+                byGroup[queueGroupId] = groupAccumulator;
+            }
+
+            groupAccumulator.CurrentWaiting += waiting;
+            totals.CurrentWaiting += waiting;
 
             if (accumulator is null && waiting == 0)
             {
                 continue;
             }
 
-            report.Rows.Add(BuildQueueRow(queue.ItemId, queue.Name ?? queue.ItemId, queue.SlaThresholdSeconds, waiting, accumulator));
+            queueGroupNames.TryGetValue(queueGroupId, out var queueGroupName);
+            report.Rows.Add(BuildQueueRow(
+                queue.ItemId,
+                queue.Name ?? queue.ItemId,
+                queueGroupId,
+                queueGroupName,
+                queue.SlaThresholdSeconds,
+                waiting,
+                accumulator));
             byQueue.Remove(queue.ItemId);
         }
 
         foreach (var entry in byQueue)
         {
             var name = string.IsNullOrEmpty(entry.Key) ? null : entry.Key;
-            report.Rows.Add(BuildQueueRow(entry.Key, name, 0, 0, entry.Value));
+            report.Rows.Add(BuildQueueRow(entry.Key, name, null, null, 0, 0, entry.Value));
         }
 
         report.Rows = report.Rows
             .OrderByDescending(row => row.InteractionsHandled)
             .ThenByDescending(row => row.CurrentWaiting)
             .ToList();
+
+        report.GroupRows = byGroup
+            .Where(entry => entry.Value.Handled > 0 || entry.Value.CurrentWaiting > 0)
+            .Select(entry =>
+            {
+                queueGroupNames.TryGetValue(entry.Key, out var queueGroupName);
+
+                return BuildQueueGroupRow(entry.Key, queueGroupName, entry.Value);
+            })
+            .OrderByDescending(row => row.InteractionsHandled)
+            .ThenByDescending(row => row.CurrentWaiting)
+            .ToList();
+        report.Totals = BuildQueueTotals(totals);
 
         return report;
     }
@@ -653,7 +738,9 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         IReadOnlyList<AgentProfile> agents,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrEmpty(criteria?.QueueId) || criteria?.Direction.HasValue == true)
+        if (!string.IsNullOrEmpty(criteria?.QueueId) ||
+            !string.IsNullOrEmpty(criteria?.QueueGroupId) ||
+            criteria?.Direction.HasValue == true)
         {
             return new Dictionary<string, long>(StringComparer.Ordinal);
         }
@@ -684,12 +771,34 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         return result;
     }
 
-    private static QueueUsageRow BuildQueueRow(string queueId, string queueName, int slaThresholdSeconds, int currentWaiting, QueueUsageAccumulator accumulator)
+    private async Task ApplyCurrentQueueGroupCriteriaAsync(
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(criteria?.QueueGroupId))
+        {
+            return;
+        }
+
+        var queues = (await _queueManager.GetAllAsync(cancellationToken)).ToArray();
+        ApplyCurrentQueueGroupCriteria(criteria, queues);
+    }
+
+    private static QueueUsageRow BuildQueueRow(
+        string queueId,
+        string queueName,
+        string queueGroupId,
+        string queueGroupName,
+        int slaThresholdSeconds,
+        int currentWaiting,
+        QueueUsageAccumulator accumulator)
     {
         var row = new QueueUsageRow
         {
             QueueId = queueId,
             QueueName = queueName,
+            QueueGroupId = queueGroupId,
+            QueueGroupName = queueGroupName,
             SlaThresholdSeconds = slaThresholdSeconds,
             CurrentWaiting = currentWaiting,
         };
@@ -704,6 +813,66 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         }
 
         return row;
+    }
+
+    private static QueueGroupUsageRow BuildQueueGroupRow(
+        string queueGroupId,
+        string queueGroupName,
+        QueueUsageAccumulator accumulator)
+    {
+        return new QueueGroupUsageRow
+        {
+            QueueGroupId = queueGroupId,
+            QueueGroupName = queueGroupName,
+            InteractionsHandled = accumulator.Handled,
+            Answered = accumulator.Answered,
+            Abandoned = accumulator.Abandoned,
+            AverageHandleTimeSeconds = accumulator.AnsweredWithHandleTime > 0
+                ? accumulator.TalkTimeTotal / accumulator.AnsweredWithHandleTime
+                : 0d,
+            AverageSpeedOfAnswerSeconds = accumulator.Answered > 0
+                ? accumulator.AnswerSpeedTotal / accumulator.Answered
+                : 0d,
+            CurrentWaiting = accumulator.CurrentWaiting,
+        };
+    }
+
+    private static QueueUsageTotals BuildQueueTotals(QueueUsageAccumulator accumulator)
+    {
+        return new QueueUsageTotals
+        {
+            InteractionsHandled = accumulator.Handled,
+            Answered = accumulator.Answered,
+            Abandoned = accumulator.Abandoned,
+            AverageHandleTimeSeconds = accumulator.AnsweredWithHandleTime > 0
+                ? accumulator.TalkTimeTotal / accumulator.AnsweredWithHandleTime
+                : 0d,
+            AverageSpeedOfAnswerSeconds = accumulator.Answered > 0
+                ? accumulator.AnswerSpeedTotal / accumulator.Answered
+                : 0d,
+            CurrentWaiting = accumulator.CurrentWaiting,
+        };
+    }
+
+    private static void AccumulateInteraction(QueueUsageAccumulator accumulator, Interaction interaction)
+    {
+        accumulator.Handled++;
+
+        if (interaction.AnsweredUtc.HasValue)
+        {
+            accumulator.Answered++;
+            accumulator.AnswerSpeedTotal += Math.Max(0d, (interaction.AnsweredUtc.Value - interaction.CreatedUtc).TotalSeconds);
+
+            if (interaction.EndedUtc.HasValue && interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value)
+            {
+                accumulator.TalkTimeTotal += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
+                accumulator.AnsweredWithHandleTime++;
+            }
+        }
+        else if (interaction.Direction == InteractionDirection.Inbound && interaction.Status == InteractionStatus.Ended)
+        {
+            accumulator.Abandoned++;
+        }
     }
 
     private static ActivityProgressCounts BuildCounts(IEnumerable<OmnichannelActivityIndex> activities)
@@ -799,5 +968,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         public double AnswerSpeedTotal { get; set; }
 
         public long AnsweredWithHandleTime { get; set; }
+
+        public int CurrentWaiting { get; set; }
     }
 }

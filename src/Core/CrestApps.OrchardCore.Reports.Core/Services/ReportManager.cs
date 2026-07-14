@@ -22,7 +22,10 @@ public sealed class ReportManager : IReportManager
         {
             if (!string.IsNullOrEmpty(report.Name))
             {
-                _byName.TryAdd(report.Name, report);
+                if (!_byName.TryAdd(report.Name, report))
+                {
+                    throw new InvalidOperationException($"A report named '{report.Name}' is already registered.");
+                }
             }
         }
 

@@ -21,7 +21,20 @@ public sealed class ReportRow
     public ReportRow(IList<string> cells, bool emphasize = false)
     {
         Cells = cells;
-        Emphasize = emphasize;
+        Kind = emphasize
+            ? ReportRowKind.GrandTotal
+            : ReportRowKind.Detail;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReportRow"/> class.
+    /// </summary>
+    /// <param name="cells">The pre-formatted cell values.</param>
+    /// <param name="kind">The semantic purpose of the row.</param>
+    public ReportRow(IList<string> cells, ReportRowKind kind)
+    {
+        Cells = cells;
+        Kind = kind;
     }
 
     /// <summary>
@@ -30,7 +43,24 @@ public sealed class ReportRow
     public IList<string> Cells { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether the row should be visually emphasized (a totals row).
+    /// Gets or sets the semantic purpose of the row.
     /// </summary>
-    public bool Emphasize { get; set; }
+    public ReportRowKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the row should be visually emphasized.
+    /// </summary>
+    public bool Emphasize
+    {
+        get
+        {
+            return Kind != ReportRowKind.Detail;
+        }
+        set
+        {
+            Kind = value
+                ? ReportRowKind.GrandTotal
+                : ReportRowKind.Detail;
+        }
+    }
 }

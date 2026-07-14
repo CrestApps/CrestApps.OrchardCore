@@ -31,4 +31,28 @@ public sealed class CsvReportExportFormatTests
         // Assert
         Assert.Equal("Label,Offered,Answered\r\nMonday,12,10\r\nTuesday,18,15\r\n", content.TrimStart('\uFEFF'));
     }
+
+    [Fact]
+    public void Serialize_WhenTableContainsSemanticTotals_ShouldRetainEveryRow()
+    {
+        // Arrange
+        var document = new ReportDocument()
+            .Add(ReportSection.ForTable(
+                "Queues",
+                [new ReportColumn("Queue"), new ReportColumn("Count")],
+                [
+                    new ReportRow(["Support", "2"]),
+                    new ReportRow(["Customer care", "2"], ReportRowKind.Subtotal),
+                    new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal),
+                ]));
+        var exportFormat = new CsvReportExportFormat(Mock.Of<IStringLocalizer<CsvReportExportFormat>>());
+
+        // Act
+        var content = Encoding.UTF8.GetString(exportFormat.Serialize(document));
+
+        // Assert
+        Assert.Equal(
+            "Queue,Count\r\nSupport,2\r\nCustomer care,2\r\nAll queues,2\r\n",
+            content.TrimStart('\uFEFF'));
+    }
 }

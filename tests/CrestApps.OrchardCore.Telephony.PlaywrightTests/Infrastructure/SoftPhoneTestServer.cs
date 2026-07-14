@@ -79,6 +79,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 ["disconnectedHub"] = "Disconnected",
                 ["invalidNumber"] = "Enter a phone number to call.",
                 ["transferPrompt"] = "Transfer to number",
+                ["transfer"] = "Transfer",
+                ["keypad"] = "Keypad",
                 ["directoryEmpty"] = "No directory entries are available.",
                 ["activeCalls"] = "Active calls",
                 ["selectCallsToMerge"] = "Select two calls to conference.",
@@ -107,8 +109,10 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     <div data-telephony-body>
                         <div data-telephony-view="keypad">
                             <input type="tel" data-telephony-number />
-                            <div data-telephony-peer></div>
                             <div data-telephony-error hidden></div>
+                            <div data-telephony-active-calls hidden>
+                                <div data-telephony-active-calls-list></div>
+                            </div>
                             <div data-telephony-transfer-panel hidden>
                                 <input type="tel" data-telephony-transfer-input />
                                 <div data-telephony-directory hidden>
@@ -117,15 +121,18 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                                 <button type="button" data-telephony-transfer-cancel>Cancel</button>
                                 <button type="button" data-telephony-transfer-confirm>Transfer</button>
                             </div>
-                            <div data-telephony-active-calls hidden>
-                                <div data-telephony-active-calls-list></div>
+                            <div data-telephony-keypad-panel>
+                                <button type="button" data-telephony-key="1">1</button>
                             </div>
                             <button type="button" data-telephony-dial>Call</button>
                             <button type="button" data-telephony-hold hidden>Hold</button>
                             <button type="button" data-telephony-resume hidden>Resume</button>
                             <button type="button" data-telephony-mute hidden>Mute</button>
                             <button type="button" data-telephony-unmute hidden>Unmute</button>
-                            <button type="button" data-telephony-transfer hidden>Transfer</button>
+                            <button type="button" data-telephony-transfer hidden>
+                                <i data-telephony-transfer-icon></i>
+                                <span data-telephony-transfer-label>Transfer</span>
+                            </button>
                             <button type="button" data-telephony-merge hidden>Merge</button>
                             <button type="button" data-telephony-hangup hidden>Hangup</button>
                             <button type="button" data-telephony-hangup-all hidden>Disconnect all</button>

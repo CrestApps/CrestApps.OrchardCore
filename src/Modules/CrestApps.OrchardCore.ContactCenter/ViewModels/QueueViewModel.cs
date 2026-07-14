@@ -15,6 +15,16 @@ public class QueueViewModel
     public string Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional queue-group identifier used for catalog organization and reporting.
+    /// </summary>
+    public string QueueGroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available queue groups.
+    /// </summary>
+    public IList<SelectListItem> QueueGroupOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the unique queue name.
     /// </summary>
     [Required]

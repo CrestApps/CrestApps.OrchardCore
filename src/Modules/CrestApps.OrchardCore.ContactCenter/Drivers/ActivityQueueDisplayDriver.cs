@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -12,6 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
 {
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
+    private readonly IActivityQueueGroupManager _queueGroupManager;
 
     internal readonly IStringLocalizer S;
 
@@ -19,20 +21,31 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
     /// Initializes a new instance of the <see cref="ActivityQueueDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="queueGroupManager">The queue-group manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityQueueDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
+        IActivityQueueGroupManager queueGroupManager,
         IStringLocalizer<ActivityQueueDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
+        _queueGroupManager = queueGroupManager;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public override Task<IDisplayResult> DisplayAsync(ActivityQueue queue, BuildDisplayContext context)
+    public override async Task<IDisplayResult> DisplayAsync(ActivityQueue queue, BuildDisplayContext context)
     {
-        return CombineAsync(
-            View("ActivityQueue_Fields_SummaryAdmin", queue)
+        var queueGroup = string.IsNullOrEmpty(queue.QueueGroupId)
+            ? null
+            : await _queueGroupManager.FindByIdAsync(queue.QueueGroupId);
+
+        return await CombineAsync(
+            Initialize<QueueSummaryViewModel>("ActivityQueue_Fields_SummaryAdmin", model =>
+            {
+                model.Queue = queue;
+                model.QueueGroupName = queueGroup?.Name;
+            })
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
             View("ActivityQueue_Buttons_SummaryAdmin", queue)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
@@ -47,6 +60,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         var viewModel = new QueueViewModel
         {
             Id = queue.ItemId,
+            QueueGroupId = queue.QueueGroupId,
             Name = queue.Name,
             Description = queue.Description,
             DefaultPriority = queue.DefaultPriority,
@@ -70,6 +84,8 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         return Initialize<QueueViewModel>("ActivityQueueFields_Edit", model =>
         {
             model.Id = viewModel.Id;
+            model.QueueGroupId = viewModel.QueueGroupId;
+            model.QueueGroupOptions = viewModel.QueueGroupOptions;
             model.Name = viewModel.Name;
             model.Description = viewModel.Description;
             model.DefaultPriority = viewModel.DefaultPriority;
@@ -105,7 +121,16 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
         }
 
+        if (!string.IsNullOrWhiteSpace(model.QueueGroupId) &&
+            await _queueGroupManager.FindByIdAsync(model.QueueGroupId) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.QueueGroupId), S["Select a valid queue group."]);
+        }
+
         queue.Name = model.Name?.Trim();
+        queue.QueueGroupId = string.IsNullOrWhiteSpace(model.QueueGroupId)
+            ? null
+            : model.QueueGroupId.Trim();
         queue.Description = model.Description?.Trim();
         queue.DefaultPriority = model.DefaultPriority;
         queue.RoutingStrategy = model.RoutingStrategy;

@@ -20,4 +20,14 @@ public sealed class QueueUsageReport
     /// Gets or sets the per-queue usage rows, ordered by handled volume.
     /// </summary>
     public IList<QueueUsageRow> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets usage aggregated by each queue's current queue-group membership.
+    /// </summary>
+    public IList<QueueGroupUsageRow> GroupRows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the combined usage across every queue in the filtered report.
+    /// </summary>
+    public QueueUsageTotals Totals { get; set; } = new();
 }

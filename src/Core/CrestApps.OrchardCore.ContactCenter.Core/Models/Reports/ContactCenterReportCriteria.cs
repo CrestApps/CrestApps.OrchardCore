@@ -14,6 +14,16 @@ public sealed class ContactCenterReportCriteria
     public string QueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the queue-group identifier used to filter interactions by current queue membership.
+    /// </summary>
+    public string QueueGroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the queue identifiers resolved from the selected queue group's current membership.
+    /// </summary>
+    public IReadOnlySet<string> QueueIds { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent profile identifier used to filter interactions.
     /// </summary>
     public string AgentId { get; set; }

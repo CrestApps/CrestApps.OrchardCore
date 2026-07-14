@@ -26,6 +26,7 @@ public sealed class ActivityQueueIndexProvider : IndexProvider<ActivityQueue>
             {
                 ItemId = queue.ItemId,
                 Name = queue.Name,
+                QueueGroupId = queue.QueueGroupId,
                 Enabled = queue.Enabled,
             });
     }

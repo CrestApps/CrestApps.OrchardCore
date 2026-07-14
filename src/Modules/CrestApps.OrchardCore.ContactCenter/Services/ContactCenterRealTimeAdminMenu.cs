@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the real-time agent and supervisor surfaces to the Interaction Center admin navigation: the agent
+/// Adds the real-time agent and supervisor surfaces to the Contact Center admin navigation: the agent
 /// desktop where agents work and the supervisor dashboard where managers monitor operations.
 /// </summary>
 public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
@@ -25,9 +25,9 @@ public sealed class ContactCenterRealTimeAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
-                .AddClass("interaction-center")
-                .Id("interactionCenter")
+            .Add(S["Contact Center"], "80", contactCenter => contactCenter
+                .AddClass("contact-center")
+                .Id("contactCenter")
                 .Add(S["My workspace"], "-2", workspace => workspace
                     .AddClass("contact-center-workspace")
                     .Id("contactCenterWorkspace")

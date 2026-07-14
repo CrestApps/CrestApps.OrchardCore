@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the Contact Center agent configuration entries to the Interaction Center admin navigation.
+/// Adds the Contact Center agent configuration entries to the Contact Center admin navigation.
 /// </summary>
 public sealed class ContactCenterAgentsAdminMenu : AdminNavigationProvider
 {
@@ -24,9 +24,9 @@ public sealed class ContactCenterAgentsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
-                .AddClass("interaction-center")
-                .Id("interactionCenter")
+            .Add(S["Contact Center"], "80", contactCenter => contactCenter
+                .AddClass("contact-center")
+                .Id("contactCenter")
                 .Add(S["Agent states"], S["Agent states"].PrefixPosition(), agentStates => agentStates
                     .AddClass("contact-center-agent-states")
                     .Id("contactCenterAgentStates")

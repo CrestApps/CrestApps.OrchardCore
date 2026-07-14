@@ -76,7 +76,14 @@
                             <tbody>
                                 @foreach (var row in reportSection.Rows)
                                 {
-                                    <tr class="@(row.Emphasize ? "fw-semibold border-top" : null)">
+                                    var rowClass = row.Kind switch
+                                    {
+                                        ReportRowKind.Subtotal => "fw-semibold border-top table-info",
+                                        ReportRowKind.GrandTotal => "fw-semibold border-top table-primary",
+                                        _ => null,
+                                    };
+
+                                    <tr class="@rowClass">
                                         @for (var i = 0; i < row.Cells.Count; i++)
                                         {
                                             var cell = row.Cells[i];

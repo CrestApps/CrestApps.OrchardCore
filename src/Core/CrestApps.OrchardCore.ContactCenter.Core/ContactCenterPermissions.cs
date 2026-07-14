@@ -33,6 +33,11 @@ public static class ContactCenterPermissions
     public static readonly Permission ManageQueues = new("ManageContactCenterQueues", "Manage Contact Center queues", [ManageContactCenter]);
 
     /// <summary>
+    /// Grants management of queue groups used for catalog organization and reporting.
+    /// </summary>
+    public static readonly Permission ManageQueueGroups = new("ManageContactCenterQueueGroups", "Manage Contact Center queue groups", [ManageQueues, ManageContactCenter]);
+
+    /// <summary>
     /// Grants management of skills used by routing and agent sign-in.
     /// </summary>
     public static readonly Permission ManageSkills = new("ManageContactCenterSkills", "Manage Contact Center skills", [ManageContactCenter]);

@@ -194,6 +194,8 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.Locator("[data-telephony-resume]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         var status = await page.Locator("[data-telephony-status]").InnerTextAsync();
         Assert.Equal("On hold", status.Trim());
+        Assert.Equal("+1 (555) 123-4567", await page.Locator("[data-telephony-number]").InputValueAsync());
+        Assert.True(await page.Locator("[data-telephony-active-calls]").IsHiddenAsync());
     }
 
     [Fact]
@@ -213,7 +215,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         var number = page.Locator("[data-telephony-number]");
         Assert.False(await number.IsDisabledAsync());
-        Assert.Equal(string.Empty, await number.InputValueAsync());
+        Assert.Equal("+1 (555) 123-4567", await number.InputValueAsync());
         await number.FillAsync("+15557654321");
         await page.ClickAsync("[data-telephony-dial]");
         await PublishLatestCallStateAsync(page);
@@ -228,7 +230,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ActiveCallList_ShortExtension_RemainsUnformatted()
+    public async Task ActiveCallList_WithOneCall_RemainsHidden()
     {
         // Arrange
         var page = await _browser.NewPageAsync();
@@ -242,9 +244,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await PublishLatestCallStateAsync(page);
 
         // Assert
-        Assert.Contains(
-            "2001",
-            await page.Locator("[data-telephony-active-calls-list]").InnerTextAsync());
+        Assert.True(await page.Locator("[data-telephony-active-calls]").IsHiddenAsync());
     }
 
     [Fact]
@@ -292,6 +292,8 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         await page.ClickAsync("[data-telephony-transfer]");
         await page.Locator("[data-telephony-directory-destination=\"2001\"]").WaitForAsync();
+        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsHiddenAsync());
+        Assert.Equal("Keypad", await page.Locator("[data-telephony-transfer-label]").InnerTextAsync());
         await page.ClickAsync("[data-telephony-directory-destination=\"2001\"]");
         await page.ClickAsync("[data-telephony-transfer-confirm]");
 
@@ -300,6 +302,8 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetTransferRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
         Assert.True(await page.Locator("[data-telephony-transfer-panel]").IsHiddenAsync());
+        Assert.True(await page.Locator("[data-telephony-keypad-panel]").IsVisibleAsync());
+        Assert.Equal("Transfer", await page.Locator("[data-telephony-transfer-label]").InnerTextAsync());
     }
 
     [Fact]
@@ -643,7 +647,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Assert - once the provider event arrives, the call is live.
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+        Assert.Equal("+1 (555) 000-1000", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]
@@ -681,7 +685,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
         Assert.Equal("Ringing...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+15550001001", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+        Assert.Equal("+1 (555) 000-1001", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]
@@ -737,7 +741,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Assert
         await page.Locator("[data-telephony-hangup]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
         Assert.Equal("In call", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
-        Assert.Equal("+15550001000", (await page.Locator("[data-telephony-peer]").InnerTextAsync()).Trim());
+        Assert.Equal("+1 (555) 000-1000", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     private static async Task WaitForConnectedAsync(IPage page)

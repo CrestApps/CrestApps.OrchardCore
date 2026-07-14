@@ -1,9 +1,9 @@
 @model ShapeViewModel<AgentSoftPhoneViewModel>
 @using CrestApps.OrchardCore.ContactCenter
+@using CrestApps.OrchardCore.ContactCenter.Endpoints
 @using CrestApps.OrchardCore.Omnichannel.Core
 
-<style asp-name="crestapps-bootstrap-select"></style>
-<script asp-name="crestapps-bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="bootstrap-select"></style>
 <script asp-name="contact-center-realtime" at="Foot"></script>
 <script asp-name="contact-center-soft-phone" at="Foot"></script>
 
@@ -31,8 +31,8 @@
      data-contact-center-queue-text="@T["Queue"]"
      data-contact-center-campaign-text="@T["Campaign"]"
      data-contact-center-sign-out-item-text="@T["Sign out"]"
-     data-contact-center-sync-url="@Url.Action("SyncQueuedVoiceWork", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
-     data-contact-center-current-offer-url="@Url.Action("CurrentIncomingOffer", "AgentSoftPhone", new { area = "CrestApps.OrchardCore.ContactCenter" })"
+     data-contact-center-sync-url="@Url.RouteUrl(AgentSoftPhoneEndpoints.SyncQueuedVoiceWorkRouteName)"
+     data-contact-center-current-offer-url="@Url.RouteUrl(AgentSoftPhoneEndpoints.CurrentIncomingOfferRouteName)"
      data-contact-center-complete-activity-url-template="@completeActivityUrlTemplate"
      hidden>
     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -50,7 +50,14 @@
 
            <div class="mb-2">
                <label class="form-label small mb-1">@T["Queues"]</label>
-               <select name="selectedQueueIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} queues selected" title="@T["Select queue(s)"]">
+               <select name="selectedQueueIds"
+                       class="form-select"
+                       multiple
+                       data-contact-center-picker
+                       data-live-search="true"
+                       data-selected-text-format="count > 2"
+                       title="@T["Select queues"]"
+                       aria-label="@T["Select queues"]">
                    @foreach (var queue in viewModel.AvailableQueues)
                    {
                        <option value="@queue.ItemId" selected="@(viewModel.SelectedQueueIds.Contains(queue.ItemId) ? "selected" : null)">@queue.Name</option>
@@ -60,7 +67,14 @@
 
            <div class="mb-2">
                <label class="form-label small mb-1">@T["Campaigns"]</label>
-               <select name="selectedCampaignIds" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} campaigns selected" title="@T["Select campaign(s)"]">
+               <select name="selectedCampaignIds"
+                       class="form-select"
+                       multiple
+                       data-contact-center-picker
+                       data-live-search="true"
+                       data-selected-text-format="count > 2"
+                       title="@T["Select campaigns"]"
+                       aria-label="@T["Select campaigns"]">
                    @foreach (var option in viewModel.CampaignOptions)
                    {
                        <option value="@option.Value" selected="@(option.Selected ? "selected" : null)" disabled="@(option.Disabled ? "disabled" : null)">@option.Text</option>

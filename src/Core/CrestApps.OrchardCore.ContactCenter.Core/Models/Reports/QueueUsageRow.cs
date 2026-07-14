@@ -17,6 +17,16 @@ public sealed class QueueUsageRow
     public string QueueName { get; set; }
 
     /// <summary>
+    /// Gets or sets the queue's current queue-group identifier.
+    /// </summary>
+    public string QueueGroupId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the resolved current queue-group name.
+    /// </summary>
+    public string QueueGroupName { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of interactions that were routed through the queue in the period.
     /// </summary>
     public long InteractionsHandled { get; set; }

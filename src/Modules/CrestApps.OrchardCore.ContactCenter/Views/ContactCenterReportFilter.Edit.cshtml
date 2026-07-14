@@ -1,15 +1,16 @@
-@model CrestApps.OrchardCore.ContactCenter.ViewModels.ContactCenterReportFilterViewModel
+@model CrestApps.OrchardCore.ContactCenter.Reports.ViewModels.ContactCenterReportFilterViewModel
 
-@if (Model.ShowWorkforceFilters)
+@if (Model.ShowQueueGroupFilter)
 {
     <div class="col p-1">
-        <label class="form-label" asp-for="AgentId">@T["Agent"]</label>
-        <select asp-for="AgentId" asp-items="Model.Agents" class="form-select">
-            <option value="">@T["All agents"]</option>
+        <label class="form-label" asp-for="QueueGroupId">@T["Queue group"]</label>
+        <select asp-for="QueueGroupId" asp-items="Model.QueueGroups" class="form-select">
+            <option value="">@T["All queue groups"]</option>
         </select>
     </div>
 }
-else if (Model.ShowInteractionFilters)
+
+@if (Model.ShowQueueFilter)
 {
     <div class="col p-1">
         <label class="form-label" asp-for="QueueId">@T["Queue"]</label>
@@ -17,12 +18,20 @@ else if (Model.ShowInteractionFilters)
             <option value="">@T["All queues"]</option>
         </select>
     </div>
+}
+
+@if (Model.ShowAgentFilter)
+{
     <div class="col p-1">
         <label class="form-label" asp-for="AgentId">@T["Agent"]</label>
         <select asp-for="AgentId" asp-items="Model.Agents" class="form-select">
             <option value="">@T["All agents"]</option>
         </select>
     </div>
+}
+
+@if (Model.ShowDirectionFilter)
+{
     <div class="col p-1">
         <label class="form-label" asp-for="Direction">@T["Direction"]</label>
         <select asp-for="Direction" asp-items="Model.Directions" class="form-select">
@@ -30,29 +39,39 @@ else if (Model.ShowInteractionFilters)
         </select>
     </div>
 }
-else if (Model.ShowActivityFilters)
+
+@if (Model.ShowCampaignGroupFilter)
 {
-    @if (Model.ShowCampaignGroupFilter)
-    {
-        <div class="col p-1">
-            <label class="form-label" asp-for="CampaignGroupId">@T["Campaign group"]</label>
-            <select asp-for="CampaignGroupId" asp-items="Model.CampaignGroups" class="form-select">
-                <option value="">@T["All campaign groups"]</option>
-            </select>
-        </div>
-    }
+    <div class="col p-1">
+        <label class="form-label" asp-for="CampaignGroupId">@T["Campaign group"]</label>
+        <select asp-for="CampaignGroupId" asp-items="Model.CampaignGroups" class="form-select">
+            <option value="">@T["All campaign groups"]</option>
+        </select>
+    </div>
+}
+
+@if (Model.ShowCampaignFilter)
+{
     <div class="col p-1">
         <label class="form-label" asp-for="CampaignId">@T["Campaign"]</label>
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
             <option value="">@T["All campaigns"]</option>
         </select>
     </div>
+}
+
+@if (Model.ShowActivitySourceFilter)
+{
     <div class="col p-1">
         <label class="form-label" asp-for="ActivitySource">@T["Source"]</label>
         <select asp-for="ActivitySource" asp-items="Model.ActivitySources" class="form-select">
             <option value="">@T["All sources"]</option>
         </select>
     </div>
+}
+
+@if (Model.ShowActivityStatusFilter)
+{
     <div class="col p-1">
         <label class="form-label" asp-for="ActivityStatus">@T["Status"]</label>
         <select asp-for="ActivityStatus" asp-items="Model.ActivityStatuses" class="form-select">
@@ -61,7 +80,7 @@ else if (Model.ShowActivityFilters)
     </div>
 }
 
-@if (!Model.ShowWorkforceFilters)
+@if (Model.ShowChannelFilter)
 {
     <div class="col p-1">
         <label class="form-label" asp-for="Channel">@T["Channel"]</label>

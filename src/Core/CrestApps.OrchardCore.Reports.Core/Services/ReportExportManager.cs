@@ -21,7 +21,10 @@ public sealed class ReportExportManager : IReportExportManager
         {
             if (!string.IsNullOrEmpty(format.Name))
             {
-                _byName.TryAdd(format.Name, format);
+                if (!_byName.TryAdd(format.Name, format))
+                {
+                    throw new InvalidOperationException($"A report export format named '{format.Name}' is already registered.");
+                }
             }
         }
 

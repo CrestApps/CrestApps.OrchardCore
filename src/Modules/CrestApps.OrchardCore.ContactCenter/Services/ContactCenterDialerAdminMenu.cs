@@ -5,7 +5,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
-/// Adds the Contact Center dialer entries to the Interaction Center admin navigation.
+/// Adds the Contact Center dialer entries to the Contact Center admin navigation.
 /// </summary>
 public sealed class ContactCenterDialerAdminMenu : AdminNavigationProvider
 {
@@ -24,9 +24,9 @@ public sealed class ContactCenterDialerAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
-                .AddClass("interaction-center")
-                .Id("interactionCenter")
+            .Add(S["Contact Center"], "80", contactCenter => contactCenter
+                .AddClass("contact-center")
+                .Id("contactCenter")
                 .Add(S["Dialer Profiles"], S["Dialer Profiles"].PrefixPosition(), dialer => dialer
                     .AddClass("dialer-profiles")
                     .Id("dialerProfiles")
