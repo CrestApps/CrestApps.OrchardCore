@@ -2,9 +2,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Mcp.Models;
-using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -296,9 +296,11 @@ public sealed class NamedRecipeStepHandlerTests
         manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
+        var options = CreateAIDataSourceSourceOptions();
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
             manager.Object,
+            options,
             null);
 
         var context = CreateContext("AIDataSource", new JsonObject
@@ -319,6 +321,52 @@ public sealed class NamedRecipeStepHandlerTests
         Assert.Empty(context.Errors);
         manager.Verify(x => x.UpdateAsync(dataSource, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(It.IsAny<AIDataSource>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AIDataSourceStep_WhenDataSourceIsNew_ShouldUseRecipeSourceValue()
+    {
+        // Arrange
+        var token = new JsonObject
+        {
+            [nameof(AIDataSource.DisplayText)] = "Products",
+            [nameof(AIDataSource.Source)] = "PostgreSQL",
+        };
+
+        var dataSource = new AIDataSource
+        {
+            DisplayText = "Products",
+            Source = "PostgreSQL",
+        };
+
+        var manager = new Mock<ISourceCatalogManager<AIDataSource>>();
+        manager.Setup(x => x.NewAsync("PostgreSQL", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(dataSource));
+        manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var options = CreateAIDataSourceSourceOptions();
+        var handler = CreateHandler(
+            "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
+            manager.Object,
+            options,
+            null);
+
+        var context = CreateContext("AIDataSource", new JsonObject
+        {
+            ["DataSources"] = new JsonArray
+            {
+                token,
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.NewAsync("PostgreSQL", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.CreateAsync(dataSource, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -519,5 +567,16 @@ public sealed class NamedRecipeStepHandlerTests
         var task = (Task)executeMethod.Invoke(handler, [context])!;
 
         await task;
+    }
+
+    private static IOptions<AIDataSourceSourceOptions> CreateAIDataSourceSourceOptions()
+    {
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("SearchIndexProfile", new("Search Index Profile", "Search Index Profile"), new("Read source documents from an Orchard-managed search index profile.", "Read source documents from an Orchard-managed search index profile."));
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Read source documents from an external Azure AI Search index.", "Read source documents from an external Azure AI Search index."));
+        options.AddOrUpdate("Elasticsearch", new("Elasticsearch", "Elasticsearch"), new("Read source documents from an external Elasticsearch index.", "Read source documents from an external Elasticsearch index."));
+        options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
+
+        return Options.Create(options);
     }
 }

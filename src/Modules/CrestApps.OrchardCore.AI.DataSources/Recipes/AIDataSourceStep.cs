@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -13,6 +14,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
     public const string StepKey = "AIDataSource";
 
     private readonly ISourceCatalogManager<AIDataSource> _dataManager;
+    private readonly AIDataSourceSourceOptions _sourceOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -20,13 +22,16 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
     /// Initializes a new instance of the <see cref="AIDataSourceStep"/> class.
     /// </summary>
     /// <param name="dataManager">The data manager.</param>
+    /// <param name="sourceOptions">The source options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceStep(
         ISourceCatalogManager<AIDataSource> dataManager,
+        IOptions<AIDataSourceSourceOptions> sourceOptions,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
     : base(StepKey)
     {
         _dataManager = dataManager;
+        _sourceOptions = sourceOptions.Value;
         S = stringLocalizer;
     }
 
@@ -39,6 +44,18 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
         {
             AIDataSource dataSource = null;
             var isNew = false;
+
+            var sourceType = token[nameof(AIDataSource.Source)]?.GetValue<string>();
+            sourceType = string.IsNullOrWhiteSpace(sourceType)
+                ? AIDataSourceSourceTypes.SearchIndexProfile
+                : sourceType;
+
+            if (!TryGetSource(sourceType))
+            {
+                context.Errors.Add(S["Invalid source used for AI data source '{0}'.", sourceType]);
+
+                continue;
+            }
 
             var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
 
@@ -56,7 +73,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             else
             {
                 isNew = true;
-                dataSource = await _dataManager.NewAsync(token);
+                dataSource = await _dataManager.NewAsync(sourceType, token);
 
                 if (hasId && UniqueId.IsValid(id))
                 {
@@ -82,6 +99,10 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             }
         }
     }
+
+    private bool TryGetSource(string sourceType)
+        => _sourceOptions.Sources.Any(entry =>
+            string.Equals(entry.SourceType, sourceType, StringComparison.OrdinalIgnoreCase));
 
     private sealed class AIDataSourcesStepModel
     {
