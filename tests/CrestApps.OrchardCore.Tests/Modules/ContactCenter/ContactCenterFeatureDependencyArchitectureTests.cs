@@ -475,6 +475,33 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void RecordingFeature_OwnsRecordingOrchestration()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Recording"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var recordingOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            ["CrestApps.OrchardCore.ContactCenter.Voice"],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Recording", recordingOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

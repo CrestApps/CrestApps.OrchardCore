@@ -81,6 +81,11 @@ public static class ContactCenterConstants
         public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
 
         /// <summary>
+        /// The identifier of the Contact Center recording orchestration feature.
+        /// </summary>
+        public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
+
+        /// <summary>
         /// The identifier of the Contact Center soft-phone integration feature.
         /// </summary>
         public const string VoiceSoftPhone = "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone";

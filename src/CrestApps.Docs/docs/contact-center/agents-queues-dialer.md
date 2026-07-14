@@ -19,6 +19,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Outbound Compliance | `CrestApps.OrchardCore.ContactCenter.Compliance` | Mandatory eligibility, suppression auditing, retry, do-not-call, and calling-window enforcement before an outbound attempt executes. |
 | Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Compliance-gated Power and Progressive strategies, automated batch source, and scheduled pacing. |
 | Contact Center Entry Points | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
+| Contact Center Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the Availability state. |
 | Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated workspace, navigation, presence controls, offers, active interaction context, and recent work for agents. |
 | Contact Center Supervision | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |

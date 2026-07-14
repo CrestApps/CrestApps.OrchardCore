@@ -131,6 +131,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.Recording,
+    Name = "Contact Center Recording",
+    Description = "Adds provider-capability-gated recording orchestration and recording-state events for voice interactions.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Voice,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Routing,
     Name = "Contact Center Routing",
     Description = "Adds policy-based routing strategies and activity assignment orchestration over Contact Center queues.",

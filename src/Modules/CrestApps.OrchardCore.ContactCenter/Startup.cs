@@ -464,7 +464,6 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
-            .AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<VoiceContactCenterCallRouter>()
@@ -487,6 +486,18 @@ public sealed class VoiceStartup : StartupBase
         routes
             .AddVoiceOfferEndpoints()
             .AddProviderVoiceWebhookEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers voice interaction recording orchestration.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Recording)]
+public sealed class RecordingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
     }
 }
 
