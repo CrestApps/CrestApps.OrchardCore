@@ -524,9 +524,9 @@
       "invariant": "The base `CrestApps.OrchardCore.ContactCenter` feature must boot and activate in a tenant alone, resolving every service from only its own declared manifest dependencies, without requiring `CrestApps.OrchardCore.Omnichannel.Managements` or any other admin-integration assembly. Today the base feature depends on `CrestApps.OrchardCore.Omnichannel.Managements` (`ContactCenter/Manifest.cs`).",
       "testId": "CC-F001",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
-        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
-        "status": "planned"
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -539,7 +539,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "No Orchard tenant/shell feature-activation test exists yet for the base feature booting alone; the declared-dependency boot proof is a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs and the ledger .github/contact-center/feature-dependency-violations.v1.json (FDV001) statically prove and pin the base feature's declared manifest coupling to Omnichannel Managements from the manifest source, and fail the build if any new undeclared coupling appears. The runtime proof that the base feature actually boots alone in a fresh tenant remains a planned:contact-center-feature-activation-matrix dependency."
     },
     {
       "id": "F002",
@@ -550,9 +550,9 @@
       "invariant": "Every service registered by a feature's Startup class must resolve using only that feature's declared transitive manifest dependencies. A singleton and supported-combination activation matrix must prove that enabling Queues, Voice, RealTime, and SoftPhone in every approved combination never fails to resolve a service. Today `QueuesStartup` registers a Telephony soft-phone driver requiring `HubRouteManager` without declaring Telephony or SignalR/RealTime, and Voice depends on `Telephony.SoftPhone` (`ContactCenter/Startup.cs:210-262,337-420`; `ContactCenterSoftPhoneWidgetDisplayDriver.cs:24-80`).",
       "testId": "CC-F002",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
-        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
-        "status": "planned"
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -565,7 +565,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "No singleton/combination feature-activation matrix exists yet; the resolvable-services-per-declared-dependency proof is a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs statically parses every Contact Center StartupBase class across the module, resolves each recognized registered concrete type's constructor parameters, and fails the build if a parameter resolves to a service not guaranteed by the registering feature's manifest closure or its RequireFeatures closure. The ledger .github/contact-center/feature-dependency-violations.v1.json pins the two currently known findings: Voice's declared coupling to Telephony.SoftPhone (FDV002) and Queues' undeclared runtime requirement on SignalR's HubRouteManager through ContactCenterSoftPhoneWidgetDisplayDriver (FDV003). Factory/non-generic registrations and runtime singleton/combination activation across every approved Queues/Voice/RealTime/SoftPhone combination remain planned:contact-center-feature-activation-matrix dependencies."
     },
     {
       "id": "F003",
@@ -966,9 +966,9 @@
       "invariant": "Every Contact Center feature must, on a fresh Orchard tenant, enable, run its migrations, resolve every registered service, participate in routing, and disable cleanly, for every legal manifest combination; no feature may compile while failing as soon as a tenant enables it.",
       "testId": "CC-T001",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
-        "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
-        "status": "planned"
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -981,7 +981,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "No complete Orchard shell/tenant feature-activation matrix exists yet; this is a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs computes and pins the exact transitive manifest-dependency closure of every legal Contact Center feature combination and fails the build if a closure reaches an unresolvable or unrecorded dependency. This is a static legal-combination proof only; the runtime proof that every combination actually enables, migrates, resolves every service, and disables cleanly on a live Orchard tenant remains a planned:contact-center-feature-activation-matrix dependency."
     },
     {
       "id": "T002",

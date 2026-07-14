@@ -1,0 +1,651 @@
+using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+
+namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
+
+/// <summary>
+/// R0a architecture contract tests that parse the Contact Center manifests and startup ownership to detect
+/// undeclared feature dependencies. These are characterization tests: they pin the currently known P0
+/// violations recorded in the R0a feature-dependency ledger and fail the build the moment a new, unrecorded
+/// undeclared dependency appears, without refactoring the production feature boundaries (deferred to R2).
+/// </summary>
+public sealed class ContactCenterFeatureDependencyArchitectureTests
+{
+    private const string ContactCenterManifestPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Manifest.cs";
+    private const string ContactCenterModulePath = "src/Modules/CrestApps.OrchardCore.ContactCenter";
+    private const string SignalRManifestPath = "src/Modules/CrestApps.OrchardCore.SignalR/Manifest.cs";
+    private const string SignalRStartupPath = "src/Modules/CrestApps.OrchardCore.SignalR/Startup.cs";
+    private const string TelephonyManifestPath = "src/Modules/CrestApps.OrchardCore.Telephony/Manifest.cs";
+    private const string TelephonyStartupPath = "src/Modules/CrestApps.OrchardCore.Telephony/Startup.cs";
+    private const string OmnichannelManagementsManifestPath = "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Manifest.cs";
+    private const string OmnichannelManagementsStartupPath = "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Startup.cs";
+
+    private static readonly string[] ContactCenterConcreteTypeSearchDirectories =
+    [
+        "src/Modules/CrestApps.OrchardCore.ContactCenter",
+        "src/Core/CrestApps.OrchardCore.ContactCenter.Core",
+        "src/Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions",
+    ];
+
+    [Fact]
+    public void DeclaredExternalManifestDependencies_MatchTheExpectedLedger()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var ledger = LoadLedger(repositoryRoot);
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath);
+        var contactCenterFeatureIds = features.Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
+
+        var expected = ledger["acceptedExternalDependencies"]!.AsArray()
+            .Select(entry => (Feature: entry!["feature"]!.GetValue<string>(), DependsOn: entry["dependsOn"]!.GetValue<string>()))
+            .Concat(ledger["knownViolations"]!.AsArray()
+                .Where(entry => entry!["kind"]!.GetValue<string>() == "declared-manifest-coupling")
+                .Select(entry => (Feature: entry!["feature"]!.GetValue<string>(), DependsOn: entry["dependsOn"]!.GetValue<string>())))
+            .ToHashSet();
+
+        // Act
+        var actual = new HashSet<(string Feature, string DependsOn)>();
+
+        foreach (var feature in features)
+        {
+            foreach (var dependency in feature.Dependencies)
+            {
+                if (!contactCenterFeatureIds.Contains(dependency))
+                {
+                    actual.Add((feature.Id, dependency));
+                }
+            }
+        }
+
+        var undeclaredInLedger = actual.Except(expected).ToList();
+        var staleInLedger = expected.Except(actual).ToList();
+
+        // Assert
+        Assert.True(
+            undeclaredInLedger.Count == 0,
+            "Found new, unrecorded external manifest dependencies. Record each one in the R0a ledger's " +
+            "'acceptedExternalDependencies' (if intentional) or 'knownViolations' (if a P0 finding): " +
+            string.Join(", ", undeclaredInLedger.Select(entry => $"{entry.Feature} -> {entry.DependsOn}")));
+
+        Assert.True(
+            staleInLedger.Count == 0,
+            "The R0a ledger records external manifest dependencies that no longer exist; update the ledger: " +
+            string.Join(", ", staleInLedger.Select(entry => $"{entry.Feature} -> {entry.DependsOn}")));
+    }
+
+    [Fact]
+    public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var ledger = LoadLedger(repositoryRoot);
+        var ownership = BuildExternalServiceOwnership(repositoryRoot);
+        var graph = BuildManifestGraph(repositoryRoot);
+        var contactCenterClasses = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            ContactCenterModulePath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        var expected = ledger["knownViolations"]!.AsArray()
+            .Where(entry => entry!["kind"]!.GetValue<string>() == "undeclared-required-service")
+            .Select(entry => (
+                Feature: entry!["feature"]!.GetValue<string>(),
+                RequiredService: entry["requiredService"]!.GetValue<string>(),
+                RequiredFromFeature: entry["requiredFromFeature"]!.GetValue<string>(),
+                ViaType: entry["viaType"]!.GetValue<string>()))
+            .ToHashSet();
+
+        // Act
+        var actual = new HashSet<(string Feature, string RequiredService, string RequiredFromFeature, string ViaType)>();
+
+        foreach (var startupClass in contactCenterClasses)
+        {
+            var availableFeatures = new HashSet<string>(
+                ComputeClosure(graph, startupClass.FeatureId),
+                StringComparer.Ordinal)
+            {
+                startupClass.FeatureId,
+            };
+
+            foreach (var requiredFeatureId in startupClass.RequiredFeatureIds)
+            {
+                availableFeatures.Add(requiredFeatureId);
+                availableFeatures.UnionWith(ComputeClosure(graph, requiredFeatureId));
+            }
+
+            foreach (var concreteType in ExtractProvidedTypes(startupClass.Body))
+            {
+                var parameterTypes = FindConstructorParameterTypes(repositoryRoot, concreteType);
+
+                foreach (var parameterType in parameterTypes)
+                {
+                    if (!ownership.TryGetValue(parameterType, out var owningFeatures))
+                    {
+                        continue;
+                    }
+
+                    foreach (var owningFeature in owningFeatures)
+                    {
+                        if (!availableFeatures.Contains(owningFeature))
+                        {
+                            actual.Add((startupClass.FeatureId, parameterType, owningFeature, concreteType));
+                        }
+                    }
+                }
+            }
+        }
+
+        var undeclaredInLedger = actual.Except(expected).ToList();
+        var staleInLedger = expected.Except(actual).ToList();
+
+        // Assert
+        Assert.True(
+            undeclaredInLedger.Count == 0,
+            "Found new, unrecorded required services resolved from an undeclared feature. Record each one in " +
+            "the R0a ledger's 'knownViolations': " +
+            string.Join(", ", undeclaredInLedger.Select(entry => $"{entry.Feature} requires {entry.RequiredService} from {entry.RequiredFromFeature} via {entry.ViaType}")));
+
+        Assert.True(
+            staleInLedger.Count == 0,
+            "The R0a ledger records an undeclared-required-service violation that no longer reproduces; update the ledger: " +
+            string.Join(", ", staleInLedger.Select(entry => $"{entry.Feature} requires {entry.RequiredService} from {entry.RequiredFromFeature} via {entry.ViaType}")));
+    }
+
+    [Fact]
+    public void EveryKnownViolation_OwnsAControlMatrixGate()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var ledger = LoadLedger(repositoryRoot);
+        var controlMatrix = LoadControlMatrix(repositoryRoot);
+        var gateIds = controlMatrix["gates"]!.AsArray()
+            .Select(gate => gate!["id"]!.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Act & Assert
+        foreach (var violation in ledger["knownViolations"]!.AsArray())
+        {
+            var violationId = violation!["id"]!.GetValue<string>();
+            var gateId = violation["gateId"]!.GetValue<string>();
+
+            Assert.True(
+                gateIds.Contains(gateId),
+                $"Ledger violation '{violationId}' references control-matrix gate '{gateId}', which does not exist.");
+        }
+    }
+
+    [Fact]
+    public void FeatureDependencyClosures_AreLegalAndMatchTheExpectedLedger()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var ledger = LoadLedger(repositoryRoot);
+        var graph = BuildManifestGraph(repositoryRoot);
+        var contactCenterFeatures = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath);
+        var acceptedLeaves = ledger["acceptedLeafDependencies"]!.AsArray()
+            .Select(entry => entry!.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+        var expectedClosures = ledger["featureDependencyClosures"]!.AsObject();
+
+        foreach (var feature in contactCenterFeatures)
+        {
+            // Act
+            var closure = ComputeClosure(graph, feature.Id);
+
+            // Assert: the closure never cycles back to the feature that started it.
+            Assert.DoesNotContain(feature.Id, closure);
+
+            // Assert: every dependency is either a known feature in the parsed graph or an explicitly
+            // accepted external leaf; anything else is an illegal/unresolvable manifest reference.
+            foreach (var dependencyId in closure)
+            {
+                Assert.True(
+                    graph.ContainsKey(dependencyId) || acceptedLeaves.Contains(dependencyId),
+                    $"Feature '{feature.Id}' transitively depends on '{dependencyId}', which is neither a known feature nor an accepted leaf dependency in the R0a ledger.");
+            }
+
+            // Assert: the closure exactly matches the pinned characterization in the ledger.
+            Assert.True(
+                expectedClosures.TryGetPropertyValue(feature.Id, out var expectedClosureNode),
+                $"The R0a ledger is missing an expected dependency closure for feature '{feature.Id}'.");
+
+            var expectedClosure = expectedClosureNode!.AsArray()
+                .Select(entry => entry!.GetValue<string>())
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList();
+
+            Assert.Equal(expectedClosure, closure);
+        }
+    }
+
+    private static string ContactCenterConstantsFeatureArea(string repositoryRoot)
+    {
+        return ResolveToken(repositoryRoot, "ContactCenterConstants.Feature.Area");
+    }
+
+    private static Dictionary<string, ManifestFeature> BuildManifestGraph(string repositoryRoot)
+    {
+        var graph = new Dictionary<string, ManifestFeature>(StringComparer.Ordinal);
+
+        foreach (var manifestPath in new[]
+        {
+            ContactCenterManifestPath,
+            SignalRManifestPath,
+            TelephonyManifestPath,
+            OmnichannelManagementsManifestPath,
+        })
+        {
+            foreach (var feature in ParseManifestFeatures(repositoryRoot, manifestPath))
+            {
+                graph[feature.Id] = feature;
+            }
+        }
+
+        return graph;
+    }
+
+    private static List<string> ComputeClosure(IReadOnlyDictionary<string, ManifestFeature> graph, string featureId)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var stack = new Stack<string>();
+        stack.Push(featureId);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+
+            if (!graph.TryGetValue(current, out var feature))
+            {
+                continue;
+            }
+
+            foreach (var dependency in feature.Dependencies)
+            {
+                if (seen.Add(dependency))
+                {
+                    stack.Push(dependency);
+                }
+            }
+        }
+
+        return [.. seen.OrderBy(id => id, StringComparer.Ordinal)];
+    }
+
+    private static Dictionary<string, IReadOnlyList<string>> BuildExternalServiceOwnership(string repositoryRoot)
+    {
+        var ownership = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        var externalStartups = new[]
+        {
+            (Path: SignalRStartupPath, DefaultFeature: ResolveToken(repositoryRoot, "SignalRConstants.Feature.Area")),
+            (Path: TelephonyStartupPath, DefaultFeature: ResolveToken(repositoryRoot, "TelephonyConstants.Feature.Area")),
+            (Path: OmnichannelManagementsStartupPath, DefaultFeature: ResolveToken(repositoryRoot, "OmnichannelConstants.Features.Managements")),
+        };
+
+        foreach (var (path, defaultFeature) in externalStartups)
+        {
+            foreach (var startupClass in ParseStartupClasses(repositoryRoot, path, defaultFeature))
+            {
+                foreach (var providedType in ExtractProvidedTypes(startupClass.Body))
+                {
+                    if (!ownership.TryGetValue(providedType, out var owners))
+                    {
+                        owners = [];
+                        ownership[providedType] = owners;
+                    }
+
+                    if (!owners.Contains(startupClass.FeatureId, StringComparer.Ordinal))
+                    {
+                        owners.Add(startupClass.FeatureId);
+                    }
+                }
+            }
+        }
+
+        return ownership.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<string>)entry.Value, StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<string> FindConstructorParameterTypes(string repositoryRoot, string typeName)
+    {
+        foreach (var relativeDirectory in ContactCenterConcreteTypeSearchDirectories)
+        {
+            var directory = Path.Combine(repositoryRoot, relativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+
+            if (!Directory.Exists(directory))
+            {
+                continue;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+            {
+                var text = File.ReadAllText(file);
+
+                if (!Regex.IsMatch(text, $@"\bclass\s+{Regex.Escape(typeName)}\b"))
+                {
+                    continue;
+                }
+
+                var constructorMatch = Regex.Match(text, $@"public\s+{Regex.Escape(typeName)}\s*\(");
+
+                if (!constructorMatch.Success)
+                {
+                    return [];
+                }
+
+                var parenStart = constructorMatch.Index + constructorMatch.Length - 1;
+                var parenEnd = FindMatching(text, parenStart, '(', ')');
+                var parameterList = text.Substring(parenStart + 1, parenEnd - parenStart - 1);
+
+                return [.. SplitTopLevel(parameterList, ',').Select(ExtractParameterTypeName)];
+            }
+        }
+
+        return [];
+    }
+
+    private static string ExtractParameterTypeName(string parameterDeclaration)
+    {
+        var withoutDefault = parameterDeclaration.Split('=')[0].Trim();
+        var tokens = withoutDefault.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        // The parameter name is always the last token; the type is everything before it.
+        return tokens.Length >= 2
+            ? tokens[tokens.Length - 2]
+            : withoutDefault;
+    }
+
+    private static List<string> ExtractProvidedTypes(string methodBody)
+    {
+        var provided = new List<string>();
+
+        foreach (Match match in Regex.Matches(methodBody, @"\.Add\w*<"))
+        {
+            var genericStart = match.Index + match.Length - 1;
+            var genericEnd = FindMatching(methodBody, genericStart, '<', '>');
+            var genericArguments = SplitTopLevel(
+                methodBody.Substring(genericStart + 1, genericEnd - genericStart - 1),
+                ',');
+
+            if (genericArguments.Count > 0)
+            {
+                provided.Add(genericArguments[genericArguments.Count - 1]);
+            }
+        }
+
+        foreach (Match match in Regex.Matches(methodBody, @"\bnew\s+(?<type>\w+)\s*\("))
+        {
+            provided.Add(match.Groups["type"].Value);
+        }
+
+        return provided;
+    }
+
+    private static List<StartupClass> ParseStartupClasses(string repositoryRoot, string relativeStartupPath, string defaultFeatureId)
+    {
+        var path = Path.Combine(repositoryRoot, relativeStartupPath.Replace('/', Path.DirectorySeparatorChar));
+        var text = File.ReadAllText(path);
+        var classes = new List<StartupClass>();
+
+        foreach (Match match in Regex.Matches(
+            text,
+            @"(?<attributes>(?:\[[^\]]*\]\s*)*)(?:public|internal)\s+(?:sealed\s+)?class\s+(?<name>\w+)\s*:\s*StartupBase",
+            RegexOptions.Singleline))
+        {
+            var attributes = match.Groups["attributes"].Value;
+            var featureMatch = Regex.Match(attributes, @"\[Feature\((?<id>[^)]+)\)\]");
+            var featureId = featureMatch.Success
+                ? ResolveToken(repositoryRoot, featureMatch.Groups["id"].Value.Trim())
+                : defaultFeatureId;
+            var requiredFeatureIds = new List<string>();
+
+            foreach (Match requireFeaturesMatch in Regex.Matches(
+                attributes,
+                @"\[RequireFeatures\((?<ids>[^)]*)\)\]",
+                RegexOptions.Singleline))
+            {
+                foreach (var rawFeatureId in SplitTopLevel(requireFeaturesMatch.Groups["ids"].Value, ','))
+                {
+                    requiredFeatureIds.Add(ResolveToken(repositoryRoot, rawFeatureId));
+                }
+            }
+
+            var braceStart = text.IndexOf('{', match.Index + match.Length);
+            var braceEnd = FindMatching(text, braceStart, '{', '}');
+            var body = text.Substring(braceStart, braceEnd - braceStart + 1);
+
+            classes.Add(new StartupClass(featureId, body, requiredFeatureIds));
+        }
+
+        return classes;
+    }
+
+    private static List<StartupClass> ParseStartupClassesInDirectory(
+        string repositoryRoot,
+        string relativeDirectory,
+        string defaultFeatureId)
+    {
+        var directory = Path.Combine(repositoryRoot, relativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+        var classes = new List<StartupClass>();
+
+        foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(repositoryRoot, file);
+            classes.AddRange(ParseStartupClasses(repositoryRoot, relativePath, defaultFeatureId));
+        }
+
+        return classes;
+    }
+
+    private static List<ManifestFeature> ParseManifestFeatures(string repositoryRoot, string relativeManifestPath)
+    {
+        var manifestPath = Path.Combine(repositoryRoot, relativeManifestPath.Replace('/', Path.DirectorySeparatorChar));
+        var text = File.ReadAllText(manifestPath);
+        var features = new List<ManifestFeature>();
+
+        const string featureToken = "[assembly: Feature(";
+        var searchIndex = 0;
+
+        while (true)
+        {
+            var start = text.IndexOf(featureToken, searchIndex, StringComparison.Ordinal);
+
+            if (start < 0)
+            {
+                break;
+            }
+
+            var parenStart = start + featureToken.Length - 1;
+            var end = FindMatching(text, parenStart, '(', ')');
+            var body = text.Substring(parenStart + 1, end - parenStart - 1);
+
+            var idMatch = Regex.Match(body, @"Id\s*=\s*(?<id>[^,]+),", RegexOptions.Singleline);
+            var id = ResolveToken(repositoryRoot, idMatch.Groups["id"].Value.Trim());
+
+            var dependencies = new List<string>();
+            var dependenciesMatch = Regex.Match(body, @"Dependencies\s*=\s*\[(?<deps>.*?)\]", RegexOptions.Singleline);
+
+            if (dependenciesMatch.Success)
+            {
+                foreach (var rawToken in dependenciesMatch.Groups["deps"].Value.Split(','))
+                {
+                    var trimmed = rawToken.Trim();
+
+                    if (trimmed.Length > 0)
+                    {
+                        dependencies.Add(ResolveToken(repositoryRoot, trimmed));
+                    }
+                }
+            }
+
+            features.Add(new ManifestFeature(id, dependencies));
+            searchIndex = end + 1;
+        }
+
+        if (features.Count == 0)
+        {
+            // A module without a separate [assembly: Feature] block uses the Module attribute's Id as its
+            // single, dependency-free feature (for example, the SignalR module).
+            var moduleMatch = Regex.Match(text, @"\[assembly:\s*Module\((?<body>.*?)\)\]", RegexOptions.Singleline);
+            var idMatch = Regex.Match(moduleMatch.Groups["body"].Value, @"Id\s*=\s*(?<id>[^,]+),", RegexOptions.Singleline);
+            var id = ResolveToken(repositoryRoot, idMatch.Groups["id"].Value.Trim());
+
+            features.Add(new ManifestFeature(id, []));
+        }
+
+        return features;
+    }
+
+    private static string ResolveToken(string repositoryRoot, string rawToken)
+    {
+        if (rawToken.StartsWith('"'))
+        {
+            return rawToken.Trim('"');
+        }
+
+        var segments = rawToken.Split('.');
+        var constantsFile = FindSourceFile(repositoryRoot, segments[0] + ".cs");
+        var text = File.ReadAllText(constantsFile);
+        var scope = text;
+
+        for (var i = 1; i < segments.Length - 1; i++)
+        {
+            scope = ExtractNestedTypeBody(scope, segments[i]);
+        }
+
+        var propertyName = segments[segments.Length - 1];
+        var match = Regex.Match(scope, $@"public const string {Regex.Escape(propertyName)}\s*=\s*""(?<value>[^""]+)"";");
+
+        if (!match.Success)
+        {
+            throw new InvalidOperationException($"Could not resolve manifest token '{rawToken}' using '{constantsFile}'.");
+        }
+
+        return match.Groups["value"].Value;
+    }
+
+    private static string ExtractNestedTypeBody(string text, string typeName)
+    {
+        var match = Regex.Match(text, $@"(?:public|internal)\s+(?:static\s+)?class\s+{Regex.Escape(typeName)}\b");
+
+        if (!match.Success)
+        {
+            throw new InvalidOperationException($"Could not find nested type '{typeName}'.");
+        }
+
+        var braceStart = text.IndexOf('{', match.Index);
+        var braceEnd = FindMatching(text, braceStart, '{', '}');
+
+        return text.Substring(braceStart, braceEnd - braceStart + 1);
+    }
+
+    private static string FindSourceFile(string repositoryRoot, string fileName)
+    {
+        var matches = Directory.GetFiles(Path.Combine(repositoryRoot, "src"), fileName, SearchOption.AllDirectories);
+
+        if (matches.Length != 1)
+        {
+            throw new InvalidOperationException($"Expected exactly one source file named '{fileName}' under 'src', but found {matches.Length}.");
+        }
+
+        return matches[0];
+    }
+
+    private static int FindMatching(string text, int openIndex, char openChar, char closeChar)
+    {
+        var depth = 0;
+
+        for (var i = openIndex; i < text.Length; i++)
+        {
+            if (text[i] == openChar)
+            {
+                depth++;
+            }
+            else if (text[i] == closeChar)
+            {
+                depth--;
+
+                if (depth == 0)
+                {
+                    return i;
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Unbalanced '{openChar}'/'{closeChar}' while parsing source text.");
+    }
+
+    private static List<string> SplitTopLevel(string text, char separator)
+    {
+        var parts = new List<string>();
+        var depth = 0;
+        var current = new StringBuilder();
+
+        foreach (var ch in text)
+        {
+            if (ch is '<' or '(')
+            {
+                depth++;
+            }
+            else if (ch is '>' or ')')
+            {
+                depth--;
+            }
+
+            if (ch == separator && depth == 0)
+            {
+                parts.Add(current.ToString().Trim());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(ch);
+            }
+        }
+
+        var last = current.ToString().Trim();
+
+        if (last.Length > 0)
+        {
+            parts.Add(last);
+        }
+
+        return parts;
+    }
+
+    private static JsonObject LoadLedger(string repositoryRoot)
+    {
+        var ledgerPath = Path.Combine(repositoryRoot, ".github", "contact-center", "feature-dependency-violations.v1.json");
+
+        return JsonNode.Parse(File.ReadAllText(ledgerPath))?.AsObject() ??
+            throw new InvalidOperationException("The Contact Center R0a feature-dependency ledger is invalid.");
+    }
+
+    private static JsonObject LoadControlMatrix(string repositoryRoot)
+    {
+        var matrixPath = Path.Combine(repositoryRoot, ".github", "contact-center", "pr-test-control-matrix.v1.json");
+
+        return JsonNode.Parse(File.ReadAllText(matrixPath))?.AsObject() ??
+            throw new InvalidOperationException("The Contact Center PR-to-test control matrix is invalid.");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ??
+            throw new InvalidOperationException("The repository root could not be located.");
+    }
+
+    private sealed record ManifestFeature(string Id, IReadOnlyList<string> Dependencies);
+
+    private sealed record StartupClass(
+        string FeatureId,
+        string Body,
+        IReadOnlyList<string> RequiredFeatureIds);
+}

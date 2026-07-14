@@ -33,9 +33,11 @@ It is expected and acceptable for most CI jobs and evidence paths to be `planned
 
 The matrix currently tracks 41 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review: `C001`-`C008` (correctness), `D001`-`D009` (data), `F001`-`F006` (feature/package graph), `O001`-`O006` (operations), `S001`-`S005` (security), `T001`-`T003` (test/topology), and `V001`-`V004` (voice/provider).
 
-A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, webhook body limits, and the declared recording/monitoring prohibitions in the support matrix). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
+A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, webhook body limits, the declared recording/monitoring prohibitions in the support matrix, and the static feature-dependency architecture ledger). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
 
 The S001 in-process R0a proof now runs two active shell identities through the same hub context and verifies that user and supervisor notifications resolve to different tenant-qualified destinations. A separate R0b production-backplane run is still required before multi-node isolation is approved.
+
+The F001, F002, and T001 in-process R0a proof, `ContactCenterFeatureDependencyArchitectureTests`, statically parses the Contact Center, SignalR, Telephony, and Omnichannel Managements manifests plus every Contact Center `StartupBase` class and checks them against the machine-readable ledger `.github/contact-center/feature-dependency-violations.v1.json`. For recognized generic registrations it resolves constructor dependencies against both manifest and `[RequireFeatures]` closures, fails on a new unrecorded mismatch, and pins the three currently known P0 findings without refactoring production feature boundaries (deferred to R2): the base feature's declared coupling to Omnichannel Managements (FDV001), Voice's declared coupling to the concrete Telephony Soft Phone feature (FDV002), and Queues' undeclared runtime requirement on SignalR's `HubRouteManager` (FDV003). This is a static dependency-closure characterization only; factory/non-generic registrations and the runtime proof that every legal feature combination actually enables, migrates, and resolves every service on a live Orchard tenant remain `planned:contact-center-feature-activation-matrix` dependencies.
 
 ## Contract tests
 
@@ -47,5 +49,12 @@ The S001 in-process R0a proof now runs two active shell identities through the s
 - A gate's execution context omits providers, databases, or topologies.
 - A gate has no plan-finding citation, title, falsifiable invariant, test id, CI job id/workflow, or retained evidence location.
 - No P0 gate has at least `partial` CI enforcement, which would indicate the remediation program has not started closing any commercial release blocker.
+
+`ContactCenterFeatureDependencyArchitectureTests` in the same folder fails the build if:
+
+- A Contact Center feature's manifest declares a new, unrecorded dependency on a feature outside the Contact Center family, or the ledger records a manifest dependency that no longer exists.
+- A recognized Contact Center `StartupBase` registration requires a service not guaranteed by its manifest or `[RequireFeatures]` transitive closure, and that finding is not already recorded in the ledger, or the ledger records a finding that no longer reproduces.
+- A ledger violation references a control-matrix gate id that does not exist.
+- A Contact Center feature's transitive manifest-dependency closure reaches an unresolvable dependency, cycles back to the feature itself, or drifts from the pinned closure recorded in the ledger.
 
 See [Production support](production-support.md) and [Service objectives](service-objectives.md) for the related finite support matrix and measurable service-level contracts.
