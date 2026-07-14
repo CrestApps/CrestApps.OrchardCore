@@ -17,7 +17,7 @@ internal sealed class ContactCenterSoftPhoneResourceConfiguration : IConfigureOp
         _manifest
             .DefineScript("contact-center-soft-phone")
             .SetUrl("~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-soft-phone.js")
-            .SetDependencies("telephony-soft-phone", "bootstrap-select")
+            .SetDependencies("telephony-soft-phone", "crestapps-bootstrap-select")
             .SetVersion("1.0.0");
     }
 

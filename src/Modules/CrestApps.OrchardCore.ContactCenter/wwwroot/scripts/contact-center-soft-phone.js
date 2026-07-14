@@ -54,6 +54,16 @@
     }
 
     function refreshMembershipPicker(select) {
+        if (select && window.Selectpicker && typeof window.Selectpicker.getInstance === 'function') {
+            var selectpicker = window.Selectpicker.getInstance(select);
+
+            if (selectpicker) {
+                selectpicker.refresh();
+            }
+
+            return;
+        }
+
         if (!select || !window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.selectpicker !== 'function') {
             return;
         }
@@ -66,6 +76,14 @@
     }
 
     function initializeMembershipPickers(root) {
+        if (root && window.Selectpicker && typeof window.Selectpicker.getOrCreateInstance === 'function') {
+            root.querySelectorAll('[data-contact-center-picker]').forEach(function (select) {
+                window.Selectpicker.getOrCreateInstance(select);
+            });
+
+            return;
+        }
+
         if (!root || !window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.selectpicker !== 'function') {
             return;
         }
