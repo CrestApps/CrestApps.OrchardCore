@@ -601,7 +601,7 @@ public sealed class InboundVoiceServiceTests
                 ContactLookup.Object,
                 IncomingCallDispatcher.Object,
                 VoiceProviderResolver.Object,
-                EntryPointResolver.Object,
+                [EntryPointResolver.Object],
                 ProviderCallStateSynchronizationService.Object,
                 OfferSynchronizationService.Object,
                 DistributedLock.Object,

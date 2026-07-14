@@ -466,12 +466,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
-            .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
-            .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
-            .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
-            .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
-            .AddScoped<IEntryPointResolver, EntryPointResolver>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
@@ -484,14 +479,6 @@ public sealed class VoiceStartup : StartupBase
 
         services.AddSingleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>();
 
-        services
-            .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
-            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
-            .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
-            .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
-
-        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
         services.AddSingleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>();
     }
 
@@ -499,8 +486,36 @@ public sealed class VoiceStartup : StartupBase
     {
         routes
             .AddVoiceOfferEndpoints()
-            .AddVoiceIngressEndpoint()
             .AddProviderVoiceWebhookEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers inbound voice entry-point administration, qualification, and queue ingress.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
+public sealed class EntryPointsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
+            .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            .AddScoped<IEntryPointResolver, EntryPointResolver>()
+            .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
+            .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
+            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
+            .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
+            .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
+            .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddVoiceIngressEndpoint();
     }
 }
 

@@ -76,6 +76,11 @@ public static class ContactCenterConstants
         public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
 
         /// <summary>
+        /// The identifier of the inbound voice entry-point qualification feature.
+        /// </summary>
+        public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
+
+        /// <summary>
         /// The identifier of the Contact Center soft-phone integration feature.
         /// </summary>
         public const string VoiceSoftPhone = "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone";

@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center inbound entry points.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Voice)]
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
 public sealed class EntryPointsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

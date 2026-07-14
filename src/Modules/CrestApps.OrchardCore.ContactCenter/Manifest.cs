@@ -119,6 +119,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.EntryPoints,
+    Name = "Contact Center Entry Points",
+    Description = "Adds inbound voice entry-point administration, qualification, business-hours decisions, and queue ingress.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.Routing,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Routing,
     Name = "Contact Center Routing",
     Description = "Adds policy-based routing strategies and activity assignment orchestration over Contact Center queues.",

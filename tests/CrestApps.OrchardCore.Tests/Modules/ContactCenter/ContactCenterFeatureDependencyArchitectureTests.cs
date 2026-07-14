@@ -434,6 +434,47 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void EntryPointsFeature_OwnsInboundQualificationSurface()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var dependencies = features["CrestApps.OrchardCore.ContactCenter.EntryPoints"].Dependencies
+            .Order(StringComparer.Ordinal);
+        var resolverOwner = startupClasses.Single(startup =>
+            startup.Body.Contains("AddScoped<IEntryPointResolver, EntryPointResolver>()", StringComparison.Ordinal));
+        var ingressOwner = startupClasses.Single(startup =>
+            startup.Body.Contains("AddVoiceIngressEndpoint()", StringComparison.Ordinal));
+        var navigationOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddNavigationProvider<ContactCenterEntryPointsAdminMenu>()",
+                StringComparison.Ordinal));
+        var inboundServiceOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Routing",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+            dependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", resolverOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", ingressOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", navigationOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", inboundServiceOwner.FeatureId);
+    }
+
+    [Fact]
     public void RequiredServicesFromUndeclaredFeatures_MatchTheExpectedLedger()
     {
         // Arrange

@@ -41,7 +41,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IInboundContactLookup _contactLookup;
     private readonly IIncomingCallDispatcher _incomingCallDispatcher;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
-    private readonly IEntryPointResolver _entryPointResolver;
+    private readonly IEnumerable<IEntryPointResolver> _entryPointResolvers;
     private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
@@ -65,7 +65,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
     /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
-    /// <param name="entryPointResolver">The entry point resolver used to route inbound calls by dialed number.</param>
+    /// <param name="entryPointResolvers">The optional entry point resolvers used to route inbound calls by dialed number.</param>
     /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service used to confirm a queued call still exists before it is offered.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove queued calls that no longer exist on the provider.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
@@ -86,7 +86,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IInboundContactLookup contactLookup,
         IIncomingCallDispatcher incomingCallDispatcher,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IEntryPointResolver entryPointResolver,
+        IEnumerable<IEntryPointResolver> entryPointResolvers,
         IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
@@ -107,7 +107,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _contactLookup = contactLookup;
         _incomingCallDispatcher = incomingCallDispatcher;
         _voiceProviderResolver = voiceProviderResolver;
-        _entryPointResolver = entryPointResolver;
+        _entryPointResolvers = entryPointResolvers;
         _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
         _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
@@ -255,7 +255,10 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemId, now);
         result.ActivityItemId = activity.ItemId;
 
-        var plan = await _entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
+        var entryPointResolver = _entryPointResolvers.FirstOrDefault();
+        var plan = entryPointResolver is null
+            ? null
+            : await entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
 
         var queue = plan is not null && !string.IsNullOrEmpty(plan.TargetQueueId)
             ? await _queueManager.FindByIdAsync(plan.TargetQueueId, cancellationToken)
