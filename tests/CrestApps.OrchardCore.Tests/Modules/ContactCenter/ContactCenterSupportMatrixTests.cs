@@ -71,7 +71,15 @@ public sealed class ContactCenterSupportMatrixTests
         Assert.Contains("Power, Progressive, or Predictive dialing", prohibitedCombinations);
         Assert.Contains("recording, monitor, whisper, barge, take-over, or bidirectional media", prohibitedCombinations);
         Assert.Contains("multi-node without a Redis SignalR backplane", prohibitedCombinations);
+        Assert.Contains("multi-node without OrchardCore.Redis.Lock distributed locking", prohibitedCombinations);
         Assert.Contains("unlisted feature, provider, database, or topology combinations", prohibitedCombinations);
+
+        foreach (var topology in matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true))
+        {
+            Assert.True(topology?["redisBackplaneRequired"]?.GetValue<bool>());
+            Assert.True(topology?["redisDistributedLockRequired"]?.GetValue<bool>());
+        }
 
         foreach (var provider in matrix["providerProfiles"]?.AsArray())
         {

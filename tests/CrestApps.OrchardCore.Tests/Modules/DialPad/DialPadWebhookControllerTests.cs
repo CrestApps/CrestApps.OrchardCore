@@ -27,10 +27,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
     public async Task Call_WhenSigningSecretIsMissing_RejectsWebhook()
     {
         // Arrange
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -43,8 +43,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status401Unauthorized, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -52,9 +52,9 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
     public async Task Call_WhenSigningSecretCannotBeUnprotected_FailsClosed()
     {
         // Arrange
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -67,8 +67,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -76,11 +76,11 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
     public async Task Call_WhenPayloadExceedsLimit_ReturnsPayloadTooLarge()
     {
         // Arrange
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         httpContext.Request.ContentLength = DialPadWebhookEndpoint.MaximumRequestBodySizeBytes + 1;
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -93,8 +93,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status413PayloadTooLarge, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -102,11 +102,11 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
     public async Task Call_WhenServerRejectsChunkedPayload_ReturnsPayloadTooLarge()
     {
         // Arrange
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         httpContext.Request.Body = new PayloadTooLargeStream();
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -118,8 +118,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status413PayloadTooLarge, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -132,15 +132,12 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         var protectedSecret = dataProtectionProvider
             .CreateProtector(DialPadConstants.WebhookProtectorName)
             .Protect(secret);
-        var webhookService = new Mock<IDialPadWebhookService>();
-        webhookService
-            .Setup(service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DialPadWebhookResult.Updated);
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
         httpContext.RequestAborted = new CancellationTokenSource().Token;
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -153,11 +150,59 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status200OK, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(
-                It.IsAny<DialPadCallEvent>(),
+        inbox.Verify(
+            service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
                 It.Is<CancellationToken>(token => !token.CanBeCanceled)),
             Times.Once);
+        inbox.Verify(
+            service => service.DispatchAsync(
+                "message-1",
+                It.Is<CancellationToken>(token => !token.CanBeCanceled)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Call_WhenDurableInboxIsBusy_ReturnsServiceUnavailableWithoutDispatching()
+    {
+        // Arrange
+        const string secret = "shhh";
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedSecret = dataProtectionProvider
+            .CreateProtector(DialPadConstants.WebhookProtectorName)
+            .Protect(secret);
+        var inbox = CreateInbox();
+        inbox
+            .Setup(service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Busy,
+            });
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
+
+        // Act
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            inbox.Object,
+            _ingressLimiter,
+            SiteServiceFactory.Create(new DialPadSettings
+            {
+                IsEnabled = true,
+                WebhookSigningSecret = protectedSecret,
+            }),
+            dataProtectionProvider,
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(
+            StatusCodes.Status503ServiceUnavailable,
+            Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        inbox.Verify(
+            service => service.DispatchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -171,13 +216,13 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         var protectedSecret = dataProtectionProvider
             .CreateProtector(DialPadConstants.WebhookProtectorName)
             .Protect(secret);
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
 
         // Act
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             limiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -191,8 +236,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         // Assert
         Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
         Assert.False(string.IsNullOrEmpty(httpContext.Response.Headers.RetryAfter));
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -207,7 +252,7 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         var protectedSecret = dataProtectionProvider
             .CreateProtector(DialPadConstants.WebhookProtectorName)
             .Protect(secret);
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var timestamp = new DateTimeOffset(_now.AddSeconds(offsetSeconds)).ToUnixTimeMilliseconds();
         var payload = $"{{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":{timestamp}}}";
         var httpContext = CreateHttpContext();
@@ -215,7 +260,7 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Act
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -228,8 +273,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status400BadRequest, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -245,13 +290,13 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
         var protectedSecret = dataProtectionProvider
             .CreateProtector(DialPadConstants.WebhookProtectorName)
             .Protect(secret);
-        var webhookService = new Mock<IDialPadWebhookService>();
+        var inbox = CreateInbox();
         var httpContext = CreateHttpContext();
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
 
         // Act
         var result = await DialPadWebhookEndpoint.HandleAsync(
-            webhookService.Object,
+            inbox.Object,
             _ingressLimiter,
             SiteServiceFactory.Create(new DialPadSettings
             {
@@ -264,8 +309,8 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
 
         // Assert
         Assert.Equal(StatusCodes.Status400BadRequest, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        webhookService.Verify(
-            service => service.ProcessAsync(It.IsAny<DialPadCallEvent>(), It.IsAny<CancellationToken>()),
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -308,5 +353,24 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
                 RatePermitLimit = ratePermitLimit,
             }),
             clock.Object);
+    }
+
+    private static Mock<IProviderWebhookInbox> CreateInbox()
+    {
+        var inbox = new Mock<IProviderWebhookInbox>();
+        inbox
+            .Setup(service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Accepted,
+                MessageId = "message-1",
+            });
+        inbox
+            .Setup(service => service.DispatchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        return inbox;
     }
 }

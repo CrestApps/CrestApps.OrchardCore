@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.DialPad.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -16,6 +17,7 @@ public sealed class DialerStartup : StartupBase
         services
             .AddScoped<DialPadContactCenterVoiceProvider>()
             .AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialPadContactCenterVoiceProvider>())
-            .AddScoped<IDialPadWebhookService, DialPadWebhookService>();
+            .AddScoped<IDialPadWebhookService, DialPadWebhookService>()
+            .AddScoped<IProviderWebhookInboxHandler, DialPadWebhookInboxHandler>();
     }
 }

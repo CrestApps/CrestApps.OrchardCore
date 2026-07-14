@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcessor
 {
     private readonly IEnumerable<IProviderVoiceWebhookAdapter> _adapters;
-    private readonly IProviderVoiceEventService _providerVoiceEventService;
+    private readonly IProviderWebhookInbox _inbox;
     private readonly IProviderWebhookIngressLimiter _ingressLimiter;
     private readonly ILogger _logger;
 
@@ -18,17 +19,17 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
     /// Initializes a new instance of the <see cref="ProviderVoiceWebhookProcessor"/> class.
     /// </summary>
     /// <param name="adapters">The registered provider webhook adapters.</param>
-    /// <param name="providerVoiceEventService">The provider voice event ingestion service.</param>
+    /// <param name="inbox">The durable provider webhook inbox.</param>
     /// <param name="ingressLimiter">The provider webhook ingress limiter.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceWebhookProcessor(
         IEnumerable<IProviderVoiceWebhookAdapter> adapters,
-        IProviderVoiceEventService providerVoiceEventService,
+        IProviderWebhookInbox inbox,
         IProviderWebhookIngressLimiter ingressLimiter,
         ILogger<ProviderVoiceWebhookProcessor> logger)
     {
         _adapters = adapters;
-        _providerVoiceEventService = providerVoiceEventService;
+        _inbox = inbox;
         _ingressLimiter = ingressLimiter;
         _logger = logger;
     }
@@ -65,9 +66,13 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
 
         var events = adapter.Parse(request) ?? [];
 
-        if (events.Any(providerEvent => string.IsNullOrEmpty(providerEvent.IdempotencyKey)))
+        if (events.Any(providerEvent =>
+            string.IsNullOrEmpty(providerEvent.IdempotencyKey) ||
+            providerEvent.IdempotencyKey.Length > ProviderWebhookInbox.MaxDeliveryIdLength))
         {
-            _logger.LogWarning("Rejected a voice webhook for provider '{Provider}' because a parsed event was missing an idempotency key.", adapter.TechnicalName);
+            _logger.LogWarning(
+                "Rejected a voice webhook for provider '{Provider}' because a parsed event had a missing or oversized idempotency key.",
+                adapter.TechnicalName);
 
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.MissingIdempotencyKey };
         }
@@ -79,19 +84,36 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
             return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.StaleDelivery };
         }
 
-        var processed = 0;
+        var accepted = 0;
 
         foreach (var providerEvent in events)
         {
             providerEvent.ProviderName ??= adapter.TechnicalName;
-            await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
-            processed++;
+            var acceptance = await _inbox.AcceptAsync(new ProviderWebhookInboxDelivery
+            {
+                ProviderName = adapter.TechnicalName,
+                DeliveryId = providerEvent.IdempotencyKey,
+                HandlerName = ProviderVoiceEventInboxHandler.HandlerTechnicalName,
+                Payload = JsonSerializer.Serialize(providerEvent),
+            }, cancellationToken);
+
+            if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Busy)
+            {
+                return new ProviderVoiceWebhookOutcome { Status = ProviderVoiceWebhookStatus.InboxBusy };
+            }
+
+            if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted)
+            {
+                accepted++;
+            }
+
+            await _inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
         }
 
         return new ProviderVoiceWebhookOutcome
         {
             Status = ProviderVoiceWebhookStatus.Accepted,
-            ProcessedCount = processed,
+            ProcessedCount = accepted,
         };
     }
 }

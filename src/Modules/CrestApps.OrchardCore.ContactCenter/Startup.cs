@@ -391,6 +391,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
+            .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
+            .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
+            .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
@@ -409,6 +412,12 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
             .AddScoped<IModularTenantEvents, ContactCenterVoiceTenantEvents>();
+
+        services
+            .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
+            .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>();
 
         services
             .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()

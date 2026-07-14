@@ -33,6 +33,7 @@
       "minimumApplicationNodes": 2,
       "maximumApplicationNodes": 4,
       "redisBackplaneRequired": true,
+      "redisDistributedLockRequired": true,
       "sharedRelationalDatabaseRequired": true
     },
     {
@@ -41,6 +42,7 @@
       "minimumApplicationNodes": 1,
       "maximumApplicationNodes": 1,
       "redisBackplaneRequired": false,
+      "redisDistributedLockRequired": false,
       "sharedRelationalDatabaseRequired": false
     }
   ],
@@ -129,6 +131,7 @@
     "production with SQLite",
     "production with a single application node",
     "multi-node without a Redis SignalR backplane",
+    "multi-node without OrchardCore.Redis.Lock distributed locking",
     "multi-region active-active",
     "more than one voice provider profile in one tenant",
     "Power, Progressive, or Predictive dialing",

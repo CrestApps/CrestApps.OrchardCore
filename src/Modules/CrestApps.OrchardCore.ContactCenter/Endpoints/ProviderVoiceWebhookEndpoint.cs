@@ -82,6 +82,7 @@ internal static class ProviderVoiceWebhookEndpoint
             ProviderVoiceWebhookStatus.MissingIdempotencyKey => TypedResults.BadRequest(),
             ProviderVoiceWebhookStatus.RateLimited => CreateRateLimitedResult(httpContext, outcome.RetryAfter),
             ProviderVoiceWebhookStatus.StaleDelivery => TypedResults.BadRequest(),
+            ProviderVoiceWebhookStatus.InboxBusy => TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable),
             _ => TypedResults.BadRequest(),
         };
     }

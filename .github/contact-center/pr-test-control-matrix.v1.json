@@ -1113,7 +1113,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, and DialPadWebhookEndpointTests prove 1 MiB rejection, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, bounded provider-signed delivery age/future skew with missing/malformed/non-UTC rejection, and request-cancellation detachment after authentication. Durable inbox commit before 2xx, durable replay uniqueness, and disconnect-after-durable-acceptance remain planned:contact-center-provider-contract-suite dependencies."
+      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, DialPadWebhookEndpointTests, ProviderWebhookInboxTests, ProviderWebhookInboxPersistenceTests, ProviderVoiceEventInboxHandlerTests, and DialPadWebhookInboxHandlerTests prove 1 MiB rejection, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, bounded provider-signed delivery age/future skew with missing/malformed/non-UTC rejection, explicit YesSql commit before acceptance returns, provider-delivery duplicate detection under a distributed lock, cancellation-independent persisted dispatch, retry/backoff, poison-message isolation, and dead-lettering. A real client disconnect after durable acceptance, every supported database, every GA provider, and process-crash/restart execution remain planned:contact-center-provider-contract-suite dependencies."
     },
     {
       "id": "V004",

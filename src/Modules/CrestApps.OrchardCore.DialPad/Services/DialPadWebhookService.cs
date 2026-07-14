@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Modules;
@@ -57,7 +55,7 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             FromAddress = callEvent.ExternalNumber,
             ToAddress = toAddress,
             OccurredUtc = occurredUtc,
-            IdempotencyKey = BuildIdempotencyKey(callEvent),
+            IdempotencyKey = DialPadWebhookDelivery.GetDeliveryId(callEvent),
             IsMuted = callEvent.IsMuted,
             RecordingState = TryMapRecordingState(callEvent.RecordingState, out var recordingState)
                 ? recordingState
@@ -94,23 +92,6 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
         }
 
         return DialPadWebhookResult.Ignored;
-    }
-
-    private static string BuildIdempotencyKey(DialPadCallEvent callEvent)
-    {
-        var value = string.Join(
-            '|',
-            callEvent.CallId,
-            callEvent.State,
-            callEvent.EventTimestamp,
-            callEvent.IsMuted,
-            callEvent.RecordingState,
-            callEvent.RecordingId,
-            callEvent.IsConference,
-            callEvent.ParticipantCount);
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-
-        return $"{DialPadConstants.ProviderTechnicalName}:{Convert.ToHexString(hash)}";
     }
 
     private static bool IsInbound(string direction)

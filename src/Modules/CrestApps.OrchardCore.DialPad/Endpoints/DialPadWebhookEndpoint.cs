@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
@@ -29,7 +30,7 @@ internal static class DialPadWebhookEndpoint
     }
 
     internal static async Task<IResult> HandleAsync(
-        IDialPadWebhookService webhookService,
+        IProviderWebhookInbox inbox,
         IProviderWebhookIngressLimiter ingressLimiter,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
@@ -124,11 +125,24 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.BadRequest();
         }
 
-        var result = await webhookService.ProcessAsync(callEvent, CancellationToken.None);
+        var acceptance = await inbox.AcceptAsync(new ProviderWebhookInboxDelivery
+        {
+            ProviderName = DialPadConstants.ProviderTechnicalName,
+            DeliveryId = DialPadWebhookDelivery.GetDeliveryId(callEvent),
+            HandlerName = DialPadWebhookInboxHandler.HandlerTechnicalName,
+            Payload = JsonSerializer.Serialize(callEvent, DialPadJsonSerializerOptions.Default),
+        }, CancellationToken.None);
+
+        if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Busy)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
 
         return TypedResults.Ok(new
         {
-            result = result.ToString(),
+            accepted = acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted,
         });
     }
 

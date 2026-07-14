@@ -4,14 +4,14 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Validates and ingests provider voice webhooks: it resolves the provider adapter, verifies the
-/// provider signature, enforces mandatory idempotency keys, and forwards normalized events to the
-/// provider voice event pipeline.
+/// Validates and accepts provider voice webhooks: it resolves the provider adapter, verifies the
+/// provider signature, enforces mandatory idempotency keys and freshness, and commits normalized
+/// events to the durable provider webhook inbox before dispatch.
 /// </summary>
 public interface IProviderVoiceWebhookProcessor
 {
     /// <summary>
-    /// Processes a provider voice webhook request end to end.
+    /// Authenticates, validates, and durably accepts a provider voice webhook request.
     /// </summary>
     /// <param name="request">The webhook request.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

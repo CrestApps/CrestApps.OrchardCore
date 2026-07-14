@@ -18,7 +18,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
     public async Task ProcessAsync_WithValidSignatureAndKeyedEvents_IngestsEachEvent()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var adapter = new FakeAdapter
         {
             Parser = _ =>
@@ -28,7 +28,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
             ],
         };
 
-        var processor = CreateProcessor(eventService, adapter);
+        var processor = CreateProcessor(inbox, adapter);
 
         // Act
         var outcome = await processor.ProcessAsync(new ProviderVoiceWebhookRequest { Provider = "fake" }, TestContext.Current.CancellationToken);
@@ -36,58 +36,100 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.Accepted, outcome.Status);
         Assert.Equal(2, outcome.ProcessedCount);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        inbox.Verify(
+            service => service.DispatchAsync(It.IsAny<string>(), It.Is<CancellationToken>(token => !token.CanBeCanceled)),
+            Times.Exactly(2));
     }
 
     [Fact]
     public async Task ProcessAsync_WithUnknownProvider_ReturnsUnknownProvider()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
-        var processor = CreateProcessor(eventService, new FakeAdapter { TechnicalName = "other" });
+        var inbox = CreateInbox();
+        var processor = CreateProcessor(inbox, new FakeAdapter { TechnicalName = "other" });
 
         // Act
         var outcome = await processor.ProcessAsync(new ProviderVoiceWebhookRequest { Provider = "fake" }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.UnknownProvider, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task ProcessAsync_WithInvalidSignature_RejectsWithoutIngesting()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var adapter = new FakeAdapter { Validate = _ => false };
-        var processor = CreateProcessor(eventService, adapter);
+        var processor = CreateProcessor(inbox, adapter);
 
         // Act
         var outcome = await processor.ProcessAsync(new ProviderVoiceWebhookRequest { Provider = "fake" }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.InvalidSignature, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task ProcessAsync_WithEventMissingIdempotencyKey_RejectsWithoutIngesting()
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var adapter = new FakeAdapter
         {
             Parser = _ => [new ProviderVoiceEvent { ProviderCallId = "c1" }],
         };
 
-        var processor = CreateProcessor(eventService, adapter);
+        var processor = CreateProcessor(inbox, adapter);
 
         // Act
         var outcome = await processor.ProcessAsync(new ProviderVoiceWebhookRequest { Provider = "fake" }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.MissingIdempotencyKey, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithOversizedIdempotencyKey_RejectsWithoutAccepting()
+    {
+        // Arrange
+        var inbox = CreateInbox();
+        var adapter = new FakeAdapter
+        {
+            Parser = _ =>
+            [
+                new ProviderVoiceEvent
+                {
+                    ProviderCallId = "c1",
+                    IdempotencyKey = new string('x', ProviderWebhookInbox.MaxDeliveryIdLength + 1),
+                    OccurredUtc = _now,
+                },
+            ],
+        };
+        var processor = CreateProcessor(inbox, adapter);
+
+        // Act
+        var outcome = await processor.ProcessAsync(
+            new ProviderVoiceWebhookRequest { Provider = "fake" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderVoiceWebhookStatus.MissingIdempotencyKey, outcome.Status);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -127,11 +169,11 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
     {
         // Arrange
         using var limiter = CreateIngressLimiter(ratePermitLimit: 1);
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var adapter = new FakeAdapter();
         var processor = new ProviderVoiceWebhookProcessor(
             [adapter],
-            eventService.Object,
+            inbox.Object,
             limiter,
             NullLogger<ProviderVoiceWebhookProcessor>.Instance);
         var request = new ProviderVoiceWebhookRequest { Provider = adapter.TechnicalName };
@@ -142,7 +184,89 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.RateLimited, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WhenDurableInboxIsBusy_ReturnsInboxBusyWithoutDispatching()
+    {
+        // Arrange
+        var inbox = CreateInbox();
+        inbox
+            .Setup(service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Busy,
+            });
+        var processor = CreateProcessor(inbox, new FakeAdapter
+        {
+            Parser = _ =>
+            [
+                new ProviderVoiceEvent
+                {
+                    ProviderCallId = "c1",
+                    IdempotencyKey = "k1",
+                    OccurredUtc = _now,
+                },
+            ],
+        });
+
+        // Act
+        var outcome = await processor.ProcessAsync(
+            new ProviderVoiceWebhookRequest { Provider = "fake" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderVoiceWebhookStatus.InboxBusy, outcome.Status);
+        inbox.Verify(
+            service => service.DispatchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WhenDeliveryIsDuplicate_ReturnsAcceptedWithoutCountingANewMessage()
+    {
+        // Arrange
+        var inbox = CreateInbox();
+        inbox
+            .Setup(service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Duplicate,
+                MessageId = "message-1",
+            });
+        var processor = CreateProcessor(inbox, new FakeAdapter
+        {
+            Parser = _ =>
+            [
+                new ProviderVoiceEvent
+                {
+                    ProviderCallId = "c1",
+                    IdempotencyKey = "k1",
+                    OccurredUtc = _now,
+                },
+            ],
+        });
+
+        // Act
+        var outcome = await processor.ProcessAsync(
+            new ProviderVoiceWebhookRequest { Provider = "fake" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderVoiceWebhookStatus.Accepted, outcome.Status);
+        Assert.Equal(0, outcome.ProcessedCount);
+        inbox.Verify(
+            service => service.DispatchAsync(
+                "message-1",
+                It.Is<CancellationToken>(token => !token.CanBeCanceled)),
+            Times.Once);
     }
 
     [Theory]
@@ -151,7 +275,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
     public async Task ProcessAsync_WhenSignedEventIsOutsideFreshnessWindow_RejectsWithoutIngesting(int offsetSeconds)
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var adapter = new FakeAdapter
         {
             Parser = _ =>
@@ -164,7 +288,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
                 },
             ],
         };
-        var processor = CreateProcessor(eventService, adapter);
+        var processor = CreateProcessor(inbox, adapter);
 
         // Act
         var outcome = await processor.ProcessAsync(
@@ -173,7 +297,9 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.StaleDelivery, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Theory]
@@ -183,7 +309,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
     public async Task ProcessAsync_WhenSignedEventTimestampIsMissingOrNotUtc_RejectsWithoutIngesting(DateTimeKind? kind)
     {
         // Arrange
-        var eventService = new Mock<IProviderVoiceEventService>();
+        var inbox = CreateInbox();
         var occurredUtc = kind.HasValue
             ? DateTime.SpecifyKind(_now, kind.Value)
             : (DateTime?)null;
@@ -199,7 +325,7 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
                 },
             ],
         };
-        var processor = CreateProcessor(eventService, adapter);
+        var processor = CreateProcessor(inbox, adapter);
 
         // Act
         var outcome = await processor.ProcessAsync(
@@ -208,7 +334,9 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
 
         // Assert
         Assert.Equal(ProviderVoiceWebhookStatus.StaleDelivery, outcome.Status);
-        eventService.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     public void Dispose()
@@ -216,13 +344,35 @@ public sealed class ProviderVoiceWebhookProcessorTests : IDisposable
         _ingressLimiter.Dispose();
     }
 
-    private ProviderVoiceWebhookProcessor CreateProcessor(Mock<IProviderVoiceEventService> eventService, params IProviderVoiceWebhookAdapter[] adapters)
+    private ProviderVoiceWebhookProcessor CreateProcessor(
+        Mock<IProviderWebhookInbox> inbox,
+        params IProviderVoiceWebhookAdapter[] adapters)
     {
         return new ProviderVoiceWebhookProcessor(
             adapters,
-            eventService.Object,
+            inbox.Object,
             _ingressLimiter,
             NullLogger<ProviderVoiceWebhookProcessor>.Instance);
+    }
+
+    private static Mock<IProviderWebhookInbox> CreateInbox()
+    {
+        var inbox = new Mock<IProviderWebhookInbox>();
+        var messageNumber = 0;
+        inbox
+            .Setup(service => service.AcceptAsync(
+                It.IsAny<ProviderWebhookInboxDelivery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ProviderWebhookInboxAcceptanceResult
+            {
+                Status = ProviderWebhookInboxAcceptanceStatus.Accepted,
+                MessageId = $"message-{Interlocked.Increment(ref messageNumber)}",
+            });
+        inbox
+            .Setup(service => service.DispatchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        return inbox;
     }
 
     private static ProviderWebhookIngressLimiter CreateIngressLimiter(int ratePermitLimit = 120)

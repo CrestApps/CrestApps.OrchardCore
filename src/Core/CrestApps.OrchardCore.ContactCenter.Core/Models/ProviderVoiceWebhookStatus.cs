@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 public enum ProviderVoiceWebhookStatus
 {
     /// <summary>
-    /// The webhook was accepted and its events were ingested.
+    /// The webhook was durably accepted for idempotent event processing.
     /// </summary>
     Accepted,
 
@@ -21,7 +21,7 @@ public enum ProviderVoiceWebhookStatus
     InvalidSignature,
 
     /// <summary>
-    /// A parsed event was missing the required idempotency key.
+    /// A parsed event was missing the required idempotency key or exceeded its supported length.
     /// </summary>
     MissingIdempotencyKey,
 
@@ -34,4 +34,9 @@ public enum ProviderVoiceWebhookStatus
     /// The authenticated delivery omitted a UTC event timestamp or fell outside the accepted freshness window.
     /// </summary>
     StaleDelivery,
+
+    /// <summary>
+    /// The authenticated delivery could not acquire its durable inbox acceptance boundary.
+    /// </summary>
+    InboxBusy,
 }

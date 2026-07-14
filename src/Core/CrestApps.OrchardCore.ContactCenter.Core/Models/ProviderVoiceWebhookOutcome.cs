@@ -11,7 +11,7 @@ public sealed class ProviderVoiceWebhookOutcome
     public ProviderVoiceWebhookStatus Status { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of normalized events that were ingested.
+    /// Gets or sets the number of new normalized events committed to the durable inbox.
     /// </summary>
     public int ProcessedCount { get; set; }
 
