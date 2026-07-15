@@ -24,6 +24,11 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     protected string CollectionName { get; set; }
 
     /// <summary>
+    /// Gets a value indicating whether updates use YesSql document-version concurrency checks.
+    /// </summary>
+    protected virtual bool CheckConcurrency => false;
+
+    /// <summary>
     /// The YesSql session used for database operations.
     /// </summary>
     protected readonly ISession Session;
@@ -175,7 +180,11 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         await SavingAsync(record);
 
-        await Session.SaveAsync(record, CollectionName);
+        await Session.SaveAsync(
+            record,
+            checkConcurrency: CheckConcurrency,
+            collection: CollectionName,
+            cancellationToken: cancellationToken);
     }
 
     protected virtual ValueTask DeletingAsync(T model)

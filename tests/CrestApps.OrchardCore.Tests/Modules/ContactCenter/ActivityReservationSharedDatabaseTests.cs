@@ -24,7 +24,7 @@ public sealed class ActivityReservationSharedDatabaseTests
     private static readonly DateTime _now = new(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task ReserveAsync_TwoProvidersReadWaitingState_BothPersistReservationsToday()
+    public async Task ReserveAsync_TwoProvidersReadWaitingState_OnlyOnePersistsReservation()
     {
         // Arrange
         var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-reservation-{Guid.NewGuid():N}.db");
@@ -57,10 +57,9 @@ public sealed class ActivityReservationSharedDatabaseTests
             var secondReservationTask = secondProvider
                 .GetRequiredService<IActivityReservationService>()
                 .ReserveAsync(seed.QueueItem, seed.Agent, 30, TestContext.Current.CancellationToken);
-            var reservations = await Task.WhenAll(firstReservationTask, secondReservationTask);
-
-            await firstSession.SaveChangesAsync(TestContext.Current.CancellationToken);
-            await secondSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var attempts = await Task.WhenAll(
+                CaptureReservationAttemptAsync(firstReservationTask),
+                CaptureReservationAttemptAsync(secondReservationTask));
 
             await using var verificationSession = store.CreateSession();
             var persistedReservations = await verificationSession
@@ -70,21 +69,165 @@ public sealed class ActivityReservationSharedDatabaseTests
                 .ListAsync(TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.All(reservations, Assert.NotNull);
-            Assert.Equal(2, Volatile.Read(ref lockAcquisitionCount));
-            Assert.Equal(2, persistedReservations.Count());
-            Assert.All(persistedReservations, reservation =>
-            {
-                Assert.Equal(ReservationStatus.Pending, reservation.Status);
-                Assert.Equal(seed.QueueItem.ItemId, reservation.QueueItemId);
-            });
-            Assert.Equal(2, persistedReservations.Select(reservation => reservation.ItemId).Distinct().Count());
+            Assert.Single(attempts, attempt => attempt.Reservation is not null);
+            var failedAttempt = Assert.Single(attempts, attempt => attempt.Exception is not null);
+            Assert.True(
+                failedAttempt.Exception is ConcurrencyException or System.Data.Common.DbException,
+                $"Expected a database concurrency failure but received {failedAttempt.Exception.GetType().Name}.");
+            Assert.Equal(4, Volatile.Read(ref lockAcquisitionCount));
+            var persistedReservation = Assert.Single(persistedReservations);
+            Assert.Equal(ReservationStatus.Pending, persistedReservation.Status);
+            Assert.Equal(seed.QueueItem.ItemId, persistedReservation.QueueItemId);
         }
         finally
         {
             store.Dispose();
             File.Delete(databasePath);
         }
+    }
+
+    private static async Task<(ActivityReservation Reservation, Exception Exception)> CaptureReservationAttemptAsync(
+        Task<ActivityReservation> reservationTask)
+    {
+        try
+        {
+            return (await reservationTask, null);
+        }
+        catch (Exception exception)
+        {
+            return (null, exception);
+        }
+    }
+
+    [Fact]
+    public async Task ReservationIndex_DuplicateActiveActivityClaim_RejectsSecondReservation()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-activity-claim-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await CreateReservationAsync(store, "reservation-1", "activity-1", "agent-1", ReservationStatus.Pending);
+
+            // Act
+            var exception = await Record.ExceptionAsync(() =>
+                CreateReservationAsync(store, "reservation-2", "activity-1", "agent-2", ReservationStatus.Pending));
+
+            // Assert
+            Assert.IsAssignableFrom<System.Data.Common.DbException>(exception);
+            await CreateReservationAsync(store, "reservation-3", "activity-1", "agent-2", ReservationStatus.Rejected);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task ReservationIndex_DuplicatePendingAgentClaim_RejectsSecondReservation()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-agent-claim-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await CreateReservationAsync(store, "reservation-1", "activity-1", "agent-1", ReservationStatus.Pending);
+
+            // Act
+            var exception = await Record.ExceptionAsync(() =>
+                CreateReservationAsync(store, "reservation-2", "activity-2", "agent-1", ReservationStatus.Pending));
+
+            // Assert
+            Assert.IsAssignableFrom<System.Data.Common.DbException>(exception);
+            await CreateReservationAsync(store, "reservation-3", "activity-2", "agent-1", ReservationStatus.Accepted);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task QueueItemIndex_DuplicateActiveActivityClaim_RejectsSecondQueueItem()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-queue-claim-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await CreateQueueItemAsync(store, "queue-item-1", "activity-1", QueueItemStatus.Waiting);
+
+            // Act
+            var exception = await Record.ExceptionAsync(() =>
+                CreateQueueItemAsync(store, "queue-item-2", "activity-1", QueueItemStatus.Reserved));
+
+            // Assert
+            Assert.IsAssignableFrom<System.Data.Common.DbException>(exception);
+            await CreateQueueItemAsync(store, "queue-item-3", "activity-1", QueueItemStatus.Completed);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    private static async Task<IStore> CreateStoreAsync(string databasePath)
+    {
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes(
+        [
+            new QueueItemIndexProvider(),
+            new AgentProfileIndexProvider(),
+            new ActivityReservationIndexProvider(),
+        ]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await CreateIndexSchemaAsync(store);
+
+        return store;
+    }
+
+    private static async Task CreateReservationAsync(
+        IStore store,
+        string reservationId,
+        string activityId,
+        string agentId,
+        ReservationStatus status)
+    {
+        await using var session = store.CreateSession();
+        var manager = CreateReservationManager(session);
+        var reservation = await manager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        reservation.ItemId = reservationId;
+        reservation.ActivityItemId = activityId;
+        reservation.AgentId = agentId;
+        reservation.Status = status;
+        reservation.ExpiresUtc = _now.AddMinutes(1);
+        await manager.CreateAsync(reservation, cancellationToken: TestContext.Current.CancellationToken);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task CreateQueueItemAsync(
+        IStore store,
+        string queueItemId,
+        string activityId,
+        QueueItemStatus status)
+    {
+        await using var session = store.CreateSession();
+        var manager = CreateQueueItemManager(session);
+        var queueItem = await manager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        queueItem.ItemId = queueItemId;
+        queueItem.QueueId = "queue-1";
+        queueItem.ActivityItemId = activityId;
+        queueItem.Status = status;
+        queueItem.EnqueuedUtc = _now;
+        await manager.CreateAsync(queueItem, cancellationToken: TestContext.Current.CancellationToken);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task CreateIndexSchemaAsync(IStore store)
@@ -97,6 +240,7 @@ public sealed class ActivityReservationSharedDatabaseTests
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
+            .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
@@ -113,7 +257,9 @@ public sealed class ActivityReservationSharedDatabaseTests
         await schemaBuilder.CreateMapIndexTableAsync<ActivityReservationIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
+            .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("AgentId", column => column.WithLength(26))
+            .Column<string>("AgentClaimKey", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName);
@@ -190,6 +336,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
+        services.AddSingleton(session);
         services.AddSingleton(clock.Object);
         services.AddLogging();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
@@ -202,7 +349,9 @@ public sealed class ActivityReservationSharedDatabaseTests
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
-                "ContactCenterAgentReservation:agent-1",
+                It.Is<string>(key =>
+                    key == "ContactCenterActivityReservation:activity-1" ||
+                    key == "ContactCenterAgentReservation:agent-1"),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<TimeSpan?>()))
             .Callback(onAcquired)

@@ -19,9 +19,19 @@ public sealed class ActivityReservationIndex : CatalogItemIndex
     public string ActivityItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the unique key that prevents more than one active reservation for an activity.
+    /// </summary>
+    public string ActivityClaimKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent the activity is reserved for.
     /// </summary>
     public string AgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique key that prevents more than one pending reservation for an agent.
+    /// </summary>
+    public string AgentClaimKey { get; set; }
 
     /// <summary>
     /// Gets or sets the lifecycle status of the reservation.

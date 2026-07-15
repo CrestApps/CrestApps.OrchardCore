@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -26,7 +27,13 @@ public sealed class ActivityReservationIndexProvider : IndexProvider<ActivityRes
             {
                 ItemId = reservation.ItemId,
                 ActivityItemId = reservation.ActivityItemId,
+                ActivityClaimKey = reservation.Status is ReservationStatus.Pending or ReservationStatus.Accepted
+                    ? reservation.ActivityItemId
+                    : reservation.ItemId,
                 AgentId = reservation.AgentId,
+                AgentClaimKey = reservation.Status == ReservationStatus.Pending
+                    ? reservation.AgentId
+                    : reservation.ItemId,
                 Status = reservation.Status,
                 ExpiresUtc = reservation.ExpiresUtc,
             });

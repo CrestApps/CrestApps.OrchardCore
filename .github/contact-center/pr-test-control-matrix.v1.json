@@ -361,7 +361,7 @@
       "category": "data",
       "planFinding": "PR4",
       "gate": "Distributed locks lack DB CAS",
-      "invariant": "Under two application nodes racing a distributed-lock expiry on the same queue item or reservation, database row versions/conditional writes and unique active queue-item/reservation constraints must guarantee exactly one accepted reservation; the lock is a contention optimization, never the correctness authority. `ActivityReservationService.cs:79-156` performs read-then-write assignment today without database uniqueness/CAS.",
+      "invariant": "Under two application nodes racing a distributed-lock expiry on the same queue item or reservation, database row versions/conditional writes and unique active queue-item/reservation constraints must guarantee exactly one accepted reservation; the lock is a contention optimization, never the correctness authority.",
       "testId": "CC-D004",
       "ciJob": {
         "id": "contact-center-database-matrix",
@@ -379,7 +379,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "ActivityReservationSharedDatabaseTests.ReserveAsync_TwoProvidersReadWaitingState_BothPersistReservationsToday runs two independent service providers and YesSql sessions against one SQLite database, synchronizes both reads before either commit, deliberately permits overlapping lock holders to expose the missing database invariant, and proves two distinct pending reservations persist for one queue item/activity. R3 must invert this characterization with portable row-version/CAS and unique-active constraints across every supported database."
+      "evidenceLocation": "ActivityReservationSharedDatabaseTests.ReserveAsync_TwoProvidersReadWaitingState_OnlyOnePersistsReservation runs two independent service providers and YesSql sessions against one SQLite database, synchronizes both reads before either commit, deliberately permits overlapping activity and agent lock holders, and proves document-version CAS leaves exactly one pending reservation while the loser receives a database concurrency failure. The same suite verifies unique active activity, pending-agent, and queue-item claims while terminal history remains insertable; ActivityReservationServiceTests.ReserveAsync_WhenConcurrentTransitionWins_ThrowsAndAbortsScope proves the canceled YesSql session is not reset or reused; ContactCenterClaimMigrationTests proves valid legacy backfill and actionable failure on duplicate legacy claims. The planned contact-center-database-matrix must repeat this invariant on every supported production database before certification."
     },
     {
       "id": "D005",

@@ -24,6 +24,11 @@ public sealed class QueueItemIndex : CatalogItemIndex
     public string ActivityItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the unique key that prevents more than one active queue item for an activity.
+    /// </summary>
+    public string ActivityClaimKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the lifecycle status of the item.
     /// </summary>
     public QueueItemStatus Status { get; set; }

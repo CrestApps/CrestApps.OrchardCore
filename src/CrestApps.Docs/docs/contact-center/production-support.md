@@ -33,6 +33,8 @@ This R2 contract covers only inactive or idle components. Orchard stops scheduli
 - Production requires one region, two to four application nodes, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature so real-time messages and Contact Center idempotency/orchestration locks are distributed across nodes.
 - Single-node production, multi-node operation without the backplane or Redis distributed locking, and multi-region active-active operation are unsupported.
 
+Queue and reservation correctness does not depend on Redis lock exclusivity. YesSql document versions provide compare-and-set updates, and portable unique claim keys enforce active queue-item and reservation ownership in the relational database. Upgrade migrations reject missing identifiers or duplicate legacy active claims with explicit repair guidance instead of failing later with an opaque unique-index error. SQLite regression tests force overlapping lock holders and synchronized stale reads and retain exactly one reservation; production certification still requires the planned database matrix to repeat the invariant on PostgreSQL and any subsequently supported database.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:

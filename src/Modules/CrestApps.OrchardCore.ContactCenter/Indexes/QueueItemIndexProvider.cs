@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -27,6 +28,9 @@ public sealed class QueueItemIndexProvider : IndexProvider<QueueItem>
                 ItemId = item.ItemId,
                 QueueId = item.QueueId,
                 ActivityItemId = item.ActivityItemId,
+                ActivityClaimKey = item.Status is QueueItemStatus.Completed or QueueItemStatus.Removed
+                    ? item.ItemId
+                    : item.ActivityItemId,
                 Status = item.Status,
                 Priority = item.Priority,
                 AgentId = item.AgentId,

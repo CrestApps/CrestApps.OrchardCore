@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -30,6 +31,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyService _telephonyService;
     private readonly IDistributedLock _distributedLock;
+    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -46,6 +48,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="telephonyServices">The optional telephony services used for voice-specific timeout actions.</param>
     /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
+    /// <param name="session">The YesSql session used to commit reservation state atomically.</param>
     /// <param name="clock">The clock used to stamp reservation times.</param>
     /// <param name="logger">The logger.</param>
     public ActivityReservationService(
@@ -59,6 +62,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         IContactCenterEventPublisher publisher,
         IEnumerable<ITelephonyService> telephonyServices,
         IDistributedLock distributedLock,
+        ISession session,
         IClock clock,
         ILogger<ActivityReservationService> logger)
     {
@@ -72,6 +76,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         _publisher = publisher;
         _telephonyService = telephonyServices.FirstOrDefault();
         _distributedLock = distributedLock;
+        _session = session;
         _clock = clock;
         _logger = logger;
     }
@@ -82,17 +87,29 @@ public sealed class ActivityReservationService : IActivityReservationService
         ArgumentNullException.ThrowIfNull(queueItem);
         ArgumentNullException.ThrowIfNull(agent);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-            GetAgentReservationLockKey(agent.ItemId),
+        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetActivityReservationLockKey(queueItem.ActivityItemId),
             _lockTimeout,
             _lockExpiration);
 
-        if (!locked)
+        if (!activityLocked)
         {
             return null;
         }
 
-        await using var acquiredLock = locker;
+        await using var acquiredActivityLock = activityLocker;
+
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetAgentReservationLockKey(agent.ItemId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!agentLocked)
+        {
+            return null;
+        }
+
+        await using var acquiredAgentLock = agentLocker;
 
         var current = await _queueItemManager.FindByIdAsync(queueItem.ItemId, cancellationToken);
 
@@ -104,7 +121,20 @@ public sealed class ActivityReservationService : IActivityReservationService
         queueItem = current;
         agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
 
-        if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
+        if (agent.PresenceStatus != AgentPresenceStatus.Available ||
+            !string.IsNullOrWhiteSpace(agent.ActiveReservationId))
+        {
+            return null;
+        }
+
+        var capacity = agent.MaxConcurrentInteractions > 0
+            ? agent.MaxConcurrentInteractions
+            : 1;
+        var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(
+            agent.ItemId,
+            cancellationToken);
+
+        if (activeInteractionCount >= capacity)
         {
             return null;
         }
@@ -152,6 +182,11 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemReserved, reservation, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentReserved, reservation, cancellationToken);
+
+        await CommitTransitionAsync(
+            queueItem.ActivityItemId,
+            agent.ItemId,
+            cancellationToken);
 
         return reservation;
     }
@@ -211,6 +246,11 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, cancellationToken);
 
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
         return reservation;
     }
 
@@ -241,6 +281,11 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken);
 
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
         return reservation;
     }
 
@@ -269,6 +314,11 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken);
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
 
         return reservation;
     }
@@ -304,6 +354,10 @@ public sealed class ActivityReservationService : IActivityReservationService
             }
 
             await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
+            await CommitTransitionAsync(
+                reservation.ActivityItemId,
+                reservation.AgentId,
+                cancellationToken);
             count++;
         }
 
@@ -427,6 +481,29 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+    }
+
+    private async Task CommitTransitionAsync(
+        string activityItemId,
+        string agentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "A concurrent Contact Center operation won the compare-and-set transition for activity '{ActivityId}' and agent '{AgentId}'.",
+                    OperationalLogRedactor.Pseudonymize(activityItemId, OperationalLogIdentifierCategory.Activity),
+                    OperationalLogRedactor.Pseudonymize(agentId, OperationalLogIdentifierCategory.Agent));
+            }
+
+            throw;
+        }
     }
 
     private async Task<bool> ExecuteTimedOutOfferActionAsync(
@@ -562,6 +639,11 @@ public sealed class ActivityReservationService : IActivityReservationService
     private static string GetAgentReservationLockKey(string agentId)
     {
         return $"ContactCenterAgentReservation:{agentId}";
+    }
+
+    private static string GetActivityReservationLockKey(string activityItemId)
+    {
+        return $"ContactCenterActivityReservation:{activityItemId}";
     }
 
     private static string GetReservationLockKey(string reservationId)

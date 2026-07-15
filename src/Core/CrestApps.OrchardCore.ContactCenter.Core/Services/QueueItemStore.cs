@@ -11,6 +11,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>, IQueueItemStore
 {
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueItemStore"/> class.
     /// </summary>

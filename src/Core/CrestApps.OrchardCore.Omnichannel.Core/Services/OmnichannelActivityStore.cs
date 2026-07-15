@@ -16,6 +16,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// </summary>
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
     private const string ActivityAlias = "a";
 
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;

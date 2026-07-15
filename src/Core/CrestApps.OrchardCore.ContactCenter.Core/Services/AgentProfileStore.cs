@@ -11,6 +11,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfileIndex>, IAgentProfileStore
 {
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentProfileStore"/> class.
     /// </summary>
