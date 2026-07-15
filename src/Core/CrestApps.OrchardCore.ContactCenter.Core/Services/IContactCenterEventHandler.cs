@@ -9,6 +9,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IContactCenterEventHandler
 {
     /// <summary>
+    /// Gets the stable, versioned technical identifier of this handler. The identifier must be unique
+    /// across all registered handlers and stable across deployments; it must not depend on the CLR type
+    /// name, assembly version, or registration order so that outbox delivery checkpoints remain valid
+    /// when handlers are renamed, reordered, or shipped from a new assembly version.
+    /// </summary>
+    string HandlerId { get; }
+
+    /// <summary>
     /// Handles the specified Contact Center domain event.
     /// </summary>
     /// <param name="interactionEvent">The event to handle.</param>

@@ -43,6 +43,13 @@ public sealed class InteractionEventIndex : CatalogItemIndex
     public string IdempotencyKey { get; set; }
 
     /// <summary>
+    /// Gets or sets the portable, non-null claim key that enforces idempotency-key uniqueness at the
+    /// database level. It is the <see cref="IdempotencyKey"/> when one is present; otherwise it falls
+    /// back to the globally unique item identifier so events without a key cannot collide.
+    /// </summary>
+    public string IdempotencyClaimKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the event occurred.
     /// </summary>
     public DateTime OccurredUtc { get; set; }

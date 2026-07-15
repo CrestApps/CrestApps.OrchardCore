@@ -19,6 +19,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IAgentPresenceManager _presenceManager;
+    private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -32,6 +33,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="eventStore">The interaction event store used to de-duplicate provider events.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="presenceManager">The presence manager used to move agents into wrap-up after handled calls end.</param>
+    /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
@@ -42,6 +44,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IInteractionEventStore eventStore,
         IContactCenterEventPublisher publisher,
         IAgentPresenceManager presenceManager,
+        IProviderIdentityResolver providerIdentityResolver,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger)
     {
@@ -52,6 +55,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _eventStore = eventStore;
         _publisher = publisher;
         _presenceManager = presenceManager;
+        _providerIdentityResolver = providerIdentityResolver;
         _clock = clock;
         _logger = logger;
     }
@@ -65,6 +69,20 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             return null;
         }
+
+        // Canonicalize the provider identity before any interaction, call, or event key is built so that
+        // provider-contributed aliases (for example "Default Asterisk") collapse to a single stable
+        // identity ("Asterisk") instead of mutating the stored provider name.
+        providerEvent.ProviderName = _providerIdentityResolver.Canonicalize(providerEvent.ProviderName);
+
+        // Scope the provider-supplied idempotency key by the canonical provider so identical raw delivery
+        // identifiers emitted by different providers (for example the same numeric id from Asterisk and
+        // DialPad) cannot collide in the shared interaction-event idempotency space. Non-provider domain
+        // events are unaffected because this path only runs for normalized provider voice events.
+        var legacyIdempotencyKey = providerEvent.IdempotencyKey;
+        providerEvent.IdempotencyKey = ContactCenterClaimKeys.BuildProviderEventIdempotencyKey(
+            providerEvent.ProviderName,
+            legacyIdempotencyKey);
 
         Interaction interaction = null;
         var matchedByCallIdOnly = false;
@@ -123,8 +141,19 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             interaction.ProviderName = providerEvent.ProviderName;
         }
 
-        if (!string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
-            await _eventStore.ExistsByIdempotencyKeyAsync(providerEvent.IdempotencyKey, cancellationToken))
+        var duplicateEvent = !string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
+            await _eventStore.ExistsByIdempotencyKeyAsync(providerEvent.IdempotencyKey, cancellationToken);
+
+        if (!duplicateEvent &&
+            !string.IsNullOrEmpty(legacyIdempotencyKey) &&
+            !string.Equals(legacyIdempotencyKey, providerEvent.IdempotencyKey, StringComparison.Ordinal))
+        {
+            var interactionEvents = await _eventStore.ListByInteractionAsync(interaction.ItemId, cancellationToken);
+            duplicateEvent = interactionEvents?.Any(interactionEvent =>
+                string.Equals(interactionEvent.IdempotencyKey, legacyIdempotencyKey, StringComparison.Ordinal)) == true;
+        }
+
+        if (duplicateEvent)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -171,6 +200,13 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         ApplyState(session, interaction, providerEvent.State, now);
         ApplyProviderDetails(session, interaction, providerEvent);
         session.LastProviderEventUtc = now;
+
+        if (providerEvent.SequenceNumber.HasValue)
+        {
+            session.HighWaterSequence = session.HighWaterSequence.HasValue
+                ? Math.Max(session.HighWaterSequence.Value, providerEvent.SequenceNumber.Value)
+                : providerEvent.SequenceNumber.Value;
+        }
 
         var startsWrapUp = IsTerminalState(providerEvent.State) &&
             !string.IsNullOrEmpty(session.AgentId) &&
@@ -263,12 +299,46 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private static bool ShouldIgnoreEvent(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
     {
-        if (session.LastProviderEventUtc.HasValue && occurredUtc < session.LastProviderEventUtc.Value)
+        // When the provider supplies a monotonic sequence, it is the authoritative order. Reject stale or
+        // equal-order deliveries against the persisted high-water mark.
+        if (providerEvent.SequenceNumber.HasValue && session.HighWaterSequence.HasValue)
         {
-            return true;
+            if (providerEvent.SequenceNumber.Value <= session.HighWaterSequence.Value)
+            {
+                return true;
+            }
+        }
+        else if (session.LastProviderEventUtc.HasValue)
+        {
+            if (occurredUtc < session.LastProviderEventUtc.Value)
+            {
+                return true;
+            }
+
+            // For providers that only supply timestamps, an equal-timestamp delivery must not regress the
+            // normalized lifecycle (for example a late Ringing arriving after Connected).
+            if (occurredUtc == session.LastProviderEventUtc.Value &&
+                GetLifecycleRank(providerEvent.State) < GetLifecycleRank(session.State))
+            {
+                return true;
+            }
         }
 
         return IsTerminalState(session.State);
+    }
+
+    private static int GetLifecycleRank(ContactCenterCallState state)
+    {
+        return state switch
+        {
+            ContactCenterCallState.Planned => 0,
+            ContactCenterCallState.Dialing => 1,
+            ContactCenterCallState.Ringing => 1,
+            ContactCenterCallState.Connected => 2,
+            ContactCenterCallState.OnHold => 2,
+            ContactCenterCallState.Ending => 3,
+            _ => 4,
+        };
     }
 
     private static void ApplyState(CallSession session, Interaction interaction, ContactCenterCallState state, DateTime now)
@@ -519,7 +589,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return providerEventKey;
         }
 
-        return $"{providerEventKey}:{eventType}";
+        return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
     }
 
     private async Task TryBridgeAnsweredOutboundAsync(CallSession session, Interaction interaction, CancellationToken cancellationToken)

@@ -21,6 +21,9 @@ public sealed class ContactCenterMetricsProjectionHandler : IContactCenterEventH
     }
 
     /// <inheritdoc/>
+    public string HandlerId => "ContactCenter/MetricsProjection/v1";
+
+    /// <inheritdoc/>
     public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

@@ -34,6 +34,14 @@ public sealed class CallSessionIndex : CatalogItemIndex
     public string ProviderCallId { get; set; }
 
     /// <summary>
+    /// Gets or sets the portable, non-null claim key that enforces one call session per canonical
+    /// provider-call identity. It is <c>{ProviderName}|{ProviderCallId}</c> when the session has a
+    /// provider call identifier; otherwise it falls back to the globally unique item identifier so
+    /// sessions without a provider call cannot collide.
+    /// </summary>
+    public string ProviderCallClaimKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the normalized call state.
     /// </summary>
     public ContactCenterCallState State { get; set; }

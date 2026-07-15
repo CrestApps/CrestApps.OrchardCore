@@ -24,7 +24,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
         // Arrange
         var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-webhook-inbox-{Guid.NewGuid():N}.db");
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
-        store.RegisterIndexes([new ProviderWebhookInboxMessageIndexProvider()]);
+        store.RegisterIndexes([new ProviderWebhookInboxMessageIndexProvider(new ProviderIdentityResolver([]))]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
         await CreateIndexSchemaAsync(store);
@@ -91,6 +91,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
             new ProviderWebhookInboxStore(session),
             session,
             distributedLock,
+            new ProviderIdentityResolver([]),
             clock.Object,
             NullLogger<ProviderWebhookInbox>.Instance);
     }

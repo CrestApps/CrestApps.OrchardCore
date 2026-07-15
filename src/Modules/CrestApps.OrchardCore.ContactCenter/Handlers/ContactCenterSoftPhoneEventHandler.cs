@@ -49,6 +49,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
     }
 
     /// <inheritdoc/>
+    public string HandlerId => "ContactCenter/SoftPhoneProjection/v1";
+
+    /// <inheritdoc/>
     public async Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

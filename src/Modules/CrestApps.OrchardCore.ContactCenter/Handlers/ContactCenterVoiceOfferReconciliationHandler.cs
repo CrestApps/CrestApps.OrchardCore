@@ -20,6 +20,9 @@ public sealed class ContactCenterVoiceOfferReconciliationHandler : IContactCente
     }
 
     /// <inheritdoc/>
+    public string HandlerId => "ContactCenter/VoiceOfferReconciliation/v1";
+
+    /// <inheritdoc/>
     public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

@@ -45,6 +45,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private readonly IProviderWebhookInboxStore _store;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
+    private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -55,6 +56,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// <param name="store">The durable inbox message store.</param>
     /// <param name="session">The tenant YesSql session used to commit acceptance and processing state.</param>
     /// <param name="distributedLock">The distributed lock used for idempotent acceptance and single-message dispatch.</param>
+    /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying deliveries.</param>
     /// <param name="clock">The clock used to stamp acceptance and retry times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderWebhookInbox(
@@ -62,6 +64,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         IProviderWebhookInboxStore store,
         ISession session,
         IDistributedLock distributedLock,
+        IProviderIdentityResolver providerIdentityResolver,
         IClock clock,
         ILogger<ProviderWebhookInbox> logger)
     {
@@ -69,6 +72,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         _store = store;
         _session = session;
         _distributedLock = distributedLock;
+        _providerIdentityResolver = providerIdentityResolver;
         _clock = clock;
         _logger = logger;
     }
@@ -91,8 +95,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 $"The provider delivery identifier cannot exceed {MaxDeliveryIdLength} characters.");
         }
 
+        // Canonicalize the provider identity before building the delivery lock and idempotency key so that
+        // provider aliases resolve to a single stable identity and share one durable uniqueness constraint.
+        var providerName = _providerIdentityResolver.Canonicalize(delivery.ProviderName);
+
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-            GetDeliveryLockKey(delivery.ProviderName, delivery.DeliveryId),
+            GetDeliveryLockKey(providerName, delivery.DeliveryId),
             _acceptanceLockTimeout,
             _acceptanceLockExpiration);
 
@@ -106,7 +114,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         await using var acquiredLock = locker;
         var existing = await _store.FindByDeliveryAsync(
-            delivery.ProviderName,
+            providerName,
             delivery.DeliveryId,
             cancellationToken);
 
@@ -123,7 +131,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         var message = new ProviderWebhookInboxMessage
         {
             ItemId = IdGenerator.GenerateId(),
-            ProviderName = delivery.ProviderName,
+            ProviderName = providerName,
             DeliveryId = delivery.DeliveryId,
             HandlerName = delivery.HandlerName,
             Payload = delivery.Payload,
@@ -197,6 +205,14 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         {
             throw;
         }
+        catch (ConcurrencyException)
+        {
+            // Another worker committed a conflicting change to an aggregate this delivery touched (for
+            // example a concurrent provider event for the same call). The YesSql session is now canceled and
+            // must never be reused, so do not schedule a retry here. The message remains Pending and is
+            // reloaded and reprocessed in a fresh scope by the next dispatch pass.
+            throw;
+        }
         catch (Exception exception)
         {
             await ScheduleRetryAsync(message, exception.GetType(), cancellationToken);
@@ -219,9 +235,20 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         foreach (var message in due)
         {
-            if (await DispatchAsync(message.ItemId, cancellationToken))
+            try
             {
-                completed++;
+                if (await DispatchAsync(message.ItemId, cancellationToken))
+                {
+                    completed++;
+                }
+            }
+            catch (ConcurrencyException)
+            {
+                // A concurrent worker won ownership of an aggregate this delivery touched. The shared session
+                // is now canceled and cannot be reused, so stop draining the batch. The remaining due
+                // messages (including this one, which stays Pending) are reprocessed by the next pass in a
+                // fresh scope.
+                break;
             }
         }
 

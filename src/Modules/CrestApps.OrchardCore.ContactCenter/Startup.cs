@@ -84,6 +84,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
+            .AddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()

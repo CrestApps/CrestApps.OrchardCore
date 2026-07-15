@@ -268,6 +268,78 @@ public sealed class ProviderWebhookInboxTests
     }
 
     [Fact]
+    public async Task DispatchAsync_WhenCommitThrowsConcurrency_RethrowsWithoutSchedulingRetry()
+    {
+        // Arrange
+        var message = CreateMessage();
+        var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.FindByIdAsync(message.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(message);
+        var session = new Mock<ISession>();
+        session
+            .Setup(service => service.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConcurrencyException(new Document()));
+        var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler
+            .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var inbox = CreateInbox(store, session, [handler.Object]);
+
+        // Act
+        await Assert.ThrowsAsync<ConcurrencyException>(() =>
+            inbox.DispatchAsync(message.ItemId, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(0, message.AttemptCount);
+        Assert.Equal(ProviderWebhookInboxStatus.Pending, message.Status);
+        store.Verify(
+            service => service.UpdateAsync(It.IsAny<ProviderWebhookInboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchDueAsync_WhenAMessageLosesConcurrency_StopsBatchWithoutReusingSession()
+    {
+        // Arrange
+        var first = CreateMessage("message-1");
+        var second = CreateMessage("message-2");
+        var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([first, second]);
+        store
+            .Setup(service => service.FindByIdAsync(first.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(first);
+        store
+            .Setup(service => service.FindByIdAsync(second.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(second);
+        var session = new Mock<ISession>();
+        session
+            .Setup(service => service.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConcurrencyException(new Document()));
+        var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler
+            .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var inbox = CreateInbox(store, session, [handler.Object]);
+
+        // Act
+        var completed = await inbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, completed);
+
+        // The batch stops after the first concurrency loss so the canceled session is never reused for the
+        // remaining message; it is retried on the next pass in a fresh scope.
+        store.Verify(
+            service => service.FindByIdAsync(second.ItemId, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenRetryBudgetIsExhausted_DeadLettersMessage()
     {
         // Arrange
@@ -317,6 +389,7 @@ public sealed class ProviderWebhookInboxTests
             store.Object,
             session.Object,
             distributedLock.Object,
+            new ProviderIdentityResolver([]),
             clock.Object,
             NullLogger<ProviderWebhookInbox>.Instance);
     }

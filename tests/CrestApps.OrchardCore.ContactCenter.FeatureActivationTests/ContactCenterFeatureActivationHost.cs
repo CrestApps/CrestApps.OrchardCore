@@ -115,6 +115,7 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.NotNull(services.GetRequiredService<IActivityQueueService>());
             Assert.NotNull(services.GetRequiredService<IActivityRoutingService>());
             Assert.NotNull(services.GetRequiredService<IInteractionManager>());
+            Assert.NotNull(services.GetRequiredService<IProviderIdentityResolver>());
             Assert.NotEmpty(services.GetServices<IBackgroundTask>());
             Assert.Single(services.GetServices<IBackgroundTask>().OfType<AgentAvailabilityRecoveryBackgroundTask>());
 
@@ -136,6 +137,8 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.NotNull(services.GetRequiredService<IProviderCommandManager>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandStateService>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandProcessor>());
+            Assert.NotNull(services.GetRequiredService<IProviderVoiceEventService>());
+            Assert.NotNull(services.GetRequiredService<IProviderWebhookInbox>());
             Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderCommandRecoveryBackgroundTask>());
             Assert.Single(services.GetServices<IIndexProvider>().OfType<ProviderCommandIndexProvider>());
             Assert.Single(

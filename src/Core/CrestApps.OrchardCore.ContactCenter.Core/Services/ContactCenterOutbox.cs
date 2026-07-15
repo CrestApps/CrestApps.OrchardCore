@@ -27,7 +27,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     private const int BaseBackoffSeconds = 30;
     private const int MaxBackoffSeconds = 1800;
 
-    private readonly IEnumerable<IContactCenterEventHandler> _handlers;
+    private readonly IReadOnlyList<IContactCenterEventHandler> _handlers;
     private readonly IContactCenterOutboxStore _outboxStore;
     private readonly IInteractionEventStore _eventStore;
     private readonly IClock _clock;
@@ -48,11 +48,38 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         IClock clock,
         ILogger<ContactCenterOutbox> logger)
     {
-        _handlers = handlers;
+        _handlers = ValidateHandlers(handlers);
         _outboxStore = outboxStore;
         _eventStore = eventStore;
         _clock = clock;
         _logger = logger;
+    }
+
+    private static IReadOnlyList<IContactCenterEventHandler> ValidateHandlers(IEnumerable<IContactCenterEventHandler> handlers)
+    {
+        ArgumentNullException.ThrowIfNull(handlers);
+
+        var materialized = handlers as IReadOnlyList<IContactCenterEventHandler> ?? handlers.ToArray();
+        var seenHandlerIds = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var handler in materialized)
+        {
+            var handlerId = handler.HandlerId;
+
+            if (string.IsNullOrWhiteSpace(handlerId))
+            {
+                throw new InvalidOperationException(
+                    $"The Contact Center event handler '{handler.GetType().FullName}' must expose a non-empty stable HandlerId.");
+            }
+
+            if (!seenHandlerIds.Add(handlerId))
+            {
+                throw new InvalidOperationException(
+                    $"The Contact Center event handler id '{handlerId}' is registered by more than one handler. Handler ids must be unique so a failed handler is never skipped by another handler that shares its id.");
+            }
+        }
+
+        return materialized;
     }
 
     /// <inheritdoc/>
@@ -164,17 +191,22 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         CancellationToken cancellationToken)
     {
         string firstError = null;
-        var completedHandlerTypes = message.CompletedHandlerTypes.ToHashSet(StringComparer.Ordinal);
-
-        var handlerIndex = 0;
+        var persistedCompleted = message.CompletedHandlerTypes.ToHashSet(StringComparer.Ordinal);
+        var completedHandlerIds = new HashSet<string>(persistedCompleted, StringComparer.Ordinal);
 
         foreach (var handler in _handlers)
         {
-            var handlerType = $"{handler.GetType().AssemblyQualifiedName ?? handler.GetType().FullName ?? handler.GetType().Name}:{handlerIndex}";
-            handlerIndex++;
+            var handlerId = handler.HandlerId;
 
-            if (completedHandlerTypes.Contains(handlerType))
+            if (TryResolveCompletedCheckpoint(handler, handlerId, persistedCompleted, out var legacyCheckpoint))
             {
+                if (legacyCheckpoint is not null)
+                {
+                    completedHandlerIds.Remove(legacyCheckpoint);
+                }
+
+                completedHandlerIds.Add(handlerId);
+
                 continue;
             }
 
@@ -182,8 +214,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             {
                 await handler.HandleAsync(interactionEvent, cancellationToken);
 
-                completedHandlerTypes.Add(handlerType);
-                message.CompletedHandlerTypes = completedHandlerTypes.ToArray();
+                completedHandlerIds.Add(handlerId);
             }
             catch (Exception ex)
             {
@@ -194,11 +225,51 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                     "An error occurred while handling the Contact Center event '{EventType}' for interaction '{InteractionId}' in handler '{Handler}'.",
                     interactionEvent.EventType,
                     OperationalLogRedactor.Pseudonymize(interactionEvent.InteractionId, OperationalLogIdentifierCategory.Interaction),
-                    handler.GetType().FullName);
+                    handlerId);
             }
         }
 
+        // Persist the checkpoint using stable handler ids, repairing any legacy CLR-name/index entries so
+        // completed handlers are never replayed after a rename, reorder, or assembly version change.
+        message.CompletedHandlerTypes = completedHandlerIds.ToArray();
+
         return firstError;
+    }
+
+    private static bool TryResolveCompletedCheckpoint(
+        IContactCenterEventHandler handler,
+        string handlerId,
+        HashSet<string> persistedCompleted,
+        out string legacyCheckpoint)
+    {
+        legacyCheckpoint = null;
+
+        if (!string.IsNullOrEmpty(handlerId) && persistedCompleted.Contains(handlerId))
+        {
+            return true;
+        }
+
+        // Deploy-safe legacy alias: pre-versioned checkpoints stored "{AssemblyQualifiedName}:{index}".
+        // Treat a handler whose runtime type matches such a legacy entry as already completed.
+        var legacyTypeName = handler.GetType().FullName;
+
+        if (string.IsNullOrEmpty(legacyTypeName))
+        {
+            return false;
+        }
+
+        foreach (var entry in persistedCompleted)
+        {
+            if (entry.StartsWith(legacyTypeName + ",", StringComparison.Ordinal) ||
+                entry.StartsWith(legacyTypeName + ":", StringComparison.Ordinal))
+            {
+                legacyCheckpoint = entry;
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task ScheduleRetryAsync(

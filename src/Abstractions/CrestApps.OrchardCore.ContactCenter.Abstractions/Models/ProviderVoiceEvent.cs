@@ -50,6 +50,14 @@ public sealed class ProviderVoiceEvent
     public string IdempotencyKey { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional provider-supplied monotonic sequence number for the call stream. When
+    /// supplied, ingestion uses it as the authoritative ordering high-water mark and rejects stale or
+    /// equal-order deliveries. Providers that only supply timestamps or idempotency keys leave it
+    /// <see langword="null"/> and ingestion falls back to timestamp-based ordering.
+    /// </summary>
+    public long? SequenceNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the provider reports the call as muted.
     /// When <see langword="null"/>, the event does not change the current mute state.
     /// </summary>

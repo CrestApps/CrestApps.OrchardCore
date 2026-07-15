@@ -23,6 +23,9 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
     }
 
     /// <inheritdoc/>
+    public string HandlerId => "ContactCenter/WorkflowBridge/v1";
+
+    /// <inheritdoc/>
     public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

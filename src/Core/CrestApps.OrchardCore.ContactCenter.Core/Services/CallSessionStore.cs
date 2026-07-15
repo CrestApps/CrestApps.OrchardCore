@@ -11,6 +11,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionIndex>, ICallSessionStore
 {
     /// <summary>
+    /// Gets a value indicating that call session updates use YesSql document-version concurrency checks so
+    /// concurrent provider-event ingestion cannot lose or reverse a high-water/state update. A losing writer
+    /// observes a <see cref="ConcurrencyException"/> instead of silently overwriting a newer commit.
+    /// </summary>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CallSessionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>

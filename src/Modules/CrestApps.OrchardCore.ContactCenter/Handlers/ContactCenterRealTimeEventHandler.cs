@@ -40,6 +40,9 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     }
 
     /// <inheritdoc/>
+    public string HandlerId => "ContactCenter/RealTimeProjection/v1";
+
+    /// <inheritdoc/>
     public async Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

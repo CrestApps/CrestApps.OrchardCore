@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.DialPad.Endpoints;
 
@@ -138,7 +139,16 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
+        try
+        {
+            await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
+        }
+        catch (ConcurrencyException)
+        {
+            // A concurrent worker won ownership of the affected call during immediate dispatch. The delivery
+            // is already durably accepted, so the background inbox completes it in a fresh scope; the canceled
+            // session must not be reused, so acknowledge acceptance without failing the webhook.
+        }
 
         return TypedResults.Ok(new
         {

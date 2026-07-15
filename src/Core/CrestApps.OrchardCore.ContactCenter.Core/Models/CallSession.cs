@@ -103,6 +103,14 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public DateTime? LastProviderEventUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the highest provider-supplied monotonic sequence number applied to this call
+    /// session. When a provider supplies monotonic sequence numbers this value is the authoritative
+    /// ordering high-water mark; deliveries at or below it are rejected as stale. It remains
+    /// <see langword="null"/> for providers that only supply timestamps or idempotency keys.
+    /// </summary>
+    public long? HighWaterSequence { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the call session was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

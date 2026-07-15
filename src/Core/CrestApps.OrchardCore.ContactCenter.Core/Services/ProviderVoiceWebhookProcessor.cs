@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -85,6 +86,7 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
         }
 
         var accepted = 0;
+        var messageIds = new List<string>();
 
         foreach (var providerEvent in events)
         {
@@ -107,7 +109,23 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
                 accepted++;
             }
 
-            await _inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
+            messageIds.Add(acceptance.MessageId);
+        }
+
+        // Every delivery is durably accepted (and committed) before any inline dispatch runs, so a losing
+        // optimistic-concurrency race during immediate dispatch never loses a delivery. On a concurrency
+        // conflict the shared session is canceled and must not be reused, so stop draining inline; the
+        // background inbox completes the remaining messages in fresh scopes.
+        foreach (var messageId in messageIds)
+        {
+            try
+            {
+                await _inbox.DispatchAsync(messageId, CancellationToken.None);
+            }
+            catch (ConcurrencyException)
+            {
+                break;
+            }
         }
 
         return new ProviderVoiceWebhookOutcome

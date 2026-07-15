@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -31,6 +32,9 @@ public sealed class InteractionEventIndexProvider : IndexProvider<InteractionEve
                 AggregateId = interactionEvent.AggregateId,
                 CorrelationId = interactionEvent.CorrelationId,
                 IdempotencyKey = interactionEvent.IdempotencyKey,
+                IdempotencyClaimKey = ContactCenterClaimKeys.BuildEventIdempotencyClaim(
+                    interactionEvent.IdempotencyKey,
+                    interactionEvent.ItemId),
                 OccurredUtc = interactionEvent.OccurredUtc,
             });
     }

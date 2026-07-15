@@ -58,6 +58,7 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
     {
         services
             .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
+            .AddSingleton<IProviderIdentityProvider, AsteriskProviderIdentityProvider>()
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>();
     }
