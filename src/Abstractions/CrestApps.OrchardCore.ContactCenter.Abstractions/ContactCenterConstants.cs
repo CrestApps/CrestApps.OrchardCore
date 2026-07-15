@@ -168,6 +168,17 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable metadata keys shared across Contact Center command boundaries.
+    /// </summary>
+    public static class CommandMetadata
+    {
+        /// <summary>
+        /// Identifies the idempotent provider command associated with an interaction.
+        /// </summary>
+        public const string CommandId = "providerCommandId";
+    }
+
+    /// <summary>
     /// Contains the canonical Contact Center domain event type names.
     /// Names are channel-neutral and stable so they can be persisted, projected, and replayed.
     /// </summary>

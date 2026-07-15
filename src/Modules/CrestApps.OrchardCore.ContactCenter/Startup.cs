@@ -403,6 +403,7 @@ public sealed class ComplianceStartup : StartupBase
     {
         services
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
+            .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()
             .AddScoped<IDialerAttemptService, DialerAttemptService>();
     }
 }

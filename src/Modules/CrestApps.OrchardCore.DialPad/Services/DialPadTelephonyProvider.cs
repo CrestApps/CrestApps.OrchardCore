@@ -155,7 +155,20 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAud
             var client = CreateClient(settings, bearerToken);
 
             using var content = JsonContent.Create(body);
-            using var response = await client.PostAsync("call", content, cancellationToken);
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, "call")
+            {
+                Content = content,
+            };
+
+            if (request.Metadata?.TryGetValue(
+                TelephonyConstants.RequestMetadata.IdempotencyKey,
+                out var idempotencyKey) == true &&
+                !string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                requestMessage.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+            }
+
+            using var response = await client.SendAsync(requestMessage, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

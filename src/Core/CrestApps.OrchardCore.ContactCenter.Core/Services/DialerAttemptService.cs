@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -17,12 +19,13 @@ public sealed class DialerAttemptService : IDialerAttemptService
 {
     private readonly IDialerEligibilityService _eligibilityService;
     private readonly IActivityReservationService _reservationService;
-    private readonly IQueueItemManager _queueItemManager;
-    private readonly IActivityQueueService _queueService;
+    private readonly IDialerAttemptCompensationService _compensationService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -31,34 +34,37 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// </summary>
     /// <param name="eligibilityService">The compliance gate evaluated before every attempt.</param>
     /// <param name="reservationService">The reservation service used to release failed or suppressed attempts.</param>
-    /// <param name="queueItemManager">The queue item manager used to resolve terminal dialer work.</param>
-    /// <param name="queueService">The queue service used to remove terminal dialer work.</param>
+    /// <param name="compensationService">The service used to release failed or suppressed attempts.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="scopeExecutor">The executor used for compensation after a failed persistence scope.</param>
+    /// <param name="session">The YesSql session used to persist provider command intent before dispatch.</param>
     /// <param name="clock">The clock used to stamp attempts.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
         IActivityReservationService reservationService,
-        IQueueItemManager queueItemManager,
-        IActivityQueueService queueService,
+        IDialerAttemptCompensationService compensationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterEventPublisher publisher,
+        IContactCenterScopeExecutor scopeExecutor,
+        ISession session,
         IClock clock,
         ILogger<DialerAttemptService> logger)
     {
         _eligibilityService = eligibilityService;
         _reservationService = reservationService;
-        _queueItemManager = queueItemManager;
-        _queueService = queueService;
+        _compensationService = compensationService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _voiceCallRouter = voiceCallRouter;
         _publisher = publisher;
+        _scopeExecutor = scopeExecutor;
+        _session = session;
         _clock = clock;
         _logger = logger;
     }
@@ -73,7 +79,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (activity is null)
         {
-            await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
+            await _compensationService.CompensateAsync(reservation, removeFromQueue: true, cancellationToken);
 
             return false;
         }
@@ -91,6 +97,13 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return false;
         }
 
+        var acceptedReservation = await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
+
+        if (acceptedReservation is null)
+        {
+            return false;
+        }
+
         var interaction = await _interactionManager.NewAsync(cancellationToken: cancellationToken);
         interaction.Channel = InteractionChannel.Voice;
         interaction.Direction = InteractionDirection.Outbound;
@@ -100,7 +113,20 @@ public sealed class DialerAttemptService : IDialerAttemptService
         interaction.AgentId = reservation.AgentId;
         interaction.ProviderName = _voiceCallRouter.GetOutboundProviderName(profile.ProviderName);
         interaction.CustomerAddress = activity.PreferredDestination;
-        await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+        interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId;
+
+        try
+        {
+            await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            await _scopeExecutor.ExecuteAsync<IDialerAttemptCompensationService>(service =>
+                service.CompensateAsync(acceptedReservation, removeFromQueue: true, CancellationToken.None));
+
+            throw;
+        }
 
         ContactCenterVoiceProviderResult result;
 
@@ -110,11 +136,17 @@ public sealed class DialerAttemptService : IDialerAttemptService
             {
                 ActivityId = activity.ItemId,
                 InteractionId = interaction.ItemId,
+                CommandId = interaction.ItemId,
                 AgentId = reservation.AgentId,
                 QueueId = profile.QueueId,
                 CampaignId = profile.CampaignId,
                 Destination = activity.PreferredDestination,
                 CallerId = profile.CallerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [ContactCenterConstants.CommandMetadata.CommandId] = interaction.ItemId,
+                    [TelephonyConstants.RequestMetadata.IdempotencyKey] = interaction.ItemId,
+                },
             }, profile.ProviderName, cancellationToken);
         }
         catch (Exception ex)
@@ -149,30 +181,6 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (result.Succeeded)
         {
-            var acceptedReservation = await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
-
-            if (acceptedReservation is null)
-            {
-                result = new ContactCenterVoiceProviderResult
-                {
-                    Succeeded = false,
-                    ErrorCode = "reservation_unavailable",
-                    ErrorMessage = "The reserved agent is no longer available for this dial attempt.",
-                };
-
-                interaction.Status = InteractionStatus.Failed;
-                interaction.EndedUtc = _clock.UtcNow;
-                interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
-                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-
-                activity.Status = ActivityStatus.Failed;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-
-                await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
-
-                return false;
-            }
-
             interaction.Status = InteractionStatus.Ringing;
             interaction.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
                 ? interaction.ProviderName
@@ -188,7 +196,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-            await CancelReservationAsync(reservation, removeFromQueue: true, cancellationToken);
+            await _compensationService.CompensateAsync(acceptedReservation, removeFromQueue: true, cancellationToken);
         }
 
         await _publisher.PublishAsync(new InteractionEvent
@@ -218,7 +226,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
         }
 
-        await CancelReservationAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);
+        await _compensationService.CompensateAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -249,28 +257,6 @@ public sealed class DialerAttemptService : IDialerAttemptService
         suppressionEvent.SetData(data);
 
         await _publisher.PublishAsync(suppressionEvent, cancellationToken);
-    }
-
-    private async Task CancelReservationAsync(
-        ActivityReservation reservation,
-        bool removeFromQueue,
-        CancellationToken cancellationToken)
-    {
-        await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
-
-        if (!removeFromQueue || string.IsNullOrEmpty(reservation.QueueItemId))
-        {
-            return;
-        }
-
-        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
-
-        if (queueItem is null || queueItem.Status is QueueItemStatus.Completed or QueueItemStatus.Removed)
-        {
-            return;
-        }
-
-        await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
     }
 
     private static ActivityStatus? ResolveSuppressedStatus(DialerSuppressionReason reason)

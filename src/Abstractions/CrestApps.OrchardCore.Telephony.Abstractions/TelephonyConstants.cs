@@ -18,6 +18,17 @@ public static class TelephonyConstants
     public const string TokenProtectorPurpose = "CrestApps.OrchardCore.Telephony.UserTokens";
 
     /// <summary>
+    /// Contains metadata keys that have provider-neutral command semantics.
+    /// </summary>
+    public static class RequestMetadata
+    {
+        /// <summary>
+        /// Identifies a stable command that providers should use for idempotent execution when supported.
+        /// </summary>
+        public const string IdempotencyKey = "idempotencyKey";
+    }
+
+    /// <summary>
     /// Contains the well-known authentication scheme identifiers a telephony provider can use.
     /// </summary>
     public static class AuthenticationSchemes

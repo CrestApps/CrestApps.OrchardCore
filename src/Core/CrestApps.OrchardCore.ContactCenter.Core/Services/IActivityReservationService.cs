@@ -42,6 +42,18 @@ public interface IActivityReservationService
     Task<ActivityReservation> CancelAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Compensates a pending or accepted reservation after its provider command cannot complete.
+    /// </summary>
+    /// <param name="reservationId">The reservation identifier.</param>
+    /// <param name="removeFromQueue">Whether the owned queue item should be terminally removed.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The compensated reservation, or <see langword="null"/> when not found or no longer active.</returns>
+    Task<ActivityReservation> CompensateAsync(
+        string reservationId,
+        bool removeFromQueue,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Expires every pending reservation that has passed its timeout and returns items to their queues.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

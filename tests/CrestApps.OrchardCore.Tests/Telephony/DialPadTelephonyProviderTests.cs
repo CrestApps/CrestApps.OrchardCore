@@ -42,6 +42,30 @@ public sealed class DialPadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task DialAsync_WithIdempotencyMetadata_SendsProviderIdempotencyHeader()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\": 12345}");
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+        var request = new DialRequest
+        {
+            To = "+15551234567",
+            Metadata = new Dictionary<string, string>
+            {
+                [TelephonyConstants.RequestMetadata.IdempotencyKey] = "command-1",
+            },
+        };
+
+        // Act
+        var result = await provider.DialAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(handler.LastRequest.Headers.TryGetValues("Idempotency-Key", out var values));
+        Assert.Equal("command-1", Assert.Single(values));
+    }
+
+    [Fact]
     public async Task DialAsync_WhenDisabled_ReturnsFailedAndDoesNotCallApi()
     {
         // Arrange

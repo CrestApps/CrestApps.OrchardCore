@@ -47,6 +47,22 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByAgentAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var reservations = await Session.Query<ActivityReservation, ActivityReservationIndex>(
+            index => index.AgentId == agentId &&
+                (index.Status == ReservationStatus.Pending || index.Status == ReservationStatus.Accepted),
+            collection: ContactCenterConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return reservations.ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);

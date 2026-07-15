@@ -16,6 +16,11 @@ public sealed class ContactCenterDialRequest
     public string InteractionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the stable idempotency identifier for this provider command.
+    /// </summary>
+    public string CommandId { get; set; }
+
+    /// <summary>
     /// Gets or sets the reserved agent identifier, when the dialing mode requires an agent before dialing.
     /// </summary>
     public string AgentId { get; set; }
