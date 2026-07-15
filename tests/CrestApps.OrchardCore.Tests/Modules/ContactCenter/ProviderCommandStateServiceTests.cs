@@ -28,9 +28,11 @@ public sealed class ProviderCommandStateServiceTests
             await using var session = store.CreateSession();
             var now = _now;
             var service = CreateService(session, () => now);
+            var registration = CreateRegistration();
+            registration.RemoveReservationFromQueueOnFailure = false;
 
             // Act
-            var command = await service.RegisterAsync(CreateRegistration(), TestContext.Current.CancellationToken);
+            var command = await service.RegisterAsync(registration, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(ProviderCommandStatus.Pending, command.Status);
@@ -39,6 +41,7 @@ public sealed class ProviderCommandStateServiceTests
             Assert.Equal("command-1", command.CommandId);
             Assert.Equal(ProviderCommandType.Dial, command.CommandType);
             Assert.Equal("reservation-1", command.ReservationId);
+            Assert.False(command.RemoveReservationFromQueueOnFailure);
             Assert.Equal("profile-1", command.DialerProfileId);
             Assert.Equal(_now, command.CreatedUtc);
             Assert.Equal(_now.AddMinutes(5), command.NextAttemptUtc);

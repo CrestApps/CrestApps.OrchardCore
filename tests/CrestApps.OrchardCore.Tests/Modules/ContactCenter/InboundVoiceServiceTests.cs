@@ -7,14 +7,11 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -105,10 +102,9 @@ public sealed class InboundVoiceServiceTests
 
         Assert.Equal(InteractionChannel.Voice, interaction.Channel);
         Assert.Equal(InteractionDirection.Inbound, interaction.Direction);
-
-        harness.IncomingCallDispatcher.Verify(
-            d => d.DispatchAsync("u1", It.Is<TelephonyCall>(call => call.Direction == CallDirection.Inbound && call.CallId == "call-1"), It.IsAny<CancellationToken>()),
-            Times.Once);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -216,7 +212,9 @@ public sealed class InboundVoiceServiceTests
         Assert.False(result.Routed);
         Assert.Null(result.QueueId);
         Assert.Equal("int1", result.InteractionId);
-        harness.IncomingCallDispatcher.Verify(d => d.DispatchAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -250,7 +248,9 @@ public sealed class InboundVoiceServiceTests
         Assert.True(result.Queued);
         Assert.Equal("q1", result.QueueId);
         Assert.Equal("The call is waiting in the queue for the next eligible agent.", result.Reason);
-        harness.IncomingCallDispatcher.Verify(d => d.DispatchAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -365,6 +365,9 @@ public sealed class InboundVoiceServiceTests
         // Assert
         Assert.Null(agentUserId);
         harness.ReservationService.Verify(s => s.RejectAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -408,6 +411,9 @@ public sealed class InboundVoiceServiceTests
         Assert.Null(agentUserId);
         harness.ReservationService.Verify(
             service => service.RejectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -453,6 +459,9 @@ public sealed class InboundVoiceServiceTests
         harness.ReservationService.Verify(
             service => service.RejectAsync("r1", It.IsAny<CancellationToken>()),
             Times.Once);
+        harness.OfferSynchronizationService.Verify(
+            service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -476,20 +485,23 @@ public sealed class InboundVoiceServiceTests
 
         harness.InteractionManager
             .Setup(m => m.FindByActivityIdAsync("act-dead", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Interaction { ItemId = "int-dead", ActivityItemId = "act-dead", ProviderInteractionId = "call-dead" });
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "int-dead",
+                ActivityItemId = "act-dead",
+                ProviderInteractionId = "call-dead",
+                Status = InteractionStatus.Ended,
+            });
 
         harness.InteractionManager
             .Setup(m => m.FindByActivityIdAsync("act-live", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Interaction { ItemId = "int-live", ActivityItemId = "act-live", ProviderInteractionId = "call-live" });
-
-        // The provider reports the first queued call as terminal (gone), and the second call as still active.
-        harness.ProviderCallStateSynchronizationService
-            .Setup(s => s.RefreshInteractionAsync(It.Is<Interaction>(i => i.ItemId == "int-dead"), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Interaction { ItemId = "int-dead", ActivityItemId = "act-dead", ProviderInteractionId = "call-dead", Status = InteractionStatus.Ended });
-
-        harness.ProviderCallStateSynchronizationService
-            .Setup(s => s.RefreshInteractionAsync(It.Is<Interaction>(i => i.ItemId == "int-live"), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Interaction { ItemId = "int-live", ActivityItemId = "act-live", ProviderInteractionId = "call-live", Status = InteractionStatus.Ringing });
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "int-live",
+                ActivityItemId = "act-live",
+                ProviderInteractionId = "call-live",
+                Status = InteractionStatus.Ringing,
+            });
 
         var service = harness.CreateService();
 
@@ -499,13 +511,9 @@ public sealed class InboundVoiceServiceTests
         // Assert
         Assert.Equal("user-live", agentUserId);
         harness.OfferSynchronizationService.Verify(s => s.ReconcileEndedOfferAsync("int-dead", It.IsAny<CancellationToken>()), Times.Once);
-        harness.Session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        harness.IncomingCallDispatcher.Verify(
-            d => d.DispatchAsync("user-dead", It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()),
+        harness.OfferSynchronizationService.Verify(
+            s => s.ReconcileEndedOfferAsync("int-live", It.IsAny<CancellationToken>()),
             Times.Never);
-        harness.IncomingCallDispatcher.Verify(
-            d => d.DispatchAsync("user-live", It.Is<TelephonyCall>(c => c.CallId == "call-live"), It.IsAny<CancellationToken>()),
-            Times.Once);
     }
 
     private sealed class Harness
@@ -534,29 +542,19 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IInboundContactLookup> ContactLookup { get; } = new();
 
-        public Mock<IIncomingCallDispatcher> IncomingCallDispatcher { get; } = new();
-
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new();
 
         public Mock<IEntryPointResolver> EntryPointResolver { get; } = new();
 
-        public Mock<IProviderCallStateSynchronizationService> ProviderCallStateSynchronizationService { get; } = new();
-
         public Mock<IProviderVoiceOfferSynchronizationService> OfferSynchronizationService { get; } = new();
 
         public Mock<IDistributedLock> DistributedLock { get; } = new();
-
-        public Mock<ISession> Session { get; } = new();
 
         public Harness()
         {
             DistributedLock
                 .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
                 .ReturnsAsync((null, true));
-
-            ProviderCallStateSynchronizationService
-                .Setup(s => s.RefreshInteractionAsync(It.IsAny<Interaction>(), It.IsAny<CancellationToken>()))
-                .Returns((Interaction interaction, CancellationToken _) => Task.FromResult(interaction));
         }
 
         public void SetupNoContext()
@@ -600,14 +598,11 @@ public sealed class InboundVoiceServiceTests
                 ReservationService.Object,
                 AgentManager.Object,
                 ContactLookup.Object,
-                IncomingCallDispatcher.Object,
                 VoiceProviderResolver.Object,
                 [EntryPointResolver.Object],
-                ProviderCallStateSynchronizationService.Object,
                 OfferSynchronizationService.Object,
                 DistributedLock.Object,
                 new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
-                Session.Object,
                 clock.Object);
         }
     }

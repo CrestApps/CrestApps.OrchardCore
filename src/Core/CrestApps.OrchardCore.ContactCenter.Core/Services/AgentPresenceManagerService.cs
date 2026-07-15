@@ -23,7 +23,6 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-    private readonly IContactCenterRealTimeNotifier _realTimeNotifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentPresenceManagerService"/> class.
@@ -35,7 +34,6 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// <param name="distributedLock">The distributed lock used to serialize sign-in updates.</param>
     /// <param name="clock">The clock used to stamp presence changes.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="realTimeNotifiers">The optional real-time notifier used to revoke active queue subscriptions.</param>
     public AgentPresenceManagerService(
         IAgentProfileManager agentManager,
         IEnumerable<IAgentSessionManager> sessionManagers,
@@ -43,8 +41,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
         IClock clock,
-        ILogger<AgentPresenceManagerService> logger,
-        IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers = null)
+        ILogger<AgentPresenceManagerService> logger)
     {
         _agentManager = agentManager;
         _sessionManager = sessionManagers.FirstOrDefault();
@@ -53,7 +50,6 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
-        _realTimeNotifier = realTimeNotifiers?.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -493,14 +489,6 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         if (membershipChanged)
         {
             await SyncSessionMembershipAsync(profile.UserId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-
-            if (_realTimeNotifier is not null)
-            {
-                await _realTimeNotifier.NotifyAgentMembershipChangedAsync(
-                    profile.UserId,
-                    removedQueueIds,
-                    cancellationToken);
-            }
 
             if (_logger.IsEnabled(LogLevel.Information))
             {

@@ -1,10 +1,9 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -30,7 +29,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly ITelephonyService _telephonyService;
+    private readonly IProviderCommandStateService _providerCommandStateService;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -48,7 +48,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="telephonyServices">The optional telephony services used for voice-specific timeout actions.</param>
+    /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
+    /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
     /// <param name="session">The YesSql session used to commit reservation state atomically.</param>
     /// <param name="clock">The clock used to stamp reservation times.</param>
@@ -63,7 +64,8 @@ public sealed class ActivityReservationService : IActivityReservationService
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
-        IEnumerable<ITelephonyService> telephonyServices,
+        IEnumerable<IProviderCommandStateService> providerCommandStateServices,
+        IContactCenterScopeExecutor scopeExecutor,
         IDistributedLock distributedLock,
         ISession session,
         IClock clock,
@@ -78,7 +80,8 @@ public sealed class ActivityReservationService : IActivityReservationService
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _publisher = publisher;
-        _telephonyService = telephonyServices.FirstOrDefault();
+        _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
+        _scopeExecutor = scopeExecutor;
         _distributedLock = distributedLock;
         _session = session;
         _clock = clock;
@@ -555,11 +558,45 @@ public sealed class ActivityReservationService : IActivityReservationService
             ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
             : UnansweredOfferAction.Requeue;
         var unansweredAction = configuredUnansweredAction;
+        ProviderCommandRegistration providerCommand = null;
 
-        if (unansweredAction is UnansweredOfferAction.Voicemail or UnansweredOfferAction.Reject &&
-            !await ExecuteTimedOutOfferActionAsync(unansweredAction, interaction, queue, agent, cancellationToken))
+        if (unansweredAction is UnansweredOfferAction.Voicemail or UnansweredOfferAction.Reject)
         {
-            unansweredAction = UnansweredOfferAction.Requeue;
+            if (interaction is null ||
+                string.IsNullOrWhiteSpace(interaction.ProviderInteractionId) ||
+                string.IsNullOrWhiteSpace(interaction.ProviderName) ||
+                _providerCommandStateService is null)
+            {
+                _logger.LogWarning(
+                    "The unanswered-offer action '{UnansweredOfferAction}' could not be persisted for activity '{ActivityItemId}' because provider command infrastructure or call identity is unavailable.",
+                    unansweredAction,
+                    OperationalLogRedactor.Pseudonymize(interaction?.ActivityItemId, OperationalLogIdentifierCategory.Activity));
+                unansweredAction = UnansweredOfferAction.Requeue;
+            }
+            else
+            {
+                var commandId = IdGenerator.GenerateId();
+                interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
+                providerCommand = new ProviderCommandRegistration
+                {
+                    CommandId = commandId,
+                    ProviderName = interaction.ProviderName,
+                    CommandType = unansweredAction == UnansweredOfferAction.Voicemail
+                        ? ProviderCommandType.SendToVoicemail
+                        : ProviderCommandType.Reject,
+                    ActivityItemId = reservation.ActivityItemId,
+                    InteractionId = interaction.ItemId,
+                    RemoveReservationFromQueueOnFailure = false,
+                    RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+                    {
+                        ActivityItemId = reservation.ActivityItemId,
+                        QueueId = reservation.QueueId,
+                        ProviderCallId = interaction.ProviderInteractionId,
+                        ReofferOnFailure = true,
+                        Metadata = BuildOfferTimeoutMetadata(queue, agent),
+                    }),
+                };
+            }
         }
 
         var requeue = unansweredAction == UnansweredOfferAction.Requeue;
@@ -617,6 +654,13 @@ public sealed class ActivityReservationService : IActivityReservationService
                 interaction.Status = InteractionStatus.Created;
                 interaction.AgentId = null;
             }
+            else if (providerCommand is not null)
+            {
+                interaction.Status = InteractionStatus.Ringing;
+                interaction.EndedUtc = null;
+                interaction.AgentId = null;
+                interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
+            }
             else
             {
                 interaction.Status = InteractionStatus.Ended;
@@ -628,6 +672,13 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+
+        if (providerCommand is not null)
+        {
+            await _providerCommandStateService.RegisterAsync(providerCommand, cancellationToken);
+            _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+                processor.DispatchAsync(providerCommand.CommandId, CancellationToken.None));
+        }
     }
 
     private async Task CommitTransitionAsync(
@@ -651,70 +702,6 @@ public sealed class ActivityReservationService : IActivityReservationService
 
             throw;
         }
-    }
-
-    private async Task<bool> ExecuteTimedOutOfferActionAsync(
-        UnansweredOfferAction unansweredAction,
-        Interaction interaction,
-        ActivityQueue queue,
-        AgentProfile agent,
-        CancellationToken cancellationToken)
-    {
-        if (interaction is null || string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
-        {
-            _logger.LogWarning(
-                "The unanswered-offer action '{UnansweredOfferAction}' could not run for activity '{ActivityItemId}' because no provider interaction is available.",
-                unansweredAction,
-                OperationalLogRedactor.Pseudonymize(interaction?.ActivityItemId, OperationalLogIdentifierCategory.Activity));
-
-            return false;
-        }
-
-        if (_telephonyService is null)
-        {
-            _logger.LogWarning(
-                "The unanswered-offer action '{UnansweredOfferAction}' could not run for provider call '{ProviderCallId}' because no telephony service is registered.",
-                unansweredAction,
-                OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call));
-
-            return false;
-        }
-
-        var call = new CallReference
-        {
-            CallId = interaction.ProviderInteractionId,
-            Metadata = BuildOfferTimeoutMetadata(queue, agent),
-        };
-
-        TelephonyResult result = unansweredAction switch
-        {
-            UnansweredOfferAction.Voicemail => await _telephonyService.SendToVoicemailAsync(call, cancellationToken),
-            UnansweredOfferAction.Reject => await _telephonyService.RejectAsync(call, cancellationToken),
-            _ => null,
-        };
-
-        if (result?.Succeeded == true)
-        {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation(
-                    "Applied the unanswered-offer action '{UnansweredOfferAction}' to provider call '{ProviderCallId}' for queue '{QueueId}'.",
-                    unansweredAction,
-                    OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
-                    OperationalLogRedactor.Pseudonymize(queue?.ItemId, OperationalLogIdentifierCategory.Queue));
-            }
-
-            return true;
-        }
-
-        _logger.LogWarning(
-            "The unanswered-offer action '{UnansweredOfferAction}' failed for provider call '{ProviderCallId}' on queue '{QueueId}': {ErrorMessage}",
-            unansweredAction,
-            OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
-            OperationalLogRedactor.Pseudonymize(queue?.ItemId, OperationalLogIdentifierCategory.Queue),
-            OperationalLogRedactor.Redact(result?.Error ?? "No result was returned.", OperationalLogFieldKind.FreeText));
-
-        return false;
     }
 
     private static Dictionary<string, object> BuildOfferTimeoutMetadata(ActivityQueue queue, AgentProfile agent)

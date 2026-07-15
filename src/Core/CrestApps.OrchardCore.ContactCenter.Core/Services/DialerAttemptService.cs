@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -8,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -19,8 +17,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class DialerAttemptService : IDialerAttemptService
 {
-    private static readonly TimeSpan _providerCommandLease = TimeSpan.FromMinutes(5);
-
     private readonly IDialerEligibilityService _eligibilityService;
     private readonly IActivityReservationService _reservationService;
     private readonly IDialerAttemptCompensationService _compensationService;
@@ -30,8 +26,6 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IProviderCommandStateService _providerCommandStateService;
-    private readonly ISession _session;
-    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -44,10 +38,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="scopeExecutor">The executor used for compensation after a failed persistence scope.</param>
-    /// <param name="providerCommandStateService">The service used to persist and fence provider command execution.</param>
-    /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
-    /// <param name="clock">The clock used to stamp attempts.</param>
+    /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
+    /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerAttemptService(
         IDialerEligibilityService eligibilityService,
@@ -59,8 +51,6 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IContactCenterEventPublisher publisher,
         IContactCenterScopeExecutor scopeExecutor,
         IProviderCommandStateService providerCommandStateService,
-        ISession session,
-        IClock clock,
         ILogger<DialerAttemptService> logger)
     {
         _eligibilityService = eligibilityService;
@@ -72,8 +62,6 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _publisher = publisher;
         _scopeExecutor = scopeExecutor;
         _providerCommandStateService = providerCommandStateService;
-        _session = session;
-        _clock = clock;
         _logger = logger;
     }
 
@@ -141,7 +129,18 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         try
         {
+            activity.Attempts++;
+            await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+            await _publisher.PublishAsync(new InteractionEvent
+            {
+                EventType = ContactCenterConstants.Events.DialerAttemptStarted,
+                InteractionId = interaction.ItemId,
+                AggregateType = nameof(DialerProfile),
+                AggregateId = profile.ItemId,
+                SourceComponent = ContactCenterConstants.Components.Dialer,
+                IdempotencyKey = $"dialer-attempt:{interaction.ItemId}",
+            }, cancellationToken);
             await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
             {
                 CommandId = interaction.ItemId,
@@ -162,212 +161,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
             throw;
         }
 
-        var claim = await _providerCommandStateService.TryClaimAsync(
-            interaction.ItemId,
-            _providerCommandLease,
-            cancellationToken);
+        _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+            processor.DispatchAsync(interaction.ItemId, CancellationToken.None));
 
-        if (claim is null)
-        {
-            return true;
-        }
-
-        request.Metadata[ContactCenterConstants.CommandMetadata.FenceToken] =
-            claim.FenceToken.ToString(CultureInfo.InvariantCulture);
-        request.Metadata[TelephonyConstants.RequestMetadata.FenceToken] =
-            claim.FenceToken.ToString(CultureInfo.InvariantCulture);
-        try
-        {
-            await _providerCommandStateService.MarkSentAsync(
-                interaction.ItemId,
-                claim,
-                cancellationToken: cancellationToken);
-        }
-        catch (ConcurrencyException)
-        {
-            return true;
-        }
-        catch (ProviderCommandTransitionException)
-        {
-            return true;
-        }
-        ContactCenterVoiceProviderResult result;
-
-        try
-        {
-            result = await _voiceCallRouter.RouteOutboundAsync(request, profile.ProviderName, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
-                "The Voice Contact Center Call Router failed while dialing activity '{ActivityItemId}' for profile '{Profile}'.",
-                OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
-                profile.Name);
-
-            result = new ContactCenterVoiceProviderResult
-            {
-                Succeeded = false,
-                OutcomeUnknown = true,
-                ErrorCode = "provider_exception",
-                ErrorMessage = ex.Message,
-            };
-        }
-
-        if (result.Succeeded && string.IsNullOrEmpty(result.ProviderCallId))
-        {
-            result = new ContactCenterVoiceProviderResult
-            {
-                Succeeded = false,
-                OutcomeUnknown = true,
-                ErrorCode = "missing_provider_call_id",
-                ErrorMessage = "The Contact Center voice provider did not confirm the call identifier.",
-            };
-        }
-
-        activity.Attempts++;
-        var settlementToken = cancellationToken.IsCancellationRequested
-            ? CancellationToken.None
-            : cancellationToken;
-
-        if (result.Succeeded)
-        {
-            try
-            {
-                await _providerCommandStateService.StageConfirmSentAsync(
-                    interaction.ItemId,
-                    claim,
-                    result.ProviderCallId,
-                    settlementToken);
-            }
-            catch (ProviderCommandFenceException ex)
-            {
-                _logger.LogWarning(
-                    "Ignored a stale provider success for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls settlement.",
-                    interaction.ItemId,
-                    ex.ProvidedFenceToken);
-
-                return true;
-            }
-            catch (ConcurrencyException)
-            {
-                return true;
-            }
-            catch (ProviderCommandTransitionException)
-            {
-                return true;
-            }
-
-            activity.Status = ActivityStatus.Dialing;
-            await _activityManager.UpdateAsync(activity, cancellationToken: settlementToken);
-
-            interaction.Status = InteractionStatus.Ringing;
-            interaction.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
-                ? interaction.ProviderName
-                : result.ProviderName;
-            interaction.ProviderInteractionId = result.ProviderCallId;
-            interaction.StartedUtc = _clock.UtcNow;
-            await _interactionManager.UpdateAsync(interaction, cancellationToken: settlementToken);
-            await _session.SaveChangesAsync(settlementToken);
-        }
-        else if (result.OutcomeUnknown)
-        {
-            try
-            {
-                await _providerCommandStateService.StageOutcomeUnknownAsync(
-                    interaction.ItemId,
-                    claim,
-                    result.ErrorMessage,
-                    settlementToken);
-            }
-            catch (ProviderCommandFenceException ex)
-            {
-                _logger.LogWarning(
-                    "Ignored a stale unknown outcome for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls reconciliation.",
-                    interaction.ItemId,
-                    ex.ProvidedFenceToken);
-
-                return true;
-            }
-            catch (ConcurrencyException)
-            {
-                return true;
-            }
-            catch (ProviderCommandTransitionException)
-            {
-                return true;
-            }
-
-            activity.Status = ActivityStatus.Dialing;
-            await _activityManager.UpdateAsync(activity, cancellationToken: settlementToken);
-
-            interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
-            await _interactionManager.UpdateAsync(interaction, cancellationToken: settlementToken);
-            await _session.SaveChangesAsync(settlementToken);
-        }
-        else
-        {
-            try
-            {
-                await _providerCommandStateService.BeginCompensationAsync(
-                    interaction.ItemId,
-                    claim,
-                    result.ErrorMessage,
-                    settlementToken);
-            }
-            catch (ProviderCommandFenceException ex)
-            {
-                _logger.LogWarning(
-                    "Ignored a stale provider failure for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls settlement.",
-                    interaction.ItemId,
-                    ex.ProvidedFenceToken);
-
-                return true;
-            }
-            catch (ConcurrencyException)
-            {
-                return true;
-            }
-            catch (ProviderCommandTransitionException)
-            {
-                return true;
-            }
-
-            var compensationClaim = await _providerCommandStateService.TryClaimCompensationAsync(
-                interaction.ItemId,
-                _providerCommandLease,
-                settlementToken);
-
-            if (compensationClaim is null)
-            {
-                return true;
-            }
-
-            activity.Status = ActivityStatus.Failed;
-            await _activityManager.UpdateAsync(activity, cancellationToken: settlementToken);
-
-            interaction.Status = InteractionStatus.Failed;
-            interaction.EndedUtc = _clock.UtcNow;
-            interaction.TechnicalMetadata["providerErrorCode"] = result.ErrorCode;
-            await _interactionManager.UpdateAsync(interaction, cancellationToken: settlementToken);
-
-            await _compensationService.CompensateAsync(acceptedReservation, removeFromQueue: true, settlementToken);
-            await _providerCommandStateService.CompleteCompensationAsync(
-                interaction.ItemId,
-                compensationClaim,
-                settlementToken);
-        }
-
-        await _publisher.PublishAsync(new InteractionEvent
-        {
-            EventType = ContactCenterConstants.Events.DialerAttemptStarted,
-            InteractionId = interaction.ItemId,
-            AggregateType = nameof(DialerProfile),
-            AggregateId = profile.ItemId,
-            SourceComponent = ContactCenterConstants.Components.Dialer,
-        }, cancellationToken);
-
-        return result.Succeeded;
+        return true;
     }
 
     private async Task SuppressAsync(

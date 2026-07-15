@@ -56,4 +56,22 @@ public interface IContactCenterOutbox
         InteractionEvent interactionEvent,
         string handlerId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Settles a claimed message in a fresh scope after handler execution, rejecting stale owners by fence.
+    /// </summary>
+    /// <param name="messageId">The durable outbox message identifier.</param>
+    /// <param name="ownerToken">The owner token captured when the message was claimed.</param>
+    /// <param name="fenceToken">The fence token captured when the message was claimed.</param>
+    /// <param name="completedHandlerIds">The stable identifiers of handlers that completed.</param>
+    /// <param name="error">The first handler error, or <see langword="null"/> when all handlers completed.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the message completed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SettleClaimAsync(
+        string messageId,
+        string ownerToken,
+        long fenceToken,
+        IReadOnlyCollection<string> completedHandlerIds,
+        string error,
+        CancellationToken cancellationToken = default);
 }

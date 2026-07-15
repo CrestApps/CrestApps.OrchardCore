@@ -3,8 +3,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -26,10 +24,10 @@ public sealed class ProviderCommandProcessorTests
             .Setup(service => service.MarkSentAsync("command-1", It.IsAny<ProviderCommandClaim>(), null, It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("sent"))
             .ReturnsAsync(harness.Command);
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("route"))
             .ReturnsAsync(Success());
@@ -45,14 +43,12 @@ public sealed class ProviderCommandProcessorTests
     public async Task DispatchAsync_WhenProviderSucceeds_ConfirmsAndProjectsRingingState()
     {
         // Arrange
-        ContactCenterDialRequest request = null;
         var harness = CreateHarness();
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<ContactCenterDialRequest, string, CancellationToken>((value, _, _) => request = value)
             .ReturnsAsync(Success("call-1"));
 
         // Act
@@ -65,11 +61,6 @@ public sealed class ProviderCommandProcessorTests
         Assert.Equal("provider", harness.Interaction.ProviderName);
         Assert.Equal(_now, harness.Interaction.StartedUtc);
         Assert.Equal(ActivityStatus.Dialing, harness.Activity.Status);
-        Assert.Equal("command-1", request.CommandId);
-        Assert.Equal("command-1", request.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
-        Assert.Equal("command-1", request.Metadata[TelephonyConstants.RequestMetadata.IdempotencyKey]);
-        Assert.Equal("1", request.Metadata[ContactCenterConstants.CommandMetadata.FenceToken]);
-        Assert.Equal("1", request.Metadata[TelephonyConstants.RequestMetadata.FenceToken]);
     }
 
     [Fact]
@@ -78,20 +69,13 @@ public sealed class ProviderCommandProcessorTests
         // Arrange
         var order = new List<string>();
         var harness = CreateHarness();
-        harness.InteractionManager
-            .Setup(manager => manager.UpdateAsync(
-                It.IsAny<Interaction>(),
-                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+        harness.Executor
+            .Setup(exec => exec.ProjectSuccessAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ContactCenterVoiceProviderResult>(),
                 It.IsAny<CancellationToken>()))
-            .Callback(() => order.Add("interaction"))
-            .Returns(ValueTask.CompletedTask);
-        harness.ActivityManager
-            .Setup(manager => manager.UpdateAsync(
-                It.IsAny<OmnichannelActivity>(),
-                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
-                It.IsAny<CancellationToken>()))
-            .Callback(() => order.Add("activity"))
-            .Returns(ValueTask.CompletedTask);
+            .Callback(() => order.Add("project"))
+            .Returns(Task.CompletedTask);
         harness.StateService
             .Setup(service => service.StageConfirmSentAsync(
                 "command-1",
@@ -104,10 +88,10 @@ public sealed class ProviderCommandProcessorTests
             .Setup(session => session.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("commit"))
             .Returns(Task.CompletedTask);
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Success("call-1"));
 
@@ -115,7 +99,7 @@ public sealed class ProviderCommandProcessorTests
         await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(["confirm", "interaction", "activity", "commit"], order);
+        Assert.Equal(["confirm", "project", "commit"], order);
         harness.Session.Verify(
             session => session.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -137,11 +121,12 @@ public sealed class ProviderCommandProcessorTests
                 harness.Command.CommandId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(harness.Command)
+            .ReturnsAsync(authoritative)
             .ReturnsAsync(authoritative);
-        harness.Router
-            .Setup(value => value.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                harness.Command.ProviderName,
+        harness.Executor
+            .Setup(value => value.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Success());
         harness.StateService
@@ -159,12 +144,12 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Same(authoritative, result);
-        Assert.DoesNotContain(
-            harness.InteractionManager.Invocations,
-            invocation => invocation.Method.Name == nameof(IInteractionManager.UpdateAsync));
-        Assert.DoesNotContain(
-            harness.ActivityManager.Invocations,
-            invocation => invocation.Method.Name == nameof(IOmnichannelActivityManager.UpdateAsync));
+        harness.Executor.Verify(
+            exec => exec.ProjectSuccessAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ContactCenterVoiceProviderResult>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -191,12 +176,17 @@ public sealed class ProviderCommandProcessorTests
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
-        Assert.DoesNotContain(
-            harness.InteractionManager.Invocations,
-            invocation => invocation.Method.Name == nameof(IInteractionManager.UpdateAsync));
-        Assert.DoesNotContain(
-            harness.ActivityManager.Invocations,
-            invocation => invocation.Method.Name == nameof(IOmnichannelActivityManager.UpdateAsync));
+        harness.Executor.Verify(
+            exec => exec.ProjectFailureAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.Executor.Verify(
+            exec => exec.ProjectSuccessAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ContactCenterVoiceProviderResult>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -219,20 +209,19 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Same(harness.Command, command);
-        harness.Router.Verify(
-            value => value.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenRequestPayloadIsMissing_CompensatesWithoutCallingProvider()
+    public async Task DispatchAsync_WhenExecutorDeclinesDispatch_CompensatesWithoutCallingProvider()
     {
         // Arrange
-        var harness = CreateHarness();
-        harness.Command.RequestPayload = null;
+        var harness = CreateHarness(canDispatch: false);
 
         // Act
         var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
@@ -242,10 +231,10 @@ public sealed class ProviderCommandProcessorTests
         harness.ReservationService.Verify(
             service => service.CompensateAsync("reservation-1", true, It.IsAny<CancellationToken>()),
             Times.Once);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -255,10 +244,10 @@ public sealed class ProviderCommandProcessorTests
     {
         // Arrange
         var harness = CreateHarness();
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Failure());
 
@@ -279,10 +268,10 @@ public sealed class ProviderCommandProcessorTests
     {
         // Arrange
         var harness = CreateHarness();
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ContactCenterVoiceProviderResult { OutcomeUnknown = true });
 
@@ -292,10 +281,10 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Equal(ProviderCommandStatus.Paused, harness.Command.Status);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         harness.ReservationService.Verify(
@@ -317,10 +306,10 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Equal(ProviderCommandStatus.Paused, command.Status);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -336,14 +325,31 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Equal(ProviderCommandStatus.Compensated, command.Status);
-        harness.Router.Verify(
-            value => value.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
         harness.ReservationService.Verify(
             value => value.CompensateAsync("reservation-1", true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenRemoveReservationFromQueueOnFailureIsFalse_PassesFalseToReservationService()
+    {
+        // Arrange
+        var harness = CreateHarness(canDispatch: false);
+        harness.Command.RemoveReservationFromQueueOnFailure = false;
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Compensated, command.Status);
+        harness.ReservationService.Verify(
+            service => service.CompensateAsync("reservation-1", false, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -392,10 +398,10 @@ public sealed class ProviderCommandProcessorTests
         Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
         Assert.Equal("call-1", harness.Interaction.ProviderInteractionId);
         Assert.Equal(ActivityStatus.Dialing, harness.Activity.Status);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -456,10 +462,10 @@ public sealed class ProviderCommandProcessorTests
         // Assert
         Assert.Equal(1, recovered);
         Assert.Equal(ProviderCommandStatus.Confirmed, harness.Command.Status);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                It.IsAny<string>(),
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -520,28 +526,21 @@ public sealed class ProviderCommandProcessorTests
                 It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("unknown"))
             .ReturnsAsync(harness.Command);
-        harness.InteractionManager
-            .Setup(value => value.UpdateAsync(
-                It.IsAny<Interaction>(),
-                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+        harness.Executor
+            .Setup(exec => exec.ProjectOutcomeUnknownAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .Callback(() => order.Add("interaction"))
-            .Returns(ValueTask.CompletedTask);
-        harness.ActivityManager
-            .Setup(value => value.UpdateAsync(
-                It.IsAny<OmnichannelActivity>(),
-                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
-                It.IsAny<CancellationToken>()))
-            .Callback(() => order.Add("activity"))
-            .Returns(ValueTask.CompletedTask);
+            .Callback(() => order.Add("project"))
+            .Returns(Task.CompletedTask);
         harness.Session
             .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("commit"))
             .Returns(Task.CompletedTask);
-        harness.Router
-            .Setup(value => value.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ContactCenterVoiceProviderResult
             {
@@ -553,7 +552,7 @@ public sealed class ProviderCommandProcessorTests
         await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(["unknown", "interaction", "activity", "commit"], order);
+        Assert.Equal(["unknown", "project", "commit"], order);
         harness.Session.Verify(
             value => value.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -570,10 +569,10 @@ public sealed class ProviderCommandProcessorTests
         harness.Manager
             .Setup(manager => manager.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([harness.Command]);
-        harness.Router
-            .Setup(router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Success());
 
@@ -582,22 +581,72 @@ public sealed class ProviderCommandProcessorTests
 
         // Assert
         Assert.Equal(1, recovered);
-        harness.Router.Verify(
-            router => router.RouteOutboundAsync(
-                It.IsAny<ContactCenterDialRequest>(),
-                "provider",
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenNoExecutorRegisteredForCommandType_CompensatesWithoutCallingProvider()
+    {
+        // Arrange
+        var harness = CreateHarness(executorsOverride: []);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Compensated, command.Status);
+        harness.ReservationService.Verify(
+            service => service.CompensateAsync("reservation-1", true, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenDuplicateExecutorsRegisteredForCommandType_CompensatesWithoutCallingProvider()
+    {
+        // Arrange
+        var duplicate1 = new Mock<IProviderCommandTypeExecutor>();
+        duplicate1.SetupGet(exec => exec.CommandType).Returns(ProviderCommandType.Dial);
+        var duplicate2 = new Mock<IProviderCommandTypeExecutor>();
+        duplicate2.SetupGet(exec => exec.CommandType).Returns(ProviderCommandType.Dial);
+        var harness = CreateHarness(executorsOverride: [duplicate1.Object, duplicate2.Object]);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Compensated, command.Status);
+        harness.ReservationService.Verify(
+            service => service.CompensateAsync("reservation-1", true, It.IsAny<CancellationToken>()),
+            Times.Once);
+        duplicate1.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        duplicate2.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static TestHarness CreateHarness(
         ProviderCommandStatus status = ProviderCommandStatus.Pending,
         bool supportsReconciliation = false,
-        bool canDispatch = true)
+        bool canDispatch = true,
+        IList<IProviderCommandTypeExecutor> executorsOverride = null)
     {
         var command = new ProviderCommand
         {
             CommandId = "command-1",
+            CommandType = ProviderCommandType.Dial,
             ProviderName = "provider",
             Status = status,
             RequestPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","Destination":"+15551112222"}""",
@@ -696,15 +745,7 @@ public sealed class ProviderCommandProcessorTests
             .ReturnsAsync(command);
         var reservationService = new Mock<IActivityReservationService>();
         var interaction = new Interaction { ItemId = command.InteractionId };
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager
-            .Setup(value => value.FindByIdAsync(command.InteractionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(interaction);
         var activity = new OmnichannelActivity { ItemId = command.ActivityItemId };
-        var activityManager = new Mock<IOmnichannelActivityManager>();
-        activityManager
-            .Setup(value => value.FindByIdAsync(command.ActivityItemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(activity);
         var provider = new Mock<IContactCenterVoiceProvider>();
 
         if (supportsReconciliation)
@@ -714,11 +755,41 @@ public sealed class ProviderCommandProcessorTests
 
         var providerResolver = new Mock<IContactCenterVoiceProviderResolver>();
         providerResolver.Setup(value => value.Get("provider")).Returns(provider.Object);
-        var dispatchValidator = new Mock<IProviderCommandDispatchValidator>();
-        dispatchValidator
-            .Setup(value => value.CanDispatchAsync(command, It.IsAny<CancellationToken>()))
+        var executor = new Mock<IProviderCommandTypeExecutor>();
+        executor.SetupGet(exec => exec.CommandType).Returns(ProviderCommandType.Dial);
+        executor
+            .Setup(exec => exec.CanDispatchAsync(It.IsAny<ProviderCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(canDispatch);
-        var router = new Mock<IVoiceContactCenterCallRouter>();
+        executor
+            .Setup(exec => exec.ProjectSuccessAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ContactCenterVoiceProviderResult>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommand, ContactCenterVoiceProviderResult, CancellationToken>((cmd, res, _) =>
+            {
+                interaction.Status = InteractionStatus.Ringing;
+                interaction.ProviderName = string.IsNullOrWhiteSpace(res.ProviderName) ? cmd.ProviderName : res.ProviderName;
+                interaction.ProviderInteractionId = res.ProviderCallId;
+                interaction.StartedUtc = _now;
+                activity.Status = ActivityStatus.Dialing;
+            })
+            .Returns(Task.CompletedTask);
+        executor
+            .Setup(exec => exec.ProjectFailureAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                interaction.Status = InteractionStatus.Failed;
+                activity.Status = ActivityStatus.Failed;
+            })
+            .Returns(Task.CompletedTask);
+        executor
+            .Setup(exec => exec.ProjectOutcomeUnknownAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         var session = new Mock<ISession>();
         session
             .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -726,15 +797,13 @@ public sealed class ProviderCommandProcessorTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        var actualExecutors = executorsOverride ?? [executor.Object];
         var processor = new ProviderCommandProcessor(
             manager.Object,
             stateService.Object,
             reservationService.Object,
-            interactionManager.Object,
-            activityManager.Object,
-            router.Object,
             providerResolver.Object,
-            [dispatchValidator.Object],
+            actualExecutors,
             scopeExecutor.Object,
             session.Object,
             clock.Object,
@@ -756,11 +825,9 @@ public sealed class ProviderCommandProcessorTests
             stateService,
             reservationService,
             interaction,
-            interactionManager,
             activity,
-            activityManager,
             provider,
-            router,
+            executor,
             session,
             processor);
     }
@@ -790,11 +857,9 @@ public sealed class ProviderCommandProcessorTests
         Mock<IProviderCommandStateService> StateService,
         Mock<IActivityReservationService> ReservationService,
         Interaction Interaction,
-        Mock<IInteractionManager> InteractionManager,
         OmnichannelActivity Activity,
-        Mock<IOmnichannelActivityManager> ActivityManager,
         Mock<IContactCenterVoiceProvider> Provider,
-        Mock<IVoiceContactCenterCallRouter> Router,
+        Mock<IProviderCommandTypeExecutor> Executor,
         Mock<ISession> Session,
         ProviderCommandProcessor Processor);
 }

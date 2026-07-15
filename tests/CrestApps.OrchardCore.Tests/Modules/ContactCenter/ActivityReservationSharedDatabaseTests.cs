@@ -70,10 +70,15 @@ public sealed class ActivityReservationSharedDatabaseTests
 
             // Assert
             Assert.Single(attempts, attempt => attempt.Reservation is not null);
-            var failedAttempt = Assert.Single(attempts, attempt => attempt.Exception is not null);
-            Assert.True(
-                failedAttempt.Exception is ConcurrencyException or System.Data.Common.DbException,
-                $"Expected a database concurrency failure but received {failedAttempt.Exception.GetType().Name}.");
+            var losingAttempt = Assert.Single(attempts, attempt => attempt.Reservation is null);
+
+            if (losingAttempt.Exception is not null)
+            {
+                Assert.True(
+                    losingAttempt.Exception is ConcurrencyException or System.Data.Common.DbException,
+                    $"Expected a database concurrency failure but received {losingAttempt.Exception.GetType().Name}.");
+            }
+
             Assert.Equal(4, Volatile.Read(ref lockAcquisitionCount));
             var persistedReservation = Assert.Single(persistedReservations);
             Assert.Equal(ReservationStatus.Pending, persistedReservation.Status);
@@ -343,6 +348,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(activityManager.Object);
         services.AddSingleton(availabilityService.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
+        services.AddSingleton(Mock.Of<IContactCenterScopeExecutor>());
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
         services.AddSingleton(session);

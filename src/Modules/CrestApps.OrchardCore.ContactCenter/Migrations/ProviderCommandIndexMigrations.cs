@@ -43,7 +43,6 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
         },
             collection: ContactCenterConstants.CollectionName
         );
-
         return 1;
     }
 }

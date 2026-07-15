@@ -34,4 +34,14 @@ public enum ProviderCommandType
     /// A request to resume a held call.
     /// </summary>
     Resume,
+
+    /// <summary>
+    /// A request to reject an unanswered inbound call.
+    /// </summary>
+    Reject,
+
+    /// <summary>
+    /// A request to send an unanswered inbound call to voicemail.
+    /// </summary>
+    SendToVoicemail,
 }

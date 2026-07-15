@@ -290,7 +290,7 @@ When a provider implements `ITelephonyCallStateProvider`, Contact Center can act
 That lookup is used for:
 
 1. **pre-accept validation** so an ended call cannot still be accepted
-2. **tenant-startup reconciliation** after a restart
+2. **scheduled fresh-scope reconciliation** after a restart
 3. **periodic safety reconciliation** in case a live event was missed or delayed
 
 ### Ended-offer reconciliation
@@ -330,9 +330,9 @@ The durable truth is:
 
 The current design assumes that a short restart can happen during active traffic and must not permanently desynchronize routing.
 
-### Tenant activation reconciliation
+### Fresh-scope restart reconciliation
 
-When the tenant activates, `ContactCenterVoiceTenantEvents` immediately runs a reconciliation pass across active provider-backed interactions.
+Tenant activation performs no provider or database reconciliation inline with Orchard's shell construction. The feature registers `ProviderCallStateReconciliationBackgroundTask`, which runs the reconciliation contract in a normal fresh tenant scope within the next minute; provider listeners such as Asterisk also trigger an immediate provider-scoped pass after they reconnect.
 
 For each active interaction, Contact Center:
 
@@ -345,7 +345,7 @@ If the provider says the call no longer exists, Contact Center treats it as term
 
 ### Periodic reconciliation
 
-`ProviderCallStateReconciliationBackgroundTask` runs every minute as a safety net.
+`ProviderCallStateReconciliationBackgroundTask` runs every minute as the restart and missed-event safety net.
 
 This catches cases where:
 

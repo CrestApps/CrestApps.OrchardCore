@@ -56,6 +56,44 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task HandleAsync_AgentEntitlementsChanged_RevokesQueueMembership()
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+            });
+        var notifier = new Mock<IContactCenterRealTimeNotifier>();
+        var handler = CreateHandler(notifier, agentManager: agentManager);
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.AgentEntitlementsChanged,
+            AggregateId = "a1",
+            OccurredUtc = _now,
+        };
+
+        interactionEvent.SetData(new AgentEntitlementsChangedEventData
+        {
+            RemovedQueueIds = ["q2"],
+        });
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        notifier.Verify(
+            candidate => candidate.NotifyAgentMembershipChangedAsync(
+                "u1",
+                It.Is<IEnumerable<string>>(queueIds => queueIds.SequenceEqual(new[] { "q2" })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Theory]
     [InlineData(ActivitySources.PowerDial, true)]
     [InlineData(ActivitySources.Inbound, false)]

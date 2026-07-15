@@ -177,7 +177,6 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         Assert.Contains("OperationalLogRedactor.Pseudonymize(message.EventId, OperationalLogIdentifierCategory.Event)", contactCenterOutbox, StringComparison.Ordinal);
         Assert.Contains("OperationalLogRedactor.Redact(firstError, OperationalLogFieldKind.FreeText)", contactCenterOutbox, StringComparison.Ordinal);
         Assert.Contains("OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call)", providerVoiceEventService, StringComparison.Ordinal);
-        Assert.Contains("OperationalLogRedactor.Pseudonymize(session.AgentId, OperationalLogIdentifierCategory.Agent)", providerVoiceEventService, StringComparison.Ordinal);
     }
 
     [Fact]

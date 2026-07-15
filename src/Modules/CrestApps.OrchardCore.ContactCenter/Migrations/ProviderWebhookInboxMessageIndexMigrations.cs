@@ -64,7 +64,6 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             "UQ_ProviderWebhookInboxMessageIndex_Delivery",
             "ProviderName",
             "DeliveryId");
-
         return 2;
     }
 

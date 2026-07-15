@@ -79,7 +79,7 @@
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
       "drain": "Idle contract requires no inbox batch to be claimed or running.",
-      "reEnable": "The fresh shell resolves exactly one task and provider reconciliation re-evaluates durable state.",
+      "reEnable": "The fresh shell resolves exactly one task; its next fresh-scope pass re-evaluates durable state without blocking feature activation.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "deferred-r3"
     },
@@ -89,7 +89,7 @@
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
       "drain": "Idle contract requires no reconciliation pass to be running.",
-      "reEnable": "The fresh shell performs immediate reconciliation and resolves exactly one scheduled task.",
+      "reEnable": "The fresh shell resolves exactly one scheduled task, which performs restart reconciliation in a normal fresh scope within the next minute; provider reconnects may trigger an earlier provider-scoped pass.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "deferred-r3"
     },
@@ -99,7 +99,7 @@
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
       "drain": "Idle contract requires no provider-command recovery pass to be running.",
-      "reEnable": "The fresh shell resolves exactly one new task registration and re-evaluates due provider commands.",
+      "reEnable": "The fresh shell resolves exactly one new task registration; its next fresh-scope pass re-evaluates due provider commands.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "deferred-r3"
     },

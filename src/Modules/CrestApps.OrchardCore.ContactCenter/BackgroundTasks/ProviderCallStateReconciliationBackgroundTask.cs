@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,12 +21,12 @@ public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundT
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var synchronizationService = serviceProvider.GetRequiredService<IProviderCallStateSynchronizationService>();
+        var coordinator = serviceProvider.GetRequiredService<ContactCenterFeatureLifecycleCoordinator>();
         var logger = serviceProvider.GetRequiredService<ILogger<ProviderCallStateReconciliationBackgroundTask>>();
 
         try
         {
-            await synchronizationService.ReconcileActiveInteractionsAsync(cancellationToken);
+            await coordinator.ReconcileAsync(ContactCenterConstants.Feature.Voice, cancellationToken);
         }
         catch (Exception ex)
         {

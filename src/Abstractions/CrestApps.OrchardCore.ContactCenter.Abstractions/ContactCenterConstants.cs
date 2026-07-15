@@ -395,6 +395,11 @@ public static class ContactCenterConstants
         public const string OfferDeclined = "OfferDeclined";
 
         /// <summary>
+        /// Raised when a failed delivery attempt returns offered work to inbound routing.
+        /// </summary>
+        public const string OfferRequeued = "OfferRequeued";
+
+        /// <summary>
         /// Raised when call recording starts.
         /// </summary>
         public const string RecordingStarted = "RecordingStarted";

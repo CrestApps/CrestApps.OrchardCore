@@ -72,6 +72,13 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     cancellationToken);
                 break;
 
+            case ContactCenterConstants.Events.AgentEntitlementsChanged:
+                await BroadcastMembershipChangedAsync(
+                    interactionEvent,
+                    context.AgentManager,
+                    cancellationToken);
+                break;
+
             case ContactCenterConstants.Events.AgentReserved:
                 await BroadcastOfferReceivedAsync(
                     interactionEvent,
@@ -110,6 +117,30 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     cancellationToken);
                 break;
         }
+    }
+
+    private async Task BroadcastMembershipChangedAsync(
+        InteractionEvent interactionEvent,
+        IAgentProfileManager agentManager,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(interactionEvent.AggregateId))
+        {
+            return;
+        }
+
+        var profile = await agentManager.FindByIdAsync(interactionEvent.AggregateId, cancellationToken);
+        var change = interactionEvent.GetData<AgentEntitlementsChangedEventData>();
+
+        if (profile is null || change is null)
+        {
+            return;
+        }
+
+        await _notifier.NotifyAgentMembershipChangedAsync(
+            profile.UserId,
+            change.RemovedQueueIds,
+            cancellationToken);
     }
 
     private async Task BroadcastPresenceAsync(

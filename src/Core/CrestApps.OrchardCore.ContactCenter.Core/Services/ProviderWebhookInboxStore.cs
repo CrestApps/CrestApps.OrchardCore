@@ -10,6 +10,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>, IProviderWebhookInboxStore
 {
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderWebhookInboxStore"/> class.
     /// </summary>
@@ -43,7 +46,8 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     {
         var take = maxCount <= 0 ? ProviderWebhookInbox.MaxBatchSize : maxCount;
         var messages = await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
-            index => index.Status == ProviderWebhookInboxStatus.Pending && index.NextAttemptUtc <= nowUtc,
+            index => (index.Status == ProviderWebhookInboxStatus.Pending || index.Status == ProviderWebhookInboxStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
             collection: ContactCenterConstants.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)

@@ -11,6 +11,16 @@ public enum OutboxMessageStatus
     Pending,
 
     /// <summary>
+    /// The message is owned by a worker under a durable, expiring claim.
+    /// </summary>
+    Claimed,
+
+    /// <summary>
+    /// Every registered handler completed and the message is safe to remove.
+    /// </summary>
+    Completed,
+
+    /// <summary>
     /// The message exhausted its retry budget and was set aside for manual inspection.
     /// </summary>
     DeadLettered,

@@ -38,6 +38,14 @@ public sealed class ProviderCommandRegistration
     public string ReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the reservation associated with this command should be removed
+    /// from the queue when the command reaches a failure outcome. Defaults to <see langword="true"/> for
+    /// backward-compatible Dial commands. Set to <see langword="false"/> for commands such as Answer where the
+    /// reservation must remain in the queue so another agent can attempt the call.
+    /// </summary>
+    public bool RemoveReservationFromQueueOnFailure { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the dialer profile whose current compliance policy must be revalidated before recovery
     /// dispatches a pending command.
     /// </summary>

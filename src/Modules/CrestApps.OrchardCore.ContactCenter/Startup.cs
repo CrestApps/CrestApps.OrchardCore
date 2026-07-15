@@ -74,8 +74,7 @@ public sealed class Startup : StartupBase
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
         services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
-            .AddScoped<IFeatureEventHandler, ContactCenterFeatureDisablingHandler>()
-            .AddScoped<IModularTenantEvents, ContactCenterFeatureTenantEvents>()
+            .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
@@ -494,6 +493,10 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()
             .AddScoped<IProviderCommandManager, ProviderCommandManager>()
             .AddScoped<IProviderCommandStateService, ProviderCommandStateService>()
+            .AddScoped<IProviderCommandTypeExecutor, DialProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, AnswerProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, RejectProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, SendToVoicemailProviderCommandTypeExecutor>()
             .AddScoped<IProviderCommandProcessor, ProviderCommandProcessor>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
@@ -508,6 +511,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
+            .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())

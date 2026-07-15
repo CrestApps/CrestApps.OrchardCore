@@ -10,6 +10,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>, IContactCenterOutboxStore
 {
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOutboxStore"/> class.
     /// </summary>
@@ -37,7 +40,8 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
         var take = maxCount <= 0 ? 100 : maxCount;
 
         var due = await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
-            index => index.Status == OutboxMessageStatus.Pending && index.NextAttemptUtc <= nowUtc,
+            index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
             collection: ContactCenterConstants.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)

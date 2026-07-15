@@ -36,6 +36,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private static readonly TimeSpan _acceptanceLockExpiration = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _dispatchLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _dispatchLockExpiration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan _claimLease = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _missingHandlerDelay = TimeSpan.FromMinutes(5);
 
     private const int BaseBackoffSeconds = 15;
@@ -206,16 +207,37 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         await using var acquiredLock = locker;
         var message = await _store.FindByIdAsync(messageId, cancellationToken);
 
-        if (message is null || message.Status != ProviderWebhookInboxStatus.Pending)
+        if (message is null)
         {
             return false;
         }
+
+        var now = _clock.UtcNow;
+
+        if ((message.Status != ProviderWebhookInboxStatus.Pending &&
+                message.Status != ProviderWebhookInboxStatus.Claimed) ||
+            message.NextAttemptUtc > now)
+        {
+            return false;
+        }
+
+        message.Status = ProviderWebhookInboxStatus.Claimed;
+        message.OwnerToken = Guid.NewGuid().ToString("N");
+        message.FenceToken++;
+        message.NextAttemptUtc = now.Add(_claimLease);
+        message.ModifiedUtc = now;
+        await _store.UpdateAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+        var ownerToken = message.OwnerToken;
+        var fenceToken = message.FenceToken;
 
         var handler = _handlers.FirstOrDefault(candidate =>
             string.Equals(candidate.TechnicalName, message.HandlerName, StringComparison.Ordinal));
 
         if (handler is null)
         {
+            message.Status = ProviderWebhookInboxStatus.Pending;
+            message.OwnerToken = null;
             message.LastError = "HandlerUnavailable";
             message.NextAttemptUtc = _clock.UtcNow.Add(_missingHandlerDelay);
             message.ModifiedUtc = _clock.UtcNow;
@@ -232,11 +254,16 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         try
         {
-            await handler.HandleAsync(message.Payload, cancellationToken);
-            await _store.DeleteAsync(message, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+            await _scopeExecutor.ExecuteAsync<IProviderWebhookInbox>(inbox =>
+                inbox.DispatchHandlerAsync(message.HandlerName, message.Payload, cancellationToken));
 
-            return true;
+            return await SettleInFreshScopeAsync(
+                message.ItemId,
+                ownerToken,
+                fenceToken,
+                true,
+                null,
+                cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -246,13 +273,19 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         {
             // Another worker committed a conflicting change to an aggregate this delivery touched (for
             // example a concurrent provider event for the same call). The YesSql session is now canceled and
-            // must never be reused, so do not schedule a retry here. The message remains Pending and is
-            // reloaded and reprocessed in a fresh scope by the next dispatch pass.
+            // must never be reused, so do not schedule a retry here. The durable claim expires and the message
+            // is reclaimed in a fresh scope by the next eligible dispatch pass.
             throw;
         }
         catch (Exception exception)
         {
-            await ScheduleRetryAsync(message, exception.GetType(), cancellationToken);
+            await SettleInFreshScopeAsync(
+                message.ItemId,
+                ownerToken,
+                fenceToken,
+                false,
+                exception.GetType().FullName,
+                cancellationToken);
 
             _logger.LogError(
                 OperationalLogRedactor.RedactException(exception),
@@ -262,6 +295,68 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
             return false;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task DispatchHandlerAsync(
+        string handlerName,
+        string payload,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(handlerName);
+        ArgumentException.ThrowIfNullOrEmpty(payload);
+
+        var handler = _handlers.FirstOrDefault(candidate =>
+            string.Equals(candidate.TechnicalName, handlerName, StringComparison.Ordinal));
+
+        if (handler is null)
+        {
+            throw new InvalidOperationException(
+                $"The provider webhook inbox handler '{handlerName}' is not registered in the isolated dispatch scope.");
+        }
+
+        await handler.HandleAsync(payload, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SettleClaimAsync(
+        string messageId,
+        string ownerToken,
+        long fenceToken,
+        bool succeeded,
+        string errorType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(messageId);
+        ArgumentException.ThrowIfNullOrEmpty(ownerToken);
+
+        var message = await _store.FindByIdAsync(messageId, cancellationToken);
+
+        if (message is null ||
+            message.Status != ProviderWebhookInboxStatus.Claimed ||
+            !string.Equals(message.OwnerToken, ownerToken, StringComparison.Ordinal) ||
+            message.FenceToken != fenceToken)
+        {
+            throw new ConcurrencyException(new Document());
+        }
+
+        if (!succeeded)
+        {
+            await ScheduleRetryAsync(message, errorType, cancellationToken);
+
+            return false;
+        }
+
+        message.Status = ProviderWebhookInboxStatus.Completed;
+        message.OwnerToken = null;
+        message.ModifiedUtc = _clock.UtcNow;
+        await _store.UpdateAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        await _store.DeleteAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 
     /// <inheritdoc/>
@@ -313,14 +408,39 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         return completed;
     }
 
+    private async Task<bool> SettleInFreshScopeAsync(
+        string messageId,
+        string ownerToken,
+        long fenceToken,
+        bool succeeded,
+        string errorType,
+        CancellationToken cancellationToken)
+    {
+        var completed = false;
+
+        await _scopeExecutor.ExecuteAsync<IProviderWebhookInbox>(async inbox =>
+        {
+            completed = await inbox.SettleClaimAsync(
+                messageId,
+                ownerToken,
+                fenceToken,
+                succeeded,
+                errorType,
+                cancellationToken);
+        });
+
+        return completed;
+    }
+
     private async Task ScheduleRetryAsync(
         ProviderWebhookInboxMessage message,
-        Type exceptionType,
+        string errorType,
         CancellationToken cancellationToken)
     {
         message.AttemptCount++;
-        message.LastError = exceptionType.FullName;
+        message.LastError = errorType;
         message.ModifiedUtc = _clock.UtcNow;
+        message.OwnerToken = null;
 
         if (message.AttemptCount >= MaxAttempts)
         {
@@ -328,6 +448,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         }
         else
         {
+            message.Status = ProviderWebhookInboxStatus.Pending;
             message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
         }
 

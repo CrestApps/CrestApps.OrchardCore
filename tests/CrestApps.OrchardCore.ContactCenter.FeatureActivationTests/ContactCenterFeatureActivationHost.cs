@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -159,6 +160,11 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.NotNull(services.GetRequiredService<IProviderCommandManager>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandStateService>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandProcessor>());
+            var commandExecutors = services.GetServices<IProviderCommandTypeExecutor>().ToArray();
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Dial);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Answer);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Reject);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.SendToVoicemail);
             Assert.NotNull(services.GetRequiredService<IProviderVoiceEventService>());
             Assert.NotNull(services.GetRequiredService<IProviderWebhookInbox>());
             Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderCommandRecoveryBackgroundTask>());

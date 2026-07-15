@@ -163,7 +163,39 @@ public sealed class ProviderWebhookInboxTests
             Times.Once);
         session.Verify(
             service => service.SaveChangesAsync(TestContext.Current.CancellationToken),
-            Times.Once);
+            Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenPendingRetryIsNotDue_DoesNotClaimOrInvokeHandler()
+    {
+        // Arrange
+        var message = CreateMessage();
+        message.NextAttemptUtc = _now.AddMinutes(1);
+        var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.FindByIdAsync(message.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(message);
+        var session = new Mock<ISession>();
+        var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+        var inbox = CreateInbox(store, session, [handler.Object]);
+
+        // Act
+        var completed = await inbox.DispatchAsync(message.ItemId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(completed);
+        store.Verify(
+            service => service.UpdateAsync(It.IsAny<ProviderWebhookInboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        handler.Verify(
+            service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        session.Verify(
+            service => service.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -197,10 +229,10 @@ public sealed class ProviderWebhookInboxTests
         Assert.Equal(_now.AddSeconds(15), message.NextAttemptUtc);
         store.Verify(
             service => service.UpdateAsync(message, TestContext.Current.CancellationToken),
-            Times.Once);
+            Times.Exactly(2));
         session.Verify(
             service => service.SaveChangesAsync(TestContext.Current.CancellationToken),
-            Times.Once);
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -229,7 +261,7 @@ public sealed class ProviderWebhookInboxTests
         Assert.Equal(ProviderWebhookInboxStatus.Pending, message.Status);
         store.Verify(
             service => service.UpdateAsync(message, TestContext.Current.CancellationToken),
-            Times.Once);
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -299,9 +331,12 @@ public sealed class ProviderWebhookInboxTests
 
         // Assert
         Assert.Equal(0, message.AttemptCount);
-        Assert.Equal(ProviderWebhookInboxStatus.Pending, message.Status);
+        Assert.Equal(ProviderWebhookInboxStatus.Claimed, message.Status);
         store.Verify(
             service => service.UpdateAsync(It.IsAny<ProviderWebhookInboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        handler.Verify(
+            service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -339,14 +374,14 @@ public sealed class ProviderWebhookInboxTests
         // Assert
         Assert.Equal(0, completed);
 
-        // Each message is dispatched through the scope executor, so a failed message never blocks the later
-        // message from being loaded and attempted.
+        // Each message is dispatched through the scope executor, so a failed claim never blocks the later
+        // message from being loaded and independently claimed.
         store.Verify(
             service => service.FindByIdAsync(second.ItemId, It.IsAny<CancellationToken>()),
             Times.Once);
         handler.Verify(
             service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+            Times.Never);
     }
 
     [Fact]

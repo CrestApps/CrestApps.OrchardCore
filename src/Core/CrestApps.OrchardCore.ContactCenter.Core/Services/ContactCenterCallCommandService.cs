@@ -1,11 +1,10 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -25,14 +24,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IDialerAttemptService _dialerAttemptService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
-    private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly ICallSessionManager _callSessionManager;
-    private readonly IInboundVoiceService _inboundVoiceService;
-    private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
-    private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
+    private readonly IProviderCommandStateService _providerCommandStateService;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterCallCommandService"/> class.
@@ -44,15 +40,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="dialerProfileManagers">The optional dialer profile managers.</param>
     /// <param name="dialerAttemptServices">The optional dialer attempt services.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
-    /// <param name="voiceProviderResolver">The voice provider resolver used to connect media.</param>
-    /// <param name="telephonyProviderResolver">The telephony provider resolver used for server-side answer operations.</param>
+    /// <param name="voiceProviderResolver">The voice provider resolver used to determine the delivery model.</param>
     /// <param name="callSessionManager">The call session manager used to project the voice session.</param>
-    /// <param name="inboundVoiceService">The inbound voice service used to re-offer a declined call.</param>
-    /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service.</param>
-    /// <param name="offerSynchronizationService">The offer synchronization service used to release a queued call whose media can no longer be connected because it no longer exists on the provider.</param>
+    /// <param name="providerCommandStateService">The service used to persist server-side answer intent.</param>
+    /// <param name="scopeExecutor">The executor used for post-commit command processing and isolated compensation.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp times.</param>
-    /// <param name="logger">The logger instance.</param>
     public ContactCenterCallCommandService(
         IActivityReservationService reservationService,
         IActivityReservationManager reservationManager,
@@ -62,14 +55,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IEnumerable<IDialerAttemptService> dialerAttemptServices,
         IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        ITelephonyProviderResolver telephonyProviderResolver,
         ICallSessionManager callSessionManager,
-        IInboundVoiceService inboundVoiceService,
-        IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
-        IProviderVoiceOfferSynchronizationService offerSynchronizationService,
+        IProviderCommandStateService providerCommandStateService,
+        IContactCenterScopeExecutor scopeExecutor,
         IContactCenterEventPublisher publisher,
-        IClock clock,
-        ILogger<ContactCenterCallCommandService> logger)
+        IClock clock)
     {
         _reservationService = reservationService;
         _reservationManager = reservationManager;
@@ -79,14 +69,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _dialerAttemptService = dialerAttemptServices.FirstOrDefault();
         _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
-        _telephonyProviderResolver = telephonyProviderResolver;
         _callSessionManager = callSessionManager;
-        _inboundVoiceService = inboundVoiceService;
-        _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
-        _offerSynchronizationService = offerSynchronizationService;
+        _providerCommandStateService = providerCommandStateService;
+        _scopeExecutor = scopeExecutor;
         _publisher = publisher;
         _clock = clock;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -130,8 +117,6 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 : CallCommandResult.Success("The work was accepted.", requiresDeviceAnswer: false);
         }
 
-        interaction = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
-
         if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
         {
             return CallCommandResult.Failure("The offer is no longer available.");
@@ -154,68 +139,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
-        if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd &&
-            provider is not null &&
-            provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.AgentConnect))
-        {
-            var connectResult = await provider.ConnectToAgentAsync(new ContactCenterConnectRequest
-            {
-                ActivityId = reservation.ActivityItemId,
-                InteractionId = interaction.ItemId,
-                ProviderCallId = interaction.ProviderInteractionId,
-                AgentId = reservation.AgentId,
-                AgentUserId = agent?.UserId,
-                QueueId = reservation.QueueId,
-            }, cancellationToken);
-
-            if (!connectResult.Succeeded)
-            {
-                _logger.LogError(
-                    "The Contact Center voice provider '{Provider}' could not connect call '{ProviderCallId}' to agent '{AgentId}': {ErrorCode} {ErrorMessage}.",
-                    provider.TechnicalName,
-                    OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
-                    OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent),
-                    OperationalLogRedactor.Redact(connectResult.ErrorCode, OperationalLogFieldKind.FreeText),
-                    OperationalLogRedactor.Redact(connectResult.ErrorMessage, OperationalLogFieldKind.FreeText));
-
-                await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
-
-                return CallCommandResult.Failure(connectResult.ErrorMessage ?? "The provider could not connect the call to the agent.");
-            }
-        }
-        else if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd)
-        {
-            var telephonyProvider = await _telephonyProviderResolver.GetAsync(interaction.ProviderName);
-
-            if (telephonyProvider is not null)
-            {
-                var answerResult = await telephonyProvider.AnswerAsync(new CallReference
-                {
-                    CallId = interaction.ProviderInteractionId,
-                }, cancellationToken);
-
-                if (!answerResult.Succeeded)
-                {
-                    _logger.LogError(
-                        "The telephony provider '{Provider}' could not answer inbound Contact Center call '{ProviderCallId}' for agent '{AgentId}': {ErrorMessage}.",
-                        interaction.ProviderName,
-                        OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
-                        OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent),
-                        OperationalLogRedactor.Redact(answerResult.Error, OperationalLogFieldKind.FreeText));
-
-                    await HandleMediaConnectFailureAsync(reservation, interaction, cancellationToken);
-
-                    return CallCommandResult.Failure(answerResult.Error ?? "The provider could not answer the call.");
-                }
-            }
-        }
-
         var now = _clock.UtcNow;
 
         interaction.AgentId = reservation.AgentId;
         interaction.QueueId ??= reservation.QueueId;
 
-        if (deliveryModel == VoiceProviderDeliveryModel.AgentDeviceNative && interaction.Status != InteractionStatus.Connected)
+        if (interaction.Status != InteractionStatus.Connected)
         {
             interaction.Status = InteractionStatus.Ringing;
             interaction.StartedUtc ??= now;
@@ -225,6 +154,15 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             interaction.Status = InteractionStatus.Connected;
             interaction.StartedUtc ??= now;
             interaction.AnsweredUtc ??= now;
+        }
+
+        var commandId = deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd
+            ? IdGenerator.GenerateId()
+            : null;
+
+        if (commandId is not null)
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
         }
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
@@ -242,9 +180,46 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         await PublishAsync(ContactCenterConstants.Events.OfferAccepted, interaction.ItemId, reservation.AgentId, cancellationToken);
 
-        if (deliveryModel != VoiceProviderDeliveryModel.AgentDeviceNative)
+        if (interaction.Status == InteractionStatus.Connected)
         {
             await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, reservation.AgentId, cancellationToken);
+        }
+
+        if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd)
+        {
+            try
+            {
+                await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
+                {
+                    CommandId = commandId,
+                    ProviderName = interaction.ProviderName,
+                    CommandType = ProviderCommandType.Answer,
+                    ActivityItemId = reservation.ActivityItemId,
+                    InteractionId = interaction.ItemId,
+                    ReservationId = reservation.ItemId,
+                    RemoveReservationFromQueueOnFailure = false,
+                    RequestPayload = JsonSerializer.Serialize(new ProviderAnswerCommandRequest
+                    {
+                        ActivityId = reservation.ActivityItemId,
+                        InteractionId = interaction.ItemId,
+                        ProviderCallId = interaction.ProviderInteractionId,
+                        AgentId = reservation.AgentId,
+                        AgentUserId = agent?.UserId,
+                        QueueId = reservation.QueueId,
+                        ReofferOnFailure = true,
+                    }),
+                }, cancellationToken);
+            }
+            catch
+            {
+                await _scopeExecutor.ExecuteAsync<IActivityReservationService>(service =>
+                    service.CompensateAsync(reservation.ItemId, false, CancellationToken.None));
+
+                throw;
+            }
+
+            _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+                processor.DispatchAsync(commandId, CancellationToken.None));
         }
 
         return new CallCommandResult
@@ -277,40 +252,23 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
-        await PublishAsync(ContactCenterConstants.Events.OfferDeclined, null, reservation.AgentId, cancellationToken);
-
-        if (!string.IsNullOrEmpty(reservation.QueueId))
+        var interactionEvent = new InteractionEvent
         {
-            await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
-        }
+            EventType = ContactCenterConstants.Events.OfferDeclined,
+            AggregateType = nameof(ActivityReservation),
+            AggregateId = reservation.ItemId,
+            ActorId = reservation.AgentId,
+            SourceComponent = ContactCenterConstants.Components.Voice,
+        };
 
-        return CallCommandResult.Success("The offer was declined and re-offered.", requiresDeviceAnswer: false);
-    }
-
-    private async Task HandleMediaConnectFailureAsync(
-        ActivityReservation reservation,
-        Interaction interaction,
-        CancellationToken cancellationToken)
-    {
-        // The provider could not connect or answer the accepted call. Ask the provider for the authoritative
-        // call state: if the call no longer exists, remove it from the queue and release both the reservation
-        // and the agent so the dead call is never re-offered and the agent can receive new calls. Only when
-        // the call still exists on the provider do we treat this as a transient failure and re-offer it.
-        var refreshed = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
-
-        if (refreshed.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+        interactionEvent.SetData(new OfferDeclinedEventData
         {
-            await _offerSynchronizationService.ReconcileEndedOfferAsync(refreshed.ItemId, cancellationToken);
-        }
-        else
-        {
-            await _reservationService.CancelAsync(reservation.ItemId, cancellationToken);
-        }
+            QueueId = reservation.QueueId,
+        });
 
-        if (!string.IsNullOrEmpty(reservation.QueueId))
-        {
-            await _inboundVoiceService.OfferNextAsync(reservation.QueueId, cancellationToken);
-        }
+        await _publisher.PublishAsync(interactionEvent, cancellationToken);
+
+        return CallCommandResult.Success("The offer was declined.", requiresDeviceAnswer: false);
     }
 
     private async Task<ActivityReservation> FindAuthorizedPendingReservationAsync(

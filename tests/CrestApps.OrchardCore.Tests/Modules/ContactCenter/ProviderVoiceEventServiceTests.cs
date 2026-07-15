@@ -1,9 +1,13 @@
+#nullable enable annotations
+
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -57,7 +61,7 @@ public sealed class ProviderVoiceEventServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -115,7 +119,7 @@ public sealed class ProviderVoiceEventServiceTests
             .ReturnsAsync(new Mock<ITelephonyProvider>().Object);
 
         var callSessionManager = new Mock<ICallSessionManager>();
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -193,10 +197,12 @@ public sealed class ProviderVoiceEventServiceTests
 
         var presenceManager = new Mock<IAgentPresenceManager>();
         var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>();
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             voiceProviderResolver.Object,
@@ -206,7 +212,9 @@ public sealed class ProviderVoiceEventServiceTests
             presenceManager.Object,
             new ProviderIdentityResolver([]),
             clock.Object,
-            NullLogger<ProviderVoiceEventService>.Instance);
+            NullLogger<ProviderVoiceEventService>.Instance,
+            providerCommandStateService.Object,
+            scopeExecutor.Object);
 
         // Act
         await service.IngestAsync(new ProviderVoiceEvent
@@ -236,6 +244,13 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal(
             publishedEvents.Count,
             publishedEvents.Select(value => value.IdempotencyKey).Distinct(StringComparer.Ordinal).Count());
+        providerCommandStateService.Verify(
+            value => value.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        scopeExecutor.Verify(
+            value => value.ScheduleAfterCommit<IProviderCommandProcessor>(
+                It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
         interactionManager.Verify(
             manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()),
             Times.Once);
@@ -294,7 +309,7 @@ public sealed class ProviderVoiceEventServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             voiceProviderResolver.Object,
@@ -381,7 +396,7 @@ public sealed class ProviderVoiceEventServiceTests
             new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
             clock.Object,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -421,7 +436,7 @@ public sealed class ProviderVoiceEventServiceTests
                     interactionEvent.IdempotencyKey);
             });
         outbox.Verify(value => value.EnqueueAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        outbox.Verify(value => value.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        outbox.Verify(value => value.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -458,7 +473,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync("late-connected", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -528,7 +543,7 @@ public sealed class ProviderVoiceEventServiceTests
         eventStore
             .Setup(store => store.ExistsByIdempotencyKeyAsync("ringing-older-sequence", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -597,7 +612,7 @@ public sealed class ProviderVoiceEventServiceTests
         eventStore
             .Setup(store => store.ExistsByIdempotencyKeyAsync("late-ringing", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -668,7 +683,7 @@ public sealed class ProviderVoiceEventServiceTests
             .ReturnsAsync(false);
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(startedUtc.AddSeconds(3));
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -730,7 +745,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync("later-terminal", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -791,7 +806,7 @@ public sealed class ProviderVoiceEventServiceTests
         eventStore
             .Setup(store => store.ExistsByIdempotencyKeyAsync(scopedIdempotencyKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -856,7 +871,7 @@ public sealed class ProviderVoiceEventServiceTests
                 },
             ]);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -962,7 +977,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Returns(Task.CompletedTask);
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(connectedUtc.AddSeconds(1));
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -1053,7 +1068,7 @@ public sealed class ProviderVoiceEventServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
-        var service = new ProviderVoiceEventService(
+        var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
@@ -1077,5 +1092,444 @@ public sealed class ProviderVoiceEventServiceTests
         // Assert
         Assert.Equal(InteractionStatus.Ended, interaction.Status);
         Assert.Contains(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenOutboundConnectedEventRequiresAgentBridge_RegistersDurableAnswerCommand()
+    {
+        // Arrange
+        var now = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var order = new List<string>();
+        var publishedEvents = new List<InteractionEvent>();
+        ProviderCommandRegistration? capturedRegistration = null;
+        Func<IProviderCommandProcessor, Task>? scheduledDispatch = null;
+
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            QueueId = "queue-1",
+            Direction = InteractionDirection.Outbound,
+            Status = InteractionStatus.Ringing,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            QueueId = "queue-1",
+            Direction = InteractionDirection.Outbound,
+            State = ContactCenterCallState.Ringing,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("interaction-update"))
+            .Returns(ValueTask.CompletedTask);
+
+        var callSessionManager = new Mock<ICallSessionManager>(MockBehavior.Strict);
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        callSessionManager
+            .Setup(manager => manager.UpdateAsync(
+                session,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("session-update"))
+            .Returns(ValueTask.CompletedTask);
+
+        var eventStore = new Mock<IInteractionEventStore>(MockBehavior.Strict);
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(
+                ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("ProviderA", "connected-1"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        eventStore
+            .Setup(store => store.ListByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) =>
+            {
+                publishedEvents.Add(interactionEvent);
+                order.Add($"publish:{interactionEvent.EventType}");
+            })
+            .Returns(Task.CompletedTask);
+
+        var voiceProvider = new Mock<IContactCenterVoiceProvider>(MockBehavior.Strict);
+        voiceProvider
+            .SetupGet(value => value.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.AgentConnect);
+        voiceProvider
+            .SetupGet(value => value.DeliveryModel)
+            .Returns(VoiceProviderDeliveryModel.ServerSideAcd);
+
+        var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>(MockBehavior.Strict);
+        voiceProviderResolver
+            .Setup(resolver => resolver.Get("ProviderA"))
+            .Returns(voiceProvider.Object);
+
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        providerCommandStateService
+            .Setup(service => service.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                order.Add("register");
+            })
+            .ReturnsAsync((ProviderCommandRegistration registration, CancellationToken _) => new ProviderCommand
+            {
+                CommandId = registration.CommandId,
+                Status = ProviderCommandStatus.Pending,
+            });
+
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        scopeExecutor
+            .Setup(executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(
+                It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatch = operation;
+                order.Add("schedule");
+            })
+            .Returns(true);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(now);
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            voiceProviderResolver.Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            providerCommandStateService.Object,
+            scopeExecutor.Object);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            IdempotencyKey = "connected-1",
+        }, TestContext.Current.CancellationToken);
+
+        var processor = new Mock<IProviderCommandProcessor>(MockBehavior.Strict);
+        Assert.NotNull(capturedRegistration);
+        var registration = capturedRegistration;
+        var commandId = registration.CommandId;
+        Assert.False(string.IsNullOrWhiteSpace(commandId));
+        processor
+            .Setup(value => value.DispatchAsync(commandId, CancellationToken.None))
+            .ReturnsAsync(new ProviderCommand
+            {
+                CommandId = commandId,
+                Status = ProviderCommandStatus.Sent,
+            });
+
+        Assert.NotNull(scheduledDispatch);
+        var dispatch = scheduledDispatch;
+
+        await dispatch(processor.Object);
+
+        // Assert
+        Assert.Equal(
+            [
+                "session-update",
+                "interaction-update",
+                $"publish:{ContactCenterConstants.Events.CallSessionUpdated}",
+                $"publish:{ContactCenterConstants.Events.CallConnected}",
+                "session-update",
+                "register",
+                "schedule",
+            ],
+            order);
+        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(InteractionStatus.Connected, interaction.Status);
+        Assert.Equal(now, session.AnsweredUtc);
+        Assert.Equal(now, interaction.AnsweredUtc);
+        Assert.Equal(commandId, session.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        Assert.Equal(commandId, registration.CommandId);
+        Assert.Equal(ProviderCommandType.Answer, registration.CommandType);
+        Assert.Equal("ProviderA", registration.ProviderName);
+        Assert.Equal("activity-1", registration.ActivityItemId);
+        Assert.Equal("interaction-1", registration.InteractionId);
+        Assert.False(string.IsNullOrWhiteSpace(registration.RequestPayload));
+
+        var request = JsonSerializer.Deserialize<ProviderAnswerCommandRequest>(registration.RequestPayload)!;
+        Assert.Equal("activity-1", request.ActivityId);
+        Assert.Equal("interaction-1", request.InteractionId);
+        Assert.Equal("call-1", request.ProviderCallId);
+        Assert.Equal("agent-1", request.AgentId);
+        Assert.Equal("queue-1", request.QueueId);
+
+        Assert.Collection(
+            publishedEvents,
+            value => Assert.Equal(ContactCenterConstants.Events.CallSessionUpdated, value.EventType),
+            value => Assert.Equal(ContactCenterConstants.Events.CallConnected, value.EventType));
+        voiceProvider.Verify(
+            value => value.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(
+                session,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        scopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(
+                It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Once);
+        processor.Verify(
+            value => value.DispatchAsync(commandId, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenOutboundConnectedEventReplays_ReusesStoredCommandId()
+    {
+        // Arrange
+        var order = new List<string>();
+        var publishedEvents = new List<InteractionEvent>();
+        var commandIds = new List<string>();
+        var scheduledDispatches = new List<Func<IProviderCommandProcessor, Task>>();
+
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            QueueId = "queue-1",
+            Direction = InteractionDirection.Outbound,
+            Status = InteractionStatus.Ringing,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ActivityItemId = "activity-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            QueueId = "queue-1",
+            Direction = InteractionDirection.Outbound,
+            State = ContactCenterCallState.Ringing,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("interaction-update"))
+            .Returns(ValueTask.CompletedTask);
+
+        var callSessionManager = new Mock<ICallSessionManager>(MockBehavior.Strict);
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        callSessionManager
+            .Setup(manager => manager.UpdateAsync(
+                session,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("session-update"))
+            .Returns(ValueTask.CompletedTask);
+
+        var eventStore = new Mock<IInteractionEventStore>(MockBehavior.Strict);
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        eventStore
+            .Setup(store => store.ListByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) =>
+            {
+                publishedEvents.Add(interactionEvent);
+                order.Add($"publish:{interactionEvent.EventType}");
+            })
+            .Returns(Task.CompletedTask);
+
+        var voiceProvider = new Mock<IContactCenterVoiceProvider>(MockBehavior.Strict);
+        voiceProvider
+            .SetupGet(value => value.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.AgentConnect);
+        voiceProvider
+            .SetupGet(value => value.DeliveryModel)
+            .Returns(VoiceProviderDeliveryModel.ServerSideAcd);
+
+        var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>(MockBehavior.Strict);
+        voiceProviderResolver
+            .Setup(resolver => resolver.Get("ProviderA"))
+            .Returns(voiceProvider.Object);
+
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        providerCommandStateService
+            .Setup(service => service.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                commandIds.Add(registration.CommandId);
+                order.Add("register");
+            })
+            .ReturnsAsync((ProviderCommandRegistration registration, CancellationToken _) => new ProviderCommand
+            {
+                CommandId = registration.CommandId,
+                Status = ProviderCommandStatus.Pending,
+            });
+
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        scopeExecutor
+            .Setup(executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(
+                It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatches.Add(operation);
+                order.Add("schedule");
+            })
+            .Returns(true);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            voiceProviderResolver.Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            providerCommandStateService.Object,
+            scopeExecutor.Object);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            IdempotencyKey = "connected-1",
+        }, TestContext.Current.CancellationToken);
+
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            IdempotencyKey = "connected-2",
+        }, TestContext.Current.CancellationToken);
+
+        var processor = new Mock<IProviderCommandProcessor>(MockBehavior.Strict);
+        Assert.NotNull(commandIds[0]);
+        var storedCommandId = commandIds[0];
+        Assert.False(string.IsNullOrWhiteSpace(storedCommandId));
+        processor
+            .Setup(value => value.DispatchAsync(storedCommandId, CancellationToken.None))
+            .ReturnsAsync(new ProviderCommand
+            {
+                CommandId = storedCommandId,
+                Status = ProviderCommandStatus.Sent,
+            });
+
+        foreach (var dispatch in scheduledDispatches)
+        {
+            await dispatch(processor.Object);
+        }
+
+        // Assert
+        Assert.Equal(2, commandIds.Count);
+        Assert.All(commandIds, value => Assert.Equal(storedCommandId, value));
+        Assert.Equal(storedCommandId, session.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        Assert.Equal(2, scheduledDispatches.Count);
+        Assert.Contains(
+            publishedEvents,
+            value => value.EventType == ContactCenterConstants.Events.CallConnected);
+        voiceProvider.Verify(
+            value => value.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        processor.Verify(
+            value => value.DispatchAsync(storedCommandId, CancellationToken.None),
+            Times.Exactly(2));
+        scopeExecutor.Verify(
+            executor => executor.ScheduleAfterCommit<IProviderCommandProcessor>(
+                It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Exactly(2));
+    }
+
+    private static ProviderVoiceEventService CreateService(
+        IInteractionManager interactionManager,
+        ICallSessionManager callSessionManager,
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
+        ITelephonyProviderResolver telephonyProviderResolver,
+        IInteractionEventStore eventStore,
+        IContactCenterEventPublisher publisher,
+        IAgentPresenceManager presenceManager,
+        IProviderIdentityResolver providerIdentityResolver,
+        IClock clock,
+        ILogger<ProviderVoiceEventService> logger,
+        IProviderCommandStateService? providerCommandStateService = null,
+        IContactCenterScopeExecutor? scopeExecutor = null)
+    {
+        providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict).Object;
+        scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict).Object;
+
+        return new ProviderVoiceEventService(
+            interactionManager,
+            callSessionManager,
+            voiceProviderResolver,
+            telephonyProviderResolver,
+            eventStore,
+            publisher,
+            presenceManager,
+            providerIdentityResolver,
+            providerCommandStateService,
+            scopeExecutor,
+            clock,
+            logger);
     }
 }

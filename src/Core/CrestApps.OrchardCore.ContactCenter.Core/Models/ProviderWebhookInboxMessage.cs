@@ -34,6 +34,16 @@ public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAware
     public ProviderWebhookInboxStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the opaque token identifying the worker that owns the current claim.
+    /// </summary>
+    public string OwnerToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the monotonically increasing fence token assigned to the current claim.
+    /// </summary>
+    public long FenceToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of failed processing attempts.
     /// </summary>
     public int AttemptCount { get; set; }

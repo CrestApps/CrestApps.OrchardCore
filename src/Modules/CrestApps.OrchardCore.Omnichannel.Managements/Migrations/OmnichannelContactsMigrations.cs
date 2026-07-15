@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -61,8 +62,9 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
         await CreateContactIndexTableAsync();
         await CreateContactIndexIndexesAsync();
+        ScheduleContactDefinitionRepair();
 
-        return 9;
+        return 10;
     }
 
     /// <summary>
@@ -191,6 +193,26 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
         return 9;
+    }
+
+    /// <summary>
+    /// Repairs legacy omnichannel contact definitions without performing database work during tenant activation.
+    /// </summary>
+    public async Task<int> UpdateFrom9Async()
+    {
+        ScheduleContactDefinitionRepair();
+
+        return 10;
+    }
+
+    private void ScheduleContactDefinitionRepair()
+    {
+        _logger.LogDebug("Scheduling deferred omnichannel contact definition repair.");
+
+        ShellScope.AddDeferredTask(scope =>
+            scope.ServiceProvider
+                .GetRequiredService<OmnichannelContactDefinitionService>()
+                .RepairOmnichannelContactContentTypesAsync());
     }
 
     private async Task CreateContactIndexTableAsync()

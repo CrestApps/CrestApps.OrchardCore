@@ -677,7 +677,7 @@
       "category": "feature-and-package-graph",
       "planFinding": "PR11",
       "gate": "Feature disable has no quiesce or re-enable contract",
-      "invariant": "Every feature-owned Contact Center task, hub, listener, adapter, and media provider must declare how it stops accepting work, drains admitted work, and reconciles after a fresh shell activates. Orchard pre-disable callbacks must quiesce matching participants before descriptor mutation, and inactive or idle disable/re-enable must not retain tenant-local runtime state.",
+      "invariant": "Every feature-owned Contact Center task, hub, listener, adapter, and media provider must declare how it stops accepting work, drains admitted work, and reconciles in a fresh scope after shell activation. Orchard pre-disable callbacks must quiesce matching participants before descriptor mutation, activation must not perform provider or database work inline, and inactive or idle disable/re-enable must not retain tenant-local runtime state.",
       "testId": "CC-F007",
       "ciJob": {
         "id": "pr-ci-build-and-test",
@@ -696,7 +696,7 @@
           "multi-tenant"
         ]
       },
-      "evidenceLocation": "`.github/contact-center/feature-lifecycle-contracts.v1.json` defines the complete inactive/idle contract and explicit R3 active-work deferral. `ContactCenterFeatureLifecycleTests` proves pre-disable feature filtering, quiesce-before-drain ordering, fresh-shell reconciliation, lifecycle-hook registration, and parity with every feature-owned Contact Center, Telephony, and Omnichannel Management background task. Live active-call, connected-client, provider-command, inbox/outbox, and media-session drain remains a planned R3 dependency."
+      "evidenceLocation": "`.github/contact-center/feature-lifecycle-contracts.v1.json` defines the complete inactive/idle contract and explicit R3 active-work deferral. `ContactCenterFeatureLifecycleTests` proves pre-disable feature filtering, quiesce-before-drain ordering, scheduled fresh-scope reconciliation, lazy lifecycle resolution, and parity with every feature-owned Contact Center, Telephony, and Omnichannel Management background task. Fresh-tenant activation proves Voice and its declared dependencies enable without inline provider/database work or circular service construction. Live active-call, connected-client, provider-command, inbox/outbox, and media-session drain remains a planned R3 dependency."
     },
     {
       "id": "O001",

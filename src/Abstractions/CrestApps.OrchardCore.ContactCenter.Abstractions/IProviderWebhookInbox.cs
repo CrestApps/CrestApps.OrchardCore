@@ -26,6 +26,35 @@ public interface IProviderWebhookInbox
     Task<bool> DispatchAsync(string messageId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Dispatches one normalized payload to its feature-scoped handler in an isolated shell scope.
+    /// </summary>
+    /// <param name="handlerName">The stable technical name of the handler.</param>
+    /// <param name="payload">The normalized serialized payload.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task DispatchHandlerAsync(
+        string handlerName,
+        string payload,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Settles a claimed delivery in a fresh scope after handler execution, rejecting stale owners by fence.
+    /// </summary>
+    /// <param name="messageId">The durable inbox message identifier.</param>
+    /// <param name="ownerToken">The owner token captured when the message was claimed.</param>
+    /// <param name="fenceToken">The fence token captured when the message was claimed.</param>
+    /// <param name="succeeded">Whether the handler completed successfully.</param>
+    /// <param name="errorType">The handler exception type name when execution failed.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the message completed; otherwise <see langword="false"/>.</returns>
+    Task<bool> SettleClaimAsync(
+        string messageId,
+        string ownerToken,
+        long fenceToken,
+        bool succeeded,
+        string errorType,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Processes the pending inbox messages whose retry time is due.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

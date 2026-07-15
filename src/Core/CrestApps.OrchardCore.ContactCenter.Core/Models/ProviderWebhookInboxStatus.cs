@@ -11,6 +11,16 @@ public enum ProviderWebhookInboxStatus
     Pending,
 
     /// <summary>
+    /// The message is owned by a worker under a durable, expiring claim.
+    /// </summary>
+    Claimed,
+
+    /// <summary>
+    /// The normalized payload completed and the message is safe to remove.
+    /// </summary>
+    Completed,
+
+    /// <summary>
     /// The message exhausted its retry budget and requires operator intervention.
     /// </summary>
     DeadLettered,

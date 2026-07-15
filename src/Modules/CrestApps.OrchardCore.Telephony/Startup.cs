@@ -40,7 +40,6 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
         services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
-        services.AddScoped<IModularTenantEvents, TelephonyInteractionTenantEvents>();
         services.AddSingleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>();
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();

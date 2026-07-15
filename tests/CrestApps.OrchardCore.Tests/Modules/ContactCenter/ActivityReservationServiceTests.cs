@@ -1,10 +1,13 @@
+using System.Text.Json;
+#nullable enable annotations
+
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OrchardCore.Locking.Distributed;
@@ -439,7 +442,10 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(0, count);
         Assert.Equal(ReservationStatus.Accepted, accepted.Status);
         reservationManager.Verify(
-            manager => manager.UpdateAsync(It.IsAny<ActivityReservation>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            manager => manager.UpdateAsync(
+                It.IsAny<ActivityReservation>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
         queueItemManager.Verify(
             manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -506,7 +512,10 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(AgentPresenceStatus.Offline, agent.PresenceStatus);
         Assert.Null(agent.ActiveReservationId);
         agentManager.Verify(
-            manager => manager.UpdateAsync(agent, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            manager => manager.UpdateAsync(
+                agent,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         interactionManager.Verify(
             manager => manager.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -546,7 +555,12 @@ public sealed class ActivityReservationServiceTests
         // Assert
         Assert.Equal(InteractionStatus.Created, interaction.Status);
         Assert.Null(interaction.AgentId);
-        interactionManager.Verify(m => m.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        interactionManager.Verify(
+            m => m.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -608,7 +622,334 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
-    public async Task ExpireDueAsync_WhenQueueUsesVoicemail_RemovesItemAndSendsToVoicemail()
+    public async Task ExpireDueAsync_WhenQueueUsesVoicemail_RegistersVoiceActionAndSchedulesDispatch()
+    {
+        // Arrange
+        var order = new List<string>();
+        var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        reservationManager
+            .Setup(m => m.UpdateAsync(
+                reservation,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("reservation-update"))
+            .Returns(ValueTask.CompletedTask);
+        var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", Status = QueueItemStatus.Reserved, ReservationId = "r1", AgentId = "a1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        agentManager
+            .Setup(m => m.UpdateAsync(
+                agent,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("agent-update"))
+            .Returns(ValueTask.CompletedTask);
+        var queue = new ActivityQueue { ItemId = "q1", Name = "Voice", UnansweredOfferAction = UnansweredOfferAction.Voicemail };
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(queue);
+        var queueService = new Mock<IActivityQueueService>();
+        queueService
+            .Setup(m => m.DequeueAsync(queueItem, QueueItemStatus.Removed, It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                order.Add("queue-dequeue");
+                queueItem.Status = QueueItemStatus.Removed;
+            })
+            .Returns(Task.CompletedTask);
+        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderName = "provider-1", ProviderInteractionId = "call-1", AgentId = "a1", Status = InteractionStatus.Ringing };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        interactionManager
+            .Setup(m => m.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("interaction-update"))
+            .Returns(ValueTask.CompletedTask);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act-1",
+            AssignmentStatus = ActivityAssignmentStatus.Reserved,
+            Status = ActivityStatus.Pending,
+            ReservationId = "r1",
+            ReservedById = "u1",
+            ReservedByUsername = "agent",
+        };
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        activityManager
+            .Setup(m => m.UpdateAsync(
+                activity,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("activity-update"))
+            .Returns(ValueTask.CompletedTask);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(m => m.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("publish"))
+            .Returns(Task.CompletedTask);
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        ProviderCommandRegistration? capturedRegistration = null;
+        providerCommandStateService
+            .Setup(m => m.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                order.Add("register");
+            })
+            .ReturnsAsync(new ProviderCommand());
+        Func<IProviderCommandProcessor, Task>? scheduledDispatch = null;
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        scopeExecutor
+            .Setup(m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatch = operation;
+                order.Add("schedule");
+            })
+            .Returns(true);
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            queueManager,
+            queueService,
+            interactionManager,
+            activityManager,
+            publisher,
+            providerCommandStateService,
+            scopeExecutor);
+
+        // Act
+        await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+            [
+                "reservation-update",
+                "queue-dequeue",
+                "agent-update",
+                "activity-update",
+                "interaction-update",
+                "publish",
+                "register",
+                "schedule",
+            ],
+            order);
+        Assert.Equal(ReservationStatus.Expired, reservation.Status);
+        Assert.Equal(QueueItemStatus.Removed, queueItem.Status);
+        Assert.Null(queueItem.ReservationId);
+        Assert.Null(queueItem.AgentId);
+        Assert.Equal(_now, queueItem.DequeuedUtc);
+        Assert.Equal(ActivityAssignmentStatus.Released, activity.AssignmentStatus);
+        Assert.Equal(ActivityStatus.Completed, activity.Status);
+        Assert.Null(activity.ReservationId);
+        Assert.Null(activity.ReservedById);
+        Assert.Null(activity.ReservedByUsername);
+        Assert.Null(activity.ReservedUtc);
+        Assert.Null(activity.ReservationExpiresUtc);
+        Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal("Voicemail", interaction.TechnicalMetadata["unansweredOfferAction"]);
+        Assert.Equal(AgentPresenceStatus.Available, agent.PresenceStatus);
+        Assert.Null(agent.RequestedPresenceStatus);
+        Assert.Null(agent.ActiveReservationId);
+        Assert.NotNull(capturedRegistration);
+        Assert.Equal(
+            capturedRegistration!.CommandId,
+            Assert.IsType<string>(interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]));
+        AssertCallActionRegistration(
+            capturedRegistration!,
+            ProviderCommandType.SendToVoicemail,
+            interaction,
+            reservation,
+            queue,
+            agent,
+            "call-1");
+        await AssertScheduledDispatchAsync(scheduledDispatch, capturedRegistration!.CommandId);
+        queueService.Verify(
+            m => m.DequeueAsync(It.Is<QueueItem>(item => item.ItemId == "qi-1"), QueueItemStatus.Removed, It.IsAny<CancellationToken>()),
+            Times.Once);
+        providerCommandStateService.Verify(
+            m => m.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        scopeExecutor.Verify(
+            m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExpireDueAsync_WhenQueueUsesReject_RegistersRejectActionAndSchedulesDispatch()
+    {
+        // Arrange
+        var order = new List<string>();
+        var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        reservationManager
+            .Setup(m => m.UpdateAsync(
+                reservation,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("reservation-update"))
+            .Returns(ValueTask.CompletedTask);
+        var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", Status = QueueItemStatus.Reserved, ReservationId = "r1", AgentId = "a1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        agentManager
+            .Setup(m => m.UpdateAsync(
+                agent,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("agent-update"))
+            .Returns(ValueTask.CompletedTask);
+        var queue = new ActivityQueue { ItemId = "q1", Name = "Voice", UnansweredOfferAction = UnansweredOfferAction.Reject };
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(queue);
+        var queueService = new Mock<IActivityQueueService>();
+        queueService
+            .Setup(m => m.DequeueAsync(queueItem, QueueItemStatus.Removed, It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                order.Add("queue-dequeue");
+                queueItem.Status = QueueItemStatus.Removed;
+            })
+            .Returns(Task.CompletedTask);
+        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderName = "provider-1", ProviderInteractionId = "call-1", AgentId = "a1", Status = InteractionStatus.Ringing };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        interactionManager
+            .Setup(m => m.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("interaction-update"))
+            .Returns(ValueTask.CompletedTask);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act-1",
+            AssignmentStatus = ActivityAssignmentStatus.Reserved,
+            Status = ActivityStatus.Pending,
+            ReservationId = "r1",
+            ReservedById = "u1",
+            ReservedByUsername = "agent",
+        };
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        activityManager
+            .Setup(m => m.UpdateAsync(
+                activity,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("activity-update"))
+            .Returns(ValueTask.CompletedTask);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(m => m.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("publish"))
+            .Returns(Task.CompletedTask);
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        ProviderCommandRegistration? capturedRegistration = null;
+        providerCommandStateService
+            .Setup(m => m.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderCommandRegistration, CancellationToken>((registration, _) =>
+            {
+                capturedRegistration = registration;
+                order.Add("register");
+            })
+            .ReturnsAsync(new ProviderCommand());
+        Func<IProviderCommandProcessor, Task>? scheduledDispatch = null;
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        scopeExecutor
+            .Setup(m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()))
+            .Callback<Func<IProviderCommandProcessor, Task>>(operation =>
+            {
+                scheduledDispatch = operation;
+                order.Add("schedule");
+            })
+            .Returns(true);
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            queueManager,
+            queueService,
+            interactionManager,
+            activityManager,
+            publisher,
+            providerCommandStateService,
+            scopeExecutor);
+
+        // Act
+        await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+            [
+                "reservation-update",
+                "queue-dequeue",
+                "agent-update",
+                "activity-update",
+                "interaction-update",
+                "publish",
+                "register",
+                "schedule",
+            ],
+            order);
+        Assert.Equal(ReservationStatus.Expired, reservation.Status);
+        Assert.Equal(QueueItemStatus.Removed, queueItem.Status);
+        Assert.Null(queueItem.ReservationId);
+        Assert.Null(queueItem.AgentId);
+        Assert.Equal(_now, queueItem.DequeuedUtc);
+        Assert.Equal(ActivityAssignmentStatus.Released, activity.AssignmentStatus);
+        Assert.Equal(ActivityStatus.Cancelled, activity.Status);
+        Assert.Null(activity.ReservationId);
+        Assert.Null(activity.ReservedById);
+        Assert.Null(activity.ReservedByUsername);
+        Assert.Null(activity.ReservedUtc);
+        Assert.Null(activity.ReservationExpiresUtc);
+        Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal("Reject", interaction.TechnicalMetadata["unansweredOfferAction"]);
+        Assert.Equal(AgentPresenceStatus.Available, agent.PresenceStatus);
+        Assert.Null(agent.RequestedPresenceStatus);
+        Assert.Null(agent.ActiveReservationId);
+        Assert.NotNull(capturedRegistration);
+        AssertCallActionRegistration(
+            capturedRegistration!,
+            ProviderCommandType.Reject,
+            interaction,
+            reservation,
+            queue,
+            agent,
+            "call-1");
+        await AssertScheduledDispatchAsync(scheduledDispatch, capturedRegistration!.CommandId);
+        queueService.Verify(
+            m => m.DequeueAsync(It.Is<QueueItem>(item => item.ItemId == "qi-1"), QueueItemStatus.Removed, It.IsAny<CancellationToken>()),
+            Times.Once);
+        providerCommandStateService.Verify(
+            m => m.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        scopeExecutor.Verify(
+            m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExpireDueAsync_WhenQueueUsesVoicemail_ButProviderCommandInfrastructureIsUnavailable_RequeuesInstead()
     {
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
@@ -618,31 +959,74 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", Status = QueueItemStatus.Reserved, ReservationId = "r1", AgentId = "a1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent" };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityQueue { ItemId = "q1", Name = "Voice", UnansweredOfferAction = UnansweredOfferAction.Voicemail });
         var queueService = new Mock<IActivityQueueService>();
-        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderInteractionId = "call-1" };
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act-1",
+            AssignmentStatus = ActivityAssignmentStatus.Reserved,
+            Status = ActivityStatus.Pending,
+            ReservationId = "r1",
+            ReservedById = "u1",
+            ReservedByUsername = "agent",
+        };
+        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderName = "provider-1", ProviderInteractionId = "call-1", AgentId = "a1", Status = InteractionStatus.Ringing };
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var activityManager = new Mock<IOmnichannelActivityManager>();
-        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
-        var telephonyService = new Mock<ITelephonyService>();
-        telephonyService.Setup(m => m.SendToVoicemailAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>())).ReturnsAsync(TelephonyResult.Success());
-        var service = CreateService(reservationManager, queueItemManager, agentManager, queueManager, queueService, interactionManager, activityManager, new Mock<IContactCenterEventPublisher>(), telephonyService);
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            queueManager,
+            queueService,
+            interactionManager,
+            activityManager,
+            publisher,
+            providerCommandStateService: null,
+            scopeExecutor: scopeExecutor);
 
         // Act
         await service.ExpireDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        queueService.Verify(m => m.DequeueAsync(It.Is<QueueItem>(item => item.ItemId == "qi-1"), QueueItemStatus.Removed, It.IsAny<CancellationToken>()), Times.Once);
-        telephonyService.Verify(m => m.SendToVoicemailAsync(It.Is<CallReference>(call => call.CallId == "call-1"), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(ReservationStatus.Expired, reservation.Status);
+        Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
+        Assert.Null(queueItem.ReservationId);
+        Assert.Null(queueItem.AgentId);
+        Assert.Null(queueItem.DequeuedUtc);
+        Assert.Equal(AgentPresenceStatus.Available, agent.PresenceStatus);
+        Assert.Null(agent.RequestedPresenceStatus);
+        Assert.Null(agent.ActiveReservationId);
+        Assert.Equal(ActivityAssignmentStatus.Available, activity.AssignmentStatus);
+        Assert.Equal(ActivityStatus.Pending, activity.Status);
+        Assert.Null(activity.ReservationId);
+        Assert.Null(activity.ReservedById);
+        Assert.Null(activity.ReservedByUsername);
+        Assert.Null(activity.ReservedUtc);
+        Assert.Null(activity.ReservationExpiresUtc);
+        Assert.Null(activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Null(interaction.AgentId);
+        Assert.Null(interaction.EndedUtc);
+        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.CommandMetadata.CommandId));
+        queueService.Verify(
+            m => m.DequeueAsync(It.IsAny<QueueItem>(), It.IsAny<QueueItemStatus>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        scopeExecutor.Verify(
+            m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task ExpireDueAsync_WhenQueueUsesReject_RemovesItemAndRejectsCall()
+    public async Task ExpireDueAsync_WhenQueueUsesReject_ButCallIdentityIsUnavailable_RequeuesInstead()
     {
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
@@ -652,27 +1036,74 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", Status = QueueItemStatus.Reserved, ReservationId = "r1", AgentId = "a1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityQueue { ItemId = "q1", Name = "Voice", UnansweredOfferAction = UnansweredOfferAction.Reject });
         var queueService = new Mock<IActivityQueueService>();
-        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderInteractionId = "call-1" };
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act-1",
+            AssignmentStatus = ActivityAssignmentStatus.Reserved,
+            Status = ActivityStatus.Pending,
+            ReservationId = "r1",
+            ReservedById = "u1",
+            ReservedByUsername = "agent",
+        };
+        var interaction = new Interaction { ItemId = "i1", ActivityItemId = "act-1", ProviderName = "provider-1", Status = InteractionStatus.Ringing };
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var activityManager = new Mock<IOmnichannelActivityManager>();
-        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
-        var telephonyService = new Mock<ITelephonyService>();
-        telephonyService.Setup(m => m.RejectAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>())).ReturnsAsync(TelephonyResult.Success());
-        var service = CreateService(reservationManager, queueItemManager, agentManager, queueManager, queueService, interactionManager, activityManager, new Mock<IContactCenterEventPublisher>(), telephonyService);
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            queueManager,
+            queueService,
+            interactionManager,
+            activityManager,
+            publisher,
+            providerCommandStateService,
+            scopeExecutor);
 
         // Act
         await service.ExpireDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        queueService.Verify(m => m.DequeueAsync(It.Is<QueueItem>(item => item.ItemId == "qi-1"), QueueItemStatus.Removed, It.IsAny<CancellationToken>()), Times.Once);
-        telephonyService.Verify(m => m.RejectAsync(It.Is<CallReference>(call => call.CallId == "call-1"), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(ReservationStatus.Expired, reservation.Status);
+        Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
+        Assert.Null(queueItem.ReservationId);
+        Assert.Null(queueItem.AgentId);
+        Assert.Null(queueItem.DequeuedUtc);
+        Assert.Equal(AgentPresenceStatus.Available, agent.PresenceStatus);
+        Assert.Null(agent.RequestedPresenceStatus);
+        Assert.Null(agent.ActiveReservationId);
+        Assert.Equal(ActivityAssignmentStatus.Available, activity.AssignmentStatus);
+        Assert.Equal(ActivityStatus.Pending, activity.Status);
+        Assert.Null(activity.ReservationId);
+        Assert.Null(activity.ReservedById);
+        Assert.Null(activity.ReservedByUsername);
+        Assert.Null(activity.ReservedUtc);
+        Assert.Null(activity.ReservationExpiresUtc);
+        Assert.Null(activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Null(interaction.AgentId);
+        Assert.Null(interaction.EndedUtc);
+        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.CommandMetadata.CommandId));
+        providerCommandStateService.Verify(
+            m => m.RegisterAsync(It.IsAny<ProviderCommandRegistration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        queueService.Verify(
+            m => m.DequeueAsync(It.IsAny<QueueItem>(), It.IsAny<QueueItemStatus>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        scopeExecutor.Verify(
+            m => m.ScheduleAfterCommit<IProviderCommandProcessor>(It.IsAny<Func<IProviderCommandProcessor, Task>>()),
+            Times.Never);
     }
 
     [Fact]
@@ -983,6 +1414,37 @@ public sealed class ActivityReservationServiceTests
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null)
     {
+        return CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            queueManager,
+            queueService,
+            interactionManager,
+            activityManager,
+            publisher,
+            providerCommandStateService: null,
+            scopeExecutor: null,
+            distributedLock: distributedLock,
+            session: session,
+            availabilityService: availabilityService);
+    }
+
+    private static ActivityReservationService CreateService(
+        Mock<IActivityReservationManager> reservationManager,
+        Mock<IQueueItemManager> queueItemManager,
+        Mock<IAgentProfileManager> agentManager,
+        Mock<IActivityQueueManager> queueManager,
+        Mock<IActivityQueueService> queueService,
+        Mock<IInteractionManager> interactionManager,
+        Mock<IOmnichannelActivityManager> activityManager,
+        Mock<IContactCenterEventPublisher> publisher,
+        Mock<IProviderCommandStateService>? providerCommandStateService,
+        Mock<IContactCenterScopeExecutor>? scopeExecutor,
+        Mock<IDistributedLock> distributedLock = null,
+        Mock<ISession> session = null,
+        Mock<IAgentAvailabilityService> availabilityService = null)
+    {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
@@ -1026,10 +1488,59 @@ public sealed class ActivityReservationServiceTests
             interactionManager.Object,
             activityManager.Object,
             publisher.Object,
-            [telephonyService.Object],
+            providerCommandStateService is null ? [] : [providerCommandStateService.Object],
+            (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,
             distributedLock.Object,
             session.Object,
             clock.Object,
             new Mock<ILogger<ActivityReservationService>>().Object);
+    }
+
+    private static void AssertCallActionRegistration(
+        ProviderCommandRegistration registration,
+        ProviderCommandType expectedCommandType,
+        Interaction interaction,
+        ActivityReservation reservation,
+        ActivityQueue queue,
+        AgentProfile agent,
+        string providerCallId)
+    {
+        Assert.NotNull(registration);
+        Assert.Equal(interaction.ProviderName, registration.ProviderName);
+        Assert.Equal(expectedCommandType, registration.CommandType);
+        Assert.Equal(reservation.ActivityItemId, registration.ActivityItemId);
+        Assert.Equal(interaction.ItemId, registration.InteractionId);
+        Assert.False(string.IsNullOrWhiteSpace(registration.CommandId));
+        Assert.False(string.IsNullOrWhiteSpace(registration.RequestPayload));
+        Assert.Equal(registration.CommandId, Assert.IsType<string>(interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]));
+
+        using var request = JsonDocument.Parse(registration.RequestPayload);
+        Assert.Equal(reservation.ActivityItemId, request.RootElement.GetProperty("ActivityItemId").GetString());
+        Assert.Equal(reservation.QueueId, request.RootElement.GetProperty("QueueId").GetString());
+        Assert.Equal(providerCallId, request.RootElement.GetProperty("ProviderCallId").GetString());
+        Assert.True(request.RootElement.GetProperty("ReofferOnFailure").GetBoolean());
+        var metadata = request.RootElement.GetProperty("Metadata");
+        Assert.Equal(queue.ItemId, metadata.GetProperty("queueId").GetString());
+        Assert.Equal(queue.Name, metadata.GetProperty("queueName").GetString());
+        Assert.Equal(agent.UserId, metadata.GetProperty("voicemailRecipientUserId").GetString());
+        Assert.Equal(agent.UserName, metadata.GetProperty("voicemailRecipientUserName").GetString());
+        Assert.Equal(agent.DisplayName, metadata.GetProperty("voicemailRecipientDisplayName").GetString());
+    }
+
+    private static async Task AssertScheduledDispatchAsync(Func<IProviderCommandProcessor, Task>? scheduledDispatch, string commandId)
+    {
+        Assert.NotNull(scheduledDispatch);
+        var dispatch = scheduledDispatch!;
+
+        var processor = new Mock<IProviderCommandProcessor>(MockBehavior.Strict);
+        processor
+            .Setup(value => value.DispatchAsync(commandId, CancellationToken.None))
+            .ReturnsAsync(new ProviderCommand { CommandId = commandId, Status = ProviderCommandStatus.Sent });
+
+        await dispatch(processor.Object);
+
+        processor.Verify(
+            value => value.DispatchAsync(commandId, CancellationToken.None),
+            Times.Once);
     }
 }

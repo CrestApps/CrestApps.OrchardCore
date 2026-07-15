@@ -221,8 +221,6 @@ public sealed class AgentPresenceManagerServiceTests
         publisher.Setup(m => m.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
             .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvent = interactionEvent)
             .Returns(Task.CompletedTask);
-        var realTimeNotifier = new Mock<IContactCenterRealTimeNotifier>();
-
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
         var service = new AgentPresenceManagerService(
@@ -232,8 +230,7 @@ public sealed class AgentPresenceManagerServiceTests
             publisher.Object,
             CreateDistributedLock().Object,
             clock.Object,
-            new Mock<ILogger<AgentPresenceManagerService>>().Object,
-            [realTimeNotifier.Object]);
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.UpdateEntitlementsAsync("a1", ["q1"], [], TestContext.Current.CancellationToken);
@@ -255,12 +252,6 @@ public sealed class AgentPresenceManagerServiceTests
         Assert.Empty(eventData.AllowedCampaignIds);
         Assert.Equal(["q2"], eventData.RemovedQueueIds);
         Assert.Equal(["c1"], eventData.RemovedCampaignIds);
-        realTimeNotifier.Verify(
-            notifier => notifier.NotifyAgentMembershipChangedAsync(
-                "u1",
-                It.Is<IEnumerable<string>>(queueIds => queueIds.SequenceEqual(new[] { "q2" })),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
     }
 
     [Fact]

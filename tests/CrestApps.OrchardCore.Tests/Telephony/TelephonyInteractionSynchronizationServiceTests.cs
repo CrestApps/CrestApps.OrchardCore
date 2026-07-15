@@ -1,13 +1,16 @@
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -284,19 +287,22 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
     }
 
     [Fact]
-    public async Task TenantActivation_PerformsImmediateTelephonyReconciliation()
+    public async Task ReconciliationBackgroundTask_FreshScope_PerformsTelephonyReconciliation()
     {
         // Arrange
         var synchronizationService = new Mock<ITelephonyInteractionSynchronizationService>();
         synchronizationService
             .Setup(value => value.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
-        var tenantEvents = new TelephonyInteractionTenantEvents(
-            synchronizationService.Object,
-            NullLogger<TelephonyInteractionTenantEvents>.Instance);
+        var services = new ServiceCollection()
+            .AddSingleton(synchronizationService.Object)
+            .AddSingleton<ILogger<TelephonyInteractionReconciliationBackgroundTask>>(
+                NullLogger<TelephonyInteractionReconciliationBackgroundTask>.Instance)
+            .BuildServiceProvider();
+        var task = new TelephonyInteractionReconciliationBackgroundTask();
 
         // Act
-        await tenantEvents.ActivatingAsync();
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
 
         // Assert
         synchronizationService.Verify(

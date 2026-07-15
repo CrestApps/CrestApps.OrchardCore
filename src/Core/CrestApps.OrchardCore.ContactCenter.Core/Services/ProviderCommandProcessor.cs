@@ -1,11 +1,6 @@
-using System.Globalization;
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -15,24 +10,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides the default implementation of <see cref="IProviderCommandProcessor"/>. It durably records a
 /// command as sent before provider execution and reconciles uncertain outcomes instead of reissuing them.
+/// Each <see cref="ProviderCommandType"/> is handled by a uniquely registered
+/// <see cref="IProviderCommandTypeExecutor"/>; a missing or duplicate registration causes safe compensation
+/// without any provider contact.
 /// </summary>
 public sealed class ProviderCommandProcessor : IProviderCommandProcessor
 {
     private const int MaxRecoveryBatchSize = 25;
     private static readonly TimeSpan _leaseDuration = TimeSpan.FromMinutes(5);
-    private static readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
 
     private readonly IProviderCommandManager _commandManager;
     private readonly IProviderCommandStateService _stateService;
     private readonly IActivityReservationService _reservationService;
-    private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
-    private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
-    private readonly IEnumerable<IProviderCommandDispatchValidator> _dispatchValidators;
+    private readonly IEnumerable<IProviderCommandTypeExecutor> _executors;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -44,11 +35,8 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <param name="commandManager">The manager used to load due commands.</param>
     /// <param name="stateService">The durable command state machine.</param>
     /// <param name="reservationService">The reservation service used for definitive-failure compensation.</param>
-    /// <param name="interactionManager">The manager used to project interaction outcomes.</param>
-    /// <param name="activityManager">The manager used to project CRM activity outcomes.</param>
-    /// <param name="voiceCallRouter">The router used to execute outbound voice commands.</param>
     /// <param name="voiceProviderResolver">The resolver used to find optional provider reconciliation support.</param>
-    /// <param name="dispatchValidators">The policy validators applied before recovering pending dispatch.</param>
+    /// <param name="executors">The typed executors that handle per-command-type provider dispatch and projections.</param>
     /// <param name="scopeExecutor">The executor used to isolate each recovery transition in a fresh shell scope.</param>
     /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
     /// <param name="clock">The clock used to determine recovery windows.</param>
@@ -57,11 +45,8 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         IProviderCommandManager commandManager,
         IProviderCommandStateService stateService,
         IActivityReservationService reservationService,
-        IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
-        IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
+        IEnumerable<IProviderCommandTypeExecutor> executors,
         IContactCenterScopeExecutor scopeExecutor,
         ISession session,
         IClock clock,
@@ -70,11 +55,8 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         _commandManager = commandManager;
         _stateService = stateService;
         _reservationService = reservationService;
-        _interactionManager = interactionManager;
-        _activityManager = activityManager;
-        _voiceCallRouter = voiceCallRouter;
         _voiceProviderResolver = voiceProviderResolver;
-        _dispatchValidators = dispatchValidators;
+        _executors = executors;
         _scopeExecutor = scopeExecutor;
         _session = session;
         _clock = clock;
@@ -195,11 +177,160 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         return attempted;
     }
 
+    /// <inheritdoc/>
+    public async Task<ProviderCommand> SettleDispatchAsync(
+        string commandId,
+        ProviderCommandClaim claim,
+        ContactCenterVoiceProviderResult result,
+        string outcomeUnknownReason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(commandId);
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentException.ThrowIfNullOrEmpty(outcomeUnknownReason);
+
+        var command = await _commandManager.FindByCommandIdAsync(commandId, cancellationToken);
+
+        if (command is null)
+        {
+            throw new InvalidOperationException($"The provider command '{commandId}' does not exist.");
+        }
+
+        if (result?.Succeeded == true && !string.IsNullOrWhiteSpace(result.ProviderCallId))
+        {
+            var confirmed = await _stateService.StageConfirmSentAsync(
+                commandId,
+                claim,
+                result.ProviderCallId,
+                cancellationToken);
+            var executor = ResolveExecutor(command);
+
+            if (executor is not null)
+            {
+                await executor.ProjectSuccessAsync(confirmed, result, cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return confirmed;
+        }
+
+        if (result is null || result.OutcomeUnknown || result.Succeeded)
+        {
+            var outcomeUnknown = await _stateService.StageOutcomeUnknownAsync(
+                commandId,
+                claim,
+                outcomeUnknownReason,
+                cancellationToken);
+            var executor = ResolveExecutor(command);
+
+            if (executor is not null)
+            {
+                await executor.ProjectOutcomeUnknownAsync(
+                    outcomeUnknown,
+                    result?.ErrorCode ?? "provider_outcome_unknown",
+                    cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return outcomeUnknown;
+        }
+
+        var compensating = await _stateService.BeginCompensationAsync(
+            commandId,
+            claim,
+            result.ErrorCode ?? "The provider rejected the command.",
+            cancellationToken);
+
+        return await CompensateAsync(compensating, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProviderCommand> SettleReconciliationAsync(
+        string commandId,
+        ProviderCommandClaim claim,
+        ContactCenterVoiceCommandReconciliationResult result,
+        string inconclusiveReason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(commandId);
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentException.ThrowIfNullOrEmpty(inconclusiveReason);
+
+        var command = await _commandManager.FindByCommandIdAsync(commandId, cancellationToken);
+
+        if (command is null)
+        {
+            throw new InvalidOperationException($"The provider command '{commandId}' does not exist.");
+        }
+
+        if (result?.Outcome == ContactCenterVoiceCommandReconciliationOutcome.Confirmed)
+        {
+            var confirmed = await _stateService.StageConfirmFromReconciliationAsync(
+                commandId,
+                claim,
+                result.ProviderCallId,
+                cancellationToken);
+            var executor = ResolveExecutor(command);
+
+            if (executor is not null)
+            {
+                var syntheticResult = new ContactCenterVoiceProviderResult
+                {
+                    Succeeded = true,
+                    ProviderCallId = result.ProviderCallId ?? confirmed.ProviderReference,
+                    ProviderName = command.ProviderName,
+                };
+
+                await executor.ProjectSuccessAsync(confirmed, syntheticResult, cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return confirmed;
+        }
+
+        if (result?.Outcome == ContactCenterVoiceCommandReconciliationOutcome.NotExecuted)
+        {
+            var compensating = await _stateService.BeginCompensationAsync(
+                commandId,
+                claim,
+                result.Message ?? "The provider confirmed that the command did not execute.",
+                cancellationToken);
+
+            return await CompensateAsync(compensating, cancellationToken);
+        }
+
+        return await _stateService.PauseAsync(
+            commandId,
+            claim,
+            result?.Message ?? inconclusiveReason,
+            cancellationToken);
+    }
+
     private async Task<ProviderCommand> DispatchPendingAsync(
         ProviderCommand command,
         CancellationToken cancellationToken)
     {
-        if (!await CanDispatchAsync(command, cancellationToken))
+        var executor = ResolveExecutor(command);
+
+        if (executor is null)
+        {
+            _logger.LogError(
+                "No unique executor is registered for command type '{CommandType}'. Command '{CommandId}' will be compensated without provider contact.",
+                command.CommandType,
+                command.CommandId);
+
+            var unsupportedCompensation = await _stateService.BeginPendingCompensationAsync(
+                command.CommandId,
+                $"No executor is registered for command type '{command.CommandType}'.",
+                cancellationToken);
+
+            return await CompensateAsync(unsupportedCompensation, cancellationToken);
+        }
+
+        if (!await executor.CanDispatchAsync(command, cancellationToken))
         {
             var ineligibleCompensation = await _stateService.BeginPendingCompensationAsync(
                 command.CommandId,
@@ -209,22 +340,6 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             return await CompensateAsync(ineligibleCompensation, cancellationToken);
         }
 
-        ContactCenterDialRequest request;
-
-        try
-        {
-            request = DeserializeDialRequest(command);
-        }
-        catch (JsonException)
-        {
-            var invalidPayloadCompensation = await _stateService.BeginPendingCompensationAsync(
-                command.CommandId,
-                "The provider command request payload is invalid.",
-                cancellationToken);
-
-            return await CompensateAsync(invalidPayloadCompensation, cancellationToken);
-        }
-
         var claim = await _stateService.TryClaimAsync(command.CommandId, _leaseDuration, cancellationToken);
 
         if (claim is null)
@@ -232,7 +347,6 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             return command;
         }
 
-        StampRequest(request, command, claim);
         try
         {
             await _stateService.MarkSentAsync(command.CommandId, claim, cancellationToken: cancellationToken);
@@ -250,15 +364,19 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
 
         try
         {
-            result = await _voiceCallRouter.RouteOutboundAsync(request, command.ProviderName, cancellationToken);
+            result = await executor.ExecuteAsync(command, claim, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await MarkOutcomeUnknownAfterSendAsync(
-                command,
+            await SettleDispatchInFreshScopeAsync(
+                command.CommandId,
                 claim,
+                new ContactCenterVoiceProviderResult
+                {
+                    OutcomeUnknown = true,
+                    ErrorCode = "provider_dispatch_cancelled",
+                },
                 "Provider dispatch was cancelled after the command was sent.",
-                "provider_dispatch_cancelled",
                 CancellationToken.None);
 
             throw;
@@ -270,73 +388,26 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                 command.CommandId,
                 ex.GetType().Name);
 
-            return await MarkOutcomeUnknownAfterSendAsync(
-                command,
+            return await SettleDispatchInFreshScopeAsync(
+                command.CommandId,
                 claim,
+                new ContactCenterVoiceProviderResult
+                {
+                    OutcomeUnknown = true,
+                    ErrorCode = "provider_dispatch_failed",
+                },
                 "Provider dispatch did not return a reliable result.",
-                "provider_dispatch_failed",
                 cancellationToken);
         }
 
-        if (result?.Succeeded == true && !string.IsNullOrWhiteSpace(result.ProviderCallId))
-        {
-            ProviderCommand confirmed;
-
-            try
-            {
-                confirmed = await _stateService.StageConfirmSentAsync(
-                    command.CommandId,
-                    claim,
-                    result.ProviderCallId,
-                    cancellationToken);
-            }
-            catch (ProviderCommandFenceException ex)
-            {
-                _logger.LogWarning(
-                    "Ignored a stale provider success for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls settlement.",
-                    command.CommandId,
-                    ex.ProvidedFenceToken);
-
-                return await _commandManager.FindByCommandIdAsync(command.CommandId, cancellationToken) ?? command;
-            }
-            catch (ConcurrencyException)
-            {
-                return command;
-            }
-            catch (ProviderCommandTransitionException)
-            {
-                return await _commandManager.FindByCommandIdAsync(command.CommandId, CancellationToken.None) ?? command;
-            }
-
-            await UpdateSuccessProjectionAsync(
-                confirmed,
-                string.IsNullOrWhiteSpace(result.ProviderName) ? command.ProviderName : result.ProviderName,
-                result.ProviderCallId,
-                cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
-
-            return confirmed;
-        }
-
-        if (result is null || result.OutcomeUnknown || result.Succeeded)
-        {
-            return await MarkOutcomeUnknownAfterSendAsync(
-                command,
-                claim,
-                result?.Succeeded == true
-                    ? "The provider did not return a call identifier."
-                    : "The provider could not prove the command outcome.",
-                result?.ErrorCode ?? "provider_outcome_unknown",
-                cancellationToken);
-        }
-
-        var compensating = await _stateService.BeginCompensationAsync(
+        return await SettleDispatchInFreshScopeAsync(
             command.CommandId,
             claim,
-            result.ErrorCode ?? "The provider rejected the command.",
+            result,
+            result?.Succeeded == true
+                ? "The provider did not return a call identifier."
+                : "The provider could not prove the command outcome.",
             cancellationToken);
-
-        return await CompensateAsync(compensating, cancellationToken);
     }
 
     private async Task<ProviderCommand> ReconcileAsync(ProviderCommand command, CancellationToken cancellationToken)
@@ -355,9 +426,10 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
 
         if (provider is not IContactCenterVoiceCommandReconciler reconciler)
         {
-            return await _stateService.PauseAsync(
+            return await SettleReconciliationInFreshScopeAsync(
                 command.CommandId,
                 claim,
+                null,
                 "The provider does not support command reconciliation.",
                 cancellationToken);
         }
@@ -379,46 +451,19 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                 command.CommandId,
                 ex.GetType().Name);
 
-            return await _stateService.PauseAsync(
+            return await SettleReconciliationInFreshScopeAsync(
                 command.CommandId,
                 claim,
+                null,
                 "The provider could not reconcile the command outcome.",
                 cancellationToken);
         }
 
-        if (result?.Outcome == ContactCenterVoiceCommandReconciliationOutcome.Confirmed)
-        {
-            var confirmed = await _stateService.StageConfirmFromReconciliationAsync(
-                command.CommandId,
-                claim,
-                result.ProviderCallId,
-                cancellationToken);
-
-            await UpdateSuccessProjectionAsync(
-                confirmed,
-                command.ProviderName,
-                result.ProviderCallId ?? confirmed.ProviderReference,
-                cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
-
-            return confirmed;
-        }
-
-        if (result?.Outcome == ContactCenterVoiceCommandReconciliationOutcome.NotExecuted)
-        {
-            var compensating = await _stateService.BeginCompensationAsync(
-                command.CommandId,
-                claim,
-                result.Message ?? "The provider confirmed that the command did not execute.",
-                cancellationToken);
-
-            return await CompensateAsync(compensating, cancellationToken);
-        }
-
-        return await _stateService.PauseAsync(
+        return await SettleReconciliationInFreshScopeAsync(
             command.CommandId,
             claim,
-            result?.Message ?? "The provider could not prove the command outcome.",
+            result,
+            "The provider could not prove the command outcome.",
             cancellationToken);
     }
 
@@ -435,7 +480,13 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         }
 
         await CompensateReservationAsync(command, cancellationToken);
-        await UpdateFailureProjectionAsync(command, cancellationToken);
+
+        var executor = ResolveExecutor(command);
+
+        if (executor is not null)
+        {
+            await executor.ProjectFailureAsync(command, cancellationToken);
+        }
 
         return await _stateService.CompleteCompensationAsync(command.CommandId, claim, cancellationToken);
     }
@@ -444,146 +495,95 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     {
         if (!string.IsNullOrWhiteSpace(command.ReservationId))
         {
-            await _reservationService.CompensateAsync(command.ReservationId, true, cancellationToken);
+            await _reservationService.CompensateAsync(
+                command.ReservationId,
+                command.RemoveReservationFromQueueOnFailure,
+                cancellationToken);
         }
     }
 
-    private async Task UpdateSuccessProjectionAsync(
-        ProviderCommand command,
-        string providerName,
-        string providerCallId,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(command.InteractionId))
-        {
-            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
-
-            if (interaction is not null)
-            {
-                interaction.Status = InteractionStatus.Ringing;
-                interaction.ProviderName = providerName;
-                interaction.ProviderInteractionId = providerCallId;
-                interaction.StartedUtc = _clock.UtcNow;
-                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
-        {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
-
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Dialing;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
-        }
-    }
-
-    private async Task UpdateFailureProjectionAsync(ProviderCommand command, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(command.InteractionId))
-        {
-            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
-
-            if (interaction is not null)
-            {
-                interaction.Status = InteractionStatus.Failed;
-                interaction.EndedUtc = _clock.UtcNow;
-                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
-        {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
-
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Failed;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
-        }
-    }
-
-    private async Task<ProviderCommand> MarkOutcomeUnknownAfterSendAsync(
-        ProviderCommand command,
+    private async Task<ProviderCommand> SettleDispatchInFreshScopeAsync(
+        string commandId,
         ProviderCommandClaim claim,
-        string reason,
-        string errorCode,
+        ContactCenterVoiceProviderResult result,
+        string outcomeUnknownReason,
         CancellationToken cancellationToken)
     {
+        ProviderCommand settled = null;
+
         try
         {
-            var outcomeUnknown = await _stateService.StageOutcomeUnknownAsync(
-                command.CommandId,
-                claim,
-                reason,
-                cancellationToken);
+            await _scopeExecutor.ExecuteAsync<IProviderCommandProcessor>(async processor =>
+            {
+                settled = await processor.SettleDispatchAsync(
+                    commandId,
+                    claim,
+                    result,
+                    outcomeUnknownReason,
+                    cancellationToken);
+            });
 
-            await UpdateUnknownProjectionAsync(outcomeUnknown, errorCode, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
-
-            return outcomeUnknown;
+            return settled;
         }
         catch (ProviderCommandFenceException ex)
         {
             _logger.LogWarning(
-                "Ignored a stale unknown outcome for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls reconciliation.",
-                command.CommandId,
+                "Ignored a stale provider response for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls settlement.",
+                commandId,
                 ex.ProvidedFenceToken);
 
-            return await _commandManager.FindByCommandIdAsync(command.CommandId, CancellationToken.None) ?? command;
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
         }
         catch (ConcurrencyException)
         {
-            return command;
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
+        }
+        catch (ProviderCommandTransitionException)
+        {
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
         }
     }
 
-    private async Task UpdateUnknownProjectionAsync(
-        ProviderCommand command,
-        string errorCode,
+    private async Task<ProviderCommand> SettleReconciliationInFreshScopeAsync(
+        string commandId,
+        ProviderCommandClaim claim,
+        ContactCenterVoiceCommandReconciliationResult result,
+        string inconclusiveReason,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(command.InteractionId))
+        ProviderCommand settled = null;
+
+        try
         {
-            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
-
-            if (interaction is not null)
+            await _scopeExecutor.ExecuteAsync<IProviderCommandProcessor>(async processor =>
             {
-                interaction.TechnicalMetadata["providerErrorCode"] = errorCode;
-                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-            }
-        }
+                settled = await processor.SettleReconciliationAsync(
+                    commandId,
+                    claim,
+                    result,
+                    inconclusiveReason,
+                    cancellationToken);
+            });
 
-        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
+            return settled;
+        }
+        catch (ProviderCommandFenceException ex)
         {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
+            _logger.LogWarning(
+                "Ignored a stale provider reconciliation response for command '{ProviderCommandId}' with fence {FenceToken}; a newer owner controls settlement.",
+                commandId,
+                ex.ProvidedFenceToken);
 
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Dialing;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
         }
-    }
-
-    private async Task<bool> CanDispatchAsync(ProviderCommand command, CancellationToken cancellationToken)
-    {
-        var validated = false;
-
-        foreach (var validator in _dispatchValidators)
+        catch (ConcurrencyException)
         {
-            validated = true;
-
-            if (!await validator.CanDispatchAsync(command, cancellationToken))
-            {
-                return false;
-            }
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
         }
-
-        return validated;
+        catch (ProviderCommandTransitionException)
+        {
+            return await _commandManager.FindByCommandIdAsync(commandId, CancellationToken.None);
+        }
     }
 
     private static bool IsRecoverable(ProviderCommand command)
@@ -593,35 +593,27 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             or ProviderCommandStatus.Compensating;
     }
 
-    private static ContactCenterDialRequest DeserializeDialRequest(ProviderCommand command)
+    private IProviderCommandTypeExecutor ResolveExecutor(ProviderCommand command)
     {
-        if (string.IsNullOrWhiteSpace(command.RequestPayload))
+        IProviderCommandTypeExecutor found = null;
+        var hasDuplicate = false;
+
+        foreach (var executor in _executors)
         {
-            throw new JsonException("The provider command request payload is empty.");
+            if (executor.CommandType != command.CommandType)
+            {
+                continue;
+            }
+
+            if (found is not null)
+            {
+                hasDuplicate = true;
+                break;
+            }
+
+            found = executor;
         }
 
-        var request = JsonSerializer.Deserialize<ContactCenterDialRequest>(
-            command.RequestPayload,
-            _serializerOptions);
-
-        if (request is null)
-        {
-            throw new JsonException("The provider command request payload is empty.");
-        }
-
-        return request;
-    }
-
-    private static void StampRequest(
-        ContactCenterDialRequest request,
-        ProviderCommand command,
-        ProviderCommandClaim claim)
-    {
-        request.CommandId = command.CommandId;
-        request.Metadata ??= new Dictionary<string, string>();
-        request.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = command.CommandId;
-        request.Metadata[TelephonyConstants.RequestMetadata.IdempotencyKey] = command.CommandId;
-        request.Metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
-        request.Metadata[TelephonyConstants.RequestMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+        return hasDuplicate ? null : found;
     }
 }

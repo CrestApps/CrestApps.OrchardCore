@@ -83,10 +83,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
         await _outbox.EnqueueAsync(interactionEvent, cancellationToken);
 
-        if (!_scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(
-            context => context.DispatchAsync(interactionEvent.ItemId)))
-        {
-            await _outbox.DispatchAsync(interactionEvent, cancellationToken);
-        }
+        _scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(
+            context => context.DispatchAsync(interactionEvent.ItemId));
     }
 }

@@ -5,12 +5,9 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -38,14 +35,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IActivityReservationService _reservationService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IInboundContactLookup _contactLookup;
-    private readonly IIncomingCallDispatcher _incomingCallDispatcher;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEnumerable<IEntryPointResolver> _entryPointResolvers;
-    private readonly IProviderCallStateSynchronizationService _providerCallStateSynchronizationService;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly ISession _session;
     private readonly IClock _clock;
 
     /// <summary>
@@ -63,14 +57,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="reservationService">The reservation service used to release invalid offers.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
-    /// <param name="incomingCallDispatcher">The dispatcher used to offer the ringing call to the agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
     /// <param name="entryPointResolvers">The optional entry point resolvers used to route inbound calls by dialed number.</param>
-    /// <param name="providerCallStateSynchronizationService">The provider call-state synchronization service used to confirm a queued call still exists before it is offered.</param>
-    /// <param name="offerSynchronizationService">The offer synchronization service used to remove queued calls that no longer exist on the provider.</param>
+    /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
-    /// <param name="session">The YesSql session used to persist queue changes before selecting the next call.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -85,14 +76,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IActivityReservationService reservationService,
         IAgentProfileManager agentManager,
         IInboundContactLookup contactLookup,
-        IIncomingCallDispatcher incomingCallDispatcher,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEnumerable<IEntryPointResolver> entryPointResolvers,
-        IProviderCallStateSynchronizationService providerCallStateSynchronizationService,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
-        ISession session,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -107,14 +95,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _reservationService = reservationService;
         _agentManager = agentManager;
         _contactLookup = contactLookup;
-        _incomingCallDispatcher = incomingCallDispatcher;
         _voiceProviderResolver = voiceProviderResolver;
         _entryPointResolvers = entryPointResolvers;
-        _providerCallStateSynchronizationService = providerCallStateSynchronizationService;
         _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
-        _session = session;
         _clock = clock;
     }
 
@@ -314,11 +299,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        // Offer the next viable queued call. The telephony provider is the source of truth, so any queued
-        // call whose provider channel no longer exists is removed instead of being offered. Skipping such
-        // "zombie" calls prevents an agent from being reserved for a call they can never answer or hang up,
-        // which would otherwise leave them stuck and unable to receive new inbound calls. The loop is bounded
-        // to avoid spinning if reservations keep failing for unrelated reasons.
+        // The provider event stream and reconciliation service own provider truth. Offering work must remain
+        // a local atomic transition so provider latency or transport failure cannot strand an uncommitted reservation.
         for (var attempt = 0; attempt < MaxOfferAttempts; attempt++)
         {
             var reservation = await _assignmentService.AssignNextAsync(queueId, cancellationToken);
@@ -359,14 +341,9 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
                 return null;
             }
 
-            interaction = await _providerCallStateSynchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
-
             if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
             {
-                // Provider truth reports the call no longer exists. Remove it from the queue and release the
-                // reservation and agent so the dead call is never offered again, then try the next call.
                 await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
-                await _session.SaveChangesAsync(cancellationToken);
 
                 continue;
             }
@@ -376,70 +353,10 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             interaction.QueueId = reservation.QueueId;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-            var call = new TelephonyCall
-            {
-                CallId = interaction.ProviderInteractionId,
-                From = interaction.CustomerAddress,
-                To = ResolveServiceAddress(interaction),
-                State = CallState.Ringing,
-                Direction = CallDirection.Inbound,
-                ProviderName = interaction.ProviderName,
-                StartedUtc = _clock.UtcNow,
-                Metadata = BuildCallMetadata(interaction),
-            };
-
-            await _incomingCallDispatcher.DispatchAsync(agent.UserId, call, cancellationToken);
-
             return agent.UserId;
         }
 
         return null;
-    }
-
-    private static string ResolveServiceAddress(Core.Models.Interaction interaction)
-    {
-        return interaction.TechnicalMetadata.TryGetValue(ServiceAddressMetadataKey, out var value)
-            ? value?.ToString()
-            : null;
-    }
-
-    private static Dictionary<string, object> BuildCallMetadata(Core.Models.Interaction interaction)
-    {
-        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-        if (!string.IsNullOrWhiteSpace(interaction.CustomerAddress))
-        {
-            metadata["callerAddress"] = interaction.CustomerAddress;
-        }
-
-        var serviceAddress = ResolveServiceAddress(interaction);
-
-        if (!string.IsNullOrWhiteSpace(serviceAddress))
-        {
-            metadata["calledAddress"] = serviceAddress;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ProviderName))
-        {
-            metadata["providerName"] = interaction.ProviderName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ItemId))
-        {
-            metadata["interactionId"] = interaction.ItemId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ActivityItemId))
-        {
-            metadata["activityItemId"] = interaction.ActivityItemId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.QueueId))
-        {
-            metadata["queueId"] = interaction.QueueId;
-        }
-
-        return metadata;
     }
 
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)

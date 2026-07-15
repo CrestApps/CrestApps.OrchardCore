@@ -13,7 +13,7 @@ public sealed class DefaultContactCenterEventPublisherTests
     private static readonly DateTime _now = new(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task PublishAsync_PersistsTheEvent_AndDispatchesThroughTheOutbox()
+    public async Task PublishAsync_WithoutAmbientShellScope_PersistsForBackgroundDispatchWithoutRunningHandlersInline()
     {
         // Arrange
         var store = CreateStore();
@@ -32,7 +32,7 @@ public sealed class DefaultContactCenterEventPublisherTests
         // Assert
         store.Verify(s => s.CreateAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
         outbox.Verify(o => o.EnqueueAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
-        outbox.Verify(o => o.DispatchAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
+        outbox.Verify(o => o.DispatchAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

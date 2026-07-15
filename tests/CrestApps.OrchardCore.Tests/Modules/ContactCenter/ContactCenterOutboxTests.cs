@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -52,7 +53,15 @@ public sealed class ContactCenterOutboxTests
         handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
+        ContactCenterOutboxMessage created = null;
         var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => created = message)
+            .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => created);
         var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [handler.Object]);
         var interactionEvent = new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.InteractionCreated };
 
@@ -62,6 +71,45 @@ public sealed class ContactCenterOutboxTests
         // Assert
         outboxStore.Verify(s => s.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()), Times.Once);
         outboxStore.Verify(s => s.DeleteAsync(It.Is<ContactCenterOutboxMessage>(message => message.EventId == "e1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchDueMessageAsync_WhenPendingRetryIsNotDue_DoesNotClaimOrDispatch()
+    {
+        // Arrange
+        var message = new ContactCenterOutboxMessage
+        {
+            ItemId = "m1",
+            EventId = "e1",
+            Status = OutboxMessageStatus.Pending,
+            NextAttemptUtc = _now.AddMinutes(1),
+        };
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.FindByIdAsync(message.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(message);
+        var eventStore = new Mock<IInteractionEventStore>();
+        var handler = new Mock<IContactCenterEventHandler>();
+        handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
+        var outbox = CreateOutbox(outboxStore, eventStore, [handler.Object]);
+
+        // Act
+        var processed = await outbox.DispatchDueMessageAsync(
+            message.ItemId,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(processed);
+        outboxStore.Verify(
+            store => store.UpdateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        eventStore.Verify(
+            store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        handler.Verify(
+            candidate => candidate.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -84,6 +132,9 @@ public sealed class ContactCenterOutboxTests
             .Setup(s => s.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
             .Callback<ContactCenterOutboxMessage, CancellationToken>((m, _) => created = m)
             .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => created);
 
         var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(), [faulty.Object, healthy.Object]);
 
@@ -153,6 +204,9 @@ public sealed class ContactCenterOutboxTests
             .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => pending = message)
             .Returns(ValueTask.CompletedTask);
         outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => pending);
+        outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => [pending]);
         outboxStore
@@ -171,6 +225,7 @@ public sealed class ContactCenterOutboxTests
 
         // Act
         await outbox.DispatchAsync(interactionEvent, TestContext.Current.CancellationToken);
+        pending.NextAttemptUtc = _now;
         var processed = await outbox.DispatchDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
@@ -203,6 +258,9 @@ public sealed class ContactCenterOutboxTests
             .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
             .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => pending = message)
             .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => pending);
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore
             .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
@@ -225,13 +283,15 @@ public sealed class ContactCenterOutboxTests
         Assert.Single(pending.CompletedHandlerTypes);
         Assert.Contains("Test/FirstHandler/v1", pending.CompletedHandlerTypes);
         var persistedCheckpoint = Clone(pending);
+        persistedCheckpoint.NextAttemptUtc = _now;
+        var reloadedCheckpoint = Clone(persistedCheckpoint);
         Assert.NotSame(pending, persistedCheckpoint);
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => [Clone(persistedCheckpoint)]);
+            .ReturnsAsync(() => [reloadedCheckpoint]);
         outboxStore
             .Setup(store => store.FindByIdAsync(persistedCheckpoint.ItemId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Clone(persistedCheckpoint));
+            .ReturnsAsync(() => reloadedCheckpoint);
 
         var newSecondHandler = new SecondTestHandler(() =>
         {
@@ -363,7 +423,7 @@ public sealed class ContactCenterOutboxTests
                 It.Is<ContactCenterOutboxMessage>(candidate =>
                     candidate.CompletedHandlerTypes.Contains(unavailableHandlerId)),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -428,7 +488,7 @@ public sealed class ContactCenterOutboxTests
             Times.Once);
         outboxStore.Verify(
             store => store.UpdateAsync(firstMessage, It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Exactly(2));
         outboxStore.Verify(
             store => store.DeleteAsync(secondMessage, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -461,7 +521,7 @@ public sealed class ContactCenterOutboxTests
         Assert.Equal(2, message.AttemptCount);
         Assert.Equal(OutboxMessageStatus.Pending, message.Status);
         Assert.Equal(_now.AddSeconds(60), message.NextAttemptUtc);
-        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -495,7 +555,7 @@ public sealed class ContactCenterOutboxTests
 
         // Assert
         Assert.Equal(OutboxMessageStatus.DeadLettered, message.Status);
-        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -517,7 +577,7 @@ public sealed class ContactCenterOutboxTests
 
         // Assert
         Assert.Equal(OutboxMessageStatus.DeadLettered, message.Status);
-        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Once);
+        outboxStore.Verify(s => s.UpdateAsync(message, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -589,12 +649,17 @@ public sealed class ContactCenterOutboxTests
         scopeExecutor
             .Setup(service => service.ExecuteAsync(It.IsAny<Func<IContactCenterOutbox, Task>>()))
             .Returns((Func<IContactCenterOutbox, Task> operation) => operation(outbox));
+        var session = new Mock<ISession>();
+        session
+            .Setup(service => service.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         outbox = new ContactCenterOutbox(
             handlers,
             outboxStore.Object,
             eventStore.Object,
             scopeExecutor.Object,
+            session.Object,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance);
 
@@ -609,6 +674,8 @@ public sealed class ContactCenterOutboxTests
             EventId = message.EventId,
             EventType = message.EventType,
             Status = message.Status,
+            OwnerToken = message.OwnerToken,
+            FenceToken = message.FenceToken,
             AttemptCount = message.AttemptCount,
             NextAttemptUtc = message.NextAttemptUtc,
             LastError = message.LastError,

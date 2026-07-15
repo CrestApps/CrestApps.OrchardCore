@@ -1,8 +1,10 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -20,6 +22,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
+    private readonly IProviderCommandStateService _providerCommandStateService;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -34,6 +38,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="presenceManager">The presence manager used to move agents into wrap-up after handled calls end.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying.</param>
+    /// <param name="providerCommandStateService">The service used to persist outbound bridge intent.</param>
+    /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
@@ -45,6 +51,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IContactCenterEventPublisher publisher,
         IAgentPresenceManager presenceManager,
         IProviderIdentityResolver providerIdentityResolver,
+        IProviderCommandStateService providerCommandStateService,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger)
     {
@@ -56,6 +64,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _publisher = publisher;
         _presenceManager = presenceManager;
         _providerIdentityResolver = providerIdentityResolver;
+        _providerCommandStateService = providerCommandStateService;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
     }
@@ -220,11 +230,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        if (providerEvent.State == ContactCenterCallState.Connected)
-        {
-            await TryBridgeAnsweredOutboundAsync(session, interaction, cancellationToken);
-        }
-        else if (startsWrapUp)
+        if (startsWrapUp)
         {
             await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
         }
@@ -244,6 +250,11 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             var idempotencyKey = ResolveEventIdempotencyKey(providerEvent.IdempotencyKey, eventType);
 
             await PublishAsync(eventType, interaction.ItemId, session.AgentId, idempotencyKey, cancellationToken);
+        }
+
+        if (providerEvent.State == ContactCenterCallState.Connected)
+        {
+            await StageAnsweredOutboundBridgeAsync(session, interaction, cancellationToken);
         }
 
         return session;
@@ -592,7 +603,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
     }
 
-    private async Task TryBridgeAnsweredOutboundAsync(CallSession session, Interaction interaction, CancellationToken cancellationToken)
+    private async Task StageAnsweredOutboundBridgeAsync(
+        CallSession session,
+        Interaction interaction,
+        CancellationToken cancellationToken)
     {
         if (session.Direction != InteractionDirection.Outbound || string.IsNullOrEmpty(session.AgentId))
         {
@@ -608,25 +622,34 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return;
         }
 
-        var connectResult = await provider.ConnectToAgentAsync(new ContactCenterConnectRequest
+        if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
+            string.IsNullOrEmpty(commandId))
         {
-            ActivityId = interaction.ActivityItemId,
+            commandId = IdGenerator.GenerateId();
+            session.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
+            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        }
+
+        await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
+        {
+            CommandId = commandId,
+            ProviderName = session.ProviderName,
+            CommandType = ProviderCommandType.Answer,
+            ActivityItemId = interaction.ActivityItemId,
             InteractionId = interaction.ItemId,
-            ProviderCallId = session.ProviderCallId,
-            AgentId = session.AgentId,
-            QueueId = session.QueueId,
+            RemoveReservationFromQueueOnFailure = false,
+            RequestPayload = JsonSerializer.Serialize(new ProviderAnswerCommandRequest
+            {
+                ActivityId = interaction.ActivityItemId,
+                InteractionId = interaction.ItemId,
+                ProviderCallId = session.ProviderCallId,
+                AgentId = session.AgentId,
+                QueueId = session.QueueId,
+            }),
         }, cancellationToken);
 
-        if (!connectResult.Succeeded)
-        {
-            _logger.LogError(
-                "The Contact Center voice provider '{Provider}' could not bridge answered outbound call '{ProviderCallId}' to agent '{AgentId}': {ErrorCode} {ErrorMessage}.",
-                provider.TechnicalName,
-                OperationalLogRedactor.Pseudonymize(session.ProviderCallId, OperationalLogIdentifierCategory.Call),
-                OperationalLogRedactor.Pseudonymize(session.AgentId, OperationalLogIdentifierCategory.Agent),
-                OperationalLogRedactor.Redact(connectResult.ErrorCode, OperationalLogFieldKind.FreeText),
-                OperationalLogRedactor.Redact(connectResult.ErrorMessage, OperationalLogFieldKind.FreeText));
-        }
+        _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+            processor.DispatchAsync(commandId, CancellationToken.None));
     }
 
     private Task PublishAsync(string eventType, string interactionId, string actorId, string idempotencyKey, CancellationToken cancellationToken)

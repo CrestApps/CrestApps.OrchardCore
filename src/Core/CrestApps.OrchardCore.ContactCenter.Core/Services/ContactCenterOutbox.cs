@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -27,11 +28,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
     private const int BaseBackoffSeconds = 30;
     private const int MaxBackoffSeconds = 1800;
+    private static readonly TimeSpan _claimLease = TimeSpan.FromMinutes(5);
 
     private readonly IReadOnlyList<IContactCenterEventHandler> _handlers;
     private readonly IContactCenterOutboxStore _outboxStore;
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -42,6 +45,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <param name="outboxStore">The durable outbox message store.</param>
     /// <param name="eventStore">The durable interaction event store used to reload events for retry.</param>
     /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
+    /// <param name="session">The tenant session used to commit claims before handler execution.</param>
     /// <param name="clock">The clock used to schedule retries.</param>
     /// <param name="logger">The logger instance.</param>
     public ContactCenterOutbox(
@@ -49,6 +53,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         IContactCenterOutboxStore outboxStore,
         IInteractionEventStore eventStore,
         IContactCenterScopeExecutor scopeExecutor,
+        ISession session,
         IClock clock,
         ILogger<ContactCenterOutbox> logger)
     {
@@ -56,6 +61,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         _outboxStore = outboxStore;
         _eventStore = eventStore;
         _scopeExecutor = scopeExecutor;
+        _session = session;
         _clock = clock;
         _logger = logger;
     }
@@ -107,22 +113,25 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
         var message = await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
-        var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
 
-        if (firstError is null)
+        if (!await TryClaimAsync(message, cancellationToken))
         {
-            await _outboxStore.DeleteAsync(message, cancellationToken);
-
             return;
         }
 
-        await ScheduleRetryAsync(message, firstError, cancellationToken);
+        var ownerToken = message.OwnerToken;
+        var fenceToken = message.FenceToken;
+        var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
+        await SettleInFreshScopeAsync(message, ownerToken, fenceToken, firstError, cancellationToken);
 
-        _logger.LogWarning(
-            "Scheduled Contact Center event '{EventType}' ({EventId}) for retry after a handler failure: {Error}",
-            interactionEvent.EventType,
-            OperationalLogRedactor.Pseudonymize(interactionEvent.ItemId, OperationalLogIdentifierCategory.Event),
-            OperationalLogRedactor.Redact(firstError, OperationalLogFieldKind.FreeText));
+        if (firstError is not null)
+        {
+            _logger.LogWarning(
+                "Scheduled Contact Center event '{EventType}' ({EventId}) for retry after a handler failure: {Error}",
+                interactionEvent.EventType,
+                OperationalLogRedactor.Pseudonymize(interactionEvent.ItemId, OperationalLogIdentifierCategory.Event),
+                OperationalLogRedactor.Redact(firstError, OperationalLogFieldKind.FreeText));
+        }
     }
 
     /// <inheritdoc/>
@@ -182,10 +191,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
         var message = await _outboxStore.FindByIdAsync(messageId, cancellationToken);
 
-        if (message is null || message.Status != OutboxMessageStatus.Pending)
+        if (message is null || !await TryClaimAsync(message, cancellationToken))
         {
             return false;
         }
+
+        var ownerToken = message.OwnerToken;
+        var fenceToken = message.FenceToken;
 
         if (string.IsNullOrEmpty(message.EventId))
         {
@@ -204,17 +216,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
-
-        if (firstError is null)
-        {
-            await _outboxStore.DeleteAsync(message, cancellationToken);
-
-            return true;
-        }
-
-        await ScheduleRetryAsync(message, firstError, cancellationToken);
-
-        return false;
+        return await SettleInFreshScopeAsync(message, ownerToken, fenceToken, firstError, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -236,6 +238,44 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         await handler.HandleAsync(interactionEvent, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SettleClaimAsync(
+        string messageId,
+        string ownerToken,
+        long fenceToken,
+        IReadOnlyCollection<string> completedHandlerIds,
+        string error,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(messageId);
+        ArgumentException.ThrowIfNullOrEmpty(ownerToken);
+        ArgumentNullException.ThrowIfNull(completedHandlerIds);
+
+        var message = await _outboxStore.FindByIdAsync(messageId, cancellationToken);
+
+        if (message is null ||
+            message.Status != OutboxMessageStatus.Claimed ||
+            !string.Equals(message.OwnerToken, ownerToken, StringComparison.Ordinal) ||
+            message.FenceToken != fenceToken)
+        {
+            throw new ConcurrencyException(new Document());
+        }
+
+        message.CompletedHandlerTypes = completedHandlerIds.ToArray();
+
+        if (error is null)
+        {
+            await CompleteAsync(message, cancellationToken);
+
+            return true;
+        }
+
+        await ScheduleRetryAsync(message, error, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        return false;
     }
 
     private async Task<ContactCenterOutboxMessage> GetOrCreateMessageAsync(
@@ -264,6 +304,30 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         await _outboxStore.CreateAsync(message, cancellationToken);
 
         return message;
+    }
+
+    private async Task<bool> TryClaimAsync(
+        ContactCenterOutboxMessage message,
+        CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+
+        if ((message.Status != OutboxMessageStatus.Pending &&
+                message.Status != OutboxMessageStatus.Claimed) ||
+            message.NextAttemptUtc > now)
+        {
+            return false;
+        }
+
+        message.Status = OutboxMessageStatus.Claimed;
+        message.OwnerToken = Guid.NewGuid().ToString("N");
+        message.FenceToken++;
+        message.NextAttemptUtc = now.Add(_claimLease);
+        message.ModifiedUtc = now;
+        await _outboxStore.UpdateAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 
     private async Task<string> RunHandlersAsync(
@@ -321,6 +385,29 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         return firstError;
     }
 
+    private async Task<bool> SettleInFreshScopeAsync(
+        ContactCenterOutboxMessage message,
+        string ownerToken,
+        long fenceToken,
+        string error,
+        CancellationToken cancellationToken)
+    {
+        var completed = false;
+
+        await _scopeExecutor.ExecuteAsync<IContactCenterOutbox>(async outbox =>
+        {
+            completed = await outbox.SettleClaimAsync(
+                message.ItemId,
+                ownerToken,
+                fenceToken,
+                message.CompletedHandlerTypes.ToArray(),
+                error,
+                cancellationToken);
+        });
+
+        return completed;
+    }
+
     private static bool TryResolveCompletedCheckpoint(
         IContactCenterEventHandler handler,
         string handlerId,
@@ -365,6 +452,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         message.AttemptCount++;
         message.LastError = error;
         message.ModifiedUtc = _clock.UtcNow;
+        message.OwnerToken = null;
 
         if (message.AttemptCount >= MaxAttempts)
         {
@@ -379,10 +467,25 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
         else
         {
+            message.Status = OutboxMessageStatus.Pending;
             message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
         }
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
+    }
+
+    private async Task CompleteAsync(
+        ContactCenterOutboxMessage message,
+        CancellationToken cancellationToken)
+    {
+        message.Status = OutboxMessageStatus.Completed;
+        message.OwnerToken = null;
+        message.ModifiedUtc = _clock.UtcNow;
+        await _outboxStore.UpdateAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        await _outboxStore.DeleteAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
     }
 
     private async Task DeadLetterAsync(ContactCenterOutboxMessage message, string reason, CancellationToken cancellationToken)
@@ -390,8 +493,10 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         message.Status = OutboxMessageStatus.DeadLettered;
         message.LastError = reason;
         message.ModifiedUtc = _clock.UtcNow;
+        message.OwnerToken = null;
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
 
         _logger.LogError("Dead-lettered Contact Center outbox message '{MessageId}': {Reason}", OperationalLogRedactor.Pseudonymize(message.ItemId, OperationalLogIdentifierCategory.Event), reason);
     }

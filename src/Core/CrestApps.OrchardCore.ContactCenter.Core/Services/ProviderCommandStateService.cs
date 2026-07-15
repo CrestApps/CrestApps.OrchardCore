@@ -89,6 +89,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         command.ActivityItemId = registration.ActivityItemId;
         command.InteractionId = registration.InteractionId;
         command.ReservationId = registration.ReservationId;
+        command.RemoveReservationFromQueueOnFailure = registration.RemoveReservationFromQueueOnFailure;
         command.DialerProfileId = registration.DialerProfileId;
         command.RequestPayload = registration.RequestPayload;
         command.Status = ProviderCommandStatus.Pending;

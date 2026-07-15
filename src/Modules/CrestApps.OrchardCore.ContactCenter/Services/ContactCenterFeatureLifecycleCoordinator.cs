@@ -43,9 +43,12 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         }
     }
 
-    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
+    public async Task ReconcileAsync(string featureId, CancellationToken cancellationToken = default)
     {
-        foreach (var participant in _participants)
+        ArgumentException.ThrowIfNullOrEmpty(featureId);
+
+        foreach (var participant in _participants.Where(participant =>
+            string.Equals(participant.FeatureId, featureId, StringComparison.Ordinal)))
         {
             await ExecuteAsync(
                 participant,
