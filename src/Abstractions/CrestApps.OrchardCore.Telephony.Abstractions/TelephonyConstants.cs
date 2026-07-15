@@ -26,6 +26,11 @@ public static class TelephonyConstants
         /// Identifies a stable command that providers should use for idempotent execution when supported.
         /// </summary>
         public const string IdempotencyKey = "idempotencyKey";
+
+        /// <summary>
+        /// Identifies the monotonic fence token associated with an idempotent provider command.
+        /// </summary>
+        public const string FenceToken = "commandFenceToken";
     }
 
     /// <summary>

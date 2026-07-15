@@ -11,6 +11,11 @@ public sealed class ContactCenterVoiceProviderResult
     public bool Succeeded { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the provider may have executed the operation but its outcome could not be observed.
+    /// </summary>
+    public bool OutcomeUnknown { get; set; }
+
+    /// <summary>
     /// Gets or sets the provider call identifier returned by the provider.
     /// </summary>
     public string ProviderCallId { get; set; }

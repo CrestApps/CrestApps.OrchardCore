@@ -40,6 +40,28 @@ public sealed class ContactCenterFeatureActivationTests
         await host.AssertTenantAsync(tenant);
     }
 
+    [Fact]
+    public async Task FreshTenant_VoiceFeatureAlone_ActivatesProviderCommandServices()
+    {
+        // Arrange
+        var profile = new ContactCenterTenantProfile
+        {
+            Id = "voice-only",
+            ProviderProfile = "none",
+            Features =
+            [
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+        };
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        // Act
+        var tenant = await host.CreateTenantAsync(profile);
+
+        // Assert
+        await host.AssertVoiceFeatureAsync(tenant);
+    }
+
     [Theory]
     [InlineData("ga-core-asterisk")]
     [InlineData("ga-core-dialpad")]

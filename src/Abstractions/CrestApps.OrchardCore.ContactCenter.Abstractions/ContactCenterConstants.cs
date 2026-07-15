@@ -176,6 +176,11 @@ public static class ContactCenterConstants
         /// Identifies the idempotent provider command associated with an interaction.
         /// </summary>
         public const string CommandId = "providerCommandId";
+
+        /// <summary>
+        /// Identifies the monotonic fence token for the current provider-command claim.
+        /// </summary>
+        public const string FenceToken = "providerCommandFence";
     }
 
     /// <summary>

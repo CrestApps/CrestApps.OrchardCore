@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -9,11 +10,13 @@ using Microsoft.Extensions.Hosting;
 using OrchardCore.Abstractions.Setup;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Environment.Shell.Models;
 using OrchardCore.Setup.Services;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
@@ -118,6 +121,28 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             var voiceProviders = services.GetServices<IContactCenterVoiceProvider>();
             var provider = Assert.Single(voiceProviders);
             Assert.Equal(GetExpectedProviderName(tenant.Profile), provider.TechnicalName);
+        });
+    }
+
+    public async Task AssertVoiceFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IProviderCommandManager>());
+            Assert.NotNull(services.GetRequiredService<IProviderCommandStateService>());
+            Assert.NotNull(services.GetRequiredService<IProviderCommandProcessor>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderCommandRecoveryBackgroundTask>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ProviderCommandIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ProviderCommandIndexMigrations");
+
+            return Task.CompletedTask;
         });
     }
 

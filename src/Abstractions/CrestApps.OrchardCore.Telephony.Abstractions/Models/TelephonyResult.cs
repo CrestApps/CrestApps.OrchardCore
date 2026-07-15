@@ -11,6 +11,11 @@ public sealed class TelephonyResult
     public bool Succeeded { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the provider may have executed the operation but its outcome could not be observed.
+    /// </summary>
+    public bool OutcomeUnknown { get; init; }
+
+    /// <summary>
     /// Gets the error message describing why the operation failed, when <see cref="Succeeded"/> is
     /// <see langword="false"/>.
     /// </summary>
@@ -36,4 +41,19 @@ public sealed class TelephonyResult
     /// <returns>A failed <see cref="TelephonyResult"/>.</returns>
     public static TelephonyResult Failed(string error)
         => new() { Succeeded = false, Error = error };
+
+    /// <summary>
+    /// Creates a result for an operation whose provider outcome could not be determined.
+    /// </summary>
+    /// <param name="error">The error message describing why the outcome is unknown.</param>
+    /// <returns>An indeterminate <see cref="TelephonyResult"/>.</returns>
+    public static TelephonyResult Unknown(string error)
+    {
+        return new TelephonyResult
+        {
+            Succeeded = false,
+            OutcomeUnknown = true,
+            Error = error,
+        };
+    }
 }

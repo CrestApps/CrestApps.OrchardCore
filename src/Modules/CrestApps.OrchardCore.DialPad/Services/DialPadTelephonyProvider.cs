@@ -174,6 +174,11 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAud
             {
                 _logger.LogError("DialPad rejected a dial request with status code {StatusCode}.", response.StatusCode);
 
+                if (IsAmbiguousDialStatusCode(response.StatusCode))
+                {
+                    return TelephonyResult.Unknown(S["DialPad did not confirm whether the call was placed."].Value);
+                }
+
                 return TelephonyResult.Failed(S["DialPad could not place the call."].Value);
             }
 
@@ -192,12 +197,25 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAud
 
             return TelephonyResult.Success(call);
         }
-        catch (Exception ex)
+
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
             _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while placing a DialPad call.");
 
+            return TelephonyResult.Unknown(S["DialPad did not confirm whether the call was placed."].Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while preparing a DialPad call.");
+
             return TelephonyResult.Failed(S["DialPad could not place the call."].Value);
         }
+    }
+
+    private static bool IsAmbiguousDialStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
+            (int)statusCode >= 500;
     }
 
     /// <inheritdoc/>

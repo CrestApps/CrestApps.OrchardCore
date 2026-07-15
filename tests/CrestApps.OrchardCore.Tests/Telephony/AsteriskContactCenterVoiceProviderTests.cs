@@ -92,6 +92,35 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         Assert.Equal(AsteriskConstants.DefaultProviderTechnicalName, result.ProviderName);
     }
 
+    [Fact]
+    public async Task DialAsync_WhenTelephonyOutcomeIsUnknown_PreservesUnknownOutcome()
+    {
+        // Arrange
+        var telephonyProvider = new Mock<ITelephonyProvider>();
+        telephonyProvider
+            .Setup(provider => provider.DialAsync(It.IsAny<DialRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TelephonyResult.Unknown("The provider response was lost."));
+
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        resolver
+            .Setup(provider => provider.GetAsync(AsteriskConstants.ProviderTechnicalName))
+            .ReturnsAsync(telephonyProvider.Object);
+
+        var service = CreateService(resolver);
+
+        // Act
+        var result = await service.DialAsync(new ContactCenterDialRequest
+        {
+            Destination = "+15551234567",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Equal("dial_outcome_unknown", result.ErrorCode);
+        Assert.Equal(AsteriskConstants.ProviderTechnicalName, result.ProviderName);
+    }
+
     private static AsteriskContactCenterVoiceProvider CreateService(Mock<ITelephonyProviderResolver> resolver)
     {
         var localizer = new Mock<IStringLocalizer<AsteriskContactCenterVoiceProvider>>();

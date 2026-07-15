@@ -147,6 +147,56 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
+    public void VoiceFeature_OwnsProviderCommandRecoveryStateMachine()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var startupClasses = ParseStartupClasses(
+            repositoryRoot,
+            ContactCenterStartupPath,
+            ContactCenterConstantsFeatureArea(repositoryRoot));
+
+        // Act
+        var commandStoreOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IProviderCommandStore, ProviderCommandStore>()",
+                StringComparison.Ordinal));
+        var commandManagerOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IProviderCommandManager, ProviderCommandManager>()",
+                StringComparison.Ordinal));
+        var commandStateOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IProviderCommandStateService, ProviderCommandStateService>()",
+                StringComparison.Ordinal));
+        var commandProcessorOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddScoped<IProviderCommandProcessor, ProviderCommandProcessor>()",
+                StringComparison.Ordinal));
+        var commandIndexOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddIndexProvider<ProviderCommandIndexProvider>()",
+                StringComparison.Ordinal));
+        var commandMigrationOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddDataMigration<ProviderCommandIndexMigrations>()",
+                StringComparison.Ordinal));
+        var commandRecoveryTaskOwner = startupClasses.Single(startup =>
+            startup.Body.Contains(
+                "AddSingleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>()",
+                StringComparison.Ordinal));
+
+        // Assert
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandStoreOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandManagerOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandStateOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandProcessorOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandIndexOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandMigrationOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", commandRecoveryTaskOwner.FeatureId);
+    }
+
+    [Fact]
     public void QueuesFeature_DoesNotOwnSoftPhoneIntegration()
     {
         // Arrange

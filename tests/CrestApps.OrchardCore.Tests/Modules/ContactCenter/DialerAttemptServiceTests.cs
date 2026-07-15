@@ -62,13 +62,15 @@ public sealed class DialerAttemptServiceTests
         reservationService
             .Setup(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);
+        var providerCommandStateService = CreateProviderCommandStateService();
         var voiceCallRouter = CreateVoiceCallRouter(Success("call1", "Default Asterisk"));
         var service = CreateService(
             EligibleGate(),
             reservationService,
             CreateInteractionManager(interaction),
             CreateActivityManager(activity),
-            voiceCallRouter);
+            voiceCallRouter,
+            providerCommandStateService: providerCommandStateService);
 
         // Act
         var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
@@ -79,6 +81,277 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal("Default Asterisk", interaction.ProviderName);
         Assert.Equal(ActivityStatus.Dialing, activity.Status);
         reservationService.Verify(s => s.AcceptAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
+        providerCommandStateService.Verify(
+            service => service.StageConfirmSentAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                "call1",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenSuccessSettlementLosesFence_TreatsAttemptAsOwnedElsewhere()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var interaction = new Interaction { ItemId = "int1" };
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+15551112222",
+            Status = ActivityStatus.Pending,
+        };
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.StageConfirmSentAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                "call1",
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCommandFenceException("int1", 2, 1));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(interaction),
+            CreateActivityManager(activity),
+            CreateVoiceCallRouter(Success("call1")),
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Equal(ActivityStatus.Pending, activity.Status);
+        reservationService.Verify(
+            value => value.CompensateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenRecoveryAlreadySettledSuccess_TreatsAttemptAsOwnedElsewhere()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.StageConfirmSentAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                "call1",
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCommandTransitionException(
+                "int1",
+                ProviderCommandStatus.Confirmed,
+                ProviderCommandStatus.Confirmed));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(new Interaction { ItemId = "int1" }),
+            CreateActivityManager(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                PreferredDestination = "+15551112222",
+            }),
+            CreateVoiceCallRouter(Success("call1")),
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenStaleProviderFailureLosesFence_DoesNotCompensateNewerOwner()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var interaction = new Interaction { ItemId = "int1" };
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+15551112222",
+            Status = ActivityStatus.Pending,
+        };
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.BeginCompensationAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCommandFenceException("int1", 2, 1));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(interaction),
+            CreateActivityManager(activity),
+            CreateVoiceCallRouter(Failure("provider_rejected", "Provider rejected the request.")),
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Equal(ActivityStatus.Pending, activity.Status);
+        reservationService.Verify(
+            value => value.CompensateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenUnknownSettlementAlreadyTransitioned_DoesNotProjectStaleOutcome()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var interaction = new Interaction { ItemId = "int1" };
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+15551112222",
+            Status = ActivityStatus.Pending,
+        };
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.StageOutcomeUnknownAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProviderCommandTransitionException(
+                "int1",
+                ProviderCommandStatus.Paused,
+                ProviderCommandStatus.OutcomeUnknown));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(interaction),
+            CreateActivityManager(activity),
+            CreateVoiceCallRouter(new ContactCenterVoiceProviderResult
+            {
+                OutcomeUnknown = true,
+                ErrorCode = "provider_outcome_unknown",
+                ErrorMessage = "The provider response was lost.",
+            }),
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Equal(ActivityStatus.Pending, activity.Status);
+        reservationService.Verify(
+            value => value.CompensateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenRecoveryClaimsRegisteredCommand_TreatsAttemptAsOwnedElsewhere()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.TryClaimAsync(
+                "int1",
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ProviderCommandClaim)null);
+        var router = CreateVoiceCallRouter(Success("call1"));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(new Interaction { ItemId = "int1" }),
+            CreateActivityManager(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                PreferredDestination = "+15551112222",
+            }),
+            router,
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        router.Verify(
+            value => value.RouteOutboundAsync(
+                It.IsAny<ContactCenterDialRequest>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TryDialAsync_WhenMarkSentLosesDatabaseRace_TreatsAttemptAsOwnedElsewhere()
+    {
+        // Arrange
+        var reservation = Reservation();
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reservation);
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.MarkSentAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                null,
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConcurrencyException(new Document()));
+        var router = CreateVoiceCallRouter(Success("call1"));
+        var service = CreateService(
+            EligibleGate(),
+            reservationService,
+            CreateInteractionManager(new Interaction { ItemId = "int1" }),
+            CreateActivityManager(new OmnichannelActivity
+            {
+                ItemId = "act1",
+                PreferredDestination = "+15551112222",
+            }),
+            router,
+            providerCommandStateService: providerCommandStateService);
+
+        // Act
+        var accepted = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(accepted);
+        router.Verify(
+            value => value.RouteOutboundAsync(
+                It.IsAny<ContactCenterDialRequest>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -129,6 +402,7 @@ public sealed class DialerAttemptServiceTests
             .ReturnsAsync(reservation);
         var queueService = new Mock<IActivityQueueService>();
         var interaction = new Interaction { ItemId = "int1" };
+        var providerCommandStateService = CreateProviderCommandStateService();
         var voiceCallRouter = CreateVoiceCallRouter(Failure("provider_failed", "Provider rejected the request."));
         var service = CreateService(
             EligibleGate(),
@@ -136,7 +410,8 @@ public sealed class DialerAttemptServiceTests
             CreateInteractionManager(interaction),
             CreateActivityManager(new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" }),
             voiceCallRouter,
-            queueService: queueService);
+            queueService: queueService,
+            providerCommandStateService: providerCommandStateService);
 
         // Act
         var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
@@ -146,6 +421,19 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal(InteractionStatus.Failed, interaction.Status);
         reservationService.Verify(
             service => service.CompensateAsync("r1", true, It.IsAny<CancellationToken>()),
+            Times.Once);
+        providerCommandStateService.Verify(
+            service => service.BeginCompensationAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                "Provider rejected the request.",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        providerCommandStateService.Verify(
+            service => service.CompleteCompensationAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -222,11 +510,29 @@ public sealed class DialerAttemptServiceTests
                 It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("create"))
             .Returns(ValueTask.CompletedTask);
-        var session = new Mock<ISession>();
-        session
-            .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()))
             .Callback(() => order.Add("commit"))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(new ProviderCommand
+            {
+                CommandId = "int1",
+                Status = ProviderCommandStatus.Pending,
+            });
+        providerCommandStateService
+            .Setup(service => service.MarkSentAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => order.Add("sent"))
+            .ReturnsAsync(new ProviderCommand
+            {
+                CommandId = "int1",
+                Status = ProviderCommandStatus.Sent,
+            });
         ContactCenterDialRequest capturedRequest = null;
         var voiceCallRouter = CreateVoiceCallRouter(Success("call1"));
         voiceCallRouter
@@ -246,14 +552,14 @@ public sealed class DialerAttemptServiceTests
             interactionManager,
             CreateActivityManager(new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" }),
             voiceCallRouter,
-            session: session);
+            providerCommandStateService: providerCommandStateService);
 
         // Act
         var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(started);
-        Assert.Equal(["create", "commit", "route"], order);
+        Assert.Equal(["create", "commit", "sent", "route"], order);
         Assert.NotNull(capturedRequest);
         Assert.Equal("int1", capturedRequest.CommandId);
         Assert.Equal(
@@ -262,9 +568,22 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal(
             capturedRequest.CommandId,
             capturedRequest.Metadata[TelephonyConstants.RequestMetadata.IdempotencyKey]);
+        Assert.Equal("1", capturedRequest.Metadata[ContactCenterConstants.CommandMetadata.FenceToken]);
+        Assert.Equal("1", capturedRequest.Metadata[TelephonyConstants.RequestMetadata.FenceToken]);
         Assert.Equal(
             capturedRequest.CommandId,
             interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]);
+        providerCommandStateService.Verify(
+            state => state.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration =>
+                    registration.CommandId == "int1" &&
+                    registration.ReservationId == "r1" &&
+                    registration.DialerProfileId == "profile1" &&
+                    registration.ActivityItemId == "act1" &&
+                    registration.InteractionId == "int1" &&
+                    registration.CommandType == ProviderCommandType.Dial),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -276,9 +595,11 @@ public sealed class DialerAttemptServiceTests
         reservationService
             .Setup(service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservation);
-        var session = new Mock<ISession>();
-        session
-            .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        var providerCommandStateService = CreateProviderCommandStateService();
+        providerCommandStateService
+            .Setup(service => service.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("The command intent could not be committed."));
         var scopedCompensation = new Mock<IDialerAttemptCompensationService>();
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
@@ -294,7 +615,7 @@ public sealed class DialerAttemptServiceTests
             CreateInteractionManager(new Interaction { ItemId = "int1" }),
             CreateActivityManager(new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" }),
             voiceCallRouter,
-            session: session,
+            providerCommandStateService: providerCommandStateService,
             scopeExecutor: scopeExecutor);
 
         // Act
@@ -318,7 +639,7 @@ public sealed class DialerAttemptServiceTests
     }
 
     [Fact]
-    public async Task TryDialAsync_WhenProviderTimesOutAfterUnknownExecution_MarksDefinitiveFailureToday()
+    public async Task TryDialAsync_WhenProviderOutcomeIsUnknown_MarksUnknownWithoutCompensatingOrRedialing()
     {
         // Arrange
         var reservation = Reservation();
@@ -332,25 +653,40 @@ public sealed class DialerAttemptServiceTests
         var queueService = new Mock<IActivityQueueService>();
         var interaction = new Interaction { ItemId = "int1" };
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
-        var voiceCallRouter = CreateVoiceCallRouter(new TimeoutException("The provider response was lost."));
+        var providerCommandStateService = CreateProviderCommandStateService();
+        var voiceCallRouter = CreateVoiceCallRouter(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = false,
+            OutcomeUnknown = true,
+            ErrorCode = "dial_outcome_unknown",
+            ErrorMessage = "The provider response was lost.",
+        });
         var service = CreateService(
             EligibleGate(),
             reservationService,
             CreateInteractionManager(interaction),
             CreateActivityManager(activity),
             voiceCallRouter,
-            queueService: queueService);
+            queueService: queueService,
+            providerCommandStateService: providerCommandStateService);
 
         // Act
         var started = await service.TryDialAsync(CreateProfile(), reservation, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(started);
-        Assert.Equal(InteractionStatus.Failed, interaction.Status);
-        Assert.Equal("provider_exception", interaction.TechnicalMetadata["providerErrorCode"]);
-        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        Assert.Equal(InteractionStatus.Created, interaction.Status);
+        Assert.Equal("dial_outcome_unknown", interaction.TechnicalMetadata["providerErrorCode"]);
+        Assert.Equal(ActivityStatus.Dialing, activity.Status);
         reservationService.Verify(
             service => service.CompensateAsync("r1", true, It.IsAny<CancellationToken>()),
+            Times.Never);
+        providerCommandStateService.Verify(
+            service => service.StageOutcomeUnknownAsync(
+                "int1",
+                It.IsAny<ProviderCommandClaim>(),
+                "The provider response was lost.",
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -514,21 +850,18 @@ public sealed class DialerAttemptServiceTests
         Mock<IContactCenterEventPublisher> publisher = null,
         Mock<IQueueItemManager> queueItemManager = null,
         Mock<IActivityQueueService> queueService = null,
-        Mock<ISession> session = null,
+        Mock<IProviderCommandStateService> providerCommandStateService = null,
         Mock<IContactCenterScopeExecutor> scopeExecutor = null,
         IDialerAttemptCompensationService compensationService = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
         queueItemManager ??= new Mock<IQueueItemManager>();
-
-        if (session is null)
-        {
-            session = new Mock<ISession>();
-            session
-                .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
-        }
+        providerCommandStateService ??= CreateProviderCommandStateService();
+        var session = new Mock<ISession>();
+        session
+            .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         queueItemManager
             .Setup(m => m.FindByIdAsync("qi1", It.IsAny<CancellationToken>()))
@@ -544,9 +877,80 @@ public sealed class DialerAttemptServiceTests
             voiceCallRouter.Object,
             (publisher ?? new Mock<IContactCenterEventPublisher>()).Object,
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>()).Object,
+            providerCommandStateService.Object,
             session.Object,
             clock.Object,
             new Mock<ILogger<DialerAttemptService>>().Object);
+    }
+
+    private static Mock<IProviderCommandStateService> CreateProviderCommandStateService()
+    {
+        var service = new Mock<IProviderCommandStateService>();
+        var claim = new ProviderCommandClaim
+        {
+            CommandId = "int1",
+            FenceToken = 1,
+            OwnerToken = "owner-1",
+            LeaseExpiresUtc = _now.AddMinutes(2),
+        };
+
+        service
+            .Setup(value => value.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand
+            {
+                CommandId = "int1",
+                Status = ProviderCommandStatus.Pending,
+            });
+        service
+            .Setup(value => value.TryClaimAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(claim);
+        service
+            .Setup(value => value.MarkSentAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand { CommandId = "int1", Status = ProviderCommandStatus.Sent });
+        service
+            .Setup(value => value.StageConfirmSentAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand { CommandId = "int1", Status = ProviderCommandStatus.Confirmed });
+        service
+            .Setup(value => value.StageOutcomeUnknownAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand { CommandId = "int1", Status = ProviderCommandStatus.OutcomeUnknown });
+        service
+            .Setup(value => value.BeginCompensationAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand { CommandId = "int1", Status = ProviderCommandStatus.Compensating });
+        service
+            .Setup(value => value.TryClaimCompensationAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(claim);
+        service
+            .Setup(value => value.CompleteCompensationAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderCommand { CommandId = "int1", Status = ProviderCommandStatus.Compensated });
+
+        return service;
     }
 
     private static ContactCenterVoiceProviderResult Success(string providerCallId, string providerName = null)

@@ -96,7 +96,13 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
 
         if (!result.Succeeded)
         {
-            return Failure("dial_failed", result.Error);
+            return new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                OutcomeUnknown = result.OutcomeUnknown,
+                ErrorCode = result.OutcomeUnknown ? "dial_outcome_unknown" : "dial_failed",
+                ErrorMessage = result.Error,
+            };
         }
 
         return new ContactCenterVoiceProviderResult

@@ -95,6 +95,16 @@
     },
     {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
+      "component": "ProviderCommandRecoveryBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no provider-command recovery pass to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration and re-evaluates due provider commands.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
       "component": "ProviderWebhookIngressLimiter",
       "kind": "shell-singleton",
       "quiesce": "No requests are admitted in the idle fixture while the old shell is being replaced.",

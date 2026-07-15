@@ -108,6 +108,11 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     response.StatusCode,
                     OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
 
+                if (IsAmbiguousDialStatusCode(response.StatusCode))
+                {
+                    return TelephonyResult.Unknown(S["Asterisk did not confirm whether the call was placed."].Value);
+                }
+
                 return TelephonyResult.Failed(S["The call could not be placed."].Value);
             }
 
@@ -130,12 +135,25 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
 
             return TelephonyResult.Success(call);
         }
-        catch (Exception ex)
+
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
             _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while placing an Asterisk call for provider {ProviderName}.", ProviderName);
 
+            return TelephonyResult.Unknown(S["Asterisk did not confirm whether the call was placed."].Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while preparing an Asterisk call for provider {ProviderName}.", ProviderName);
+
             return TelephonyResult.Failed(S["The call could not be placed."].Value);
         }
+    }
+
+    private static bool IsAmbiguousDialStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
+            (int)statusCode >= 500;
     }
 
     public async Task<TelephonyCallLookupResult> GetCallStateAsync(string callId, CancellationToken cancellationToken = default)

@@ -403,6 +403,7 @@ public sealed class ComplianceStartup : StartupBase
     {
         services
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
+            .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
             .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()
             .AddScoped<IDialerAttemptService, DialerAttemptService>();
     }
@@ -484,6 +485,10 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IInboundVoiceEventSink, InboundVoiceEventSink>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
+            .AddScoped<IProviderCommandStore, ProviderCommandStore>()
+            .AddScoped<IProviderCommandManager, ProviderCommandManager>()
+            .AddScoped<IProviderCommandStateService, ProviderCommandStateService>()
+            .AddScoped<IProviderCommandProcessor, ProviderCommandProcessor>()
             .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
@@ -506,9 +511,12 @@ public sealed class VoiceStartup : StartupBase
                 serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>());
 
         services
+            .AddIndexProvider<ProviderCommandIndexProvider>()
+            .AddDataMigration<ProviderCommandIndexMigrations>()
             .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
             .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
 
+        services.AddSingleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>();
 
         services.AddSingleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>();
@@ -520,6 +528,7 @@ public sealed class VoiceStartup : StartupBase
             .AddVoiceOfferEndpoints()
             .AddProviderVoiceWebhookEndpoint();
     }
+
 }
 
 /// <summary>

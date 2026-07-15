@@ -66,6 +66,43 @@ public sealed class DialPadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task DialAsync_WhenTransportOutcomeIsUnknown_ReturnsOutcomeUnknown()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(_ => throw new HttpRequestException("connection lost"));
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.DialAsync(
+            new DialRequest { To = "+15551234567" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task DialAsync_WhenApiResponseIsAmbiguous_ReturnsOutcomeUnknown(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(statusCode, "{\"error\": \"temporary\"}");
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.DialAsync(
+            new DialRequest { To = "+15551234567" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+    }
+
+    [Fact]
     public async Task DialAsync_WhenDisabled_ReturnsFailedAndDoesNotCallApi()
     {
         // Arrange
