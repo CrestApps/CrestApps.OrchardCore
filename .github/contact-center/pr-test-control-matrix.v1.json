@@ -993,8 +993,8 @@
       "invariant": "Every Contact Center feature must, on a fresh Orchard tenant, enable, run its migrations, resolve every registered service, participate in routing, and disable cleanly, for every legal manifest combination; no feature may compile while failing as soon as a tenant enables it.",
       "testId": "CC-T001",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "contact-center-feature-activation-matrix",
+        "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml",
         "status": "partial"
       },
       "context": {
@@ -1008,7 +1008,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs computes and pins the exact transitive manifest-dependency closure of every legal Contact Center feature combination and fails the build if a closure reaches an unresolvable or unrecorded dependency. ContactCenterFeatureLifecycleTests and `.github/contact-center/feature-lifecycle-contracts.v1.json` add pre-disable and fresh-shell lifecycle contracts for inactive/idle work. The runtime proof that every combination actually enables, migrates, resolves every service, and disables cleanly on a live fresh Orchard tenant remains a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests boots disposable Orchard hosts and fresh SQLite tenants from the Blank recipe for every finite GA-Core support-matrix profile. It enables features with Orchard dependency expansion, asserts the exact enabled CrestApps manifest closure, resolves key Contact Center services and all background tasks, proves idle provider disable/re-enable, and proves Asterisk and DialPad tenants coexist without provider leakage. `.github/workflows/contact_center_feature_activation_matrix.yml` runs the matrix on Linux and retains TRX evidence. Static manifest-closure and lifecycle-contract proofs remain in ContactCenterFeatureDependencyArchitectureTests and ContactCenterFeatureLifecycleTests. Full registered-service and routed-request coverage, independent disable coverage for every legal feature combination, and the production PostgreSQL matrix remain later test-and-topology work, so this broader control stays partial."
     },
     {
       "id": "T002",

@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.DialPad;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -106,6 +108,24 @@ public sealed class ContactCenterSupportMatrixTests
         Assert.Equal(50, capacity?["maxConcurrentVoiceInteractionsPerTenant"]?.GetValue<int>());
         Assert.Equal(10, capacity?["maxNewInteractionsPerSecondPerTenant"]?.GetValue<int>());
         Assert.True(capacity?["maxTenantsPerDeployment"]?.GetValue<int>() > 0);
+    }
+
+    [Fact]
+    public void SupportMatrix_GaProfilesReferenceCurrentProviderAdapterFeatures()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var profiles = matrix["tenantProfiles"]?.AsArray()
+            .ToDictionary(
+                profile => profile?["id"]?.GetValue<string>() ?? string.Empty,
+                profile => profile?["features"]?.AsArray()
+                    .Select(feature => feature?.GetValue<string>())
+                    .ToHashSet(StringComparer.Ordinal),
+                StringComparer.Ordinal);
+
+        // Act & Assert
+        Assert.Contains(AsteriskConstants.Feature.ContactCenterVoice, profiles["ga-core-asterisk"]);
+        Assert.Contains(DialPadConstants.Feature.ContactCenterVoice, profiles["ga-core-dialpad"]);
     }
 
     private static JsonObject LoadMatrix()

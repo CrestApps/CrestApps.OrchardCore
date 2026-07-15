@@ -18,7 +18,7 @@ The first release targets two provider-specific tenant profiles. A tenant select
 | `ga-core-asterisk` | Asterisk | Inbound voice plus Manual and Preview dialing |
 | `ga-core-dialpad` | DialPad | Inbound voice, Manual and Preview dialing, and call transfer |
 
-The feature identifiers in the matrix describe the implemented R2 feature graph. Commercial readiness remains blocked on the fresh-tenant activation matrix and later remediation and certification phases.
+The feature identifiers in the matrix describe the implemented R2 feature graph. A dedicated Linux gate now creates fresh Orchard tenants from the Blank recipe for both profiles, enables only the profile seeds plus their declared dependency closure, runs migrations, resolves key services and background tasks, disables and re-enables the idle provider adapter, and verifies Asterisk and DialPad tenants can coexist without provider leakage. The gate retains TRX evidence from `.github/workflows/contact_center_feature_activation_matrix.yml`. Commercial readiness remains blocked on later remediation and certification phases.
 
 ## Feature lifecycle contract
 

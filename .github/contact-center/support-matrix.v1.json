@@ -104,7 +104,7 @@
         "CrestApps.OrchardCore.ContactCenter.RealTime",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Asterisk.ContactCenter"
+        "CrestApps.OrchardCore.Asterisk.ContactCenterVoice"
       ]
     },
     {
@@ -123,7 +123,7 @@
         "CrestApps.OrchardCore.ContactCenter.RealTime",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.DialPad",
-        "CrestApps.OrchardCore.DialPad.ContactCenter"
+        "CrestApps.OrchardCore.DialPad.ContactCenterVoice"
       ]
     }
   ],
