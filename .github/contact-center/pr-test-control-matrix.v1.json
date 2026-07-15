@@ -153,12 +153,12 @@
       "category": "correctness",
       "planFinding": "PR5",
       "gate": "Completed-handler identity unstable across deployment",
-      "invariant": "Outbox completed-handler keys must be stable, explicit, versioned ids; under a rolling deployment that reorders or renames handler registrations, only handlers that were never recorded as completed under their stable id may replay, and a permanently failing (poison) handler must be isolated so it never blocks other due work. Today `ContactCenterOutbox.cs:172` derives the completed-handler key from the assembly-qualified type name plus registration index, so a rolling deployment can replay already-completed handlers or skip due ones.",
+      "invariant": "Outbox completed-handler keys are stable, explicit, versioned ids; under a rolling deployment that reorders or renames handler registrations, only handlers that were never recorded as completed under their stable id may replay, and a permanently failing handler is isolated so it never blocks other due work.",
       "testId": "CC-C004",
       "ciJob": {
         "id": "contact-center-domain-invariants",
         "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
-        "status": "planned"
+        "status": "implemented"
       },
       "context": {
         "providers": [
@@ -171,7 +171,7 @@
           "rolling-upgrade"
         ]
       },
-      "evidenceLocation": "ContactCenterOutboxTests.DispatchDueAsync_AfterHandlerOrderChanges_ReplaysCompletedHandlerToday proves a rolling-version registration reorder re-executes a handler already checkpointed under its assembly-qualified name plus prior index. DispatchDueAsync_WhenFirstDueMessageFails_DoesNotProcessLaterMessageToday proves one poison due item blocks later messages in the same batch. R3 must invert these characterizations with explicit stable versioned handler ids and per-message failure isolation."
+      "evidenceLocation": "ContactCenterOutboxTests.DispatchDueAsync_AfterHandlerOrderChanges_DoesNotReplayCompletedHandler and DispatchDueAsync_WhenFirstDueMessageFails_ContinuesToLaterMessage prove stable versioned handler checkpoints and per-message poison isolation. Constructor validation tests reject blank, duplicate, and unspecified handler contracts."
     },
     {
       "id": "C005",
@@ -442,12 +442,12 @@
       "category": "data",
       "planFinding": "P1-analytics-and-projections",
       "gate": "Metrics projections not idempotent/rebuildable",
-      "invariant": "Every projection increment must be guarded by a unique `(Projection, EventId)` processed-event record applied through an atomic upsert, and every replayable projection must support a versioned checkpoint, a documented rebuild operation, and a drift-detection check, so a duplicate delivery, concurrent writer, event replay, or poison event can never double-count a metric or diverge from live state. Metric increments have no processed-event guard/checkpoint today and rebuild tooling is incomplete.",
+      "invariant": "Every projection increment is guarded by a unique `(Projection, EventId)` processed-event record committed atomically with the effect, while metric rows use optimistic concurrency and portable date/event uniqueness. Every replayable projection must also support a versioned checkpoint, a documented rebuild operation, and a drift-detection check; that rebuild tooling remains incomplete.",
       "testId": "CC-D007",
       "ciJob": {
         "id": "contact-center-database-matrix",
         "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
-        "status": "planned"
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -460,7 +460,7 @@
           "concurrent-writers"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterMetricsServiceTests.cs and ContactCenterReportingServiceTests.cs cover current metric increments; the duplicate/concurrent/replay/poison idempotency and rebuild/drift-detection proof is a planned:contact-center-database-matrix dependency."
+      "evidenceLocation": "ContactCenterEventDeduplicationPersistenceTests uses real SQLite sessions to prove a failed handler unit leaves neither marker nor metric durable, a retry commits one effect, and concurrent reservations allow only one commit. ContactCenterMetricsServiceTests and ContactCenterWorkflowEventHandlerTests cover handler-level replay branching; outbox tests cover poison isolation. Multi-database certification plus versioned checkpoint, rebuild, and drift-detection proof remain planned:contact-center-database-matrix dependencies."
     },
     {
       "id": "D008",

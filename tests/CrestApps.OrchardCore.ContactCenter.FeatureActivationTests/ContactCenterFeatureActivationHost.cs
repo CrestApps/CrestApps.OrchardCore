@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -116,12 +117,33 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.NotNull(services.GetRequiredService<IActivityRoutingService>());
             Assert.NotNull(services.GetRequiredService<IInteractionManager>());
             Assert.NotNull(services.GetRequiredService<IProviderIdentityResolver>());
+            Assert.NotNull(services.GetRequiredService<IContactCenterEventDeduplicationService>());
             Assert.NotEmpty(services.GetServices<IBackgroundTask>());
             Assert.Single(services.GetServices<IBackgroundTask>().OfType<AgentAvailabilityRecoveryBackgroundTask>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<OutboxDispatchBackgroundTask>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ContactCenterProcessedEventIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ContactCenterProcessedEventIndexMigrations");
 
             var voiceProviders = services.GetServices<IContactCenterVoiceProvider>();
             var provider = Assert.Single(voiceProviders);
-            Assert.Equal(GetExpectedProviderName(tenant.Profile), provider.TechnicalName);
+            var expectedProviderName = GetExpectedProviderName(tenant.Profile);
+            Assert.Equal(expectedProviderName, provider.TechnicalName);
+            Assert.Contains(
+                services.GetServices<IProviderIdentityProvider>().SelectMany(provider => provider.GetIdentities()),
+                identity => identity.CanonicalName == expectedProviderName);
+            var webhookHandlers = services.GetServices<IProviderWebhookInboxHandler>().ToArray();
+            Assert.All(
+                webhookHandlers,
+                handler => Assert.NotEqual(ContactCenterHandlerReplaySafety.Unspecified, handler.ReplaySafety));
+
+            if (expectedProviderName == "DialPad")
+            {
+                Assert.Single(webhookHandlers, handler => handler.TechnicalName == "dialpad-call-event");
+            }
+
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderWebhookInboxBackgroundTask>());
         });
     }
 
@@ -144,6 +166,26 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.Single(
                 services.GetServices<IDataMigration>(),
                 migration => migration.GetType().Name == "ProviderCommandIndexMigrations");
+
+            return Task.CompletedTask;
+        });
+    }
+
+    public async Task AssertWorkflowsFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IContactCenterEventDeduplicationService>());
+            Assert.Single(services.GetServices<IContactCenterEventHandler>().OfType<ContactCenterWorkflowEventHandler>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ContactCenterProcessedEventIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ContactCenterProcessedEventIndexMigrations");
 
             return Task.CompletedTask;
         });

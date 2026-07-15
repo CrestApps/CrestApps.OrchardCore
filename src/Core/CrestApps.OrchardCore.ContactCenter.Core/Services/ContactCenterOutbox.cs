@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     private readonly IReadOnlyList<IContactCenterEventHandler> _handlers;
     private readonly IContactCenterOutboxStore _outboxStore;
     private readonly IInteractionEventStore _eventStore;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -39,18 +41,21 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <param name="handlers">The registered Contact Center event handlers.</param>
     /// <param name="outboxStore">The durable outbox message store.</param>
     /// <param name="eventStore">The durable interaction event store used to reload events for retry.</param>
+    /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
     /// <param name="clock">The clock used to schedule retries.</param>
     /// <param name="logger">The logger instance.</param>
     public ContactCenterOutbox(
         IEnumerable<IContactCenterEventHandler> handlers,
         IContactCenterOutboxStore outboxStore,
         IInteractionEventStore eventStore,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<ContactCenterOutbox> logger)
     {
         _handlers = ValidateHandlers(handlers);
         _outboxStore = outboxStore;
         _eventStore = eventStore;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
     }
@@ -70,6 +75,12 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             {
                 throw new InvalidOperationException(
                     $"The Contact Center event handler '{handler.GetType().FullName}' must expose a non-empty stable HandlerId.");
+            }
+
+            if (!Enum.IsDefined(handler.ReplaySafety) || handler.ReplaySafety == ContactCenterHandlerReplaySafety.Unspecified)
+            {
+                throw new InvalidOperationException(
+                    $"The Contact Center event handler '{handlerId}' must declare an explicit ReplaySafety contract because outbox delivery is at-least-once.");
             }
 
             if (!seenHandlerIds.Add(handlerId))
@@ -123,38 +134,108 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
         foreach (var message in due)
         {
-            if (string.IsNullOrEmpty(message.EventId))
+            cancellationToken.ThrowIfCancellationRequested();
+            var messageId = message.ItemId;
+
+            try
             {
-                await DeadLetterAsync(message, "The outbox message has no event reference.", cancellationToken);
+                var completed = false;
 
-                continue;
+                // Isolate every due message in its own fresh Orchard child scope and YesSql session so a
+                // poison message or a canceled session can never poison the remaining batch.
+                await _scopeExecutor.ExecuteAsync<IContactCenterOutbox>(async outbox =>
+                {
+                    if (await outbox.DispatchDueMessageAsync(messageId, cancellationToken))
+                    {
+                        completed = true;
+                    }
+                });
+
+                if (completed)
+                {
+                    redelivered++;
+                }
             }
-
-            var interactionEvent = await _eventStore.FindByIdAsync(message.EventId, cancellationToken);
-
-            if (interactionEvent is null)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                await DeadLetterAsync(message, "The referenced event no longer exists.", cancellationToken);
-
-                continue;
+                throw;
             }
-
-            var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
-
-            if (firstError is null)
+            catch (Exception ex)
             {
-                await _outboxStore.DeleteAsync(message, cancellationToken);
-                redelivered++;
-
-                continue;
+                // The message's isolated scope failed (for example an optimistic-concurrency loss committed
+                // by another worker). The message stays pending and is reprocessed by the next pass in a
+                // fresh scope, so continue draining the rest of the batch instead of blocking it.
+                _logger.LogWarning(
+                    "Isolated dispatch of Contact Center outbox message '{MessageId}' failed with {ExceptionType}; the message stays pending for the next pass.",
+                    OperationalLogRedactor.Pseudonymize(messageId, OperationalLogIdentifierCategory.Event),
+                    ex.GetType().Name);
             }
-
-            await ScheduleRetryAsync(message, firstError, cancellationToken);
-
-            break;
         }
 
         return redelivered;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> DispatchDueMessageAsync(string messageId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(messageId);
+
+        var message = await _outboxStore.FindByIdAsync(messageId, cancellationToken);
+
+        if (message is null || message.Status != OutboxMessageStatus.Pending)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(message.EventId))
+        {
+            await DeadLetterAsync(message, "The outbox message has no event reference.", cancellationToken);
+
+            return false;
+        }
+
+        var interactionEvent = await _eventStore.FindByIdAsync(message.EventId, cancellationToken);
+
+        if (interactionEvent is null)
+        {
+            await DeadLetterAsync(message, "The referenced event no longer exists.", cancellationToken);
+
+            return false;
+        }
+
+        var firstError = await RunHandlersAsync(interactionEvent, message, cancellationToken);
+
+        if (firstError is null)
+        {
+            await _outboxStore.DeleteAsync(message, cancellationToken);
+
+            return true;
+        }
+
+        await ScheduleRetryAsync(message, firstError, cancellationToken);
+
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public async Task DispatchHandlerAsync(
+        InteractionEvent interactionEvent,
+        string handlerId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interactionEvent);
+        ArgumentException.ThrowIfNullOrEmpty(handlerId);
+
+        var handler = _handlers.FirstOrDefault(candidate =>
+            string.Equals(candidate.HandlerId, handlerId, StringComparison.Ordinal));
+
+        if (handler is null)
+        {
+            throw new InvalidOperationException(
+                $"The Contact Center event handler '{handlerId}' is not registered in the isolated dispatch scope.");
+        }
+
+        await handler.HandleAsync(interactionEvent, cancellationToken);
     }
 
     private async Task<ContactCenterOutboxMessage> GetOrCreateMessageAsync(
@@ -212,7 +293,11 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
             try
             {
-                await handler.HandleAsync(interactionEvent, cancellationToken);
+                // Commit each handler effect and its replay marker in an isolated child scope. A handler
+                // exception rolls back that unit without canceling this message scope, allowing the retry
+                // checkpoint to be persisted and later messages to continue.
+                await _scopeExecutor.ExecuteAsync<IContactCenterOutbox>(outbox =>
+                    outbox.DispatchHandlerAsync(interactionEvent, handlerId, cancellationToken));
 
                 completedHandlerIds.Add(handlerId);
             }

@@ -87,6 +87,7 @@ public sealed class Startup : StartupBase
             .AddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
+            .AddScoped<IContactCenterEventDeduplicationService, ContactCenterEventDeduplicationService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
             .AddScoped<IContactCenterRetentionService, ContactCenterRetentionService>()
             .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
@@ -95,6 +96,10 @@ public sealed class Startup : StartupBase
         services
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
             .AddDataMigration<ContactCenterEventMetricIndexMigrations>();
+
+        services
+            .AddIndexProvider<ContactCenterProcessedEventIndexProvider>()
+            .AddDataMigration<ContactCenterProcessedEventIndexMigrations>();
 
         services
             .AddScoped<ICallSessionStore, CallSessionStore>()

@@ -62,6 +62,28 @@ public sealed class ContactCenterFeatureActivationTests
         await host.AssertVoiceFeatureAsync(tenant);
     }
 
+    [Fact]
+    public async Task FreshTenant_WorkflowsFeatureAlone_ActivatesReplaySafeWorkflowBridge()
+    {
+        // Arrange
+        var profile = new ContactCenterTenantProfile
+        {
+            Id = "workflows-only",
+            ProviderProfile = "none",
+            Features =
+            [
+                "CrestApps.OrchardCore.ContactCenter.Workflows",
+            ],
+        };
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        // Act
+        var tenant = await host.CreateTenantAsync(profile);
+
+        // Assert
+        await host.AssertWorkflowsFeatureAsync(tenant);
+    }
+
     [Theory]
     [InlineData("ga-core-asterisk")]
     [InlineData("ga-core-dialpad")]

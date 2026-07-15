@@ -79,10 +79,37 @@ public sealed class ContactCenterMetricsServiceTests
     {
         // Arrange
         var metricsService = new Mock<IContactCenterMetricsService>();
-        var handler = new ContactCenterMetricsProjectionHandler(metricsService.Object);
+        var deduplication = new Mock<IContactCenterEventDeduplicationService>();
+        deduplication
+            .Setup(service => service.TryBeginAsync("ContactCenter/MetricsProjection/v1", "event-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var handler = new ContactCenterMetricsProjectionHandler(metricsService.Object, deduplication.Object);
 
         // Act
-        await handler.HandleAsync(new InteractionEvent { EventType = "OfferAccepted", OccurredUtc = _now }, TestContext.Current.CancellationToken);
+        await handler.HandleAsync(
+            new InteractionEvent { ItemId = "event-1", EventType = "OfferAccepted", OccurredUtc = _now },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        metricsService.Verify(s => s.RecordAsync("OfferAccepted", _now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProjectionHandler_WhenEventReplayed_DoesNotDoubleCount()
+    {
+        // Arrange
+        var metricsService = new Mock<IContactCenterMetricsService>();
+        var deduplication = new Mock<IContactCenterEventDeduplicationService>();
+        deduplication
+            .SetupSequence(service => service.TryBeginAsync("ContactCenter/MetricsProjection/v1", "event-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true)
+            .ReturnsAsync(false);
+        var handler = new ContactCenterMetricsProjectionHandler(metricsService.Object, deduplication.Object);
+        var interactionEvent = new InteractionEvent { ItemId = "event-1", EventType = "OfferAccepted", OccurredUtc = _now };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
 
         // Assert
         metricsService.Verify(s => s.RecordAsync("OfferAccepted", _now, It.IsAny<CancellationToken>()), Times.Once);

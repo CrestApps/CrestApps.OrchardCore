@@ -29,6 +29,9 @@ public sealed class DialPadWebhookInboxHandler : IProviderWebhookInboxHandler
     public string TechnicalName => HandlerTechnicalName;
 
     /// <inheritdoc/>
+    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+
+    /// <inheritdoc/>
     public async Task HandleAsync(string payload, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(payload);

@@ -8,7 +8,8 @@ using OrchardCore.BackgroundTasks;
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
 /// <summary>
-/// Retries provider webhook inbox messages whose immediate persisted dispatch did not complete.
+/// Retries provider webhook inbox messages whose immediate persisted dispatch did not complete. Each due
+/// message is isolated in its own fresh child scope so a poison delivery never blocks the rest of the batch.
 /// </summary>
 [BackgroundTask(
     Title = "Contact Center Provider Webhook Inbox Dispatch",
@@ -21,9 +22,8 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        await using var scope = serviceProvider.CreateAsyncScope();
-        var inbox = scope.ServiceProvider.GetRequiredService<IProviderWebhookInbox>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ProviderWebhookInboxBackgroundTask>>();
+        var inbox = serviceProvider.GetRequiredService<IProviderWebhookInbox>();
+        var logger = serviceProvider.GetRequiredService<ILogger<ProviderWebhookInboxBackgroundTask>>();
 
         try
         {
@@ -33,6 +33,10 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
             {
                 logger.LogDebug("Processed {Count} provider webhook inbox message(s).", processed);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {

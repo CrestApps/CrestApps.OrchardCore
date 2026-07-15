@@ -393,6 +393,96 @@ public sealed class ContactCenterUniquenessMigrationTests
         }
     }
 
+    [Fact]
+    public async Task EventMetricMigration_DuplicateDateAndEvent_FailsWithRepairGuidance()
+    {
+        var databasePath = DatabasePath("metric-duplicate");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            await CreateLegacyEventMetricIndexAsync(schemaBuilder);
+            var tableName = GetIndexTableName<ContactCenterEventMetricIndex>(store);
+            await InsertEventMetricAsync(schemaBuilder, tableName, 1, "metric-1", "2026-07-15", "OfferAccepted");
+            await InsertEventMetricAsync(schemaBuilder, tableName, 2, "metric-2", "2026-07-15", "OfferAccepted");
+            var migration = new ContactCenterEventMetricIndexMigrations(store)
+            {
+                SchemaBuilder = schemaBuilder,
+            };
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(migration.UpdateFrom1Async);
+
+            Assert.Contains("multiple rows for the same date and event type", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task EventMetricMigration_UniqueIndexRejectsDuplicateDateAndEvent()
+    {
+        var databasePath = DatabasePath("metric-constraint");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            await CreateLegacyEventMetricIndexAsync(schemaBuilder);
+            var tableName = GetIndexTableName<ContactCenterEventMetricIndex>(store);
+            var migration = new ContactCenterEventMetricIndexMigrations(store)
+            {
+                SchemaBuilder = schemaBuilder,
+            };
+            await migration.UpdateFrom1Async();
+            await InsertEventMetricAsync(schemaBuilder, tableName, 1, "metric-1", "2026-07-15", "OfferAccepted");
+
+            await Assert.ThrowsAnyAsync<DbException>(() =>
+                InsertEventMetricAsync(schemaBuilder, tableName, 2, "metric-2", "2026-07-15", "OfferAccepted"));
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessedEventMigration_UniqueIndexRejectsDuplicateHandlerEvent()
+    {
+        var databasePath = DatabasePath("processed-event-constraint");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            var migration = new ContactCenterProcessedEventIndexMigrations(store)
+            {
+                SchemaBuilder = schemaBuilder,
+            };
+            await migration.CreateAsync();
+            var tableName = GetIndexTableName<ContactCenterProcessedEventIndex>(store);
+            await InsertProcessedEventAsync(schemaBuilder, tableName, 1, "processed-1", "handler/v1", "event-1");
+
+            await Assert.ThrowsAnyAsync<DbException>(() =>
+                InsertProcessedEventAsync(schemaBuilder, tableName, 2, "processed-2", "handler/v1", "event-1"));
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
     private static string DatabasePath(string prefix)
         => Path.Combine(Path.GetTempPath(), $"contact-center-{prefix}-{Guid.NewGuid():N}.db");
 
@@ -446,6 +536,16 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            collection: ContactCenterConstants.CollectionName);
+    }
+
+    private static Task CreateLegacyEventMetricIndexAsync(SchemaBuilder schemaBuilder)
+    {
+        return schemaBuilder.CreateMapIndexTableAsync<ContactCenterEventMetricIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("DateKey", column => column.WithLength(10))
+            .Column<DateTime>("Date")
+            .Column<string>("EventType", column => column.WithLength(128)),
             collection: ContactCenterConstants.CollectionName);
     }
 
@@ -550,6 +650,47 @@ public sealed class ContactCenterUniquenessMigrationTests
             ("@DeliveryId", deliveryId),
             ("@Status", ProviderWebhookInboxStatus.Pending.ToString()),
             ("@NextAttemptUtc", new DateTime(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc)));
+    }
+
+    private static Task InsertEventMetricAsync(
+        SchemaBuilder schemaBuilder,
+        string tableName,
+        long documentId,
+        string itemId,
+        string dateKey,
+        string eventType)
+    {
+        return ExecuteAsync(
+            schemaBuilder,
+            $"""
+            INSERT INTO {tableName} (DocumentId, ItemId, DateKey, Date, EventType)
+            VALUES (@DocumentId, @ItemId, @DateKey, @Date, @EventType)
+            """,
+            ("@DocumentId", documentId),
+            ("@ItemId", itemId),
+            ("@DateKey", dateKey),
+            ("@Date", new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc)),
+            ("@EventType", eventType));
+    }
+
+    private static Task InsertProcessedEventAsync(
+        SchemaBuilder schemaBuilder,
+        string tableName,
+        long documentId,
+        string itemId,
+        string handlerId,
+        string eventId)
+    {
+        return ExecuteAsync(
+            schemaBuilder,
+            $"""
+            INSERT INTO {tableName} (DocumentId, ItemId, HandlerId, EventId)
+            VALUES (@DocumentId, @ItemId, @HandlerId, @EventId)
+            """,
+            ("@DocumentId", documentId),
+            ("@ItemId", itemId),
+            ("@HandlerId", handlerId),
+            ("@EventId", eventId));
     }
 
     private static async Task<string> ReadColumnAsync(

@@ -41,11 +41,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private const int BaseBackoffSeconds = 15;
     private const int MaxBackoffSeconds = 1800;
 
-    private readonly IEnumerable<IProviderWebhookInboxHandler> _handlers;
+    private readonly IReadOnlyList<IProviderWebhookInboxHandler> _handlers;
     private readonly IProviderWebhookInboxStore _store;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -57,6 +58,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// <param name="session">The tenant YesSql session used to commit acceptance and processing state.</param>
     /// <param name="distributedLock">The distributed lock used for idempotent acceptance and single-message dispatch.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying deliveries.</param>
+    /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
     /// <param name="clock">The clock used to stamp acceptance and retry times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderWebhookInbox(
@@ -65,16 +67,51 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         ISession session,
         IDistributedLock distributedLock,
         IProviderIdentityResolver providerIdentityResolver,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<ProviderWebhookInbox> logger)
     {
-        _handlers = handlers;
+        _handlers = ValidateHandlers(handlers);
         _store = store;
         _session = session;
         _distributedLock = distributedLock;
         _providerIdentityResolver = providerIdentityResolver;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
+    }
+
+    private static IReadOnlyList<IProviderWebhookInboxHandler> ValidateHandlers(IEnumerable<IProviderWebhookInboxHandler> handlers)
+    {
+        ArgumentNullException.ThrowIfNull(handlers);
+
+        var materialized = handlers as IReadOnlyList<IProviderWebhookInboxHandler> ?? handlers.ToArray();
+        var seenTechnicalNames = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var handler in materialized)
+        {
+            var technicalName = handler.TechnicalName;
+
+            if (string.IsNullOrWhiteSpace(technicalName))
+            {
+                throw new InvalidOperationException(
+                    $"The provider webhook inbox handler '{handler.GetType().FullName}' must expose a non-empty stable TechnicalName.");
+            }
+
+            if (!Enum.IsDefined(handler.ReplaySafety) || handler.ReplaySafety == ContactCenterHandlerReplaySafety.Unspecified)
+            {
+                throw new InvalidOperationException(
+                    $"The provider webhook inbox handler '{technicalName}' must declare an explicit ReplaySafety contract because provider delivery is at-least-once.");
+            }
+
+            if (!seenTechnicalNames.Add(technicalName))
+            {
+                throw new InvalidOperationException(
+                    $"The provider webhook inbox handler technical name '{technicalName}' is registered by more than one handler. Technical names must be unique so a persisted payload routes to exactly one handler.");
+            }
+        }
+
+        return materialized;
     }
 
     /// <inheritdoc/>
@@ -235,20 +272,41 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         foreach (var message in due)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            var messageId = message.ItemId;
+
             try
             {
-                if (await DispatchAsync(message.ItemId, cancellationToken))
+                var processed = false;
+
+                // Isolate every due message in its own fresh Orchard child scope and YesSql session so a
+                // concurrency loss or a poison delivery can never poison the remaining batch.
+                await _scopeExecutor.ExecuteAsync<IProviderWebhookInbox>(async inbox =>
+                {
+                    if (await inbox.DispatchAsync(messageId, cancellationToken))
+                    {
+                        processed = true;
+                    }
+                });
+
+                if (processed)
                 {
                     completed++;
                 }
             }
-            catch (ConcurrencyException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                // A concurrent worker won ownership of an aggregate this delivery touched. The shared session
-                // is now canceled and cannot be reused, so stop draining the batch. The remaining due
-                // messages (including this one, which stays Pending) are reprocessed by the next pass in a
-                // fresh scope.
-                break;
+                throw;
+            }
+            catch (Exception exception)
+            {
+                // The message's isolated scope failed (for example a concurrent worker won ownership of an
+                // aggregate this delivery touched). The message stays pending and is reprocessed by the next
+                // pass in a fresh scope, so continue draining the rest of the batch.
+                _logger.LogWarning(
+                    "Isolated dispatch of provider webhook inbox message '{MessageId}' failed with {ExceptionType}; the message stays pending for the next pass.",
+                    OperationalLogRedactor.Pseudonymize(messageId, OperationalLogIdentifierCategory.Event),
+                    exception.GetType().Name);
             }
         }
 

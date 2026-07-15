@@ -27,6 +27,9 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandler : IContactCenterEv
     public string HandlerId => "ContactCenter/OfferQueuedVoiceWorkOnAvailability/v1";
 
     /// <inheritdoc />
+    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+
+    /// <inheritdoc />
     public async Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

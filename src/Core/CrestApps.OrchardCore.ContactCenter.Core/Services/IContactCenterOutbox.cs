@@ -26,9 +26,34 @@ public interface IContactCenterOutbox
 
     /// <summary>
     /// Processes the outbox messages that are due for retry, re-running their handlers and applying
-    /// exponential back-off or dead-lettering based on the outcome.
+    /// exponential back-off or dead-lettering based on the outcome. Each due message is processed in its
+    /// own fresh Orchard child scope so a poison message or a canceled YesSql session cannot block the
+    /// remaining messages in the batch.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of messages that were successfully redelivered and removed.</returns>
     Task<int> DispatchDueAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Processes one due outbox message by its identifier. This is the per-message unit of work that
+    /// <see cref="DispatchDueAsync"/> runs in an isolated child scope; it reloads the message, re-runs its
+    /// incomplete handlers, and either removes the message or schedules a retry.
+    /// </summary>
+    /// <param name="messageId">The durable outbox message identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the message completed and was removed; otherwise <see langword="false"/>.</returns>
+    Task<bool> DispatchDueMessageAsync(string messageId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes one registered handler for an event. The outbox runs this operation in an isolated child
+    /// scope so the handler effect and any replay marker commit together, while an exception rolls both
+    /// back without canceling the message-dispatch session.
+    /// </summary>
+    /// <param name="interactionEvent">The event to handle.</param>
+    /// <param name="handlerId">The stable identifier of the handler to execute.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task DispatchHandlerAsync(
+        InteractionEvent interactionEvent,
+        string handlerId,
+        CancellationToken cancellationToken = default);
 }

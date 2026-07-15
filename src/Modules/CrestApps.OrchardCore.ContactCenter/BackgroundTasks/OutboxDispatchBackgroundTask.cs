@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 /// <summary>
 /// Redelivers Contact Center domain events whose handler dispatch previously failed. It is the durable
 /// retry mechanism behind <see cref="IContactCenterOutbox"/>, so a transient handler failure no longer
-/// silently drops an event.
+/// silently drops an event. Each due message is isolated in its own fresh child scope so a poison message
+/// never blocks the rest of the batch.
 /// </summary>
 [BackgroundTask(
     Title = "Contact Center Event Outbox Dispatch",
@@ -22,9 +23,8 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        await using var scope = serviceProvider.CreateAsyncScope();
-        var outbox = scope.ServiceProvider.GetRequiredService<IContactCenterOutbox>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<OutboxDispatchBackgroundTask>>();
+        var outbox = serviceProvider.GetRequiredService<IContactCenterOutbox>();
+        var logger = serviceProvider.GetRequiredService<ILogger<OutboxDispatchBackgroundTask>>();
 
         try
         {
@@ -34,6 +34,10 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
             {
                 logger.LogDebug("Redelivered {Count} Contact Center event(s) from the outbox.", redelivered);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

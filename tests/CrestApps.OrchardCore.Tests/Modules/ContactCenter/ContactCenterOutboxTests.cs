@@ -17,6 +17,7 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
@@ -48,6 +49,7 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
@@ -68,10 +70,12 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var faulty = new Mock<IContactCenterEventHandler>();
         faulty.SetupGet(mock => mock.HandlerId).Returns("Test/faulty/v1");
+        faulty.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         faulty.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("boom"));
 
         var healthy = new Mock<IContactCenterEventHandler>();
         healthy.SetupGet(mock => mock.HandlerId).Returns("Test/healthy/v1");
+        healthy.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         healthy.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
@@ -105,12 +109,14 @@ public sealed class ContactCenterOutboxTests
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "e1", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore.Setup(s => s.FindByIdAsync("e1", It.IsAny<CancellationToken>())).ReturnsAsync(new InteractionEvent { ItemId = "e1" });
 
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var outbox = CreateOutbox(outboxStore, eventStore, [handler.Object]);
@@ -129,11 +135,13 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var completedHandler = new Mock<IContactCenterEventHandler>();
         completedHandler.SetupGet(mock => mock.HandlerId).Returns("Test/completedHandler/v1");
+        completedHandler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         completedHandler
             .Setup(handler => handler.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var retryingHandler = new Mock<IContactCenterEventHandler>();
         retryingHandler.SetupGet(mock => mock.HandlerId).Returns("Test/retryingHandler/v1");
+        retryingHandler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         retryingHandler
             .SetupSequence(handler => handler.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("transient"))
@@ -147,6 +155,9 @@ public sealed class ContactCenterOutboxTests
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => [pending]);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => pending);
         var interactionEvent = new InteractionEvent
         {
             ItemId = "e1",
@@ -218,6 +229,9 @@ public sealed class ContactCenterOutboxTests
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => [Clone(persistedCheckpoint)]);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(persistedCheckpoint.ItemId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Clone(persistedCheckpoint));
 
         var newSecondHandler = new SecondTestHandler(() =>
         {
@@ -277,6 +291,9 @@ public sealed class ContactCenterOutboxTests
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([legacyCheckpoint]);
+        outboxStore
+            .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(legacyCheckpoint);
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore
             .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
@@ -324,6 +341,9 @@ public sealed class ContactCenterOutboxTests
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([message]);
+        outboxStore
+            .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(message);
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore
             .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
@@ -347,7 +367,7 @@ public sealed class ContactCenterOutboxTests
     }
 
     [Fact]
-    public async Task DispatchDueAsync_WhenFirstDueMessageFails_DoesNotProcessLaterMessageToday()
+    public async Task DispatchDueAsync_WhenFirstDueMessageFails_ContinuesToLaterMessage()
     {
         // Arrange
         var firstMessage = new ContactCenterOutboxMessage
@@ -368,6 +388,12 @@ public sealed class ContactCenterOutboxTests
         outboxStore
             .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([firstMessage, secondMessage]);
+        outboxStore
+            .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstMessage);
+        outboxStore
+            .Setup(store => store.FindByIdAsync("m2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(secondMessage);
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore
             .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
@@ -377,6 +403,7 @@ public sealed class ContactCenterOutboxTests
             .ReturnsAsync(secondEvent);
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler
             .Setup(service => service.HandleAsync(firstEvent, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("poison"));
@@ -389,7 +416,7 @@ public sealed class ContactCenterOutboxTests
         var processed = await outbox.DispatchDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0, processed);
+        Assert.Equal(1, processed);
         Assert.Equal(1, firstMessage.AttemptCount);
         Assert.Equal("poison", firstMessage.LastError);
         Assert.Equal(_now.AddSeconds(30), firstMessage.NextAttemptUtc);
@@ -398,13 +425,13 @@ public sealed class ContactCenterOutboxTests
             Times.Once);
         handler.Verify(
             service => service.HandleAsync(secondEvent, It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
         outboxStore.Verify(
             store => store.UpdateAsync(firstMessage, It.IsAny<CancellationToken>()),
             Times.Once);
-        eventStore.Verify(
-            store => store.FindByIdAsync("e2", It.IsAny<CancellationToken>()),
-            Times.Never);
+        outboxStore.Verify(
+            store => store.DeleteAsync(secondMessage, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -414,12 +441,14 @@ public sealed class ContactCenterOutboxTests
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "e1", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore.Setup(s => s.FindByIdAsync("e1", It.IsAny<CancellationToken>())).ReturnsAsync(new InteractionEvent { ItemId = "e1" });
 
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("still failing"));
 
         var outbox = CreateOutbox(outboxStore, eventStore, [handler.Object]);
@@ -449,12 +478,14 @@ public sealed class ContactCenterOutboxTests
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore.Setup(s => s.FindByIdAsync("e1", It.IsAny<CancellationToken>())).ReturnsAsync(new InteractionEvent { ItemId = "e1" });
 
         var handler = new Mock<IContactCenterEventHandler>();
         handler.SetupGet(mock => mock.HandlerId).Returns("Test/handler/v1");
+        handler.SetupGet(mock => mock.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.NaturallyIdempotent);
         handler.Setup(h => h.HandleAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("permanent"));
 
         var outbox = CreateOutbox(outboxStore, eventStore, [handler.Object]);
@@ -474,6 +505,7 @@ public sealed class ContactCenterOutboxTests
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "missing", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
         eventStore.Setup(s => s.FindByIdAsync("missing", It.IsAny<CancellationToken>())).ReturnsAsync((InteractionEvent)null);
@@ -527,6 +559,24 @@ public sealed class ContactCenterOutboxTests
         Assert.Contains("non-empty stable HandlerId", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Constructor_WhenReplaySafetyIsUnspecified_Throws()
+    {
+        // Arrange
+        var handler = new Mock<IContactCenterEventHandler>();
+        handler.SetupGet(service => service.HandlerId).Returns("ContactCenter/Unspecified/v1");
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CreateOutbox(
+                new Mock<IContactCenterOutboxStore>(),
+                new Mock<IInteractionEventStore>(),
+                [handler.Object]));
+
+        // Assert
+        Assert.Contains("explicit ReplaySafety contract", exception.Message, StringComparison.Ordinal);
+    }
+
     private static ContactCenterOutbox CreateOutbox(
         Mock<IContactCenterOutboxStore> outboxStore,
         Mock<IInteractionEventStore> eventStore,
@@ -534,13 +584,21 @@ public sealed class ContactCenterOutboxTests
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
+        ContactCenterOutbox outbox = null;
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        scopeExecutor
+            .Setup(service => service.ExecuteAsync(It.IsAny<Func<IContactCenterOutbox, Task>>()))
+            .Returns((Func<IContactCenterOutbox, Task> operation) => operation(outbox));
 
-        return new ContactCenterOutbox(
+        outbox = new ContactCenterOutbox(
             handlers,
             outboxStore.Object,
             eventStore.Object,
+            scopeExecutor.Object,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance);
+
+        return outbox;
     }
 
     private static ContactCenterOutboxMessage Clone(ContactCenterOutboxMessage message)
@@ -564,6 +622,8 @@ public sealed class ContactCenterOutboxTests
     {
         public string HandlerId => "Test/FirstHandler/v1";
 
+        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
+
         public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
         {
             return action();
@@ -574,6 +634,8 @@ public sealed class ContactCenterOutboxTests
     {
         public string HandlerId => "Test/SecondHandler/v1";
 
+        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
+
         public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
         {
             return action();
@@ -583,6 +645,8 @@ public sealed class ContactCenterOutboxTests
     private sealed class ConfigurableTestHandler(string handlerId, Func<Task> action) : IContactCenterEventHandler
     {
         public string HandlerId => handlerId;
+
+        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
 
         public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
         {

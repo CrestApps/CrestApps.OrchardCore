@@ -31,6 +31,8 @@ public sealed class ProviderWebhookInboxTests
             .Setup(service => service.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         var inbox = CreateInbox(store, session, [handler.Object]);
 
         // Act
@@ -142,6 +144,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(message.Payload, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -178,6 +181,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(message.Payload, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive provider response"));
@@ -250,6 +254,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .SetupSequence(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("poison"))
@@ -282,6 +287,7 @@ public sealed class ProviderWebhookInboxTests
             .ThrowsAsync(new ConcurrencyException(new Document()));
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -300,7 +306,7 @@ public sealed class ProviderWebhookInboxTests
     }
 
     [Fact]
-    public async Task DispatchDueAsync_WhenAMessageLosesConcurrency_StopsBatchWithoutReusingSession()
+    public async Task DispatchDueAsync_WhenAMessageLosesConcurrency_ContinuesToLaterMessageScope()
     {
         // Arrange
         var first = CreateMessage("message-1");
@@ -321,6 +327,7 @@ public sealed class ProviderWebhookInboxTests
             .ThrowsAsync(new ConcurrencyException(new Document()));
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -332,11 +339,14 @@ public sealed class ProviderWebhookInboxTests
         // Assert
         Assert.Equal(0, completed);
 
-        // The batch stops after the first concurrency loss so the canceled session is never reused for the
-        // remaining message; it is retried on the next pass in a fresh scope.
+        // Each message is dispatched through the scope executor, so a failed message never blocks the later
+        // message from being loaded and attempted.
         store.Verify(
             service => service.FindByIdAsync(second.ItemId, It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
+        handler.Verify(
+            service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -355,6 +365,7 @@ public sealed class ProviderWebhookInboxTests
             .Returns(Task.CompletedTask);
         var handler = new Mock<IProviderWebhookInboxHandler>();
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
             .Setup(service => service.HandleAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException());
@@ -366,6 +377,71 @@ public sealed class ProviderWebhookInboxTests
         // Assert
         Assert.Equal(ProviderWebhookInboxStatus.DeadLettered, message.Status);
         Assert.Equal(ProviderWebhookInbox.MaxAttempts, message.AttemptCount);
+    }
+
+    [Fact]
+    public void Constructor_WhenReplaySafetyIsUnspecified_Throws()
+    {
+        // Arrange
+        var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns("handler");
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CreateInbox(
+                new Mock<IProviderWebhookInboxStore>(),
+                new Mock<ISession>(),
+                [handler.Object]));
+
+        // Assert
+        Assert.Contains("explicit ReplaySafety contract", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WhenTechnicalNameIsNullOrBlank_Throws(string technicalName)
+    {
+        // Arrange
+        var handler = CreateHandler(technicalName);
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CreateInbox(
+                new Mock<IProviderWebhookInboxStore>(),
+                new Mock<ISession>(),
+                [handler.Object]));
+
+        // Assert
+        Assert.Contains("non-empty stable TechnicalName", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Constructor_WhenTechnicalNameIsDuplicated_Throws()
+    {
+        // Arrange
+        var first = CreateHandler("handler");
+        var second = CreateHandler("handler");
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CreateInbox(
+                new Mock<IProviderWebhookInboxStore>(),
+                new Mock<ISession>(),
+                [first.Object, second.Object]));
+
+        // Assert
+        Assert.Contains("must be unique", exception.Message, StringComparison.Ordinal);
+    }
+
+    private static Mock<IProviderWebhookInboxHandler> CreateHandler(string technicalName)
+    {
+        var handler = new Mock<IProviderWebhookInboxHandler>();
+        handler.SetupGet(service => service.TechnicalName).Returns(technicalName);
+        handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
+
+        return handler;
     }
 
     private static ProviderWebhookInbox CreateInbox(
@@ -383,15 +459,23 @@ public sealed class ProviderWebhookInboxTests
             .ReturnsAsync((null, locked));
         var clock = new Mock<IClock>();
         clock.SetupGet(service => service.UtcNow).Returns(_now);
+        ProviderWebhookInbox inbox = null;
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
+        scopeExecutor
+            .Setup(service => service.ExecuteAsync(It.IsAny<Func<IProviderWebhookInbox, Task>>()))
+            .Returns((Func<IProviderWebhookInbox, Task> operation) => operation(inbox));
 
-        return new ProviderWebhookInbox(
+        inbox = new ProviderWebhookInbox(
             handlers,
             store.Object,
             session.Object,
             distributedLock.Object,
             new ProviderIdentityResolver([]),
+            scopeExecutor.Object,
             clock.Object,
             NullLogger<ProviderWebhookInbox>.Instance);
+
+        return inbox;
     }
 
     private static ProviderWebhookInboxDelivery CreateDelivery()

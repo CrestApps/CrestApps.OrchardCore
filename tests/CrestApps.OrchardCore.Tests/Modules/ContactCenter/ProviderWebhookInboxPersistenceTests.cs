@@ -92,6 +92,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
             session,
             distributedLock,
             new ProviderIdentityResolver([]),
+            new Mock<IContactCenterScopeExecutor>().Object,
             clock.Object,
             NullLogger<ProviderWebhookInbox>.Instance);
     }

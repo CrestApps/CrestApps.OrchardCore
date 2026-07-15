@@ -43,6 +43,9 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     public string HandlerId => "ContactCenter/RealTimeProjection/v1";
 
     /// <inheritdoc/>
+    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
+
+    /// <inheritdoc/>
     public async Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

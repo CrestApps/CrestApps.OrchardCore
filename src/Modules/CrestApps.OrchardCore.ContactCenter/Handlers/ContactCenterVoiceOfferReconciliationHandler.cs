@@ -23,6 +23,9 @@ public sealed class ContactCenterVoiceOfferReconciliationHandler : IContactCente
     public string HandlerId => "ContactCenter/VoiceOfferReconciliation/v1";
 
     /// <inheritdoc/>
+    public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.GuardedByDurableStore;
+
+    /// <inheritdoc/>
     public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);

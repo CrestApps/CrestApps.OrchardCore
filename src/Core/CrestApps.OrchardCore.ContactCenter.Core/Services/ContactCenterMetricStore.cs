@@ -10,6 +10,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEventMetric, ContactCenterEventMetricIndex>, IContactCenterMetricStore
 {
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMetricStore"/> class.
     /// </summary>

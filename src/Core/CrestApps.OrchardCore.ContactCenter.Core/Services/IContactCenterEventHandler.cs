@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -15,6 +16,14 @@ public interface IContactCenterEventHandler
     /// when handlers are renamed, reordered, or shipped from a new assembly version.
     /// </summary>
     string HandlerId { get; }
+
+    /// <summary>
+    /// Gets the machine-readable replay contract for this handler. Outbox delivery is at-least-once, so
+    /// this value states honestly how the handler stays idempotent when the same event is dispatched again.
+    /// Registration validation rejects an <see cref="ContactCenterHandlerReplaySafety.Unspecified"/>
+    /// contract.
+    /// </summary>
+    ContactCenterHandlerReplaySafety ReplaySafety { get; }
 
     /// <summary>
     /// Handles the specified Contact Center domain event.
