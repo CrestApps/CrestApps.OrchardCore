@@ -14,7 +14,7 @@ public sealed class ContactCenterR0bHarnessDependencyLedgerTests
             .ToHashSet(StringComparer.Ordinal);
 
         // Assert
-        Assert.Equal("dependencies-recorded-harness-not-certified", ledger["status"]?.GetValue<string>());
+        Assert.Equal("minimal-harness-implemented-certification-pending", ledger["status"]?.GetValue<string>());
         Assert.Contains("redis-backplane-two-shell", scenarioIds);
         Assert.Contains("duplicate-provider-stream-two-process", scenarioIds);
         Assert.Contains("listener-lease-loss", scenarioIds);
@@ -63,7 +63,7 @@ public sealed class ContactCenterR0bHarnessDependencyLedgerTests
     }
 
     [Fact]
-    public void Ledger_DoesNotClaimUnimplementedHarnessesAreCertified()
+    public void Ledger_DoesNotClaimUncertifiedHarnessesAreCertified()
     {
         // Arrange
         var scenarios = LoadLedger()["scenarios"]?.AsArray();
@@ -71,7 +71,9 @@ public sealed class ContactCenterR0bHarnessDependencyLedgerTests
         // Act & Assert
         Assert.All(scenarios, scenario =>
         {
-            Assert.Equal("blocked", scenario?["status"]?.GetValue<string>());
+            var status = scenario?["status"]?.GetValue<string>();
+
+            Assert.True(status is "blocked" or "implemented-uncertified");
             Assert.NotEmpty(scenario?["blockedBy"]?.AsArray());
         });
     }

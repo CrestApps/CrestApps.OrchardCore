@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "status": "dependencies-recorded-harness-not-certified",
+  "status": "minimal-harness-implemented-certification-pending",
   "scenarios": [
     {
       "id": "redis-backplane-two-shell",
-      "status": "blocked",
+      "status": "implemented-uncertified",
       "description": "Run two Orchard tenants through the production SignalR Redis backplane configuration and prove tenant-qualified agent, queue, supervisor, reconnect, and fan-out delivery.",
       "controlIds": [
         "O002",
@@ -14,11 +14,14 @@
       "certificationPhase": "R8",
       "currentEvidence": [
         "ContactCenterHubSecurityTests",
-        "ContactCenterRealTimeNotifierTests"
+        "ContactCenterRealTimeNotifierTests",
+        "SignalRRedisBackplaneArchitectureTests",
+        "TwoNodeRedisBackplaneTests.ProviderEvent_CrossesNodesWithoutCrossingTenantShells"
       ],
       "blockedBy": [
-        "No production Redis backplane registration exists in CrestApps.OrchardCore.SignalR.",
-        "The Orchard Contact Center integration host does not yet boot two authenticated tenant hubs against Redis."
+        "The current transport harness uses tenant-scoped hosts and production backplane registration but does not activate features through a complete Orchard tenant setup.",
+        "R8 must extend the minimal provider-listener harness to authenticated ContactCenterHub agent, queue, supervisor, reconnect, and fan-out scenarios.",
+        "Retained release evidence has not yet been produced for every candidate GA topology."
       ],
       "harnessDependencies": [
         "Redis 7-compatible test container",

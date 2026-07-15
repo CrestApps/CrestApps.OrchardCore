@@ -24,7 +24,7 @@ The feature identifiers in the matrix describe the target feature graph that R2 
 
 - PostgreSQL 16.x is the only initial production database target.
 - SQLite is for local development, demonstrations, and tests only.
-- Production requires one region, two to four application nodes, a shared relational database, a Redis SignalR backplane, and the `OrchardCore.Redis.Lock` feature so Contact Center idempotency and orchestration locks are distributed across nodes.
+- Production requires one region, two to four application nodes, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature so real-time messages and Contact Center idempotency/orchestration locks are distributed across nodes.
 - Single-node production, multi-node operation without the backplane or Redis distributed locking, and multi-region active-active operation are unsupported.
 
 ## Tier-1 capacity target

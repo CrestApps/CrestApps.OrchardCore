@@ -703,12 +703,12 @@
       "category": "operations",
       "planFinding": "PR6",
       "gate": "Multi-node SignalR not configured/proven",
-      "invariant": "Under two application nodes, a hub offer, a supervisor dashboard watch, an agent reconnect, and a supervisor fan-out broadcast must all reach the correct connections through a supported, configured SignalR backplane; in-memory single-node behavior must not be used to claim multi-node correctness. `CrestApps.OrchardCore.SignalR/Startup.cs:26-38` configures `AddSignalR()` with no backplane, and `CrestApps.Aspire.AppHost/Program.cs:18,26-35` does not wire one for Contact Center.",
+      "invariant": "Under two application nodes, a hub offer, a supervisor dashboard watch, an agent reconnect, and a supervisor fan-out broadcast must all reach the correct connections through the supported `CrestApps.OrchardCore.SignalR.Redis` backplane; in-memory single-node behavior must not be used to claim multi-node correctness.",
       "testId": "CC-O002",
       "ciJob": {
         "id": "contact-center-operations-gates",
-        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
-        "status": "planned"
+        "workflow": ".github/workflows/contact_center_operations_gates.yml",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -721,7 +721,7 @@
           "single-region-multi-node"
         ]
       },
-      "evidenceLocation": "ContactCenterRealTimeNotifierTests and ContactCenterHubSecurityTests prove single-node group/user targeting. The versioned dependency and retained-evidence contract for the Redis two-shell/two-node proof is scenario redis-backplane-two-shell in .github/contact-center/r0b-harness-dependency-ledger.v1.json; implementation remains planned:contact-center-operations-gates."
+      "evidenceLocation": "SignalRRedisBackplaneArchitectureTests proves the explicit Orchard Redis-dependent feature, invalid-configuration guard, and distinct deployment/shell channel prefixes. TwoNodeRedisBackplaneTests.ProviderEvent_CrossesNodesWithoutCrossingTenantShells boots independent Node A/Node B tenant-scoped transport hosts through the production registration, sends a provider-listener event across nodes, and rejects delivery to an equal user id in another shell. This does not activate a complete Orchard tenant or certify ContactCenterHub; R8 must extend the fixture to authenticated offer, supervisor, reconnect, and fan-out scenarios with retained release evidence."
     },
     {
       "id": "O003",
