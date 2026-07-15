@@ -549,6 +549,51 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task CompleteWorkAsync_WhenAgentWasReservedBeforeLockAcquisition_DoesNotClearReservation()
+    {
+        // Arrange
+        var wrapUp = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.WrapUp,
+        };
+        var reserved = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            ActiveReservationId = "r1",
+        };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .SetupSequence(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wrapUp)
+            .ReturnsAsync(reserved);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.CompleteWorkAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(profile);
+        Assert.Equal(AgentPresenceStatus.Reserved, reserved.PresenceStatus);
+        Assert.Equal("r1", reserved.ActiveReservationId);
+        agentManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), null, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task SignInAsync_WhenExistingProfilePresent_HealsStaleWorkBeforeResettingAvailability()
     {
         // Arrange

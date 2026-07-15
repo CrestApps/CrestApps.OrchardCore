@@ -408,6 +408,12 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
+        if (profile.PresenceStatus is not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp ||
+            !string.IsNullOrWhiteSpace(profile.ActiveReservationId))
+        {
+            return null;
+        }
+
         var previousStatus = profile.PresenceStatus;
 
         profile.PresenceStatus = profile.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(profile);

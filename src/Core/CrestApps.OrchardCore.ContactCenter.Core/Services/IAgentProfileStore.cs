@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -23,4 +24,14 @@ public interface IAgentProfileStore : ICatalog<AgentProfile>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The available agents for the queue.</returns>
     Task<IReadOnlyCollection<AgentProfile>> ListAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists agent profiles in the specified presence state.
+    /// </summary>
+    /// <param name="presenceStatus">The presence state to match.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The matching agent profiles.</returns>
+    Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+        AgentPresenceStatus presenceStatus,
+        CancellationToken cancellationToken = default);
 }

@@ -47,4 +47,15 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
 
         return available.Where(agent => AgentEntitlementUtilities.HasQueueEntitlement(agent, queueId)).ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+        AgentPresenceStatus presenceStatus,
+        CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<AgentProfile, AgentProfileIndex>(
+            index => index.PresenceStatus == presenceStatus,
+            collection: ContactCenterConstants.CollectionName)
+            .ListAsync(cancellationToken)).ToArray();
+    }
 }

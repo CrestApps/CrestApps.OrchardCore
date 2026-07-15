@@ -24,6 +24,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
+    private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityQueueService _queueService;
     private readonly IInteractionManager _interactionManager;
@@ -41,6 +42,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="reservationManager">The reservation manager.</param>
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
+    /// <param name="availabilityService">The canonical agent availability service.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="queueService">The queue service used for dequeue operations.</param>
     /// <param name="interactionManager">The interaction manager.</param>
@@ -55,6 +57,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         IActivityReservationManager reservationManager,
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
+        IAgentAvailabilityService availabilityService,
         IActivityQueueManager queueManager,
         IActivityQueueService queueService,
         IInteractionManager interactionManager,
@@ -69,6 +72,7 @@ public sealed class ActivityReservationService : IActivityReservationService
         _reservationManager = reservationManager;
         _queueItemManager = queueItemManager;
         _agentManager = agentManager;
+        _availabilityService = availabilityService;
         _queueManager = queueManager;
         _queueService = queueService;
         _interactionManager = interactionManager;
@@ -123,6 +127,13 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         if (agent.PresenceStatus != AgentPresenceStatus.Available ||
             !string.IsNullOrWhiteSpace(agent.ActiveReservationId))
+        {
+            return null;
+        }
+
+        var availability = await _availabilityService.GetAsync(agent.ItemId, queueItem.QueueId, cancellationToken);
+
+        if (availability is null)
         {
             return null;
         }

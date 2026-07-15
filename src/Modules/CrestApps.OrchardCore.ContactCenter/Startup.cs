@@ -155,20 +155,41 @@ public sealed class AgentsStartup : StartupBase
 [Feature(ContactCenterConstants.Feature.Availability)]
 public sealed class AvailabilityStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AvailabilityStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind availability policy.</param>
+    public AvailabilityStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services
+            .AddOptions<AgentAvailabilityOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Availability"))
+            .Validate(options => options.HeartbeatTimeout > TimeSpan.Zero, "HeartbeatTimeout must be greater than zero.")
+            .Validate(options => options.MaximumWrapUpDuration > TimeSpan.Zero, "MaximumWrapUpDuration must be greater than zero.")
+            .ValidateOnStart();
+
         services
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()
             .AddScoped<IAgentSessionManager, AgentSessionManager>()
-            .AddScoped<IAgentSessionService, AgentSessionService>();
+            .AddScoped<IAgentSessionService, AgentSessionService>()
+            .AddScoped<IAgentAvailabilityService, AgentAvailabilityService>()
+            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>();
 
         services
             .AddIndexProvider<AgentSessionIndexProvider>()
             .AddDataMigration<AgentSessionIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

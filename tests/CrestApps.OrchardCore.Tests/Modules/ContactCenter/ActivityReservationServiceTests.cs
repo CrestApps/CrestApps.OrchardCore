@@ -141,6 +141,58 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task ReserveAsync_WhenAgentDisconnectsBeforeFinalTransition_AbortsWithoutReserving()
+    {
+        // Arrange
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+            Status = QueueItemStatus.Waiting,
+        };
+        var agent = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+        };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+        var availabilityService = new Mock<IAgentAvailabilityService>();
+        availabilityService
+            .Setup(service => service.GetAsync("a1", "q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentAvailability)null);
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            new Mock<IInteractionManager>(),
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>(),
+            availabilityService: availabilityService);
+
+        // Act
+        var reservation = await service.ReserveAsync(item, agent, 30, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        reservationManager.Verify(
+            manager => manager.CreateAsync(It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ReserveAsync_WhenAgentAlreadyHasActiveReservation_AbortsWithoutReserving()
     {
         // Arrange
@@ -662,7 +714,8 @@ public sealed class ActivityReservationServiceTests
         Mock<IContactCenterEventPublisher> publisher,
         Mock<ITelephonyService> telephonyService,
         Mock<IDistributedLock> distributedLock = null,
-        Mock<ISession> session = null)
+        Mock<ISession> session = null,
+        Mock<IAgentAvailabilityService> availabilityService = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -683,10 +736,25 @@ public sealed class ActivityReservationServiceTests
                 .Returns(Task.CompletedTask);
         }
 
+        if (availabilityService is null)
+        {
+            availabilityService = new Mock<IAgentAvailabilityService>();
+            availabilityService
+                .Setup(service => service.GetAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string agentId, string _, CancellationToken _) => new AgentAvailability
+                {
+                    Agent = new AgentProfile { ItemId = agentId },
+                });
+        }
+
         return new ActivityReservationService(
             reservationManager.Object,
             queueItemManager.Object,
             agentManager.Object,
+            availabilityService.Object,
             queueManager.Object,
             queueService.Object,
             interactionManager.Object,

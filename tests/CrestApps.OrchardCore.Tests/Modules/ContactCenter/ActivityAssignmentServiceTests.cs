@@ -53,7 +53,7 @@ public sealed class ActivityAssignmentServiceTests
     }
 
     [Fact]
-    public async Task AssignNextAsync_WhenAvailableProfileHasNoLiveSession_StillReservesToday()
+    public async Task AssignNextAsync_WhenCanonicalAvailabilityIsEmpty_DoesNotReserve()
     {
         // Arrange
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
@@ -88,16 +88,26 @@ public sealed class ActivityAssignmentServiceTests
             .Setup(s => s.ReserveAsync(topItem, disconnectedAgent, 30, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ActivityReservation { ItemId = "r1" });
 
-        var service = CreateService(queueItemManager, agentManager, queueManager, reservationService);
+        var availabilityService = new Mock<IAgentAvailabilityService>();
+        availabilityService
+            .Setup(service => service.ListForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var service = CreateService(
+            queueItemManager,
+            agentManager,
+            queueManager,
+            reservationService,
+            CreateDistributedLock(locked: true),
+            availabilityService: availabilityService);
 
         // Act
         var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(reservation);
+        Assert.Null(reservation);
         reservationService.Verify(
             s => s.ReserveAsync(topItem, disconnectedAgent, 30, It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Fact]
@@ -285,7 +295,8 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IActivityQueueManager> queueManager,
         Mock<IActivityReservationService> reservationService,
         Mock<IDistributedLock> distributedLock,
-        Mock<ISession> session = null)
+        Mock<ISession> session = null,
+        Mock<IAgentAvailabilityService> availabilityService = null)
     {
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours
@@ -295,9 +306,22 @@ public sealed class ActivityAssignmentServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
 
+        if (availabilityService is null)
+        {
+            availabilityService = new Mock<IAgentAvailabilityService>();
+            availabilityService
+                .Setup(service => service.ListForQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(async (string queueId, CancellationToken cancellationToken) =>
+                {
+                    var agents = await agentManager.Object.ListAvailableForQueueAsync(queueId, cancellationToken);
+
+                    return agents.Select(agent => new AgentAvailability { Agent = agent }).ToArray();
+                });
+        }
+
         return new ActivityAssignmentService(
             queueItemManager.Object,
-            agentManager.Object,
+            availabilityService.Object,
             queueManager.Object,
             CreateRoutingService(),
             reservationService.Object,

@@ -104,6 +104,14 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<string, int>> CountActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _store.CountActiveByAgentIdsAsync(agentIds, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
     {
         var interaction = await _store.FindActiveByAgentAsync(agentId, cancellationToken);
@@ -114,6 +122,21 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
         }
 
         return interaction;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListPendingWrapUpsByAgentAsync(agentId, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
     }
 
     /// <inheritdoc/>

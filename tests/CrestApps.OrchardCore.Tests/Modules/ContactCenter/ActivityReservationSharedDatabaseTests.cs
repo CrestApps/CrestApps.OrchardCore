@@ -47,8 +47,8 @@ public sealed class ActivityReservationSharedDatabaseTests
             var distributedLock = CreateOverlappingLock(() => Interlocked.Increment(ref lockAcquisitionCount));
             await using var firstSession = store.CreateSession();
             await using var secondSession = store.CreateSession();
-            await using var firstProvider = CreateServiceProvider(firstSession, readGate, distributedLock);
-            await using var secondProvider = CreateServiceProvider(secondSession, readGate, distributedLock);
+            await using var firstProvider = CreateServiceProvider(firstSession, readGate, distributedLock, seed);
+            await using var secondProvider = CreateServiceProvider(secondSession, readGate, distributedLock, seed);
 
             // Act
             var firstReservationTask = firstProvider
@@ -292,7 +292,8 @@ public sealed class ActivityReservationSharedDatabaseTests
     private static ServiceProvider CreateServiceProvider(
         ISession session,
         AsyncGate readGate,
-        IDistributedLock distributedLock)
+        IDistributedLock distributedLock,
+        (QueueItem QueueItem, AgentProfile Agent) seed)
     {
         var queueItemManager = CreateQueueItemManager(session);
         var queueItemManagerProxy = new Mock<IQueueItemManager>();
@@ -315,6 +316,13 @@ public sealed class ActivityReservationSharedDatabaseTests
 
         var agentManager = CreateAgentProfileManager(session);
         var reservationManager = CreateReservationManager(session);
+        var availabilityService = new Mock<IAgentAvailabilityService>();
+        availabilityService
+            .Setup(service => service.GetAsync(seed.Agent.ItemId, seed.QueueItem.QueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentAvailability
+            {
+                Agent = seed.Agent,
+            });
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager
             .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
@@ -333,6 +341,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(Mock.Of<IActivityQueueService>());
         services.AddSingleton(Mock.Of<IInteractionManager>());
         services.AddSingleton(activityManager.Object);
+        services.AddSingleton(availabilityService.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);

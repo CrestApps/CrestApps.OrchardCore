@@ -62,12 +62,32 @@ public interface IInteractionStore : ICatalog<Interaction>
     Task<int> CountActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts active interactions for the specified agents.
+    /// </summary>
+    /// <param name="agentIds">The agent profile identifiers.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The active interaction count keyed by agent identifier.</returns>
+    Task<IReadOnlyDictionary<string, int>> CountActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the most recent live interaction the specified agent is currently handling.
     /// </summary>
     /// <param name="agentId">The agent profile identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The active interaction, or <see langword="null"/> when the agent is not on a live interaction.</returns>
     Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists interactions whose after-call work is still incomplete for the specified agent.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The pending wrap-up interactions, newest first.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+        string agentId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the most recent interactions handled by the specified agent, newest first.

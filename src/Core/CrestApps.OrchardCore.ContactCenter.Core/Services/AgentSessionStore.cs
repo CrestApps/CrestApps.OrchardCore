@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -10,6 +11,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessionIndex>, IAgentSessionStore
 {
+    private const int QueryBatchSize = 500;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentSessionStore"/> class.
     /// </summary>
@@ -40,5 +43,30 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
             .ListAsync(cancellationToken);
 
         return stale.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentSession>> ListByUserIdsAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        var sessions = new List<AgentSession>();
+
+        foreach (var userIdBatch in userIds.Chunk(QueryBatchSize))
+        {
+            sessions.AddRange(await Session.Query<AgentSession, AgentSessionIndex>(
+                index => index.UserId.IsIn(userIdBatch),
+                collection: ContactCenterConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return sessions;
     }
 }

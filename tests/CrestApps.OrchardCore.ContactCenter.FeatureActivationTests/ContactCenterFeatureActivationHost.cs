@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -106,10 +107,13 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.All(expectedFeatures, featureId => Assert.Contains(featureId, enabledFeatureIds));
             Assert.Equal(expectedCrestAppsFeatures, enabledCrestAppsFeatures);
             Assert.NotNull(services.GetRequiredService<IAgentPresenceManager>());
+            Assert.NotNull(services.GetRequiredService<IAgentAvailabilityService>());
+            Assert.NotNull(services.GetRequiredService<IAgentAvailabilityRecoveryService>());
             Assert.NotNull(services.GetRequiredService<IActivityQueueService>());
             Assert.NotNull(services.GetRequiredService<IActivityRoutingService>());
             Assert.NotNull(services.GetRequiredService<IInteractionManager>());
             Assert.NotEmpty(services.GetServices<IBackgroundTask>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<AgentAvailabilityRecoveryBackgroundTask>());
 
             var voiceProviders = services.GetServices<IContactCenterVoiceProvider>();
             var provider = Assert.Single(voiceProviders);

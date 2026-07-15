@@ -52,4 +52,19 @@ public sealed class AgentSessionManager : CatalogManager<AgentSession>, IAgentSe
 
         return sessions;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentSession>> ListByUserIdsAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        var sessions = await _store.ListByUserIdsAsync(userIds, cancellationToken);
+
+        foreach (var session in sessions)
+        {
+            await LoadAsync(session, cancellationToken);
+        }
+
+        return sessions;
+    }
 }

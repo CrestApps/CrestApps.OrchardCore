@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -43,6 +44,21 @@ public sealed class AgentProfileManager : CatalogManager<AgentProfile>, IAgentPr
     public async Task<IReadOnlyCollection<AgentProfile>> ListAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
     {
         var profiles = await _store.ListAvailableForQueueAsync(queueId, cancellationToken);
+
+        foreach (var profile in profiles)
+        {
+            await LoadAsync(profile, cancellationToken);
+        }
+
+        return profiles;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+        AgentPresenceStatus presenceStatus,
+        CancellationToken cancellationToken = default)
+    {
+        var profiles = await _store.ListByPresenceAsync(presenceStatus, cancellationToken);
 
         foreach (var profile in profiles)
         {

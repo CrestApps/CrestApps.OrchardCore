@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -12,6 +13,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionIndex>, IInteractionStore
 {
+    private const int QueryBatchSize = 500;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionStore"/> class.
     /// </summary>
@@ -107,6 +110,39 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, int>> CountActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentIds);
+
+        if (agentIds.Count == 0)
+        {
+            return new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var agentIdBatch in agentIds.Chunk(QueryBatchSize))
+        {
+            var indexes = await Session.QueryIndex<InteractionIndex>(
+                index => index.AgentId.IsIn(agentIdBatch) &&
+                    index.Status != InteractionStatus.Created &&
+                    index.Status != InteractionStatus.Ended &&
+                    index.Status != InteractionStatus.Failed,
+                collection: ContactCenterConstants.CollectionName)
+                .ListAsync(cancellationToken);
+
+            foreach (var group in indexes.GroupBy(index => index.AgentId, StringComparer.Ordinal))
+            {
+                counts[group.Key] = group.Count();
+            }
+        }
+
+        return counts;
+    }
+
+    /// <inheritdoc/>
     public async Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
@@ -119,6 +155,22 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             collection: ContactCenterConstants.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        return (await Session.Query<Interaction, InteractionIndex>(
+            index => index.AgentId == agentId &&
+                index.WrapUpStartedUtc != null &&
+                index.WrapUpCompletedUtc == null,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.WrapUpStartedUtc)
+            .ListAsync(cancellationToken)).ToArray();
     }
 
     /// <inheritdoc/>

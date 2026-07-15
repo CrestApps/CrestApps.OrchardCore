@@ -12,7 +12,7 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, reason codes, skills, and administrator-owned queue/campaign entitlements. |
-| Contact Center Availability | `CrestApps.OrchardCore.ContactCenter.Availability` | Agent presence, capacity state, durable sessions, heartbeat tracking, stale-session recovery, and logout synchronization without requiring SignalR. |
+| Contact Center Availability | `CrestApps.OrchardCore.ContactCenter.Availability` | Canonical routing availability, durable sessions, heartbeat tracking, capacity projection, after-call recovery, and logout synchronization without requiring SignalR. |
 | Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, and reservations. |
 | Contact Center Routing | `CrestApps.OrchardCore.ContactCenter.Routing` | Policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
 | Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, and Manual or Preview inventory loads routed through Contact Center Voice. |
@@ -37,6 +37,23 @@ Agents sign in from the floating Telephony soft phone. When the Contact Center q
 
 Presence is a dropdown in the soft-phone header so agents can change availability without switching tabs. **Request break** is system-approved: if no assignment is in progress, the request is granted immediately and the agent enters `Break`; if a route/reservation is already in progress, the request is kept pending while the call continues, and the system grants `Break` automatically when that in-flight work is released. Agents in `RequestBreak` or `Break` are not eligible for new routing decisions.
 
+Routing never treats the profile presence value by itself as proof that an agent can receive work. The Availability feature computes a canonical projection by joining an `Available` profile and queue entitlement with the agent's selected session queue, online connection state, fresh heartbeat, and remaining interaction capacity. The last connection disconnect therefore removes the agent from routing immediately without destroying the profile's requested presence during a transient reconnect; stale-session cleanup later performs the durable sign-out. Reservation creation repeats the canonical check while it holds the activity and agent transition locks, closing the race where a client disconnects after candidate selection.
+
+Availability policy is tenant configuration:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "Availability": {
+      "HeartbeatTimeout": "00:01:30",
+      "MaximumWrapUpDuration": "00:15:00"
+    }
+  }
+}
+```
+
+`HeartbeatTimeout` controls how old a session heartbeat may be before routing treats the session as disconnected. `MaximumWrapUpDuration` is the server-owned after-call deadline. A tenant background task runs each minute and releases agents whose wrap-up interaction exceeded that deadline or whose `WrapUp` presence has no matching pending wrap-up interaction. Deadline recovery records the interaction's wrap-up completion time and restores the pending/default presence; it does not complete the CRM activity or invent a disposition.
+
 ### Presence state reference
 
 | State | Set by | Meaning and routing behavior |
@@ -45,7 +62,7 @@ Presence is a dropdown in the soft-phone header so agents can change availabilit
 | `Available` | Agent/system | Ready for work. A transition to this state publishes an event that triggers queued voice recovery in a separate service scope. |
 | `Reserved` | System | An offer is assigned but not yet accepted. The agent cannot receive another offer beyond configured capacity. |
 | `Busy` | System | The agent accepted and is actively handling an interaction. |
-| `WrapUp` | System | The answered interaction ended and after-call work is pending. The agent remains ineligible until the CRM activity is completed. |
+| `WrapUp` | System | The answered interaction ended and after-call work is pending. The agent remains ineligible until the CRM activity is completed or the server-owned recovery deadline releases orphaned capacity. |
 | `RequestBreak` | Agent | A request to enter `Break`; when work is already reserved or active, the request is stored and granted after the work is released or completed. |
 | `Break` | Agent/system | A granted break. The agent is signed in but ineligible for work. |
 | `Away` | Agent | Not ready because the agent is away from the desk. |
@@ -110,7 +127,7 @@ A reservation locks the activity for one agent and can be accepted, rejected, ca
 
 Declining an inbound offer rejects that reservation and immediately makes the agent eligible according to their pending/default presence while routing tries the next eligible agent. If the agent does not respond before the reservation timeout, the queue's unanswered-offer action is applied. Preview outbound work remains agent-controlled; power and progressive work is owned by the dialer pacing cycle rather than the generic inbound assignment loop. Automated dialer reservations without a valid interaction are released so pacing can retry safely instead of leaving the agent stuck in `Reserved`.
 
-Assignment uses distributed locks for contention control and database invariants for correctness. Each queue's assignment runs under a per-queue lock; reservation creation acquires an activity lock and then an agent lock in a consistent order; and accept/reject/cancel/expiry transitions share a per-reservation lock. Before reserving, the service revalidates the agent's current presence, pending reservation ownership, and active-interaction capacity. YesSql document-version checks make the queue, reservation, agent, and CRM activity updates one compare-and-set commit. Portable unique claim keys allow only one active queue item per activity, one pending or accepted reservation per activity, and one pending reservation per agent while retaining terminal history. A writer that loses the database race aborts the operation scope instead of reusing YesSql's canceled session, so lock expiry or overlapping holders cannot publish a second successful reservation.
+Assignment uses distributed locks for contention control and database invariants for correctness. Each queue's assignment runs under a per-queue lock; reservation creation acquires an activity lock and then an agent lock in a consistent order; and accept/reject/cancel/expiry transitions share a per-reservation lock. Before reserving, the service revalidates canonical session liveness and queue opt-in, the agent's current presence, pending reservation ownership, and active-interaction capacity. YesSql document-version checks make the queue, reservation, agent, and CRM activity updates one compare-and-set commit. Portable unique claim keys allow only one active queue item per activity, one pending or accepted reservation per activity, and one pending reservation per agent while retaining terminal history. A writer that loses the database race aborts the operation scope instead of reusing YesSql's canceled session, so lock expiry or overlapping holders cannot publish a second successful reservation.
 
 This relational compare-and-set boundary does not yet certify provider-side voicemail or reject execution during reservation expiry. Those side effects require the durable provider-command intent, fencing, reconciliation, and compensation work in the remaining R3 command phases.
 

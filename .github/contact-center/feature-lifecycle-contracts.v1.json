@@ -34,6 +34,16 @@
       "activeWorkStatus": "deferred-r3"
     },
     {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Availability",
+      "component": "AgentAvailabilityRecoveryBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no availability-recovery pass to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Routing",
       "component": "ReservationExpiryBackgroundTask",
       "kind": "background-task",

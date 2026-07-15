@@ -63,7 +63,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Availability,
     Name = "Contact Center Availability",
-    Description = "Adds agent presence, durable sessions, heartbeat state, and stale-session recovery without requiring real-time transport.",
+    Description = "Adds canonical agent availability, durable sessions, heartbeat state, and after-call recovery without requiring real-time transport.",
     Category = "Contact Center",
     Dependencies =
     [

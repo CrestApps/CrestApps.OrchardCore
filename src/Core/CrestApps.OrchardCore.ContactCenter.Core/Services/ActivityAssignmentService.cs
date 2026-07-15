@@ -20,7 +20,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private static readonly TimeSpan _assignmentLockExpiration = TimeSpan.FromSeconds(30);
 
     private readonly IQueueItemManager _queueItemManager;
-    private readonly IAgentProfileManager _agentManager;
+    private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityRoutingService _routingService;
     private readonly IActivityReservationService _reservationService;
@@ -35,7 +35,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// Initializes a new instance of the <see cref="ActivityAssignmentService"/> class.
     /// </summary>
     /// <param name="queueItemManager">The queue item manager.</param>
-    /// <param name="agentManager">The agent profile manager.</param>
+    /// <param name="availabilityService">The canonical agent availability service.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="routingService">The routing service.</param>
     /// <param name="reservationService">The reservation service.</param>
@@ -47,7 +47,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="logger">The logger.</param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
-        IAgentProfileManager agentManager,
+        IAgentAvailabilityService availabilityService,
         IActivityQueueManager queueManager,
         IActivityRoutingService routingService,
         IActivityReservationService reservationService,
@@ -59,7 +59,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         ILogger<ActivityAssignmentService> logger)
     {
         _queueItemManager = queueItemManager;
-        _agentManager = agentManager;
+        _availabilityService = availabilityService;
         _queueManager = queueManager;
         _routingService = routingService;
         _reservationService = reservationService;
@@ -179,7 +179,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        var agents = await _agentManager.ListAvailableForQueueAsync(queueId, cancellationToken);
+        var availability = await _availabilityService.ListForQueueAsync(queueId, cancellationToken);
+        var agents = availability.Select(entry => entry.Agent).ToArray();
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -187,7 +188,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
                 "Evaluating Contact Center queue item '{QueueItemId}' for queue '{QueueId}' against {AvailableAgentCount} available agents.",
                 OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
                 OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
-                agents.Count);
+                agents.Length);
         }
 
         var decision = await _routingService.SelectAgentAsync(queue, topItem, agents, cancellationToken);
