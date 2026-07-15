@@ -1,0 +1,187 @@
+{
+  "version": "1.0",
+  "scope": "inactive-and-idle-only",
+  "activeWorkMilestone": "R3",
+  "entries": [
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter",
+      "component": "OutboxDispatchBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no running dispatch and an empty in-flight batch.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter",
+      "component": "ContactCenterRetentionBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no retention pass to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Availability",
+      "component": "AgentSessionCleanupBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no cleanup pass to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Routing",
+      "component": "ReservationExpiryBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no reservation-expiry pass to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Dialer",
+      "component": "CallbackDispatchBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no callback dispatch to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Dialer.Automated",
+      "component": "DialerPacingBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no pacing cycle to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
+      "component": "ProviderWebhookInboxBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no inbox batch to be claimed or running.",
+      "reEnable": "The fresh shell resolves exactly one task and provider reconciliation re-evaluates durable state.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
+      "component": "ProviderCallStateReconciliationBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no reconciliation pass to be running.",
+      "reEnable": "The fresh shell performs immediate reconciliation and resolves exactly one scheduled task.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
+      "component": "ProviderWebhookIngressLimiter",
+      "kind": "shell-singleton",
+      "quiesce": "No requests are admitted in the idle fixture while the old shell is being replaced.",
+      "drain": "Idle contract requires zero admitted webhook requests.",
+      "reEnable": "The fresh shell creates a new limiter with no rate-limit state from the prior activation.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
+      "component": "ContactCenterVoiceTenantEvents",
+      "kind": "lifecycle-participant",
+      "quiesce": "The pre-disable coordinator invokes the Voice participant before the feature descriptor changes.",
+      "drain": "The idle participant completes immediately because no active voice work exists.",
+      "reEnable": "The new shell invokes provider-truth reconciliation during tenant activation.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.RealTime",
+      "component": "ContactCenterHub",
+      "kind": "signalr-hub",
+      "quiesce": "The feature-owned hub route is absent after the tenant pipeline reloads.",
+      "drain": "Idle contract requires zero connected agents or supervisors.",
+      "reEnable": "The fresh shell maps one hub route and SignalR creates new connection state.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Telephony",
+      "component": "TelephonyInteractionReconciliationBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no reconciliation pass to be running.",
+      "reEnable": "The fresh shell resolves one task and runs tenant activation reconciliation.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Telephony",
+      "component": "TelephonyHub",
+      "kind": "signalr-hub",
+      "quiesce": "The feature-owned hub route is absent after the tenant pipeline reloads.",
+      "drain": "Idle contract requires zero connected soft-phone clients.",
+      "reEnable": "The fresh shell maps one hub route and creates new connection state.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Omnichannel.Managements",
+      "component": "AutomatedActivitiesProcessorBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no automated-activity batch to be running.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Asterisk",
+      "component": "AsteriskRealtimeVoiceListener",
+      "kind": "provider-listener",
+      "quiesce": "Tenant termination cancels the listener and awaits its run task.",
+      "drain": "Idle listener shutdown completes after cancellation with no provider event in flight.",
+      "reEnable": "Tenant activation starts one fresh listener guarded against duplicate starts.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
+      "component": "AsteriskContactCenterVoiceProvider",
+      "kind": "provider-adapter",
+      "quiesce": "The scoped stateless adapter disappears from the rebuilt shell when the feature is disabled.",
+      "drain": "Idle contract has no provider command in flight.",
+      "reEnable": "The fresh shell resolves a new scoped adapter through the provider resolver.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.Asterisk.ContactCenterMedia",
+      "component": "AsteriskContactCenterVoiceMediaProvider",
+      "kind": "provider-media",
+      "quiesce": "The scoped media provider disappears from the rebuilt shell when the feature is disabled.",
+      "drain": "Idle contract has no media session open.",
+      "reEnable": "The fresh shell resolves a new scoped media provider.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.DialPad.ContactCenterVoice",
+      "component": "DialPadContactCenterVoiceProvider",
+      "kind": "provider-adapter",
+      "quiesce": "The scoped stateless adapter disappears from the rebuilt shell when the feature is disabled.",
+      "drain": "Idle contract has no provider command in flight.",
+      "reEnable": "The fresh shell resolves a new scoped adapter through the provider resolver.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-r3"
+    }
+  ]
+}

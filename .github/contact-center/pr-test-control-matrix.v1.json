@@ -672,6 +672,33 @@
       "evidenceLocation": "No characterization test for the current post-commit/child-scope execution path exists yet; it must land before the explicit-dispatcher refactor as a planned:contact-center-feature-activation-matrix dependency."
     },
     {
+      "id": "F007",
+      "severity": "P0",
+      "category": "feature-and-package-graph",
+      "planFinding": "PR11",
+      "gate": "Feature disable has no quiesce or re-enable contract",
+      "invariant": "Every feature-owned Contact Center task, hub, listener, adapter, and media provider must declare how it stops accepting work, drains admitted work, and reconciles after a fresh shell activates. Orchard pre-disable callbacks must quiesce matching participants before descriptor mutation, and inactive or idle disable/re-enable must not retain tenant-local runtime state.",
+      "testId": "CC-F007",
+      "ciJob": {
+        "id": "pr-ci-build-and-test",
+        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "multi-tenant"
+        ]
+      },
+      "evidenceLocation": "`.github/contact-center/feature-lifecycle-contracts.v1.json` defines the complete inactive/idle contract and explicit R3 active-work deferral. `ContactCenterFeatureLifecycleTests` proves pre-disable feature filtering, quiesce-before-drain ordering, fresh-shell reconciliation, lifecycle-hook registration, and parity with every feature-owned Contact Center, Telephony, and Omnichannel Management background task. Live active-call, connected-client, provider-command, inbox/outbox, and media-session drain remains a planned R3 dependency."
+    },
+    {
       "id": "O001",
       "severity": "P1",
       "category": "operations",
@@ -981,7 +1008,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs computes and pins the exact transitive manifest-dependency closure of every legal Contact Center feature combination and fails the build if a closure reaches an unresolvable or unrecorded dependency. This is a static legal-combination proof only; the runtime proof that every combination actually enables, migrates, resolves every service, and disables cleanly on a live Orchard tenant remains a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs computes and pins the exact transitive manifest-dependency closure of every legal Contact Center feature combination and fails the build if a closure reaches an unresolvable or unrecorded dependency. ContactCenterFeatureLifecycleTests and `.github/contact-center/feature-lifecycle-contracts.v1.json` add pre-disable and fresh-shell lifecycle contracts for inactive/idle work. The runtime proof that every combination actually enables, migrates, resolves every service, and disables cleanly on a live fresh Orchard tenant remains a planned:contact-center-feature-activation-matrix dependency."
     },
     {
       "id": "T002",

@@ -40,6 +40,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -72,6 +73,9 @@ public sealed class Startup : StartupBase
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
         services
+            .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
+            .AddScoped<IFeatureEventHandler, ContactCenterFeatureDisablingHandler>()
+            .AddScoped<IModularTenantEvents, ContactCenterFeatureTenantEvents>()
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
@@ -475,7 +479,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
-            .AddScoped<IModularTenantEvents, ContactCenterVoiceTenantEvents>();
+            .AddScoped<ContactCenterVoiceTenantEvents>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>());
 
         services
             .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()

@@ -8,7 +8,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
     {
         ["C"] = 8,
         ["D"] = 9,
-        ["F"] = 6,
+        ["F"] = 7,
         ["O"] = 6,
         ["S"] = 5,
         ["T"] = 3,
@@ -32,7 +32,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
 
         // Assert
         Assert.Equal("blocked-until-r0-r8-pass", matrix["releaseStatus"]?.GetValue<string>());
-        Assert.Equal(41, gates.Count);
+        Assert.Equal(42, gates.Count);
         Assert.Equal(ids.Count, distinctIds.Count);
 
         foreach (var (prefix, expectedCount) in ExpectedGateCountByPrefix)
@@ -175,6 +175,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
     [InlineData("F004", "P1", "Provider modules depend on implementation/Asterisk integrations ungated")]
     [InlineData("F005", "P1", "Omnichannel Managements dynamically resolves optional CC services")]
     [InlineData("F006", "P1", "Post-commit uses IServiceProvider/ad hoc child scopes")]
+    [InlineData("F007", "P0", "Feature disable has no quiesce or re-enable contract")]
     [InlineData("O001", "P1", "No production health/OpenTelemetry")]
     [InlineData("O002", "P0", "Multi-node SignalR not configured/proven")]
     [InlineData("O003", "P0", "Logs contain raw customer/agent IDs")]

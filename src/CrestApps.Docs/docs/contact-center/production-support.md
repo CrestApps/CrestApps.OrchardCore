@@ -18,7 +18,13 @@ The first release targets two provider-specific tenant profiles. A tenant select
 | `ga-core-asterisk` | Asterisk | Inbound voice plus Manual and Preview dialing |
 | `ga-core-dialpad` | DialPad | Inbound voice, Manual and Preview dialing, and call transfer |
 
-The feature identifiers in the matrix describe the target feature graph that R2 must implement. The headless base and separate administration integration are implemented; the remaining graph is not yet production-ready.
+The feature identifiers in the matrix describe the implemented R2 feature graph. Commercial readiness remains blocked on the fresh-tenant activation matrix and later remediation and certification phases.
+
+## Feature lifecycle contract
+
+Feature-owned background tasks, SignalR hubs, provider listeners, provider adapters, media providers, and shell singletons have a versioned inactive/idle lifecycle contract in `.github/contact-center/feature-lifecycle-contracts.v1.json`. Before Orchard disables a feature, Contact Center invokes matching lifecycle participants in two phases: quiesce first, then drain. When the rebuilt tenant shell activates, currently registered participants reconcile durable provider state.
+
+This R2 contract covers only inactive or idle components. Orchard stops scheduling feature-owned background tasks after the shell reloads, hub routes and scoped providers disappear with their owning feature, shell singletons are recreated, and the Asterisk listener cancels and awaits its run task during tenant termination. Active calls, connected clients, pending provider commands, claimed inbox or outbox batches, and open media sessions require the bounded durable drain behavior planned for R3 and are not certified by the idle contract.
 
 ## Database and topology
 

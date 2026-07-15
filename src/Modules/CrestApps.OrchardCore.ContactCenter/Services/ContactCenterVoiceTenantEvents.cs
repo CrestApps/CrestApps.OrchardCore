@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -9,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// Runs a provider-truth reconciliation pass when the tenant activates so short restarts do not leave
 /// persisted voice offers out of sync with the telephony server.
 /// </summary>
-public sealed class ContactCenterVoiceTenantEvents : ModularTenantEvents
+public sealed class ContactCenterVoiceTenantEvents : IContactCenterFeatureLifecycleParticipant
 {
     private readonly IProviderCallStateSynchronizationService _synchronizationService;
     private readonly ILogger _logger;
@@ -30,14 +29,34 @@ public sealed class ContactCenterVoiceTenantEvents : ModularTenantEvents
         _logger = logger;
     }
 
+    /// <inheritdoc/>
+    public string FeatureId => ContactCenterConstants.Feature.Voice;
+
+    /// <inheritdoc/>
+    public Task QuiesceAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task DrainAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     /// <summary>
-    /// Reconciles active voice interactions during tenant activation.
+    /// Reconciles active voice interactions when a fresh tenant shell activates.
     /// </summary>
-    public override async Task ActivatingAsync()
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            await _synchronizationService.ReconcileActiveInteractionsAsync();
+            await _synchronizationService.ReconcileActiveInteractionsAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

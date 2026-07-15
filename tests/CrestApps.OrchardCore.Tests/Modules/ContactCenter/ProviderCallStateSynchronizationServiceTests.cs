@@ -266,7 +266,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             NullLogger<ContactCenterVoiceTenantEvents>.Instance);
 
         // Act
-        await tenantEvents.ActivatingAsync();
+        await tenantEvents.ReconcileAsync(TestContext.Current.CancellationToken);
 
         // Assert
         synchronizationService.Verify(
