@@ -73,8 +73,22 @@ public sealed class Startup : StartupBase
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
         services
+            .AddOptions<ContactCenterFeatureLifecycleOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))
+            .Validate(
+                options => options.DrainTimeoutSeconds is >= 1 and <= 300,
+                "The Contact Center feature drain timeout must be between 1 and 300 seconds.")
+            .ValidateOnStart();
+
+        services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
             .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
+            .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.Area,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
@@ -364,7 +378,12 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<ICallbackService, CallbackService>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
-            .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>();
+            .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.Dialer,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
         services
             .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
@@ -435,7 +454,12 @@ public sealed class DialerAutomatedStartup : StartupBase
     {
         services
             .AddScoped<IDialerStrategy, PowerDialerStrategy>()
-            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>();
+            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.DialerAutomated,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
         services.AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>();
 
@@ -630,7 +654,11 @@ public sealed class RealTimeStartup : StartupBase
             .AddScoped<ContactCenterHubScopeContext>()
             .AddScoped<ContactCenterRealTimeEventScopeContext>()
             .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
-            .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>();
+            .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>()
+            .AddSingleton<ContactCenterHubConnectionRegistry>()
+            .AddScoped<ContactCenterRealTimeLifecycleParticipant>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                serviceProvider.GetRequiredService<ContactCenterRealTimeLifecycleParticipant>());
 
         services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
     }

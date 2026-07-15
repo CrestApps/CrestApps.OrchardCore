@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -559,6 +560,44 @@ public sealed class ProviderCommandProcessorTests
     }
 
     [Fact]
+    public async Task DispatchAsync_WhenProviderFeatureIsQuiescing_DefersWithoutCompensation()
+    {
+        // Arrange
+        var harness = CreateHarness();
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult
+            {
+                ErrorCode = "feature_quiescing",
+            });
+
+        // Act
+        var command = await harness.Processor.DispatchAsync(
+            "command-1",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Pending, command.Status);
+        harness.StateService.Verify(
+            service => service.DeferSentAsync(
+                "command-1",
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.StateService.Verify(
+            service => service.BeginCompensationAsync(
+                It.IsAny<string>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task RecoverDueAsync_WhenCommandIsPending_DispatchesItOnce()
     {
         // Arrange
@@ -693,6 +732,10 @@ public sealed class ProviderCommandProcessorTests
             .Callback(() => command.Status = ProviderCommandStatus.OutcomeUnknown)
             .ReturnsAsync(command);
         stateService
+            .Setup(value => value.DeferSentAsync("command-1", claim, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => command.Status = ProviderCommandStatus.Pending)
+            .ReturnsAsync(command);
+        stateService
             .Setup(value => value.TryClaimReconciliationAsync(
                 "command-1",
                 It.IsAny<TimeSpan>(),
@@ -805,6 +848,7 @@ public sealed class ProviderCommandProcessorTests
             providerResolver.Object,
             actualExecutors,
             scopeExecutor.Object,
+            new TestContactCenterFeatureWorkManager(),
             session.Object,
             clock.Object,
             NullLogger<ProviderCommandProcessor>.Instance);

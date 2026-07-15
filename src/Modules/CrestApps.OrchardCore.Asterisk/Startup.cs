@@ -60,7 +60,12 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
             .AddSingleton<IProviderIdentityProvider, AsteriskProviderIdentityProvider>()
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()
-            .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>();
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    AsteriskConstants.Feature.ContactCenterVoice,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
     }
 }
 
@@ -72,6 +77,12 @@ public sealed class AsteriskContactCenterMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>();
+        services
+            .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    AsteriskConstants.Feature.ContactCenterMedia,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
     }
 }

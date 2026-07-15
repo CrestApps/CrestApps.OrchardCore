@@ -202,6 +202,35 @@ public sealed class ProviderCommandStateServiceTests
     }
 
     [Fact]
+    public async Task DeferSentAsync_WhenProviderFeatureQuiesces_ReturnsCommandToPending()
+    {
+        await WithStoreAsync(async store =>
+        {
+            // Arrange
+            await using var session = store.CreateSession();
+            var service = CreateService(session, () => _now);
+            await service.RegisterAsync(CreateRegistration(), TestContext.Current.CancellationToken);
+            var claim = await service.TryClaimAsync("command-1", _lease, TestContext.Current.CancellationToken);
+            await service.MarkSentAsync("command-1", claim, cancellationToken: TestContext.Current.CancellationToken);
+
+            // Act
+            var command = await service.DeferSentAsync(
+                "command-1",
+                claim,
+                "Provider feature is quiescing.",
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(ProviderCommandStatus.Pending, command.Status);
+            Assert.Null(command.OwnerToken);
+            Assert.Equal(default, command.LeaseExpiresUtc);
+            Assert.Null(command.SentUtc);
+            Assert.Equal(_now.AddMinutes(5), command.NextAttemptUtc);
+            Assert.Equal("Provider feature is quiescing.", command.LastError);
+        });
+    }
+
+    [Fact]
     public async Task MarkSentAsync_WithStaleFence_ThrowsFenceException_AndDoesNotMutate()
     {
         await WithStoreAsync(async store =>

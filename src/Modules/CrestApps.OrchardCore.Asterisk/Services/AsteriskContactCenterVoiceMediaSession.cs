@@ -9,6 +9,7 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
 {
     private readonly UdpClient _udpClient;
     private readonly IPEndPoint _asteriskMediaEndpoint;
+    private readonly IContactCenterFeatureWorkLease _workLease;
     private readonly Func<CancellationToken, Task> _stop;
     private readonly SemaphoreSlim _stopLock = new(1, 1);
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -23,12 +24,14 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
         string providerCallId,
         UdpClient udpClient,
         IPEndPoint asteriskMediaEndpoint,
+        IContactCenterFeatureWorkLease workLease,
         Func<CancellationToken, Task> stop)
     {
         SessionId = sessionId;
         ProviderCallId = providerCallId;
         _udpClient = udpClient;
         _asteriskMediaEndpoint = asteriskMediaEndpoint;
+        _workLease = workLease;
         _stop = stop;
     }
 
@@ -133,6 +136,11 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
         finally
         {
             _stopLock.Release();
+
+            if (Volatile.Read(ref _cleanupCompleted) != 0)
+            {
+                _workLease.Dispose();
+            }
         }
     }
 

@@ -51,6 +51,11 @@ public sealed class ContactCenterOutboxMessage : CatalogItem, IModifiedUtcAwareM
     public string LastError { get; set; }
 
     /// <summary>
+    /// Gets or sets the stable handler identifiers required to complete this message.
+    /// </summary>
+    public IList<string> ExpectedHandlerIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the handler type names that have already processed the event successfully.
     /// </summary>
     public IList<string> CompletedHandlerTypes { get; set; } = [];

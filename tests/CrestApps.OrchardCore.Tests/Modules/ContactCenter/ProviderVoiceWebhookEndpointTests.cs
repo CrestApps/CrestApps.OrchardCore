@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
 {
     private readonly ProviderWebhookIngressLimiter _ingressLimiter = CreateIngressLimiter();
+    private readonly TestContactCenterFeatureWorkManager _workManager = new();
 
     [Fact]
     public async Task HandleAsync_WhenPayloadExceedsLimit_ReturnsPayloadTooLarge()
@@ -23,7 +24,7 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
         httpContext.Request.ContentLength = ProviderVoiceWebhookEndpoint.MaximumRequestBodySizeBytes + 1;
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, _workManager, httpContext);
 
         // Assert
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -42,7 +43,7 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
         httpContext.Request.Body = new PayloadTooLargeStream();
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, _workManager, httpContext);
 
         // Assert
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -68,7 +69,7 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
         httpContext.RequestAborted = new CancellationTokenSource().Token;
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, _workManager, httpContext);
 
         // Assert
         Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
@@ -90,7 +91,7 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
         httpContext.Request.Body = new MemoryStream("{}"u8.ToArray());
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, limiter, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, limiter, _workManager, httpContext);
 
         // Assert
         Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
@@ -115,7 +116,7 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
         httpContext.Request.Body = new MemoryStream("{}"u8.ToArray());
 
         // Act
-        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, httpContext);
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, _workManager, httpContext);
 
         // Assert
         Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);

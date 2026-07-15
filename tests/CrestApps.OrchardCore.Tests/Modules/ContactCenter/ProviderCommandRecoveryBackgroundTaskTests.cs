@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,6 +20,7 @@ public sealed class ProviderCommandRecoveryBackgroundTaskTests
             .ReturnsAsync(2);
         var services = new ServiceCollection();
         services.AddSingleton(processor.Object);
+        services.AddSingleton<IContactCenterFeatureWorkManager>(new TestContactCenterFeatureWorkManager());
         services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryBackgroundTask>>().Object);
         await using var serviceProvider = services.BuildServiceProvider();
 
@@ -43,6 +46,7 @@ public sealed class ProviderCommandRecoveryBackgroundTaskTests
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
         var services = new ServiceCollection();
         services.AddSingleton(processor.Object);
+        services.AddSingleton<IContactCenterFeatureWorkManager>(new TestContactCenterFeatureWorkManager());
         services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryBackgroundTask>>().Object);
         await using var serviceProvider = services.BuildServiceProvider();
 

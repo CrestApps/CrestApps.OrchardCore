@@ -20,6 +20,14 @@ public sealed class CallbackDispatchBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Dialer);
+
+        if (workLease is null)
+        {
+            return;
+        }
+
         var callbackService = serviceProvider.GetRequiredService<ICallbackService>();
         var logger = serviceProvider.GetRequiredService<ILogger<CallbackDispatchBackgroundTask>>();
 

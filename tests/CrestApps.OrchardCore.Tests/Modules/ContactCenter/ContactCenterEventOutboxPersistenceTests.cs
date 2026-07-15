@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore;
@@ -189,6 +190,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             new ContactCenterOutboxStore(session),
             eventStore,
             scopeExecutor.Object,
+            new TestContactCenterFeatureWorkManager(),
             session,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance);

@@ -65,6 +65,7 @@ public interface IContactCenterOutbox
     /// <param name="fenceToken">The fence token captured when the message was claimed.</param>
     /// <param name="completedHandlerIds">The stable identifiers of handlers that completed.</param>
     /// <param name="error">The first handler error, or <see langword="null"/> when all handlers completed.</param>
+    /// <param name="handlerUnavailable">Whether settlement is deferred only because an expected feature-owned handler is unavailable.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the message completed; otherwise <see langword="false"/>.</returns>
     Task<bool> SettleClaimAsync(
@@ -73,5 +74,6 @@ public interface IContactCenterOutbox
         long fenceToken,
         IReadOnlyCollection<string> completedHandlerIds,
         string error,
+        bool handlerUnavailable,
         CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
@@ -60,6 +61,7 @@ public sealed class MessageClaimFencingPersistenceTests
                 new ContactCenterOutboxStore(settlementSession),
                 new Mock<IInteractionEventStore>().Object,
                 new Mock<IContactCenterScopeExecutor>().Object,
+                new TestContactCenterFeatureWorkManager(),
                 settlementSession,
                 CreateClock(),
                 NullLogger<ContactCenterOutbox>.Instance);
@@ -69,6 +71,7 @@ public sealed class MessageClaimFencingPersistenceTests
                 1,
                 [],
                 null,
+                false,
                 TestContext.Current.CancellationToken));
 
             // Assert

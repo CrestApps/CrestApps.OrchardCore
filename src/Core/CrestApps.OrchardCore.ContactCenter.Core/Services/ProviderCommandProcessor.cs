@@ -25,6 +25,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEnumerable<IProviderCommandTypeExecutor> _executors;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -38,6 +39,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <param name="voiceProviderResolver">The resolver used to find optional provider reconciliation support.</param>
     /// <param name="executors">The typed executors that handle per-command-type provider dispatch and projections.</param>
     /// <param name="scopeExecutor">The executor used to isolate each recovery transition in a fresh shell scope.</param>
+    /// <param name="workManager">The feature work manager used to fence dispatch during Voice quiescence.</param>
     /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
     /// <param name="clock">The clock used to determine recovery windows.</param>
     /// <param name="logger">The logger instance.</param>
@@ -48,6 +50,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEnumerable<IProviderCommandTypeExecutor> executors,
         IContactCenterScopeExecutor scopeExecutor,
+        IContactCenterFeatureWorkManager workManager,
         ISession session,
         IClock clock,
         ILogger<ProviderCommandProcessor> logger)
@@ -58,6 +61,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         _voiceProviderResolver = voiceProviderResolver;
         _executors = executors;
         _scopeExecutor = scopeExecutor;
+        _workManager = workManager;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -75,6 +79,13 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             throw new InvalidOperationException($"The provider command '{commandId}' does not exist.");
         }
 
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return command;
+        }
+
         return command.Status switch
         {
             ProviderCommandStatus.Pending => await DispatchPendingAsync(command, cancellationToken),
@@ -87,6 +98,13 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <inheritdoc/>
     public async Task<int> RecoverDueAsync(CancellationToken cancellationToken = default)
     {
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return 0;
+        }
+
         var now = _clock.UtcNow;
         var candidateIds = new HashSet<string>(StringComparer.Ordinal);
         var reclaimable = await _commandManager.ListReclaimableAsync(
@@ -213,6 +231,15 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             await _session.SaveChangesAsync(cancellationToken);
 
             return confirmed;
+        }
+
+        if (string.Equals(result?.ErrorCode, "feature_quiescing", StringComparison.Ordinal))
+        {
+            return await _stateService.DeferSentAsync(
+                commandId,
+                claim,
+                "Provider dispatch was deferred because the provider feature is quiescing.",
+                cancellationToken);
         }
 
         if (result is null || result.OutcomeUnknown || result.Succeeded)

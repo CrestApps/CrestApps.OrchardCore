@@ -25,6 +25,7 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly DefaultAsteriskOptions _defaultOptions;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,18 +35,21 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
     /// <param name="dataProtectionProvider">The data protection provider used to unprotect the tenant password.</param>
     /// <param name="defaultOptions">The configuration-backed default Asterisk options.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="workManager">The feature work manager.</param>
     /// <param name="logger">The logger instance.</param>
     public AsteriskContactCenterVoiceMediaProvider(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DefaultAsteriskOptions> defaultOptions,
         IHttpClientFactory httpClientFactory,
+        IContactCenterFeatureWorkManager workManager,
         ILogger<AsteriskContactCenterVoiceMediaProvider> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _defaultOptions = defaultOptions.Value;
         _httpClientFactory = httpClientFactory;
+        _workManager = workManager;
         _logger = logger;
     }
 
@@ -82,6 +86,15 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
         }
 
         var udpClient = BindUdpClient(request.Metadata);
+        var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterMedia);
+
+        if (workLease is null)
+        {
+            udpClient.Dispose();
+
+            throw new InvalidOperationException("The Asterisk Contact Center media provider is quiescing.");
+        }
+
         var localPort = ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
         var externalChannelId = default(string);
         var bridgeId = default(string);
@@ -128,6 +141,7 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
                 request.ProviderCallId,
                 udpClient,
                 new IPEndPoint(remoteIpAddress, remotePort),
+                workLease,
                 token => StopSessionAsync(settings, externalChannelId, ownsBridge ? bridgeId : null, token));
         }
         catch
@@ -149,6 +163,10 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
                 _logger.LogWarning(
                     OperationalLogRedactor.RedactException(cleanupException),
                     "Unable to clean up a partially opened Asterisk external-media session.");
+            }
+            finally
+            {
+                workLease.Dispose();
             }
 
             throw;

@@ -21,12 +21,20 @@ public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundT
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var coordinator = serviceProvider.GetRequiredService<ContactCenterFeatureLifecycleCoordinator>();
+        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return;
+        }
+
+        var participant = serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>();
         var logger = serviceProvider.GetRequiredService<ILogger<ProviderCallStateReconciliationBackgroundTask>>();
 
         try
         {
-            await coordinator.ReconcileAsync(ContactCenterConstants.Feature.Voice, cancellationToken);
+            await participant.ReconcileProviderStateAsync(cancellationToken);
         }
         catch (Exception ex)
         {

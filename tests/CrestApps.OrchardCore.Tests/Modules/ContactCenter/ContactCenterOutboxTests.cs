@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -385,7 +386,7 @@ public sealed class ContactCenterOutboxTests
     }
 
     [Fact]
-    public async Task DispatchDueAsync_WhenCompletedHandlerIsTemporarilyUnavailable_PreservesItsCheckpoint()
+    public async Task DispatchDueAsync_WhenExpectedHandlerIsTemporarilyUnavailable_DefersWithoutConsumingAttempt()
     {
         // Arrange
         var unavailableHandlerId = "ContactCenter/TemporarilyUnavailable/v1";
@@ -394,7 +395,7 @@ public sealed class ContactCenterOutboxTests
             ItemId = "m1",
             EventId = "e1",
             Status = OutboxMessageStatus.Pending,
-            CompletedHandlerTypes = [unavailableHandlerId],
+            ExpectedHandlerIds = [unavailableHandlerId],
         };
         var interactionEvent = new InteractionEvent { ItemId = "e1" };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
@@ -408,20 +409,20 @@ public sealed class ContactCenterOutboxTests
         eventStore
             .Setup(store => store.FindByIdAsync("e1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interactionEvent);
-        var failingHandler = new ConfigurableTestHandler(
-            "ContactCenter/Current/v1",
-            () => Task.FromException(new InvalidOperationException("transient")));
-        var outbox = CreateOutbox(outboxStore, eventStore, [failingHandler]);
+        var outbox = CreateOutbox(outboxStore, eventStore, []);
 
         // Act
         await outbox.DispatchDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(unavailableHandlerId, message.CompletedHandlerTypes);
+        Assert.Equal(0, message.AttemptCount);
+        Assert.Equal(OutboxMessageStatus.Pending, message.Status);
+        Assert.Contains(unavailableHandlerId, message.ExpectedHandlerIds);
         outboxStore.Verify(
             store => store.UpdateAsync(
                 It.Is<ContactCenterOutboxMessage>(candidate =>
-                    candidate.CompletedHandlerTypes.Contains(unavailableHandlerId)),
+                    candidate.AttemptCount == 0 &&
+                    candidate.Status == OutboxMessageStatus.Pending),
                 It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
@@ -659,6 +660,7 @@ public sealed class ContactCenterOutboxTests
             outboxStore.Object,
             eventStore.Object,
             scopeExecutor.Object,
+            new TestContactCenterFeatureWorkManager(),
             session.Object,
             clock.Object,
             NullLogger<ContactCenterOutbox>.Instance);

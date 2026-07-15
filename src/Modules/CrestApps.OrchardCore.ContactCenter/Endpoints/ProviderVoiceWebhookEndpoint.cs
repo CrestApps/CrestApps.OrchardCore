@@ -29,11 +29,19 @@ internal static class ProviderVoiceWebhookEndpoint
         string provider,
         IProviderVoiceWebhookProcessor processor,
         IProviderWebhookIngressLimiter ingressLimiter,
+        IContactCenterFeatureWorkManager workManager,
         HttpContext httpContext)
     {
         if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
         using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -8,24 +9,29 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// Runs a provider-truth reconciliation pass when the tenant activates so short restarts do not leave
 /// persisted voice offers out of sync with the telephony server.
 /// </summary>
-public sealed class ContactCenterVoiceTenantEvents : IContactCenterFeatureLifecycleParticipant
+internal sealed class ContactCenterVoiceTenantEvents : IContactCenterFeatureLifecycleParticipant
 {
     private readonly IProviderCallStateSynchronizationService _synchronizationService;
+    private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly TimeSpan _drainTimeout;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterVoiceTenantEvents"/> class.
     /// </summary>
     /// <param name="synchronizationService">The provider call-state synchronization service.</param>
-    /// <param name="ingressLimiter">The provider webhook ingress limiter resolved eagerly during tenant activation.</param>
+    /// <param name="workManager">The feature work manager.</param>
+    /// <param name="options">The feature lifecycle options.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterVoiceTenantEvents(
         IProviderCallStateSynchronizationService synchronizationService,
-        IProviderWebhookIngressLimiter ingressLimiter,
+        IContactCenterFeatureWorkManager workManager,
+        IOptions<ContactCenterFeatureLifecycleOptions> options,
         ILogger<ContactCenterVoiceTenantEvents> logger)
     {
         _synchronizationService = synchronizationService;
-        _ = ingressLimiter;
+        _workManager = workManager;
+        _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
         _logger = logger;
     }
 
@@ -35,13 +41,15 @@ public sealed class ContactCenterVoiceTenantEvents : IContactCenterFeatureLifecy
     /// <inheritdoc/>
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
+        _workManager.Quiesce(FeatureId);
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task DrainAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
     }
 
     /// <summary>
@@ -49,6 +57,12 @@ public sealed class ContactCenterVoiceTenantEvents : IContactCenterFeatureLifecy
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     public async Task ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        _workManager.Activate(FeatureId);
+        await ReconcileProviderStateAsync(cancellationToken);
+    }
+
+    public async Task ReconcileProviderStateAsync(CancellationToken cancellationToken = default)
     {
         try
         {

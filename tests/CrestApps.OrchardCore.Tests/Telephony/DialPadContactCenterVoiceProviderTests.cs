@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.DialPad;
 using CrestApps.OrchardCore.DialPad.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Localization;
 using Moq;
 
@@ -28,7 +29,10 @@ public sealed class DialPadContactCenterVoiceProviderTests
         localizer
             .Setup(value => value["DialPad"])
             .Returns(new LocalizedString("DialPad", "DialPad"));
-        var service = new DialPadContactCenterVoiceProvider(resolver.Object, localizer.Object);
+        var service = new DialPadContactCenterVoiceProvider(
+            resolver.Object,
+            new TestContactCenterFeatureWorkManager(),
+            localizer.Object);
 
         // Act
         var result = await service.DialAsync(new ContactCenterDialRequest

@@ -22,7 +22,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         {
             [ProviderCommandStatus.Pending] = [ProviderCommandStatus.Claimed, ProviderCommandStatus.Compensating, ProviderCommandStatus.Failed],
             [ProviderCommandStatus.Claimed] = [ProviderCommandStatus.Sent, ProviderCommandStatus.Pending, ProviderCommandStatus.Failed],
-            [ProviderCommandStatus.Sent] = [ProviderCommandStatus.Confirmed, ProviderCommandStatus.OutcomeUnknown, ProviderCommandStatus.Compensating, ProviderCommandStatus.Failed],
+            [ProviderCommandStatus.Sent] = [ProviderCommandStatus.Pending, ProviderCommandStatus.Confirmed, ProviderCommandStatus.OutcomeUnknown, ProviderCommandStatus.Compensating, ProviderCommandStatus.Failed],
             [ProviderCommandStatus.OutcomeUnknown] = [ProviderCommandStatus.Confirmed, ProviderCommandStatus.Compensating, ProviderCommandStatus.Paused, ProviderCommandStatus.Failed],
             [ProviderCommandStatus.Paused] = [ProviderCommandStatus.Confirmed, ProviderCommandStatus.Compensating, ProviderCommandStatus.OutcomeUnknown, ProviderCommandStatus.Failed],
             [ProviderCommandStatus.Compensating] = [ProviderCommandStatus.Compensated, ProviderCommandStatus.Failed],
@@ -157,6 +157,34 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         command.Status = ProviderCommandStatus.Sent;
         command.SentUtc = now;
         command.ProviderReference = providerReference ?? command.ProviderReference;
+        command.ModifiedUtc = now;
+
+        await PersistAsync(command, cancellationToken);
+
+        return command;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProviderCommand> DeferSentAsync(
+        string commandId,
+        ProviderCommandClaim claim,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reason);
+
+        var command = await LoadRequiredAsync(commandId, cancellationToken);
+        var now = _clock.UtcNow;
+
+        EnsureTransitionAllowed(command, ProviderCommandStatus.Pending);
+        EnsureClaim(command, claim, now);
+
+        command.Status = ProviderCommandStatus.Pending;
+        command.OwnerToken = null;
+        command.LeaseExpiresUtc = default;
+        command.SentUtc = null;
+        command.NextAttemptUtc = now.Add(_initialRecoveryDelay);
+        command.LastError = reason;
         command.ModifiedUtc = now;
 
         await PersistAsync(command, cancellationToken);

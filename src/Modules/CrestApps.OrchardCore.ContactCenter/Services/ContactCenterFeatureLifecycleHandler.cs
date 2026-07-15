@@ -13,12 +13,12 @@ internal sealed class ContactCenterFeatureLifecycleHandler : FeatureEventHandler
         _serviceProvider = serviceProvider;
     }
 
-    public override Task DisablingAsync(IFeatureInfo feature)
+    public override async Task DisablingAsync(IFeatureInfo feature)
     {
         ArgumentNullException.ThrowIfNull(feature);
 
-        return _serviceProvider
-            .GetRequiredService<ContactCenterFeatureLifecycleCoordinator>()
-            .QuiesceAsync(feature.Id);
+        var coordinator = _serviceProvider.GetRequiredService<ContactCenterFeatureLifecycleCoordinator>();
+
+        await coordinator.QuiesceAsync(feature.Id);
     }
 }

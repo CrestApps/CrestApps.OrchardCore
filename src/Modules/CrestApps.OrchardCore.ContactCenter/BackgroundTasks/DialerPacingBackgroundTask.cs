@@ -20,6 +20,14 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.DialerAutomated);
+
+        if (workLease is null)
+        {
+            return;
+        }
+
         var dialerManager = serviceProvider.GetRequiredService<IDialerProfileManager>();
         var dialerService = serviceProvider.GetRequiredService<IDialerService>();
         var logger = serviceProvider.GetRequiredService<ILogger<DialerPacingBackgroundTask>>();

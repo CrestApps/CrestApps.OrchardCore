@@ -40,6 +40,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IClock _clock;
 
     /// <summary>
@@ -62,6 +63,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
+    /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -81,6 +83,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
+        IContactCenterFeatureWorkManager workManager,
         IClock clock)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -100,6 +103,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _offerSynchronizationService = offerSynchronizationService;
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
+        _workManager = workManager;
         _clock = clock;
     }
 
@@ -131,6 +135,13 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return Failure("feature_quiescing", "The Contact Center Voice feature is temporarily unavailable.");
+        }
+
         var provider = _voiceProviderResolver.Get(providerName);
 
         if (provider is null)
@@ -152,6 +163,16 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     public async Task<InboundVoiceRoutingResult> RouteInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
+
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return new InboundVoiceRoutingResult
+            {
+                Reason = "The Contact Center Voice feature is temporarily unavailable.",
+            };
+        }
 
         if (string.IsNullOrWhiteSpace(inboundEvent.ProviderCallId))
         {
@@ -298,6 +319,13 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     public async Task<string> OfferNextAsync(string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return null;
+        }
 
         // The provider event stream and reconciliation service own provider truth. Offering work must remain
         // a local atomic transition so provider latency or transport failure cannot strand an uncommitted reservation.

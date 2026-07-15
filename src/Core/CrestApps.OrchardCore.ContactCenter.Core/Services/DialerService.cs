@@ -14,6 +14,7 @@ public sealed class DialerService : IDialerService
 {
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IDialerStrategyResolver _strategyResolver;
+    private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -21,14 +22,17 @@ public sealed class DialerService : IDialerService
     /// </summary>
     /// <param name="voiceCallRouter">The voice call router used to confirm outbound routing is available.</param>
     /// <param name="strategyResolver">The resolver that maps a dialing mode to its strategy.</param>
+    /// <param name="workManager">The feature work manager used to fence automated pacing during feature quiescence.</param>
     /// <param name="logger">The logger instance.</param>
     public DialerService(
         IVoiceContactCenterCallRouter voiceCallRouter,
         IDialerStrategyResolver strategyResolver,
+        IContactCenterFeatureWorkManager workManager,
         ILogger<DialerService> logger)
     {
         _voiceCallRouter = voiceCallRouter;
         _strategyResolver = strategyResolver;
+        _workManager = workManager;
         _logger = logger;
     }
 
@@ -43,6 +47,13 @@ public sealed class DialerService : IDialerService
         }
 
         if (profile.Mode is DialerMode.Manual or DialerMode.Preview)
+        {
+            return 0;
+        }
+
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.DialerAutomated);
+
+        if (workLease is null)
         {
             return 0;
         }

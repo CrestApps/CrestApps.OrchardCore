@@ -29,6 +29,7 @@ internal static class VoiceOfferEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -39,6 +40,13 @@ internal static class VoiceOfferEndpoints
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
         {
             return TypedResults.BadRequest();
+        }
+
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
         var reservationId = await ResolveReservationIdAsync(httpContext);
@@ -75,6 +83,7 @@ internal static class VoiceOfferEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IContactCenterCallCommandService callCommandService,
+        IContactCenterFeatureWorkManager workManager,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -85,6 +94,13 @@ internal static class VoiceOfferEndpoints
         if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
         {
             return TypedResults.BadRequest();
+        }
+
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
         var reservationId = await ResolveReservationIdAsync(httpContext);

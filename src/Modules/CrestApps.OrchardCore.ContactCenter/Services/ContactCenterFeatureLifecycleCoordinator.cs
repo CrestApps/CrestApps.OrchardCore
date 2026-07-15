@@ -24,23 +24,17 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
             .Where(participant => string.Equals(participant.FeatureId, featureId, StringComparison.Ordinal))
             .ToList();
 
-        foreach (var participant in participants)
-        {
-            await ExecuteAsync(
-                participant,
-                "quiescing",
-                () => participant.QuiesceAsync(cancellationToken),
-                cancellationToken);
-        }
+        await ExecuteRequiredAsync(
+            participants,
+            "quiescing",
+            participant => participant.QuiesceAsync(cancellationToken),
+            cancellationToken);
 
-        foreach (var participant in participants)
-        {
-            await ExecuteAsync(
-                participant,
-                "draining",
-                () => participant.DrainAsync(cancellationToken),
-                cancellationToken);
-        }
+        await ExecuteRequiredAsync(
+            participants,
+            "draining",
+            participant => participant.DrainAsync(cancellationToken),
+            cancellationToken);
     }
 
     public async Task ReconcileAsync(string featureId, CancellationToken cancellationToken = default)
@@ -50,7 +44,7 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         foreach (var participant in _participants.Where(participant =>
             string.Equals(participant.FeatureId, featureId, StringComparison.Ordinal)))
         {
-            await ExecuteAsync(
+            await ExecuteBestEffortAsync(
                 participant,
                 "reconciling",
                 () => participant.ReconcileAsync(cancellationToken),
@@ -58,7 +52,40 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         }
     }
 
-    private async Task ExecuteAsync(
+    private async Task ExecuteRequiredAsync(
+        IReadOnlyCollection<IContactCenterFeatureLifecycleParticipant> participants,
+        string operation,
+        Func<IContactCenterFeatureLifecycleParticipant, Task> action,
+        CancellationToken cancellationToken)
+    {
+        List<Exception> failures = [];
+
+        foreach (var participant in participants)
+        {
+            try
+            {
+                await action(participant);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failures.Add(ex);
+                LogFailure(participant, operation, ex);
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(
+                $"Unable to finish {operation} Contact Center feature work.",
+                failures);
+        }
+    }
+
+    private async Task ExecuteBestEffortAsync(
         IContactCenterFeatureLifecycleParticipant participant,
         string operation,
         Func<Task> action,
@@ -74,12 +101,20 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
-                "An error occurred while {Operation} Contact Center feature '{FeatureId}' participant '{ParticipantType}'.",
-                operation,
-                participant.FeatureId,
-                participant.GetType().Name);
+            LogFailure(participant, operation, ex);
         }
+    }
+
+    private void LogFailure(
+        IContactCenterFeatureLifecycleParticipant participant,
+        string operation,
+        Exception exception)
+    {
+        _logger.LogError(
+            OperationalLogRedactor.RedactException(exception),
+            "An error occurred while {Operation} Contact Center feature '{FeatureId}' participant '{ParticipantType}'.",
+            operation,
+            participant.FeatureId,
+            participant.GetType().Name);
     }
 }

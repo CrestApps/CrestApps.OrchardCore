@@ -21,6 +21,14 @@ public sealed class ProviderCommandRecoveryBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return;
+        }
+
         var processor = serviceProvider.GetRequiredService<IProviderCommandProcessor>();
         var logger = serviceProvider.GetRequiredService<ILogger<ProviderCommandRecoveryBackgroundTask>>();
 

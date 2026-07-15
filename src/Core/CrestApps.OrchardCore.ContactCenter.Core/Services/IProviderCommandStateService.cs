@@ -41,6 +41,20 @@ public interface IProviderCommandStateService
     Task<ProviderCommand> MarkSentAsync(string commandId, ProviderCommandClaim claim, string providerReference = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns a sent command to pending when the provider adapter proves no provider call was attempted because its feature is quiescing.
+    /// </summary>
+    /// <param name="commandId">The stable command identifier.</param>
+    /// <param name="claim">The current owner and fence claim.</param>
+    /// <param name="reason">The reason dispatch was deferred.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The deferred pending command.</returns>
+    Task<ProviderCommand> DeferSentAsync(
+        string commandId,
+        ProviderCommandClaim claim,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Confirms that a sent command executed. The presented claim must match the command's current fence and
     /// owner tokens.
     /// </summary>

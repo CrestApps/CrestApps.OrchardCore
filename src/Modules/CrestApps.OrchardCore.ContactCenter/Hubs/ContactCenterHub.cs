@@ -23,6 +23,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 [Authorize]
 public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 {
+    private const string WorkLeaseKey = "ContactCenterFeatureWorkLease";
+
     /// <summary>
     /// The name of the SignalR group that receives supervisor-wide updates.
     /// </summary>
@@ -30,6 +32,8 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
     private readonly ILogger _logger;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly ContactCenterHubConnectionRegistry _connectionRegistry;
     private readonly string _tenantName;
 
     /// <summary>
@@ -37,14 +41,20 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="scopeExecutor">The executor used to isolate hub operations in child shell scopes.</param>
+    /// <param name="workManager">The feature work manager.</param>
+    /// <param name="connectionRegistry">The tenant-local hub connection registry.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     public ContactCenterHub(
         ILogger<ContactCenterHub> logger,
         IContactCenterScopeExecutor scopeExecutor,
+        IContactCenterFeatureWorkManager workManager,
+        ContactCenterHubConnectionRegistry connectionRegistry,
         ShellSettings shellSettings)
     {
         _logger = logger;
         _scopeExecutor = scopeExecutor;
+        _workManager = workManager;
+        _connectionRegistry = connectionRegistry;
         _tenantName = shellSettings.Name;
     }
 
@@ -61,6 +71,24 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <inheritdoc/>
     public override async Task OnConnectedAsync()
     {
+        var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.RealTime);
+
+        if (workLease is null)
+        {
+            Context.Abort();
+
+            return;
+        }
+
+        Context.Items[WorkLeaseKey] = workLease;
+
+        if (!_connectionRegistry.Register(Context))
+        {
+            ReleaseConnectionWork();
+
+            return;
+        }
+
         var userId = Context.UserIdentifier;
 
         if (string.IsNullOrEmpty(userId))
@@ -133,27 +161,44 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <inheritdoc/>
     public override async Task OnDisconnectedAsync(Exception exception)
     {
-        var userId = Context.UserIdentifier;
-
-        if (!string.IsNullOrEmpty(userId))
+        try
         {
-            await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
-            {
-                try
-                {
-                    await services.SessionService.DisconnectAsync(userId, Context.ConnectionId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        OperationalLogRedactor.RedactException(ex),
-                        "An error occurred while removing the Contact Center connection for user '{UserId}'.",
-                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
-                }
-            });
-        }
+            var userId = Context.UserIdentifier;
 
-        await base.OnDisconnectedAsync(exception);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
+                {
+                    try
+                    {
+                        await services.SessionService.DisconnectAsync(userId, Context.ConnectionId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            OperationalLogRedactor.RedactException(ex),
+                            "An error occurred while removing the Contact Center connection for user '{UserId}'.",
+                            OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
+                    }
+                });
+            }
+
+            await base.OnDisconnectedAsync(exception);
+        }
+        finally
+        {
+            _connectionRegistry.Unregister(Context.ConnectionId);
+            ReleaseConnectionWork();
+        }
+    }
+
+    private void ReleaseConnectionWork()
+    {
+        if (Context.Items.Remove(WorkLeaseKey, out var workLease) &&
+            workLease is IContactCenterFeatureWorkLease featureWorkLease)
+        {
+            featureWorkLease.Dispose();
+        }
     }
 
     /// <summary>

@@ -2,7 +2,9 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -140,6 +142,7 @@ public sealed class AsteriskContactCenterVoiceMediaSessionTests
         using var sessionSocket = BindLoopback();
         using var asteriskSocket = BindLoopback();
         var stopCount = 0;
+        var workManager = new TestContactCenterFeatureWorkManager();
         await using var session = CreateSession(
             sessionSocket,
             asteriskSocket,
@@ -150,16 +153,20 @@ public sealed class AsteriskContactCenterVoiceMediaSessionTests
                 return stopCount == 1
                     ? Task.FromException(new InvalidOperationException("Cleanup failed."))
                     : Task.CompletedTask;
-            });
+            },
+            workManager.TryEnter("test"));
 
         // Act
         var exception = await Record.ExceptionAsync(() =>
             session.StopAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, workManager.ActiveLeaseCount);
+
         await session.StopAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal(2, stopCount);
+        Assert.Equal(0, workManager.ActiveLeaseCount);
     }
 
     [Fact]
@@ -184,13 +191,15 @@ public sealed class AsteriskContactCenterVoiceMediaSessionTests
     private static AsteriskContactCenterVoiceMediaSession CreateSession(
         UdpClient sessionSocket,
         UdpClient asteriskSocket,
-        Func<CancellationToken, Task> stop = null)
+        Func<CancellationToken, Task> stop = null,
+        IContactCenterFeatureWorkLease workLease = null)
     {
         return new AsteriskContactCenterVoiceMediaSession(
             "external-1",
             "call-1",
             sessionSocket,
             LocalEndpoint(asteriskSocket),
+            workLease ?? new TestContactCenterFeatureWorkManager().TryEnter("test"),
             stop ?? (_ => Task.CompletedTask));
     }
 

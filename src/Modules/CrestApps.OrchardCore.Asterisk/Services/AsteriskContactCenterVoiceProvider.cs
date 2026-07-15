@@ -12,17 +12,21 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
+    private readonly IContactCenterFeatureWorkManager _workManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AsteriskContactCenterVoiceProvider"/> class.
     /// </summary>
     /// <param name="telephonyResolver">The telephony provider resolver.</param>
+    /// <param name="workManager">The feature work manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AsteriskContactCenterVoiceProvider(
         ITelephonyProviderResolver telephonyResolver,
+        IContactCenterFeatureWorkManager workManager,
         IStringLocalizer<AsteriskContactCenterVoiceProvider> stringLocalizer)
     {
         _telephonyResolver = telephonyResolver;
+        _workManager = workManager;
         Name = stringLocalizer["Asterisk"];
     }
 
@@ -46,6 +50,13 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable.");
+        }
 
         var providerName = AsteriskConstants.ProviderTechnicalName;
         var provider = await _telephonyResolver.GetAsync(providerName);
@@ -95,6 +106,13 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
+        }
+
         return Task.FromResult(new ContactCenterVoiceProviderResult
         {
             Succeeded = true,
@@ -107,6 +125,13 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
         ContactCenterCallAssignmentRequest request,
         CancellationToken cancellationToken = default)
     {
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
+        }
+
         return Task.FromResult(Failure("not_supported", "Asterisk does not support provider-side Contact Center call assignment."));
     }
 
@@ -115,6 +140,13 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
         ContactCenterQueueCallRequest request,
         CancellationToken cancellationToken = default)
     {
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
+        }
+
         return Task.FromResult(Failure("not_supported", "Asterisk does not support provider-side Contact Center queue placement."));
     }
 
