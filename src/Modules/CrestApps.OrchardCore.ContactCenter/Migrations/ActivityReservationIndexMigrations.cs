@@ -111,14 +111,18 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             await command.ExecuteNonQueryAsync();
         }
 
-        await CreateUniqueIndexAsync(
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ActivityReservationIndex),
             "UQ_ActivityReservationIndex_ActivityClaimKey",
-            quotedTableName,
-            activityClaimColumn);
-        await CreateUniqueIndexAsync(
+            "ActivityClaimKey");
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ActivityReservationIndex),
             "UQ_ActivityReservationIndex_AgentClaimKey",
-            quotedTableName,
-            agentClaimColumn);
+            "AgentClaimKey");
 
         return 2;
     }
@@ -130,7 +134,9 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
         string itemIdColumn,
         string statusColumn)
     {
-        var hasMissingIdentifiers = await ExistsAsync($"""
+        var hasMissingIdentifiers = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
+            $"""
             SELECT 1
             FROM {quotedTableName}
             WHERE {itemIdColumn} IS NULL OR {itemIdColumn} = ''
@@ -144,7 +150,8 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
                 "The Contact Center reservation index contains rows without item, activity, or agent identifiers. Repair the legacy rows before enabling unique active reservation claims.");
         }
 
-        var hasDuplicateActivityClaims = await ExistsAsync(
+        var hasDuplicateActivityClaims = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
             $"""
             SELECT 1
             FROM {quotedTableName}
@@ -161,7 +168,8 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
                 "The Contact Center reservation index contains multiple active reservations for one activity. Resolve the duplicate legacy reservations before enabling unique active reservation claims.");
         }
 
-        var hasDuplicateAgentClaims = await ExistsAsync(
+        var hasDuplicateAgentClaims = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
             $"""
             SELECT 1
             FROM {quotedTableName}
@@ -176,42 +184,5 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             throw new InvalidOperationException(
                 "The Contact Center reservation index contains multiple pending reservations for one agent. Resolve the duplicate legacy reservations before enabling unique pending-agent claims.");
         }
-    }
-
-    private async Task<bool> ExistsAsync(
-        string commandText,
-        params (string Name, object Value)[] parameters)
-    {
-        await using var command = SchemaBuilder.Connection.CreateCommand();
-        command.Transaction = SchemaBuilder.Transaction;
-        command.CommandText = commandText;
-
-        foreach (var (name, value) in parameters)
-        {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = name;
-            parameter.Value = value;
-            command.Parameters.Add(parameter);
-        }
-
-        return await command.ExecuteScalarAsync() is not null;
-    }
-
-    private async Task CreateUniqueIndexAsync(
-        string indexName,
-        string quotedTableName,
-        string quotedColumnName)
-    {
-        if (SchemaBuilder.Dialect.PrefixIndex)
-        {
-            indexName = SchemaBuilder.TablePrefix + indexName;
-        }
-
-        var quotedIndexName = SchemaBuilder.Dialect.QuoteForColumnName(
-            SchemaBuilder.Dialect.FormatIndexName(indexName));
-        await using var command = SchemaBuilder.Connection.CreateCommand();
-        command.Transaction = SchemaBuilder.Transaction;
-        command.CommandText = $"CREATE UNIQUE INDEX {quotedIndexName} ON {quotedTableName} ({quotedColumnName})";
-        await command.ExecuteNonQueryAsync();
     }
 }

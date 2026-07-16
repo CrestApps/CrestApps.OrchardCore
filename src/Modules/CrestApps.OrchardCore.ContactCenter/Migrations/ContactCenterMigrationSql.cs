@@ -53,6 +53,38 @@ internal static class ContactCenterMigrationSql
     }
 
     /// <summary>
+    /// Builds a portable <c>CREATE UNIQUE INDEX</c> statement whose identifiers are quoted entirely through
+    /// the supplied dialect, so the same migration code emits valid SQL on every supported database engine.
+    /// </summary>
+    /// <param name="dialect">The active SQL dialect.</param>
+    /// <param name="tablePrefix">The configured table prefix, applied to the index name when the dialect requires globally-unique index names.</param>
+    /// <param name="quotedTableName">The already dialect-quoted table name the index is created on.</param>
+    /// <param name="indexName">The unqualified unique index name.</param>
+    /// <param name="columnNames">The unquoted columns that participate in the unique constraint.</param>
+    /// <returns>The dialect-quoted <c>CREATE UNIQUE INDEX</c> statement.</returns>
+    public static string BuildCreateUniqueIndexStatement(
+        ISqlDialect dialect,
+        string tablePrefix,
+        string quotedTableName,
+        string indexName,
+        params string[] columnNames)
+    {
+        ArgumentNullException.ThrowIfNull(dialect);
+
+        if (dialect.PrefixIndex)
+        {
+            indexName = tablePrefix + indexName;
+        }
+
+        var quotedIndexName = dialect.QuoteForColumnName(dialect.FormatIndexName(indexName));
+        var quotedColumns = string.Join(
+            ", ",
+            columnNames.Select(dialect.QuoteForColumnName));
+
+        return $"CREATE UNIQUE INDEX {quotedIndexName} ON {quotedTableName} ({quotedColumns})";
+    }
+
+    /// <summary>
     /// Creates a unique index over the specified columns using dialect-aware quoting.
     /// </summary>
     /// <param name="schemaBuilder">The active schema builder.</param>
@@ -69,20 +101,14 @@ internal static class ContactCenterMigrationSql
     {
         var quotedTableName = GetQuotedTableName(schemaBuilder, store, indexType);
 
-        if (schemaBuilder.Dialect.PrefixIndex)
-        {
-            indexName = schemaBuilder.TablePrefix + indexName;
-        }
-
-        var quotedIndexName = schemaBuilder.Dialect.QuoteForColumnName(
-            schemaBuilder.Dialect.FormatIndexName(indexName));
-        var quotedColumns = string.Join(
-            ", ",
-            columnNames.Select(schemaBuilder.Dialect.QuoteForColumnName));
-
         await using var command = schemaBuilder.Connection.CreateCommand();
         command.Transaction = schemaBuilder.Transaction;
-        command.CommandText = $"CREATE UNIQUE INDEX {quotedIndexName} ON {quotedTableName} ({quotedColumns})";
+        command.CommandText = BuildCreateUniqueIndexStatement(
+            schemaBuilder.Dialect,
+            schemaBuilder.TablePrefix,
+            quotedTableName,
+            indexName,
+            columnNames);
         await command.ExecuteNonQueryAsync();
     }
 }

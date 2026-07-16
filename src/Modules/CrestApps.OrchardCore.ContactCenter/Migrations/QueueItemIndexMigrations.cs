@@ -100,20 +100,12 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             await command.ExecuteNonQueryAsync();
         }
 
-        var indexName = "UQ_QueueItemIndex_ActivityClaimKey";
-
-        if (SchemaBuilder.Dialect.PrefixIndex)
-        {
-            indexName = SchemaBuilder.TablePrefix + indexName;
-        }
-
-        var quotedIndexName = SchemaBuilder.Dialect.QuoteForColumnName(
-            SchemaBuilder.Dialect.FormatIndexName(indexName));
-        await using var createIndexCommand = SchemaBuilder.Connection.CreateCommand();
-        createIndexCommand.Transaction = SchemaBuilder.Transaction;
-        createIndexCommand.CommandText =
-            $"CREATE UNIQUE INDEX {quotedIndexName} ON {quotedTableName} ({activityClaimColumn})";
-        await createIndexCommand.ExecuteNonQueryAsync();
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(QueueItemIndex),
+            "UQ_QueueItemIndex_ActivityClaimKey",
+            "ActivityClaimKey");
 
         return 2;
     }
@@ -124,7 +116,9 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         string itemIdColumn,
         string statusColumn)
     {
-        var hasMissingIdentifiers = await ExistsAsync($"""
+        var hasMissingIdentifiers = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
+            $"""
             SELECT 1
             FROM {quotedTableName}
             WHERE {itemIdColumn} IS NULL OR {itemIdColumn} = ''
@@ -137,7 +131,8 @@ internal sealed class QueueItemIndexMigrations : DataMigration
                 "The Contact Center queue-item index contains rows without item or activity identifiers. Repair the legacy rows before enabling unique active queue-item claims.");
         }
 
-        var hasDuplicateActivityClaims = await ExistsAsync(
+        var hasDuplicateActivityClaims = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
             $"""
             SELECT 1
             FROM {quotedTableName}
@@ -153,24 +148,5 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             throw new InvalidOperationException(
                 "The Contact Center queue-item index contains multiple active items for one activity. Resolve the duplicate legacy queue items before enabling unique active queue-item claims.");
         }
-    }
-
-    private async Task<bool> ExistsAsync(
-        string commandText,
-        params (string Name, object Value)[] parameters)
-    {
-        await using var command = SchemaBuilder.Connection.CreateCommand();
-        command.Transaction = SchemaBuilder.Transaction;
-        command.CommandText = commandText;
-
-        foreach (var (name, value) in parameters)
-        {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = name;
-            parameter.Value = value;
-            command.Parameters.Add(parameter);
-        }
-
-        return await command.ExecuteScalarAsync() is not null;
     }
 }
