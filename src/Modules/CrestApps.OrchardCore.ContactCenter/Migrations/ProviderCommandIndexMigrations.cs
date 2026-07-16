@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -20,7 +21,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("CommandId", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("ProviderName", column => column.WithLength(100))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<ProviderCommandStatus>("Status")
             .Column<long>("FenceToken", column => column.NotNull().WithDefault(0L))
             .Column<string>("InteractionId", column => column.WithLength(26))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())

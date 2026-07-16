@@ -1,5 +1,6 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using OrchardCore.Data.Migration;
 using YesSql;
@@ -38,7 +39,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<ProviderWebhookInboxStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName);
 

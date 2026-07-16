@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -18,7 +19,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("EventId", column => column.WithLength(26))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<OutboxMessageStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName
         );

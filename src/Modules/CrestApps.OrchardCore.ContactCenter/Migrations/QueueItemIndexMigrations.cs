@@ -33,8 +33,8 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
-            .Column<string>("Status", column => column.WithLength(50))
-            .Column<string>("Priority", column => column.WithLength(50))
+            .Column<QueueItemStatus>("Status")
+            .Column<InteractionPriority>("Priority")
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName

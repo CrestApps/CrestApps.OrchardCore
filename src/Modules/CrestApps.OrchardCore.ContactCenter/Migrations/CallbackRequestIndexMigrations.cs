@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -17,7 +18,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<CallbackRequestIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<int>("Status")
+            .Column<CallbackRequestStatus>("Status")
             .Column<DateTime>("ScheduledUtc")
             .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName

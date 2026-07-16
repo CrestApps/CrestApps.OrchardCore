@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -14,7 +15,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Kind", column => column.WithLength(50))
+            .Column<ActivityKind>("Kind")
             .Column<string>("Source", column => column.WithLength(50))
             .Column<string>("Channel", column => column.WithLength(50))
             .Column<string>("ChannelEndpointId", column => column.WithLength(26))
@@ -29,7 +30,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
-            .Column<string>("AssignmentStatus", column => column.WithLength(50))
+            .Column<ActivityAssignmentStatus>("AssignmentStatus")
             .Column<string>("ReservationId", column => column.WithLength(26))
             .Column<string>("ReservedById", column => column.WithLength(26))
             .Column<DateTime>("ReservedUtc")
@@ -37,9 +38,9 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("CreatedById", column => column.WithLength(26))
             .Column<string>("DispositionId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
-            .Column<string>("UrgencyLevel", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(50))
-            .Column<string>("InteractionType", column => column.WithLength(50)),
+            .Column<ActivityUrgencyLevel>("UrgencyLevel")
+            .Column<ActivityStatus>("Status")
+            .Column<ActivityInteractionType>("InteractionType"),
         collection: OmnichannelConstants.CollectionName
         );
 

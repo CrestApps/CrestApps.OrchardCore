@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -18,7 +19,7 @@ internal sealed class AgentQueueMembershipIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<AgentQueueMembershipIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
-            .Column<string>("PresenceStatus", column => column.WithLength(50))
+            .Column<AgentPresenceStatus>("PresenceStatus")
             .Column<int>("MaxConcurrentInteractions"),
             collection: ContactCenterConstants.CollectionName
         );

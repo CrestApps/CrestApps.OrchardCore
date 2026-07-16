@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -17,9 +18,9 @@ internal sealed class InteractionIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<InteractionIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Channel", column => column.WithLength(50))
-            .Column<string>("Direction", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<InteractionChannel>("Channel")
+            .Column<InteractionDirection>("Direction")
+            .Column<InteractionStatus>("Status")
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("ProviderName", column => column.WithLength(128))
             .Column<string>("ProviderInteractionId", column => column.WithLength(128))

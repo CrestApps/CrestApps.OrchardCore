@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -19,7 +20,7 @@ internal sealed class AgentProfileIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("UserId", column => column.WithLength(26))
-            .Column<string>("PresenceStatus", column => column.WithLength(50)),
+            .Column<AgentPresenceStatus>("PresenceStatus"),
             collection: ContactCenterConstants.CollectionName
         );
 

@@ -72,10 +72,14 @@ public sealed class OmnichannelActivityStoreTests
                 rawStatusItemId);
 
             // Assert
-            // YesSql persists the ActivityStatus enum index column as its underlying integer value,
-            // so raw-SQL predicates in OmnichannelActivityStore must compare against integer literals
-            // (not enum names). This assertion guards that persistence contract.
-            Assert.Equal(((int)ActivityStatus.NotStated).ToString(CultureInfo.InvariantCulture), rawStatus);
+            // The ActivityStatus index column is declared with the enum type (.Column<ActivityStatus>),
+            // so YesSql creates it as an integer column and persists the enum's underlying integer value.
+            // This is what makes the (int) raw-SQL predicates in OmnichannelActivityStore correct on every
+            // provider (SQLite and PostgreSQL alike). Asserting the SQLite storage class is "integer" (not
+            // "text") proves the column is genuinely integer-typed, guarding against a regression back to
+            // a .Column<string> declaration.
+            Assert.Equal("integer", rawStatus.StorageClass);
+            Assert.Equal((int)ActivityStatus.NotStated, rawStatus.Value);
             Assert.Equal(
                 expectedItemIds.OrderBy(itemId => itemId, StringComparer.Ordinal),
                 activities.Select(activity => activity.ItemId).OrderBy(itemId => itemId, StringComparer.Ordinal));
@@ -188,7 +192,7 @@ public sealed class OmnichannelActivityStoreTests
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Kind", column => column.WithLength(50))
+            .Column<ActivityKind>("Kind")
             .Column<string>("Source", column => column.WithLength(50))
             .Column<string>("Channel", column => column.WithLength(50))
             .Column<string>("ChannelEndpointId", column => column.WithLength(26))
@@ -202,7 +206,7 @@ public sealed class OmnichannelActivityStoreTests
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
-            .Column<string>("AssignmentStatus", column => column.WithLength(50))
+            .Column<ActivityAssignmentStatus>("AssignmentStatus")
             .Column<string>("ReservationId", column => column.WithLength(26))
             .Column<string>("ReservedById", column => column.WithLength(26))
             .Column<DateTime>("ReservedUtc")
@@ -210,9 +214,9 @@ public sealed class OmnichannelActivityStoreTests
             .Column<string>("CreatedById", column => column.WithLength(26))
             .Column<string>("DispositionId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
-            .Column<string>("UrgencyLevel", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(50))
-            .Column<string>("InteractionType", column => column.WithLength(50)),
+            .Column<ActivityUrgencyLevel>("UrgencyLevel")
+            .Column<ActivityStatus>("Status")
+            .Column<ActivityInteractionType>("InteractionType"),
             collection: OmnichannelConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -251,7 +255,7 @@ public sealed class OmnichannelActivityStoreTests
         return itemId;
     }
 
-    private static async Task<string> ReadRawStatusAsync(
+    private static async Task<(string StorageClass, int Value)> ReadRawStatusAsync(
         IStore store,
         string connectionString,
         string itemId)
@@ -268,13 +272,18 @@ public sealed class OmnichannelActivityStoreTests
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT {statusCol} FROM {table} WHERE {itemIdCol} = $itemId";
+        command.CommandText = $"SELECT typeof({statusCol}), {statusCol} FROM {table} WHERE {itemIdCol} = $itemId";
         var parameter = command.CreateParameter();
         parameter.ParameterName = "$itemId";
         parameter.Value = itemId;
         command.Parameters.Add(parameter);
 
-        return (string)await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+        await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+        await reader.ReadAsync(TestContext.Current.CancellationToken);
+        var storageClass = reader.GetString(0);
+        var value = Convert.ToInt32(reader.GetValue(1), CultureInfo.InvariantCulture);
+
+        return (storageClass, value);
     }
 
     private static string DatabasePath(string suffix)

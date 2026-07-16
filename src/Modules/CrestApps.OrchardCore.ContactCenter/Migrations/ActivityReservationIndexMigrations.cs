@@ -34,7 +34,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("AgentClaimKey", column => column.NotNull().Unique().WithLength(26))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<ReservationStatus>("Status")
             .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName
         );

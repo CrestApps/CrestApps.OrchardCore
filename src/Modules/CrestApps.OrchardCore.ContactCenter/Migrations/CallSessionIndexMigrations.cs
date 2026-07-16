@@ -1,6 +1,7 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
 using YesSql;
 using YesSql.Sql;
@@ -42,7 +43,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             .Column<string>("ProviderName", column => column.WithLength(128))
             .Column<string>("ProviderCallId", column => column.WithLength(128))
             .Column<string>("ProviderCallClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(261))
-            .Column<string>("State", column => column.WithLength(50))
+            .Column<ContactCenterCallState>("State")
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())

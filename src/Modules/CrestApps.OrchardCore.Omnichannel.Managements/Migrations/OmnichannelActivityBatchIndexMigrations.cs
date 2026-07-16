@@ -1,5 +1,6 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -16,7 +17,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("DisplayText", column => column.WithLength(255))
             .Column<string>("Source", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(20)),
+            .Column<OmnichannelActivityBatchStatus>("Status"),
         collection: OmnichannelConstants.CollectionName
         );
 
