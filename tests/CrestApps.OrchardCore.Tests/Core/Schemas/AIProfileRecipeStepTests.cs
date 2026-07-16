@@ -64,10 +64,17 @@ public sealed class AIProfileRecipeStepTests
     [Fact]
     public async Task AIProfileTemplateSchema_ContainsSharedAndTemplateSpecificKnownProperties()
     {
-        var step = new AIProfileTemplateRecipeStep();
-        var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
+        var step = new AIProfileTemplateRecipeStep(Options.Create(new AIOptions()));
+        var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
+        var json = JsonSerializer.Serialize(schema);
+        var schemaNode = JsonNode.Parse(json)!;
+        var requiredValues = schemaNode["properties"]?["Templates"]?["items"]?["required"]?
+            .AsArray()
+            .Select(node => node?.GetValue<string>())
+            .ToArray();
 
         Assert.Contains("\"AIProfileTemplate\"", json);
+        Assert.Contains("\"Source\"", json);
         Assert.Contains("\"Properties\"", json);
         Assert.Contains("\"AgentMetadata\"", json);
         Assert.Contains("\"AIProfileMetadata\"", json);
@@ -91,6 +98,7 @@ public sealed class AIProfileRecipeStepTests
         Assert.Contains("\"ChatModeProfileSettings\"", json);
         Assert.Contains("\"InitialResponseHandlerName\"", json);
         Assert.Contains("\"AgentAvailability\"", json);
+        Assert.Equal(["Name", "Source", "DisplayText"], requiredValues);
     }
 
     [Fact]

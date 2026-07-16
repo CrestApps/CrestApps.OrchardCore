@@ -2,9 +2,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
-using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -71,15 +71,17 @@ public sealed class NamedRecipeStepHandlerTests
             Name = "customer-support",
         };
 
-        var manager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
+        var manager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
         manager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(template));
         manager.Setup(x => x.ValidateAsync(template, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+        var options = Options.Create(new AIOptions());
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIProfileTemplateStep, CrestApps.OrchardCore.AI",
             manager.Object,
+            options,
             null);
 
         var context = CreateContext("AIProfileTemplate", new JsonObject
@@ -99,6 +101,53 @@ public sealed class NamedRecipeStepHandlerTests
 
         // Assert
         Assert.Empty(context.Errors);
+        manager.Verify(x => x.UpdateAsync(template, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AIProfileTemplate>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AIProfileTemplateStep_WhenTemplateExistsByNameAndSource_ShouldUpdateInsteadOfCreate()
+    {
+        // Arrange
+        var template = new AIProfileTemplate
+        {
+            ItemId = "template-2",
+            Name = "customer-support",
+            Source = AITemplateSources.Profile,
+        };
+
+        var manager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
+        manager.Setup(x => x.GetAsync("customer-support", AITemplateSources.Profile, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(template));
+        manager.Setup(x => x.ValidateAsync(template, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+        var options = Options.Create(new AIOptions());
+
+        var handler = CreateHandler(
+            "CrestApps.OrchardCore.AI.Recipes.AIProfileTemplateStep, CrestApps.OrchardCore.AI",
+            manager.Object,
+            options,
+            null);
+
+        var context = CreateContext("AIProfileTemplate", new JsonObject
+        {
+            ["Templates"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    [nameof(AIProfileTemplate.Name)] = "customer-support",
+                    [nameof(AIProfileTemplate.DisplayText)] = "Customer Support",
+                    [nameof(AIProfileTemplate.Source)] = AITemplateSources.Profile,
+                },
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.GetAsync("customer-support", AITemplateSources.Profile, It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.UpdateAsync(template, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(It.IsAny<AIProfileTemplate>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -250,7 +299,7 @@ public sealed class NamedRecipeStepHandlerTests
         profileManager.Setup(x => x.ValidateAsync(profile, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
-        var templateManager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
+        var templateManager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
         templateManager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(template));
 

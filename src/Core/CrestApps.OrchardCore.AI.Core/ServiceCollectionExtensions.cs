@@ -86,19 +86,6 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds the AI data source services.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
-    {
-        services
-            .AddScoped<ISourceCatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
-            .AddScoped<ICatalogManager<AIDataSource>>(sp => sp.GetRequiredService<ISourceCatalogManager<AIDataSource>>());
-
-        return services;
-    }
-
-    /// <summary>
     /// Adds the orchard core indexing adapters.
     /// </summary>
     /// <param name="services">The services.</param>

@@ -38,7 +38,7 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     /// </summary>
     /// <param name="type">The index profile type to filter by.</param>
     /// <returns>A read-only collection of matching <see cref="SearchIndexProfile"/> entries.</returns>
-    public async Task<IReadOnlyCollection<SearchIndexProfile>> GetByTypeAsync(string type)
+    public async Task<IReadOnlyCollection<SearchIndexProfile>> GetByTypeAsync(string type, CancellationToken cancellationToken = default)
         => (await _store.GetByTypeAsync(type)).Select(MapToSearchIndexProfile).ToArray();
 
     /// <summary>

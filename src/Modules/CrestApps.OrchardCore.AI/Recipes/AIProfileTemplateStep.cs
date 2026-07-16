@@ -1,8 +1,10 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -15,7 +17,8 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
     /// </summary>
     public const string StepKey = "AIProfileTemplate";
 
-    private readonly INamedCatalogManager<AIProfileTemplate> _templateManager;
+    private readonly INamedSourceCatalogManager<AIProfileTemplate> _templateManager;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -23,13 +26,16 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
     /// Initializes a new instance of the <see cref="AIProfileTemplateStep"/> class.
     /// </summary>
     /// <param name="templateManager">The AI profile template manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
     /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProfileTemplateStep(
-        INamedCatalogManager<AIProfileTemplate> templateManager,
+        INamedSourceCatalogManager<AIProfileTemplate> templateManager,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileTemplateStep> stringLocalizer)
         : base(StepKey)
     {
         _templateManager = templateManager;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -44,6 +50,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
             var isNew = false;
 
             var id = token[nameof(AIProfileTemplate.ItemId)]?.GetValue<string>();
+            var source = token[nameof(AIProfileTemplate.Source)]?.GetValue<string>()?.Trim();
 
             var hasId = !string.IsNullOrEmpty(id);
 
@@ -52,14 +59,26 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
                 template = await _templateManager.FindByIdAsync(id);
             }
 
+            var name = token[nameof(AIProfileTemplate.Name)]?.GetValue<string>()?.Trim();
+            var hasSource = !string.IsNullOrEmpty(source);
+
             if (template is null)
             {
-                var name = token[nameof(AIProfileTemplate.Name)]?.GetValue<string>()?.Trim();
-
-                if (!string.IsNullOrEmpty(name))
+                if (!hasSource)
                 {
-                    template = await _templateManager.FindByNameAsync(name);
+                    context.Errors.Add(S["Could not find template source. The template will not be imported."]);
+
+                    continue;
                 }
+
+                if (string.IsNullOrEmpty(name))
+                {
+                    context.Errors.Add(S["Could not find template name. The template will not be imported."]);
+
+                    continue;
+                }
+
+                template = await _templateManager.GetAsync(name, source);
             }
 
             if (template is not null)
@@ -69,7 +88,14 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
             else
             {
                 isNew = true;
-                template = await _templateManager.NewAsync(token);
+                if (!_aiOptions.TemplateSources.TryGetValue(source, out _))
+                {
+                    context.Errors.Add(S["Unable to find a template-source that can handle the source '{0}'.", source]);
+
+                    return;
+                }
+
+                template = await _templateManager.NewAsync(name, source, token);
 
                 if (hasId && UniqueId.IsValid(id))
                 {
