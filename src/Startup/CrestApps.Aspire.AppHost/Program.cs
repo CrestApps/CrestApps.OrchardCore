@@ -1,3 +1,6 @@
+using System.Net.Sockets;
+using Aspire.Hosting.ApplicationModel;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 const string ollamaModelName = "deepseek-v2:16b";
@@ -17,23 +20,32 @@ ollama.AddModel(ollamaModelName);
 
 var redis = builder.AddRedis("Redis");
 
-var asterisk = builder.AddContainer("Asterisk", "andrius/asterisk", "latest")
+var asterisk = builder.AddContainer("Asterisk", "crestapps/asterisk-webrtc", "22.6.0-dev")
+    .WithDockerfile("Asterisk")
     .WithHttpEndpoint(port: 8088, targetPort: 8088, name: "HttpAsterisk")
+    .WithEndpoint(port: 8089, targetPort: 8089, scheme: "https", name: "WssAsterisk")
     .WithBindMount("Asterisk/http.conf", "/etc/asterisk/http.conf", isReadOnly: true)
     .WithBindMount("Asterisk/ari.conf", "/etc/asterisk/ari.conf", isReadOnly: true)
-    .WithBindMount("Asterisk/extensions.conf", "/etc/asterisk/extensions.conf", isReadOnly: true);
+    .WithBindMount("Asterisk/extensions.conf", "/etc/asterisk/extensions.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/pjsip.conf", "/etc/asterisk/pjsip.conf", isReadOnly: true);
+
+var coturn = builder.AddContainer("Coturn", "coturn/coturn", "4.6.3")
+    .WithEndpoint(port: 3478, targetPort: 3478, scheme: "turn", name: "TurnTcp")
+    .WithEndpoint(port: 3478, targetPort: 3478, scheme: "turn", name: "TurnUdp", protocol: ProtocolType.Udp)
+    .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsTcp")
+    .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsUdp", protocol: ProtocolType.Udp)
+    .WithBindMount("Coturn/turnserver.conf", "/etc/coturn/turnserver.conf", isReadOnly: true);
 
 var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
-// .WithReference(redis)
+    .WithReference(redis)
 // .WithReference(ollama)
-// .WaitFor(redis)
+    .WaitFor(redis)
     .WaitFor(asterisk)
+    .WaitFor(coturn)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
+    .WithEnvironment("OrchardCore__OrchardCore_Redis__Configuration", ReferenceExpression.Create($"{redis.Resource.ConnectionStringExpression},allowAdmin=true"))
     .WithEnvironment((options) =>
     {
-        // Configure the Redis connection.
-        options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Redis__Configuration", "localhost,allowAdmin=true");
-
         // Configure the Elasticsearch connection.
         // options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__ConnectionType", "SingleNodeConnectionPool");
         // options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Url", "http://localhost");
