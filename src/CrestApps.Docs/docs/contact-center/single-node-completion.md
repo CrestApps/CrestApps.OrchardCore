@@ -68,3 +68,7 @@ The work is sequenced so that correctness and safety land before power:
 ## Tracking
 
 Detailed, evidence-based execution is tracked internally alongside the master Contact Center plan. This public page summarizes intent and progress; the shipped capability matrix in each release is the authoritative statement of what is supported.
+
+### Current status (single-node)
+
+Roadmap Wave 1 has landed on a single node: the reference-stack **foundations** (an Aspire-orchestrated Asterisk + TURN + Redis stack with a Docker Compose CI variant, a digest-pinned media image, and the adversarial two-tenant isolation harness), the canonical **state-authority** model (single-writer call ownership with optimistic-concurrency protection, atomic queue enqueue, and idempotent webhook handling), and the first slice of the **authorization boundary** (fail-closed soft-phone call-ownership checks) are all in place with a clean build and passing single-node tests. Browser media, server-side connect and inbound routing, supervisor and recording, and the end-to-end audio proof remain in later waves. All additions extend Orchard Core's own distributed primitives with tenant-qualified keys, so multi-tenant isolation is preserved throughout.
