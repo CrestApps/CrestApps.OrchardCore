@@ -503,6 +503,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 session.Metadata[entry.Key] = entry.Value;
             }
         }
+
+        if (providerEvent.AnswerClassification.HasValue)
+        {
+            var classificationValue = providerEvent.AnswerClassification.Value.ToString();
+
+            session.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification] = classificationValue;
+            interaction.TechnicalMetadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification] = classificationValue;
+        }
     }
 
     private static InteractionStatus MapInteractionStatus(ContactCenterCallState state)

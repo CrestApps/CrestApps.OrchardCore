@@ -100,21 +100,41 @@ public class DialerProfileViewModel
     public bool EnforceCallingWindow { get; set; }
 
     /// <summary>
-    /// Gets or sets the first local hour (0-23) at which the contact may be dialed.
+    /// Gets or sets the default business-hours calendar used to evaluate outbound calls.
     /// </summary>
-    [Range(0, 23)]
-    public int CallingWindowStartHour { get; set; } = 8;
+    public string CallingCalendarId { get; set; }
 
     /// <summary>
-    /// Gets or sets the local hour (1-24), exclusive, after which the contact may no longer be dialed.
+    /// Gets or sets the available business-hours calendars.
     /// </summary>
-    [Range(1, 24)]
-    public int CallingWindowEndHour { get; set; } = 21;
+    public IList<SelectListItem> CallingCalendarOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the time zone used to evaluate the calling window when the contact has no time zone.
+    /// Gets or sets a value indicating whether outbound dialing is gated by a rolling abandonment-rate cap.
     /// </summary>
-    public string CallingTimeZoneId { get; set; }
+    public bool EnforceAbandonmentCap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum tolerated rolling abandonment rate as a percentage of live-answered calls.
+    /// </summary>
+    [Range(0, 100)]
+    public double MaxAbandonmentRatePercent { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the minimum number of live-answered calls required before the abandonment rate is enforced.
+    /// </summary>
+    [Range(0, int.MaxValue)]
+    public int AbandonmentSampleFloor { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an abandoned automated call plays a safe-harbor announcement.
+    /// </summary>
+    public bool SafeHarborEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the safe-harbor announcement played to a live party when no agent connects in time.
+    /// </summary>
+    public string SafeHarborMessage { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.

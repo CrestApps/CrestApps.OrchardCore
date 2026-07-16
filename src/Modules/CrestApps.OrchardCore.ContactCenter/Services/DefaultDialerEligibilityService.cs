@@ -12,14 +12,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// <summary>
 /// Default <see cref="IDialerEligibilityService"/> implementation. It enforces the outbound compliance
 /// rules that protect the dialer: a valid destination, the attempt limit, the retry cool-down, the
-/// contact's do-not-call communication preference, national do-not-call registries, and the calling
-/// window evaluated in the contact's local time zone.
+/// contact's do-not-call communication preference, national do-not-call registries, the calling window
+/// evaluated in the contact's local time zone, and the rolling abandonment-rate cap.
 /// </summary>
 public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 {
     private readonly IInteractionManager _interactionManager;
     private readonly IContentManager _contentManager;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IBusinessHoursService _businessHoursService;
+    private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
     private readonly IClock _clock;
 
@@ -29,18 +31,24 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="interactionManager">The interaction manager used to evaluate the retry cool-down.</param>
     /// <param name="contentManager">The content manager used to load the contact's communication preferences.</param>
     /// <param name="phoneNumberService">The phone number service used to normalize destinations to E.164.</param>
+    /// <param name="businessHoursService">The business-hours service used to evaluate calling calendars.</param>
+    /// <param name="abandonmentPolicyService">The policy service used to evaluate the rolling abandonment-rate cap.</param>
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
     /// <param name="clock">The clock used to evaluate cool-down and calling-window timing.</param>
     public DefaultDialerEligibilityService(
         IInteractionManager interactionManager,
         IContentManager contentManager,
         IPhoneNumberService phoneNumberService,
+        IBusinessHoursService businessHoursService,
+        IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
         IClock clock)
     {
         _interactionManager = interactionManager;
         _contentManager = contentManager;
         _phoneNumberService = phoneNumberService;
+        _businessHoursService = businessHoursService;
+        _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
         _clock = clock;
     }
@@ -85,11 +93,36 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
                 "The contact opted out of phone calls.");
         }
 
-        if (profile.EnforceCallingWindow && !IsWithinCallingWindow(profile, contactPart?.TimeZoneId))
+        if (profile.EnforceCallingWindow)
+        {
+            var normalizedDestination = Normalize(activity.PreferredDestination);
+            var regionCode = string.IsNullOrEmpty(normalizedDestination)
+                ? null
+                : _phoneNumberService.GetRegionCode(normalizedDestination);
+            var calendarId = ResolveCallingCalendarId(profile, regionCode);
+            var isOpen = await _businessHoursService.EvaluateAsync(
+                calendarId,
+                _clock.UtcNow,
+                contactPart?.TimeZoneId,
+                cancellationToken);
+
+            if (isOpen != true)
+            {
+                return DialerEligibilityResult.Suppressed(
+                    DialerSuppressionReason.OutsideCallingWindow,
+                    isOpen.HasValue
+                        ? "The destination is outside its configured regional calling calendar."
+                        : "The required outbound calling calendar is unavailable or disabled.");
+            }
+        }
+
+        var abandonment = await _abandonmentPolicyService.EvaluateAsync(profile, cancellationToken);
+
+        if (!abandonment.IsPermitted)
         {
             return DialerEligibilityResult.Suppressed(
-                DialerSuppressionReason.OutsideCallingWindow,
-                $"The contact's local time is outside the {profile.CallingWindowStartHour}:00-{profile.CallingWindowEndHour}:00 calling window.");
+                DialerSuppressionReason.AbandonmentRateExceeded,
+                abandonment.Description);
         }
 
         if (profile.RespectDoNotCall && await IsOnNationalRegistryAsync(activity.PreferredDestination, cancellationToken))
@@ -150,26 +183,16 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         return contactPart;
     }
 
-    private bool IsWithinCallingWindow(DialerProfile profile, string contactTimeZoneId)
+    private static string ResolveCallingCalendarId(DialerProfile profile, string regionCode)
     {
-        var startHour = Math.Clamp(profile.CallingWindowStartHour, 0, 23);
-        var endHour = Math.Clamp(profile.CallingWindowEndHour, 1, 24);
-
-        var timeZone = ResolveTimeZone(contactTimeZoneId ?? profile.CallingTimeZoneId);
-        var localNow = TimeZoneInfo.ConvertTimeFromUtc(_clock.UtcNow, timeZone);
-        var hour = localNow.Hour;
-
-        if (startHour == endHour)
+        if (!string.IsNullOrWhiteSpace(regionCode) &&
+            profile.RegionalCallingCalendarIds.TryGetValue(regionCode, out var regionalCalendarId) &&
+            !string.IsNullOrWhiteSpace(regionalCalendarId))
         {
-            return false;
+            return regionalCalendarId;
         }
 
-        if (startHour < endHour)
-        {
-            return hour >= startHour && hour < endHour;
-        }
-
-        return hour >= startHour || hour < endHour;
+        return profile.CallingCalendarId;
     }
 
     private async Task<bool> IsOnNationalRegistryAsync(string destination, CancellationToken cancellationToken)
@@ -209,15 +232,5 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         }
 
         return new string(phoneNumber.Where(char.IsDigit).ToArray());
-    }
-
-    private static TimeZoneInfo ResolveTimeZone(string timeZoneId)
-    {
-        if (!string.IsNullOrEmpty(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var timeZone))
-        {
-            return timeZone;
-        }
-
-        return TimeZoneInfo.Utc;
     }
 }

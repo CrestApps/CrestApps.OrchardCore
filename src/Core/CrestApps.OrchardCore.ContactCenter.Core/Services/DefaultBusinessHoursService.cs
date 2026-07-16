@@ -33,19 +33,39 @@ public sealed class DefaultBusinessHoursService : IBusinessHoursService
     /// <inheritdoc/>
     public async Task<bool> IsOpenAsync(string calendarId, DateTime utcInstant, CancellationToken cancellationToken = default)
     {
+        return await IsOpenAsync(calendarId, utcInstant, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsOpenAsync(
+        string calendarId,
+        DateTime utcInstant,
+        string timeZoneId,
+        CancellationToken cancellationToken = default)
+    {
+        return await EvaluateAsync(calendarId, utcInstant, timeZoneId, cancellationToken) ?? true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool?> EvaluateAsync(
+        string calendarId,
+        DateTime utcInstant,
+        string timeZoneId,
+        CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrEmpty(calendarId))
         {
-            return true;
+            return null;
         }
 
         var calendar = await _calendarManager.FindByIdAsync(calendarId, cancellationToken);
 
         if (calendar is null || !calendar.Enabled)
         {
-            return true;
+            return null;
         }
 
-        return IsOpen(calendar, utcInstant);
+        return IsOpen(calendar, utcInstant, timeZoneId);
     }
 
     /// <summary>
@@ -56,9 +76,21 @@ public sealed class DefaultBusinessHoursService : IBusinessHoursService
     /// <returns><see langword="true"/> when the calendar is open; otherwise, <see langword="false"/>.</returns>
     public static bool IsOpen(BusinessHoursCalendar calendar, DateTime utcInstant)
     {
+        return IsOpen(calendar, utcInstant, null);
+    }
+
+    /// <summary>
+    /// Evaluates whether the supplied calendar is open at the given UTC instant using an optional time-zone override.
+    /// </summary>
+    /// <param name="calendar">The calendar to evaluate.</param>
+    /// <param name="utcInstant">The UTC instant to evaluate.</param>
+    /// <param name="timeZoneId">The time zone used instead of the calendar time zone when supplied.</param>
+    /// <returns><see langword="true"/> when the calendar is open; otherwise, <see langword="false"/>.</returns>
+    public static bool IsOpen(BusinessHoursCalendar calendar, DateTime utcInstant, string timeZoneId)
+    {
         ArgumentNullException.ThrowIfNull(calendar);
 
-        var timeZone = ResolveTimeZone(calendar.TimeZoneId);
+        var timeZone = ResolveTimeZone(string.IsNullOrWhiteSpace(timeZoneId) ? calendar.TimeZoneId : timeZoneId);
         var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc), timeZone);
         var localDate = DateOnly.FromDateTime(local);
 

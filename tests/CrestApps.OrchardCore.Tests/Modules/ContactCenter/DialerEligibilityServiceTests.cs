@@ -97,13 +97,18 @@ public sealed class DialerEligibilityServiceTests
         // Arrange
         var harness = new Harness();
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
-
         var profile = Profile();
         profile.EnforceCallingWindow = true;
-        profile.CallingWindowStartHour = 13;
-        profile.CallingWindowEndHour = 21;
+        profile.CallingCalendarId = "calendar-default";
+        harness.BusinessHoursService
+            .Setup(service => service.EvaluateAsync(
+                "calendar-default",
+                _now,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
-        // Act (12:00 UTC is before the 13:00 window in the default UTC time zone)
+        // Act
         var result = await harness.EvaluateAsync(profile, activity);
 
         // Assert
@@ -112,15 +117,21 @@ public sealed class DialerEligibilityServiceTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_WhenCallingWindowStartAndEndAreEqual_SuppressesWindow()
+    public async Task EvaluateAsync_WhenRequiredCallingCalendarIsUnavailable_SuppressesWindow()
     {
         // Arrange
         var harness = new Harness();
         var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
         var profile = Profile();
         profile.EnforceCallingWindow = true;
-        profile.CallingWindowStartHour = 9;
-        profile.CallingWindowEndHour = 9;
+        profile.CallingCalendarId = "calendar-default";
+        harness.BusinessHoursService
+            .Setup(service => service.EvaluateAsync(
+                "calendar-default",
+                _now,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
 
         // Act
         var result = await harness.EvaluateAsync(profile, activity);
@@ -128,6 +139,45 @@ public sealed class DialerEligibilityServiceTests
         // Assert
         Assert.False(result.IsEligible);
         Assert.Equal(DialerSuppressionReason.OutsideCallingWindow, result.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenRegionalCalendarIsConfigured_UsesDestinationRegionAndContactTimeZone()
+    {
+        // Arrange
+        var harness = new Harness();
+        var contact = new ContentItem();
+        contact.Apply(new OmnichannelContactPart { TimeZoneId = "America/Los_Angeles" });
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.PhoneNumberService
+            .Setup(service => service.GetRegionCode("+15551112222"))
+            .Returns("US");
+        harness.BusinessHoursService
+            .Setup(service => service.EvaluateAsync(
+                "calendar-us",
+                _now,
+                "America/Los_Angeles",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            PreferredDestination = "+15551112222",
+            ContactContentItemId = "contact1",
+        };
+        var profile = Profile();
+        profile.EnforceCallingWindow = true;
+        profile.CallingCalendarId = "calendar-default";
+        profile.RegionalCallingCalendarIds["US"] = "calendar-us";
+
+        // Act
+        var result = await harness.EvaluateAsync(profile, activity);
+
+        // Assert
+        Assert.True(result.IsEligible);
+        harness.BusinessHoursService.VerifyAll();
     }
 
     [Fact]
@@ -151,6 +201,25 @@ public sealed class DialerEligibilityServiceTests
         // Assert
         Assert.False(result.IsEligible);
         Assert.Equal(DialerSuppressionReason.NationalDoNotCallRegistry, result.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenAbandonmentCapExceeded_SuppressesAbandonment()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AbandonmentPolicyService
+            .Setup(service => service.EvaluateAsync(It.IsAny<DialerProfile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DialerAbandonmentEvaluation.Suppressed(true, 5, 100, "The rolling abandonment rate of 5% exceeds the 3% cap."));
+
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+15551112222" };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.AbandonmentRateExceeded, result.Reason);
     }
 
     [Fact]
@@ -194,6 +263,10 @@ public sealed class DialerEligibilityServiceTests
 
         public Mock<IPhoneNumberService> PhoneNumberService { get; } = new();
 
+        public Mock<IBusinessHoursService> BusinessHoursService { get; } = new();
+
+        public Mock<IDialerAbandonmentPolicyService> AbandonmentPolicyService { get; } = new();
+
         public List<INationalDoNotCallRegistry> Registries { get; } = [];
 
         public Harness()
@@ -202,6 +275,10 @@ public sealed class DialerEligibilityServiceTests
             PhoneNumberService
                 .Setup(s => s.TryFormatToE164(It.IsAny<string>(), It.IsAny<string>(), out e164))
                 .Returns(true);
+
+            AbandonmentPolicyService
+                .Setup(service => service.EvaluateAsync(It.IsAny<DialerProfile>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(DialerAbandonmentEvaluation.Permitted(true, 0, 0, "Not enforced."));
         }
 
         public Task<DialerEligibilityResult> EvaluateAsync(DialerProfile profile, OmnichannelActivity activity)
@@ -213,6 +290,8 @@ public sealed class DialerEligibilityServiceTests
                 InteractionManager.Object,
                 ContentManager.Object,
                 PhoneNumberService.Object,
+                BusinessHoursService.Object,
+                AbandonmentPolicyService.Object,
                 Registries,
                 clock.Object);
 

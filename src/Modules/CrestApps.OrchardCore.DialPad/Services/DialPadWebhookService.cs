@@ -63,6 +63,9 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             RecordingReference = callEvent.RecordingId,
             IsConference = callEvent.IsConference,
             ParticipantCount = callEvent.ParticipantCount,
+            AnswerClassification = TryMapAnswerClassification(callEvent.State, out var amdClassification)
+                ? amdClassification
+                : null,
             Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["dialPadState"] = callEvent.State ?? string.Empty,
@@ -110,9 +113,10 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
         {
             "calling" or "dialing" or "connecting" or "preanswer" => ContactCenterCallState.Dialing,
             "ringing" => ContactCenterCallState.Ringing,
-            "connected" or "active" => ContactCenterCallState.Connected,
+            "connected" or "active" or "human" or "live" => ContactCenterCallState.Connected,
             "hold" or "on_hold" or "parked" => ContactCenterCallState.OnHold,
-            "hangup" or "ended" or "disconnected" or "completed" or "voicemail" => ContactCenterCallState.Ended,
+            "hangup" or "ended" or "disconnected" or "completed" or "voicemail"
+                or "voicemail_greeting" or "machine" or "answering_machine" or "fax" or "fax_detected" => ContactCenterCallState.Ended,
             "missed" or "no_answer" or "noanswer" => ContactCenterCallState.NoAnswer,
             "rejected" or "declined" or "busy" => ContactCenterCallState.Rejected,
             "canceled" or "cancelled" or "abandoned" => ContactCenterCallState.Canceled,
@@ -121,6 +125,19 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
         };
 
         return Enum.IsDefined(mapped);
+    }
+
+    private static bool TryMapAnswerClassification(string state, out AnswerClassification classification)
+    {
+        classification = state?.Trim().ToLowerInvariant() switch
+        {
+            "voicemail" or "voicemail_greeting" or "machine" or "answering_machine" => AnswerClassification.Machine,
+            "fax" or "fax_detected" => AnswerClassification.Fax,
+            "human" or "live" => AnswerClassification.Human,
+            _ => (AnswerClassification)(-1),
+        };
+
+        return Enum.IsDefined(classification);
     }
 
     private static bool TryMapRecordingState(string state, out RecordingState mapped)

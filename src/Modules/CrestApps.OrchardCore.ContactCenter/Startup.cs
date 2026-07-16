@@ -423,9 +423,29 @@ public sealed class DialerStartup : StartupBase
 [Feature(ContactCenterConstants.Feature.Compliance)]
 public sealed class ComplianceStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ComplianceStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind outbound compliance options.</param>
+    public ComplianceStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddOptions<ContactCenterComplianceOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Compliance"))
+            .Validate(
+                options => options.AbandonmentRollingWindowMinutes is >= 1 and <= 1440,
+                "The Contact Center abandonment rolling window must be between 1 and 1440 minutes.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
             .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
             .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()

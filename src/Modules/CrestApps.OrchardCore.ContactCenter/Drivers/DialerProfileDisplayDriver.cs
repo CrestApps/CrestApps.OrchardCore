@@ -61,9 +61,12 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             CallerId = profile.CallerId,
             RespectDoNotCall = profile.RespectDoNotCall,
             EnforceCallingWindow = profile.EnforceCallingWindow,
-            CallingWindowStartHour = profile.CallingWindowStartHour,
-            CallingWindowEndHour = profile.CallingWindowEndHour,
-            CallingTimeZoneId = profile.CallingTimeZoneId,
+            CallingCalendarId = profile.CallingCalendarId,
+            EnforceAbandonmentCap = profile.EnforceAbandonmentCap,
+            MaxAbandonmentRatePercent = profile.MaxAbandonmentRatePercent,
+            AbandonmentSampleFloor = profile.AbandonmentSampleFloor,
+            SafeHarborEnabled = profile.SafeHarborEnabled,
+            SafeHarborMessage = profile.SafeHarborMessage,
             Enabled = profile.Enabled,
         };
 
@@ -87,9 +90,13 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.CallerId = viewModel.CallerId;
             model.RespectDoNotCall = viewModel.RespectDoNotCall;
             model.EnforceCallingWindow = viewModel.EnforceCallingWindow;
-            model.CallingWindowStartHour = viewModel.CallingWindowStartHour;
-            model.CallingWindowEndHour = viewModel.CallingWindowEndHour;
-            model.CallingTimeZoneId = viewModel.CallingTimeZoneId;
+            model.CallingCalendarId = viewModel.CallingCalendarId;
+            model.CallingCalendarOptions = viewModel.CallingCalendarOptions;
+            model.EnforceAbandonmentCap = viewModel.EnforceAbandonmentCap;
+            model.MaxAbandonmentRatePercent = viewModel.MaxAbandonmentRatePercent;
+            model.AbandonmentSampleFloor = viewModel.AbandonmentSampleFloor;
+            model.SafeHarborEnabled = viewModel.SafeHarborEnabled;
+            model.SafeHarborMessage = viewModel.SafeHarborMessage;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -111,9 +118,31 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."]);
         }
 
-        if (model.EnforceCallingWindow && model.CallingWindowStartHour == model.CallingWindowEndHour)
+        if (model.EnforceCallingWindow && string.IsNullOrWhiteSpace(model.CallingCalendarId))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CallingWindowEndHour), S["The calling window start and end hours must differ."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CallingCalendarId), S["Select an outbound calling calendar when calling-window enforcement is enabled."]);
+        }
+
+        if (model.MaxAbandonmentRatePercent is < 0 or > 100)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxAbandonmentRatePercent), S["The maximum abandonment rate must be between 0 and 100 percent."]);
+        }
+
+        if (model.AbandonmentSampleFloor < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AbandonmentSampleFloor), S["The abandonment sample floor cannot be negative."]);
+        }
+
+        var automatedMode = model.Mode is DialerMode.Power or DialerMode.Progressive or DialerMode.Predictive;
+
+        if (model.EnforceAbandonmentCap && automatedMode && !model.SafeHarborEnabled)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SafeHarborEnabled), S["Enable safe-harbor messaging when an automated dialing mode enforces an abandonment cap."]);
+        }
+
+        if (model.SafeHarborEnabled && string.IsNullOrWhiteSpace(model.SafeHarborMessage))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SafeHarborMessage), S["Provide a safe-harbor announcement when safe-harbor messaging is enabled."]);
         }
 
         profile.Name = model.Name?.Trim();
@@ -134,11 +163,16 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.CallerId = model.CallerId?.Trim();
         profile.RespectDoNotCall = model.RespectDoNotCall;
         profile.EnforceCallingWindow = model.EnforceCallingWindow;
-        profile.CallingWindowStartHour = Math.Clamp(model.CallingWindowStartHour, 0, 23);
-        profile.CallingWindowEndHour = Math.Clamp(model.CallingWindowEndHour, 1, 24);
-        profile.CallingTimeZoneId = string.IsNullOrWhiteSpace(model.CallingTimeZoneId)
+        profile.CallingCalendarId = string.IsNullOrWhiteSpace(model.CallingCalendarId)
             ? null
-            : model.CallingTimeZoneId.Trim();
+            : model.CallingCalendarId.Trim();
+        profile.EnforceAbandonmentCap = model.EnforceAbandonmentCap;
+        profile.MaxAbandonmentRatePercent = Math.Clamp(model.MaxAbandonmentRatePercent, 0, 100);
+        profile.AbandonmentSampleFloor = Math.Max(0, model.AbandonmentSampleFloor);
+        profile.SafeHarborEnabled = model.SafeHarborEnabled;
+        profile.SafeHarborMessage = string.IsNullOrWhiteSpace(model.SafeHarborMessage)
+            ? null
+            : model.SafeHarborMessage.Trim();
         profile.Enabled = model.Enabled;
 
         return await EditAsync(profile, context);

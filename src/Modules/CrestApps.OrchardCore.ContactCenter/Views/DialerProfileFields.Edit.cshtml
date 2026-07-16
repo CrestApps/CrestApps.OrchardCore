@@ -115,34 +115,63 @@
             <input asp-for="EnforceCallingWindow" class="form-check-input" />
             <label asp-for="EnforceCallingWindow" class="form-check-label">@T["Enforce a calling window"]</label>
         </div>
-        <span class="hint dashed">@T["When enabled, the contact is only dialed while their local time is within the window below."]</span>
+        <span class="hint dashed">@T["When enabled, the contact is only dialed while the selected calendar is open. Contact time zones override the calendar time zone, and region-specific calendar rules configured through deployment data take precedence."]</span>
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="CallingWindowStartHour">
-    <label asp-for="CallingWindowStartHour" class="ocat-label">@T["Calling window start hour"]</label>
-    <div class="ocat-limited">
-        <input asp-for="CallingWindowStartHour" type="number" min="0" max="23" class="form-control" />
-        <span asp-validation-for="CallingWindowStartHour" class="text-danger"></span>
-        <span class="hint">@T["The first local hour (0-23) at which the contact may be dialed."]</span>
-    </div>
-</div>
-
-<div class="ocat-limited-wrapper" asp-validation-class-for="CallingWindowEndHour">
-    <label asp-for="CallingWindowEndHour" class="ocat-label">@T["Calling window end hour"]</label>
-    <div class="ocat-limited">
-        <input asp-for="CallingWindowEndHour" type="number" min="1" max="24" class="form-control" />
-        <span asp-validation-for="CallingWindowEndHour" class="text-danger"></span>
-        <span class="hint">@T["The local hour (1-24), exclusive, after which the contact may no longer be dialed."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="CallingTimeZoneId">
-    <label asp-for="CallingTimeZoneId" class="ocat-label">@T["Default time zone"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="CallingCalendarId">
+    <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling calendar"]</label>
     <div class="ocat-end">
-        <input asp-for="CallingTimeZoneId" class="form-control" placeholder="UTC" />
-        <span asp-validation-for="CallingTimeZoneId" class="text-danger"></span>
-        <span class="hint">@T["The time zone used to evaluate the calling window when the contact has no time zone of its own."]</span>
+        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" data-width="100%" title="@T["Select an outbound calling calendar"]">
+            <option value="">@T["Select an outbound calling calendar"]</option>
+        </select>
+        <span asp-validation-for="CallingCalendarId" class="text-danger"></span>
+        <span class="hint">@T["The calendar supplies minute-precision weekday, overnight, holiday, and default time-zone rules."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceAbandonmentCap" class="form-check-input" />
+            <label asp-for="EnforceAbandonmentCap" class="form-check-label">@T["Enforce an abandonment-rate cap"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, automated pacing modes are suppressed once the rolling abandonment rate reaches the cap or the compliance statistics cannot be proven. Manual and preview dialing are unaffected because an agent is bound to every call."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent">
+    <label asp-for="MaxAbandonmentRatePercent" class="ocat-label">@T["Maximum abandonment rate (%)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxAbandonmentRatePercent" class="form-control" />
+        <span asp-validation-for="MaxAbandonmentRatePercent" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor">
+    <label asp-for="AbandonmentSampleFloor" class="ocat-label">@T["Abandonment sample floor"]</label>
+    <div class="ocat-limited">
+        <input asp-for="AbandonmentSampleFloor" class="form-control" />
+        <span asp-validation-for="AbandonmentSampleFloor" class="text-danger"></span>
+        <span class="hint">@T["The minimum number of live-answered calls in the rolling window before the abandonment rate is enforced."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SafeHarborEnabled" class="form-check-input" />
+            <label asp-for="SafeHarborEnabled" class="form-check-label">@T["Play a safe-harbor announcement when abandoned"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, an abandoned automated call plays a recorded announcement that identifies the caller instead of dropping the party silently."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage">
+    <label asp-for="SafeHarborMessage" class="ocat-label">@T["Safe-harbor announcement"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="SafeHarborMessage" class="form-control"></textarea>
+        <span asp-validation-for="SafeHarborMessage" class="text-danger"></span>
     </div>
 </div>
 

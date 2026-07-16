@@ -39,4 +39,10 @@ public enum DialerSuppressionReason
     /// The contact's local time is outside the configured calling window.
     /// </summary>
     OutsideCallingWindow,
+
+    /// <summary>
+    /// The dialer profile's rolling abandonment rate reached or exceeded its configured cap, or the
+    /// abandonment statistics required to prove compliance were unavailable.
+    /// </summary>
+    AbandonmentRateExceeded,
 }

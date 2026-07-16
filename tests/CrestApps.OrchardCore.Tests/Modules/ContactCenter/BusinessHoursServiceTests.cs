@@ -90,6 +90,20 @@ public sealed class BusinessHoursServiceTests
         Assert.False(closedLocalEarly);
     }
 
+    [Fact]
+    public void IsOpen_WithTimeZoneOverride_UsesOverrideInsteadOfCalendarTimeZone()
+    {
+        // Arrange
+        var calendar = CreateMondayNineToFive("UTC");
+        var instant = new DateTime(2026, 1, 5, 17, 30, 0, DateTimeKind.Utc);
+
+        // Act
+        var open = DefaultBusinessHoursService.IsOpen(calendar, instant, "America/Los_Angeles");
+
+        // Assert
+        Assert.True(open);
+    }
+
     [Theory]
     [InlineData(2026, 1, 5, 23, 0, true)]
     [InlineData(2026, 1, 6, 2, 0, true)]
@@ -174,6 +188,27 @@ public sealed class BusinessHoursServiceTests
 
         // Assert
         Assert.True(open);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WithDisabledCalendar_ReturnsNull()
+    {
+        // Arrange
+        var manager = new Mock<IBusinessHoursCalendarManager>();
+        manager
+            .Setup(m => m.FindByIdAsync("cal1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BusinessHoursCalendar { ItemId = "cal1", Enabled = false });
+        var service = CreateService(manager);
+
+        // Act
+        var open = await service.EvaluateAsync(
+            "cal1",
+            _mondayNoonUtc,
+            null,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(open);
     }
 
     [Fact]

@@ -485,6 +485,82 @@ public sealed class ProviderVoiceEventServiceTests
     }
 
     [Fact]
+    public async Task IngestAsync_WhenAnswerClassificationIsPresent_PersistsClassificationToSessionAndInteractionMetadata()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            Status = InteractionStatus.Ringing,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            State = ContactCenterCallState.Dialing,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("amd-machine-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "amd-machine-1",
+            AnswerClassification = AnswerClassification.Machine,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(session.Metadata.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerClassification));
+        Assert.Equal("Machine", session.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification]);
+        Assert.True(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerClassification));
+        Assert.Equal("Machine", interaction.TechnicalMetadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification]);
+    }
+
+    [Fact]
     public async Task IngestAsync_WhenCallResumesAndRecordingStops_PublishesResumeAndStopEvents()
     {
         // Arrange

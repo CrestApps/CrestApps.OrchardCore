@@ -184,6 +184,17 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable metadata keys written to call sessions and interactions for provider-reported telephony details.
+    /// </summary>
+    public static class TelephonyMetadata
+    {
+        /// <summary>
+        /// The key under which the AMD (Answering Machine Detection) answer classification is stored.
+        /// </summary>
+        public const string AnswerClassification = "amd_answer_classification";
+    }
+
+    /// <summary>
     /// Contains the canonical Contact Center domain event type names.
     /// Names are channel-neutral and stable so they can be persisted, projected, and replayed.
     /// </summary>

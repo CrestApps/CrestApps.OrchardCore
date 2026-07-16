@@ -198,6 +198,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     {
         model.CampaignOptions = await GetCampaignOptionsAsync([model.CampaignId]);
         model.QueueOptions = await GetQueueOptionsAsync(model.QueueId);
+        model.CallingCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.CallingCalendarId);
         model.ProviderOptions = GetVoiceProviderOptions(model.ProviderName);
     }
 

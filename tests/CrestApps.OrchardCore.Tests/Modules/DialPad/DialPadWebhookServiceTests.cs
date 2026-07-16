@@ -176,6 +176,77 @@ public sealed class DialPadWebhookServiceTests
         Assert.NotEqual(providerEvents[0].IdempotencyKey, providerEvents[1].IdempotencyKey);
     }
 
+    [Fact]
+    public async Task ProcessAsync_VoicemailState_YieldsEndedWithMachineClassification()
+    {
+        // Arrange
+        ProviderVoiceEvent captured = null;
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink
+            .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
+            .ReturnsAsync(true);
+
+        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var callEvent = new DialPadCallEvent { CallId = "c1", State = "voicemail", Direction = "outbound" };
+
+        // Act
+        var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(DialPadWebhookResult.Updated, result);
+        Assert.NotNull(captured);
+        Assert.Equal(ContactCenterCallState.Ended, captured.State);
+        Assert.Equal(AnswerClassification.Machine, captured.AnswerClassification);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_FaxState_YieldsEndedWithFaxClassification()
+    {
+        // Arrange
+        ProviderVoiceEvent captured = null;
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink
+            .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
+            .ReturnsAsync(true);
+
+        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var callEvent = new DialPadCallEvent { CallId = "c1", State = "fax", Direction = "outbound" };
+
+        // Act
+        var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(DialPadWebhookResult.Updated, result);
+        Assert.NotNull(captured);
+        Assert.Equal(ContactCenterCallState.Ended, captured.State);
+        Assert.Equal(AnswerClassification.Fax, captured.AnswerClassification);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ConnectedState_YieldsNullAnswerClassification()
+    {
+        // Arrange
+        ProviderVoiceEvent captured = null;
+        var eventSink = new Mock<IProviderVoiceEventSink>();
+        eventSink
+            .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
+            .ReturnsAsync(true);
+
+        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var callEvent = new DialPadCallEvent { CallId = "c1", State = "connected", Direction = "outbound" };
+
+        // Act
+        await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(captured);
+        Assert.Equal(ContactCenterCallState.Connected, captured.State);
+        Assert.Null(captured.AnswerClassification);
+    }
+
     private static DialPadWebhookService CreateService(
         Mock<IProviderVoiceEventSink> eventSink,
         Mock<IInboundVoiceEventSink> inboundSink)

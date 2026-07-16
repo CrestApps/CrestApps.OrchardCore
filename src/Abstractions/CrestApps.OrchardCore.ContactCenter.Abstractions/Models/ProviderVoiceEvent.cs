@@ -87,6 +87,13 @@ public sealed class ProviderVoiceEvent
     public int? ParticipantCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider-neutral AMD (Answering Machine Detection) answer classification when the provider
+    /// reports AMD for this event. When <see langword="null"/>, the provider did not report AMD and the event does
+    /// not change the current answer classification.
+    /// </summary>
+    public AnswerClassification? AnswerClassification { get; set; }
+
+    /// <summary>
     /// Gets or sets additional provider metadata to retain for troubleshooting.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

@@ -65,24 +65,50 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool RespectDoNotCall { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether calls are restricted to the configured calling window.
+    /// Gets or sets a value indicating whether calls are restricted by business-hours calendars.
     /// </summary>
     public bool EnforceCallingWindow { get; set; }
 
     /// <summary>
-    /// Gets or sets the first local hour (0-23) at which the contact may be dialed.
+    /// Gets or sets a value indicating whether outbound dialing is gated by a rolling abandonment-rate cap.
+    /// The cap only constrains automated pacing modes, because manual and preview dialing bind an agent to
+    /// every call and cannot abandon a connected party.
     /// </summary>
-    public int CallingWindowStartHour { get; set; } = 8;
+    public bool EnforceAbandonmentCap { get; set; }
 
     /// <summary>
-    /// Gets or sets the local hour (1-24), exclusive, after which the contact may no longer be dialed.
+    /// Gets or sets the maximum tolerated rolling abandonment rate, expressed as a percentage of calls a
+    /// live person answered. A value of 3 keeps abandonment at or below three percent.
     /// </summary>
-    public int CallingWindowEndHour { get; set; } = 21;
+    public double MaxAbandonmentRatePercent { get; set; } = 3;
 
     /// <summary>
-    /// Gets or sets the time zone used to evaluate the calling window when the contact has no time zone of its own.
+    /// Gets or sets the minimum number of live-answered calls that must accumulate in the rolling window
+    /// before the abandonment rate is enforced, avoiding volatile suppression on small samples.
     /// </summary>
-    public string CallingTimeZoneId { get; set; }
+    public int AbandonmentSampleFloor { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an abandoned automated call plays a safe-harbor announcement
+    /// that identifies the caller instead of being dropped silently.
+    /// </summary>
+    public bool SafeHarborEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the safe-harbor announcement played to a live party when no agent connects in time.
+    /// </summary>
+    public string SafeHarborMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default business-hours calendar used to evaluate outbound calls.
+    /// </summary>
+    public string CallingCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets region-specific business-hours calendar overrides keyed by ISO 3166-1 alpha-2 region code.
+    /// </summary>
+    public IDictionary<string, string> RegionalCallingCalendarIds { get; set; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.
