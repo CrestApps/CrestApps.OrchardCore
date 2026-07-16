@@ -308,12 +308,12 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             return;
         }
 
-        var waiting = await queueItemStore.ListWaitingAsync(queueId, cancellationToken);
+        var waitingCount = await queueItemStore.CountWaitingAsync(queueId, cancellationToken);
 
         await _notifier.NotifyQueueStatsChangedAsync(new QueueStatsNotification
         {
             QueueId = queueId,
-            WaitingCount = waiting.Count,
+            WaitingCount = waitingCount,
             ChangedUtc = _clock.UtcNow,
         }, cancellationToken);
     }

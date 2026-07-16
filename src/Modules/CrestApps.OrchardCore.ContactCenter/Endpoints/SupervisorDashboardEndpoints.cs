@@ -66,29 +66,26 @@ internal static class SupervisorDashboardEndpoints
 
         foreach (var queue in queues)
         {
-            var waiting = await queueItemManager.ListWaitingAsync(queue.ItemId, httpContext.RequestAborted);
+            var waitingCount = await queueItemManager.CountWaitingAsync(queue.ItemId, httpContext.RequestAborted);
+            var longestWaiting = await queueItemManager.FindLongestWaitingAsync(queue.ItemId, httpContext.RequestAborted);
             var signedInAgents = agents
                 .Where(agent => agent.QueueIds.Contains(queue.ItemId, StringComparer.OrdinalIgnoreCase))
                 .ToArray();
-            var longestWaitSeconds = 0;
-            var slaBreachCount = 0;
-
-            foreach (var item in waiting)
-            {
-                var waitSeconds = (int)Math.Max(0, (now - item.EnqueuedUtc).TotalSeconds);
-                longestWaitSeconds = Math.Max(longestWaitSeconds, waitSeconds);
-
-                if (queue.SlaThresholdSeconds > 0 && waitSeconds > queue.SlaThresholdSeconds)
-                {
-                    slaBreachCount++;
-                }
-            }
+            var longestWaitSeconds = longestWaiting is null
+                ? 0
+                : (int)Math.Max(0, (now - longestWaiting.EnqueuedUtc).TotalSeconds);
+            var slaBreachCount = queue.SlaThresholdSeconds > 0
+                ? await queueItemManager.CountWaitingOlderThanAsync(
+                    queue.ItemId,
+                    now.AddSeconds(-queue.SlaThresholdSeconds),
+                    httpContext.RequestAborted)
+                : 0;
 
             model.Queues.Add(new SupervisorQueueViewModel
             {
                 Id = queue.ItemId,
                 Name = queue.Name,
-                WaitingCount = waiting.Count,
+                WaitingCount = waitingCount,
                 SignedInAgentCount = signedInAgents.Length,
                 AvailableAgentCount = signedInAgents.Count(agent => agent.PresenceStatus == AgentPresenceStatus.Available),
                 BusyAgentCount = signedInAgents.Count(agent => agent.PresenceStatus is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp),
@@ -98,7 +95,7 @@ internal static class SupervisorDashboardEndpoints
                 SlaThresholdSeconds = queue.SlaThresholdSeconds,
             });
 
-            model.TotalWaiting += waiting.Count;
+            model.TotalWaiting += waitingCount;
         }
 
         foreach (var agent in agents)

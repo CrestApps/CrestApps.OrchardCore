@@ -132,8 +132,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         foreach (var queue in filteredQueues)
         {
-            var waiting = await _queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
-            waitingByQueue[queue.ItemId] = waiting.Count;
+            waitingByQueue[queue.ItemId] = await _queueItemManager.CountWaitingAsync(queue.ItemId, cancellationToken);
         }
 
         return BuildQueueUsage(

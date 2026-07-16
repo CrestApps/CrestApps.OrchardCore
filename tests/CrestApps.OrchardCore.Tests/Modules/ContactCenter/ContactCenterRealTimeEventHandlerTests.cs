@@ -119,8 +119,8 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
 
         var queueItemStore = new Mock<IQueueItemStore>();
-        queueItemStore.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new QueueItem { ItemId = "qi1" }, new QueueItem { ItemId = "qi2" }]);
+        queueItemStore.Setup(m => m.CountWaitingAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
@@ -180,7 +180,7 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
 
         var queueItemStore = new Mock<IQueueItemStore>();
-        queueItemStore.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        queueItemStore.Setup(m => m.CountWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(0);
 
         var notifier = new Mock<IContactCenterRealTimeNotifier>();
         var handler = CreateHandler(notifier, reservationManager, agentManager, queueItemStore);
@@ -210,8 +210,8 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         var queueItemStore = new Mock<IQueueItemStore>();
         queueItemStore.Setup(m => m.FindByIdAsync("qi1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QueueItem { ItemId = "qi1", QueueId = "q1" });
-        queueItemStore.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new QueueItem { ItemId = "qi1" }]);
+        queueItemStore.Setup(m => m.CountWaitingAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var notifier = new Mock<IContactCenterRealTimeNotifier>();
         var handler = CreateHandler(notifier, queueItemStore: queueItemStore);

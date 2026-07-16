@@ -103,13 +103,13 @@ internal static class AgentWorkspaceEndpoints
                 continue;
             }
 
-            var waiting = await queueItemManager.ListWaitingAsync(queueId, httpContext.RequestAborted);
+            var waitingCount = await queueItemManager.CountWaitingAsync(queueId, httpContext.RequestAborted);
 
             model.Queues.Add(new WorkspaceQueueStatViewModel
             {
                 Id = queueId,
                 Name = queue.Name,
-                WaitingCount = waiting.Count,
+                WaitingCount = waitingCount,
             });
         }
 

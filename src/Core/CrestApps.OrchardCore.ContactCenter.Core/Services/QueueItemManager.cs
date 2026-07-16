@@ -51,4 +51,32 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
 
         return item;
     }
+
+    /// <inheritdoc/>
+    public Task<int> CountWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        return _store.CountWaitingAsync(queueId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<int> CountWaitingOlderThanAsync(
+        string queueId,
+        DateTime thresholdUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return _store.CountWaitingOlderThanAsync(queueId, thresholdUtc, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<QueueItem> FindLongestWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        var item = await _store.FindLongestWaitingAsync(queueId, cancellationToken);
+
+        if (item is not null)
+        {
+            await LoadAsync(item, cancellationToken);
+        }
+
+        return item;
+    }
 }

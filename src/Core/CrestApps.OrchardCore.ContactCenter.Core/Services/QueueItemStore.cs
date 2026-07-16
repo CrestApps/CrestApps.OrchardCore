@@ -50,4 +50,43 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
             .OrderByDescending(index => index.EnqueuedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<int> CountWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountWaitingOlderThanAsync(
+        string queueId,
+        DateTime thresholdUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId
+                && index.Status == QueueItemStatus.Waiting
+                && index.EnqueuedUtc < thresholdUtc,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<QueueItem> FindLongestWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderBy(index => index.EnqueuedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }
