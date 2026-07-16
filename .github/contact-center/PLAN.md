@@ -1774,7 +1774,7 @@ Changes:
 - [x] Wire and document the supported multi-node backplane.
 - [ ] Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
 - [x] Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
-- [ ] Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
+- [x] Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
 - [ ] Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
 
 Exit: health/telemetry contracts, erasure/retention, backup/restore, mixed-version upgrade, and failure-injection tests pass.
@@ -1990,6 +1990,8 @@ Ordered by the former design-review execution order. Numbers reference the histo
 - [ ] **G8 — Inbound entry points/IVR (Phase 8), recording/monitoring (Phase 9), compliance hardening (Phase 10), analytics (Phase 12)** per the existing phase plan once G1–G7 are stable.
 
 ### Change log
+
+- 2026-07-17: Continued R7 by documenting the Contact Center expand-migrate-contract upgrade policy and auditing the shipped migrations for rolling-deploy safety. Confirmed the entire Contact Center schema-migration surface is additive: every migration uses `CreateMapIndexTable`, `AddColumn` with a default or nullable value, and guarded `CreateIndex`/`CreateUniqueIndex`, with no `DropColumn`/`DropTable`/`RenameColumn`/`RenameTable`/`AlterColumn` operations anywhere, and unique-constraint additions run a portable preflight that rejects pre-existing duplicate active claims with explicit repair guidance rather than corrupting data. Documented the expand→migrate→contract phases, the audit result (no shipped upgrade requires downtime), and the rule that any future incompatible change must either be phased or declare downtime in its release notes, under Contact Center production support. Docs build passes.
 
 - 2026-07-17: Continued R7 by aligning interaction-event retention with projection replay horizons and legal holds. Purging the durable event log bounds how far a projection can be rebuilt, so retention no longer deletes purely by age: `ContactCenterRetentionOptions` gained `ProjectionReplayHorizonDays` (minimum days the event log must remain rebuildable) and `LegalHoldMinimumDays` (a legal/regulatory floor), and a pure, unit-tested `RetentionCutoffCalculator.TryComputeCutoff` computes the effective cutoff as `max(retention, replayHorizon, legalHold)` days — so both floors can only make retention more conservative (keep longer) and never trigger an earlier purge, and purging stays disabled when the retention window is zero. The retention background task now derives its cutoff from the calculator. Documented the retention settings, the retained-snapshot guarantee (the daily metrics projection survives event purge), the post-purge rebuild guarantee (rebuild recomputes only from remaining events, bounded below by the replay horizon), and legal-hold usage under Contact Center production support. Added six calculator tests (disabled, retention-only, replay-horizon floor, legal-hold floor, floors-below-retention, negative floors ignored). Strict build, targeted ContactCenter tests, and ten fresh-tenant activation scenarios pass.
 

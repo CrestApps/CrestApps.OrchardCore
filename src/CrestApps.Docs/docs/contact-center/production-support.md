@@ -133,6 +133,16 @@ Behavior guarantees:
 - **Post-purge rebuild** — after a purge, a projection rebuild (`RebuildAsync`) recomputes counts only from the events that remain; the replay-horizon floor guarantees that window is at least `ProjectionReplayHorizonDays`.
 - **Legal hold** — set `LegalHoldMinimumDays` above the retention window to hold events for a case or regulatory obligation without changing the operational retention setting.
 
+## Upgrade and migration safety
+
+Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:
+
+- **Expand** — a release only adds schema. New columns are additive and ship with a default (or are nullable), so an old node keeps writing valid rows while the new node populates the new column.
+- **Migrate** — backfill and any new unique constraint run inside the upgrade migration against the module's own index tables. Unique-constraint creation is preceded by a portable preflight that detects pre-existing duplicate active claims and fails with explicit repair guidance instead of silently corrupting data or throwing an opaque unique-index error later.
+- **Contract** — destructive changes (dropping or renaming a column or table, narrowing a type, or removing a default) are deferred to a later release, after every node is known to no longer read the old shape.
+
+Audit of the shipped Contact Center migrations: every migration is additive — `CreateMapIndexTable`, `AddColumn` with a default or nullable value, and guarded `CreateIndex`/`CreateUniqueIndex`. There are no `DropColumn`, `DropTable`, `RenameColumn`, `RenameTable`, or `AlterColumn` operations, so no shipped upgrade requires downtime. Any future backward-incompatible change must either be restructured into the expand/migrate/contract phases above or explicitly declare a downtime requirement in its release notes.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:
