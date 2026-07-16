@@ -101,6 +101,18 @@ Thresholds are configured under `CrestApps_ContactCenter:HealthChecks` and are n
 
 SignalR backplane health is owned by the backplane provider rather than the Contact Center module: when a Redis backplane is configured, enable the Redis/backplane connectivity health check so its liveness is aggregated by the same `/health/live` endpoint. On a single node the in-memory backplane needs no separate check.
 
+## Multi-node real-time backplane
+
+The Contact Center real-time hub is backplane-agnostic. It is hosted through `HubRouteManager.MapHub<ContactCenterHub>` and addresses connections through tenant-qualified `TenantSignalRGroupName` groups, so the same code path serves both single-node and multi-node deployments without change. What makes it correct across nodes is the shared backplane, not the hub.
+
+The supported multi-node real-time topology is:
+
+- Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange real-time messages across application nodes. It wires the SignalR Redis backplane (`AddStackExchangeRedis`) using the `OrchardCore_Redis` connection settings and a dedicated SignalR connection, and it namespaces the backplane channel with both `InstancePrefix` and the immutable shell name so two nodes serving one tenant share a channel while different tenants never do. See [SignalR module — Redis backplane](../modules/signalr.md#redis-backplane) for configuration.
+- Enable `OrchardCore.Redis.Lock` as well. The SignalR backplane distributes real-time messages, but Contact Center routing, provider webhook inbox acceptance, and other distributed critical sections require the Redis distributed lock independently of the backplane. A backplane without distributed locking is an unsupported configuration.
+- Use a deployment-unique `InstancePrefix` (application, environment, region) whenever Redis infrastructure is shared, so tenants with the same shell name in different deployments cannot merge backplane channels.
+
+Single-node production uses the default in-memory backplane and requires neither feature. Multi-node operation without the backplane, or without Redis distributed locking, and multi-region active-active operation are unsupported.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:
