@@ -39,6 +39,8 @@ Presence is a dropdown in the soft-phone header so agents can change availabilit
 
 Routing never treats the profile presence value by itself as proof that an agent can receive work. The Availability feature computes a canonical projection by joining an `Available` profile and queue entitlement with the agent's selected session queue, online connection state, fresh heartbeat, and remaining interaction capacity. The last connection disconnect therefore removes the agent from routing immediately without destroying the profile's requested presence during a transient reconnect; stale-session cleanup later performs the durable sign-out. Reservation creation repeats the canonical check while it holds the activity and agent transition locks, closing the race where a client disconnects after candidate selection.
 
+Queue membership is normalized into a query-aligned index. Each agent profile projects one membership row per queue it is both entitled to and signed in to (the intersection of live sign-in and the administrator-owned allow-list), so selecting the candidate agents for a queue is a single indexed lookup by queue and `Available` presence rather than a tenant-wide scan of every available agent. The index stores queue identifiers lower-cased for portable, case-insensitive matching and preserves the fail-closed entitlement rule: an agent with no matching allow-list entry is never a member.
+
 Availability policy is tenant configuration:
 
 ```json

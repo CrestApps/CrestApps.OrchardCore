@@ -156,7 +156,9 @@ public sealed class AgentsStartup : StartupBase
 
         services
             .AddIndexProvider<AgentProfileIndexProvider>()
-            .AddDataMigration<AgentProfileIndexMigrations>();
+            .AddDataMigration<AgentProfileIndexMigrations>()
+            .AddIndexProvider<AgentQueueMembershipIndexProvider>()
+            .AddDataMigration<AgentQueueMembershipIndexMigrations>();
 
         services
             .AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>()

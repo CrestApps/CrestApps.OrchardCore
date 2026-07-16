@@ -40,12 +40,13 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        var available = await Session.Query<AgentProfile, AgentProfileIndex>(
-            index => index.PresenceStatus == AgentPresenceStatus.Available,
+        var normalizedQueueId = queueId.ToLowerInvariant();
+        var available = await Session.Query<AgentProfile, AgentQueueMembershipIndex>(
+            index => index.QueueId == normalizedQueueId && index.PresenceStatus == AgentPresenceStatus.Available,
             collection: ContactCenterConstants.CollectionName)
             .ListAsync(cancellationToken);
 
-        return available.Where(agent => AgentEntitlementUtilities.HasQueueEntitlement(agent, queueId)).ToArray();
+        return available.ToArray();
     }
 
     /// <inheritdoc/>

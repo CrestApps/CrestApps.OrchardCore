@@ -69,6 +69,21 @@ public static class AgentEntitlementUtilities
     }
 
     /// <summary>
+    /// Returns the queues the agent is both entitled to and currently signed in to, using a
+    /// case-insensitive comparison. This is the effective routing membership: the intersection of
+    /// <see cref="AgentProfile.QueueIds"/> and <see cref="AgentProfile.AllowedQueueIds"/>. Fails closed,
+    /// so an agent with no queue entitlements produces an empty result regardless of live sign-in state.
+    /// </summary>
+    /// <param name="profile">The agent profile to inspect.</param>
+    /// <returns>The normalized, de-duplicated set of entitled and signed-in queue identifiers.</returns>
+    public static IList<string> GetEntitledQueueIds(AgentProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        return FilterEntitled(profile.QueueIds, profile.AllowedQueueIds);
+    }
+
+    /// <summary>
     /// Determines, using a case-insensitive comparison, whether the agent is entitled to the dialer
     /// campaign and is currently signed in to it. Fails closed: an agent with no campaign entitlements is
     /// never entitled, regardless of what <see cref="AgentProfile.CampaignIds"/> contains.
