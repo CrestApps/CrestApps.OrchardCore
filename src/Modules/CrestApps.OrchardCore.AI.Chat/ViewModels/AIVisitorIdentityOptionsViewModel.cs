@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 /// <summary>
 /// Represents the site settings editor model for anonymous AI chat visitor identity.
 /// </summary>
-public sealed class AIVisitorIdentityOptionsViewModel
+public class AIVisitorIdentityOptionsViewModel
 {
     /// <summary>
     /// Gets or sets the cookie name.

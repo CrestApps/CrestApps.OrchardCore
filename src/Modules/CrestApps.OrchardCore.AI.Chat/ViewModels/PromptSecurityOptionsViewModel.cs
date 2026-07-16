@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 /// <summary>
 /// Represents the site settings editor model for AI chat prompt security.
 /// </summary>
-public sealed class PromptSecurityOptionsViewModel
+public class PromptSecurityOptionsViewModel
 {
     /// <summary>
     /// Gets or sets a value indicating whether injection detection is enabled.
