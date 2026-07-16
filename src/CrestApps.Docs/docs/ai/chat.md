@@ -53,7 +53,9 @@ When the AI Documents features are enabled, the **Knowledge** tab for **AI Profi
 
 When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
 
-If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
+If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. The initial prompt is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Initial prompt** is inserted ahead of that first user prompt in the stored conversation history.
+
+This avoids creating empty anonymous chat sessions just because a page or widget loaded.
 
 ### Chat Mode
 
@@ -212,6 +214,13 @@ When the widget's profile allows session document uploads or session image uploa
 When the response contains references, the widget also renders `[doc:N]` markers as superscript citations with linked references beneath the assistant message.
 
 The frontend widget also normalizes theme paragraph spacing inside rendered chat messages so theme-level `p` margins and padding do not add extra blank space above or below each response.
+
+Frontend widgets now also work with the shared anonymous-visitor protection flow:
+
+- Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
+- Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
+- Widgets no longer auto-create sessions on page load just because a profile has an initial prompt.
+- **Settings → Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
 
 #### Adding the Frontend Widget
 

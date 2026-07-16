@@ -9,12 +9,12 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,10 +64,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override async Task<bool> AuthorizeProfileAsync(IServiceProvider services, AIProfile profile)
     {
-        var authorizationService = services.GetRequiredService<IAuthorizationService>();
+        var accessEvaluator = services.GetRequiredService<AIChatProfileAccessEvaluator>();
         var httpContext = Context.GetHttpContext();
 
-        return await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile);
+        return await accessEvaluator.CanAccessProfileAsync(httpContext?.User ?? Context.User, profile);
     }
 
     protected override DateTime GetUtcNow()
@@ -188,6 +188,8 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     /// <summary>
     /// Extends the base handler to support <see cref="AIProfileType.TemplatePrompt"/> profiles
     /// which render a Liquid template and send the result to the AI completion service.
+    /// The base class does not handle TemplatePrompt profiles, so this override intercepts
+    /// them and delegates everything else to the base implementation.
     /// </summary>
     protected override async Task HandleSendMessageAsync(
         ChannelWriter<CompletionPartialMessage> writer,
@@ -198,97 +200,79 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         string sessionProfileId,
         CancellationToken cancellationToken)
     {
-        try
+        if (!string.IsNullOrWhiteSpace(profileId))
         {
-            using var invocationScope = AIInvocationScope.Begin();
-
-            if (string.IsNullOrWhiteSpace(profileId))
-            {
-                await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(profileId)));
-                return;
-            }
-
             var profileManager = services.GetRequiredService<IAIProfileManager>();
             var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
 
-            if (profile is null)
+            if (profile?.Type == AIProfileType.TemplatePrompt)
             {
-                await Clients.Caller.ReceiveError(GetProfileNotFoundMessage());
-                return;
-            }
-
-            if (!await AuthorizeProfileAsync(services, profile))
-            {
-                await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
-                return;
-            }
-
-            if (profile.Type == AIProfileType.Utility)
-            {
-                if (string.IsNullOrWhiteSpace(prompt))
+                try
                 {
-                    await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(prompt)));
-                    return;
+                    using var invocationScope = AIInvocationScope.Begin();
+
+                    if (string.IsNullOrWhiteSpace(sessionProfileId))
+                    {
+                        await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(sessionProfileId)));
+
+                        return;
+                    }
+
+                    var parentProfile = await profileManager.FindByIdAsync(sessionProfileId, cancellationToken);
+
+                    if (parentProfile is null)
+                    {
+                        await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
+
+                        return;
+                    }
+
+                    if (!await AuthorizeProfileAsync(services, parentProfile))
+                    {
+                        await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                        return;
+                    }
+
+                    await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+                    {
+                        Logger.LogDebug("Chat prompt processing was cancelled.");
+
+                        return;
+                    }
+
+                    Logger.LogError(ex, "An error occurred while processing the chat prompt.");
+
+                    try
+                    {
+                        var errorMessage = new CompletionPartialMessage
+                        {
+                            SessionId = sessionId,
+                            MessageId = GenerateId(),
+                            Content = GetFriendlyErrorMessage(ex),
+                        };
+
+                        await writer.WriteAsync(errorMessage, CancellationToken.None);
+                    }
+                    catch (Exception writeEx)
+                    {
+                        Logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+                    }
+                }
+                finally
+                {
+                    writer.Complete();
                 }
 
-                await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
-
                 return;
             }
-
-            if (profile.Type == AIProfileType.TemplatePrompt)
-            {
-                if (string.IsNullOrWhiteSpace(sessionProfileId))
-                {
-                    await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(sessionProfileId)));
-                    return;
-                }
-
-                var parentProfile = await profileManager.FindByIdAsync(sessionProfileId, cancellationToken);
-
-                if (parentProfile is null)
-                {
-                    await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
-                    return;
-                }
-
-                await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
-
-                return;
-            }
-
-            await ProcessChatPromptAsync(writer, services, profile, sessionId, prompt?.Trim(), cancellationToken);
         }
-        catch (Exception ex)
-        {
-            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
-            {
-                Logger.LogDebug("Chat prompt processing was cancelled.");
-                return;
-            }
 
-            Logger.LogError(ex, "An error occurred while processing the chat prompt.");
-
-            try
-            {
-                var errorMessage = new CompletionPartialMessage
-                {
-                    SessionId = sessionId,
-                    MessageId = GenerateId(),
-                    Content = GetFriendlyErrorMessage(ex),
-                };
-
-                await writer.WriteAsync(errorMessage, CancellationToken.None);
-            }
-            catch (Exception writeEx)
-            {
-                Logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-            }
-        }
-        finally
-        {
-            writer.Complete();
-        }
+        await base.HandleSendMessageAsync(writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
     }
 
     /// <summary>
@@ -363,6 +347,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         assistantMessage.References = references;
 
         await promptStore.CreateAsync(assistantMessage, cancellationToken);
-        await sessionManager.SaveAsync(chatSession, cancellationToken);
+        await SaveChatSessionAsync(sessionManager, chatSession);
     }
 }

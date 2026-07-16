@@ -1,8 +1,11 @@
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Security;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Handlers;
@@ -15,10 +18,13 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -43,6 +49,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddScoped<AIChatProfileAccessEvaluator>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
@@ -59,14 +66,23 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddSiteDisplayDriver<PromptSecurityOptionsDisplayDriver>()
+            .AddSiteDisplayDriver<AIVisitorIdentityOptionsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>()
+            .AddTransient<IConfigureOptions<PromptSecurityOptions>, PromptSecurityOptionsConfiguration>()
+            .AddTransient<IConfigureOptions<AIVisitorIdentityOptions>, AIVisitorIdentityOptionsConfiguration>();
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
+        services.AddDataProtection();
+        services.AddOptions<AIVisitorIdentityOptions>();
+        services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
+        app.UseAIAnonymousVisitorCookie();
         HubRouteManager.MapHub<AIChatHub>(routes);
     }
 }
@@ -141,5 +157,18 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentSchemaDefinition, AIProfilePartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Registers recipe schema contributors for AI chat site settings.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class SiteSettingsRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, PromptSecurityOptionsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, AIVisitorIdentityOptionsSchema>();
     }
 }

@@ -1,0 +1,112 @@
+@using CrestApps.Core.AI.Security
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model PromptSecurityOptionsViewModel
+
+<fieldset class="mb-4">
+    <legend class="h5">@T["Prompt security"]</legend>
+    <p class="hint">@T["Configure the shared AI chat protections that defend against prompt injection, prompt leakage, abusive traffic, and anonymous session churn."]</p>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="EnableInjectionDetection" />
+                <label class="form-check-label" asp-for="EnableInjectionDetection">@T["Enable injection detection"]</label>
+                <span class="hint dashed">@T["Blocks known prompt-injection and instruction-override patterns before they reach the model."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="EnableOutputFiltering" />
+                <label class="form-check-label" asp-for="EnableOutputFiltering">@T["Enable output filtering"]</label>
+                <span class="hint dashed">@T["Filters generated responses for leaked system prompts, tool details, and unsafe disclosures."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="EnableSecurityPreamble" />
+                <label class="form-check-label" asp-for="EnableSecurityPreamble">@T["Enable security preamble"]</label>
+                <span class="hint dashed">@T["Prepends a hardened security instruction to chat system prompts."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="EnableInputDelimiters" />
+                <label class="form-check-label" asp-for="EnableInputDelimiters">@T["Enable input delimiters"]</label>
+                <span class="hint dashed">@T["Wraps user input with clear boundaries so the model can distinguish user text from system instructions."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="EnableAuditLogging" />
+                <label class="form-check-label" asp-for="EnableAuditLogging">@T["Enable audit logging"]</label>
+                <span class="hint dashed">@T["Records prompt security decisions for diagnostics and abuse investigations."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPromptLength" class="ocat-label">@T["Maximum prompt length"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPromptLength" class="form-control" type="number" min="1" max="100000" />
+            <span asp-validation-for="MaxPromptLength" class="text-danger"></span>
+            <span class="hint">@T["Prompts longer than this character count are rejected."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="BlockingThreshold" class="ocat-label">@T["Blocking threshold"]</label>
+        <div class="ocat-end">
+            <select asp-for="BlockingThreshold" asp-items="Html.GetEnumSelectList<PromptRiskLevel>()" class="form-select"></select>
+            <span class="hint">@T["Prompts classified at or above this risk level are blocked."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxMessagesPerWindow" class="ocat-label">@T["Maximum messages per window"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxMessagesPerWindow" class="form-control" type="number" min="0" max="1000" />
+            <span asp-validation-for="MaxMessagesPerWindow" class="text-danger"></span>
+            <span class="hint">@T["How many chat messages one rate-limit partition can send within the window below. Set to 0 to disable message throttling."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RateLimitWindowSeconds" class="ocat-label">@T["Message rate-limit window (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="RateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" />
+            <span asp-validation-for="RateLimitWindowSeconds" class="text-danger"></span>
+            <span class="hint">@T["Duration of the shared chat message rate-limit window."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxAnonymousSessionsPerWindow" class="ocat-label">@T["Maximum anonymous sessions per window"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxAnonymousSessionsPerWindow" class="form-control" type="number" min="0" max="1000" />
+            <span asp-validation-for="MaxAnonymousSessionsPerWindow" class="text-danger"></span>
+            <span class="hint">@T["Limits how many new anonymous chat sessions can be started within the window below. Set to 0 to disable anonymous session-start throttling."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="AnonymousSessionRateLimitWindowSeconds" class="ocat-label">@T["Anonymous session window (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="AnonymousSessionRateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" />
+            <span asp-validation-for="AnonymousSessionRateLimitWindowSeconds" class="text-danger"></span>
+            <span class="hint">@T["Duration of the anonymous chat session-start rate-limit window."]</span>
+        </div>
+    </div>
+</fieldset>
