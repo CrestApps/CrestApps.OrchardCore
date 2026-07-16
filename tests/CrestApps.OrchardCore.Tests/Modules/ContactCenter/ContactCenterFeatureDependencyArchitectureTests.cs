@@ -615,6 +615,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Assert
         Assert.Equal(["CrestApps.OrchardCore.ContactCenter.Voice"], mediaDependencies);
+        Assert.True(contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].EnabledByDependencyOnly);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.Media", mediaResolverOwner.FeatureId);
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], asteriskBaseDependencies);
         Assert.Equal(
@@ -633,6 +634,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskEventBridgeOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskContactCenterReconcilerOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", asteriskMediaOwner.FeatureId);
+        Assert.True(asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterMedia"].EnabledByDependencyOnly);
         Assert.DoesNotContain("IProviderVoiceEventService", asteriskBaseStartup.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("IProviderCallStateSynchronizationService", asteriskBaseStartup.Body, StringComparison.Ordinal);
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], dialPadBaseDependencies);
@@ -1126,6 +1128,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
             var idMatch = Regex.Match(body, @"Id\s*=\s*(?<id>[^,]+),", RegexOptions.Singleline);
             var id = ResolveToken(repositoryRoot, idMatch.Groups["id"].Value.Trim());
+            var enabledByDependencyOnly = Regex.IsMatch(
+                body,
+                @"EnabledByDependencyOnly\s*=\s*true\b",
+                RegexOptions.Singleline);
 
             var dependencies = new List<string>();
             var dependenciesMatch = Regex.Match(body, @"Dependencies\s*=\s*\[(?<deps>.*?)\]", RegexOptions.Singleline);
@@ -1143,7 +1149,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 }
             }
 
-            features.Add(new ManifestFeature(id, dependencies));
+            features.Add(new ManifestFeature(id, dependencies, enabledByDependencyOnly));
             searchIndex = end + 1;
         }
 
@@ -1155,7 +1161,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             var idMatch = Regex.Match(moduleMatch.Groups["body"].Value, @"Id\s*=\s*(?<id>[^,]+),", RegexOptions.Singleline);
             var id = ResolveToken(repositoryRoot, idMatch.Groups["id"].Value.Trim());
 
-            features.Add(new ManifestFeature(id, []));
+            features.Add(new ManifestFeature(id, [], EnabledByDependencyOnly: false));
         }
 
         return features;
@@ -1343,7 +1349,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             throw new InvalidOperationException("The repository root could not be located.");
     }
 
-    private sealed record ManifestFeature(string Id, IReadOnlyList<string> Dependencies);
+    private sealed record ManifestFeature(
+        string Id,
+        IReadOnlyList<string> Dependencies,
+        bool EnabledByDependencyOnly);
 
     private sealed record StartupClass(
         string FeatureId,

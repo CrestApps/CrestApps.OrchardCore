@@ -139,7 +139,7 @@ The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `As
 
 The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` or `CrestApps.OrchardCore.Asterisk.ContactCenterMedia`.
 
-Enable `CrestApps.OrchardCore.ContactCenter.Voice.Media` and `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` to activate bidirectional media independently from the Asterisk base Telephony provider and Contact Center voice adapter. The Asterisk Contact Center voice provider advertises `BidirectionalMedia`, while the media feature registers `AsteriskContactCenterVoiceMediaProvider`. It uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
+`CrestApps.OrchardCore.ContactCenter.Voice.Media` and `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` are dependency-only development foundations and are not included in either approved GA-Core profile. They remain hidden from direct selection in the Orchard Features UI until the transport certification tracked for R9 is complete. The executable media feature registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
 
 Opening a media session:
 
@@ -161,9 +161,9 @@ Optional metadata:
 
 The current adapter accepts and emits RTP payload type `0` (G.711 mu-law). It parses RTP header extensions, contributing-source entries, and padding before exposing the audio payload. Stopping the media session removes the external-media channel without hanging up the customer call. A bridge created exclusively for the media session is also removed.
 
-The automated test suite exercises the ARI bridge and External Media lifecycle with a scripted HTTP transport and exchanges real RTP datagrams over loopback UDP sockets. It validates sender filtering, malformed-packet rejection, mu-law payload enforcement, sequence/timestamp continuity, and cleanup behavior. These tests validate the application-side adapter without requiring a live PBX; production deployment still requires network, NAT/firewall, codec, and Asterisk configuration validation.
+The automated test suite exercises the ARI bridge and External Media lifecycle with a scripted HTTP transport and exchanges real RTP datagrams over loopback UDP sockets. It validates sender filtering, malformed-packet rejection, mu-law payload enforcement, sequence/timestamp continuity, and cleanup behavior. This is development-foundation evidence only. Production support requires a documented secure RTP network boundary plus loss, reordering, jitter, capacity, failover, and node-affinity certification; that work is deferred to R9.
 
-Production networking must allow Asterisk to send UDP RTP to the advertised `externalHost:bindPort`. If Orchard is scaled across nodes, the media session must remain pinned to the node that owns the UDP socket unless a dedicated media relay is introduced.
+Any non-production lab must isolate the unencrypted RTP/UDP path on a trusted private network, restrict ingress to the expected Asterisk endpoint and explicit UDP port range, and prevent public routing to the Orchard media socket. If Orchard is scaled across nodes, the media session must remain pinned to the node that owns the UDP socket unless a dedicated media relay is introduced. These requirements describe the current risk boundary; they do not certify the adapter for production.
 
 ## Real-time call state and recovery
 

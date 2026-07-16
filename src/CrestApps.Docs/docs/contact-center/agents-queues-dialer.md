@@ -20,13 +20,13 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Compliance-gated Power and Progressive strategies, automated batch source, and scheduled pacing. |
 | Contact Center Entry Points | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
-| Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Optional provider-capability-gated bidirectional media resolution over active Contact Center voice calls. |
+| Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the Availability state. |
 | Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated workspace, navigation, presence controls, offers, active interaction context, and recent work for agents. |
 | Contact Center Supervision | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Enterprise report catalog under the shared Reports area, including executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports. |
 | Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Asterisk implementation of the Contact Center voice provider boundary. |
-| Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Asterisk RTP bidirectional-media adapter over Contact Center Voice Media. |
+| Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Dependency-only Asterisk RTP development foundation; unavailable in approved GA-Core profiles. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.ContactCenterVoice` | DialPad implementation of the Contact Center voice provider boundary. |
 
 ## Agents and presence

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DialPad;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -93,6 +94,26 @@ public sealed class ContactCenterSupportMatrixTests
             Assert.Contains("recording", prohibitedCapabilities);
             Assert.Contains("bidirectional-media", prohibitedCapabilities);
         }
+
+        foreach (var profile in matrix["tenantProfiles"]?.AsArray())
+        {
+            var features = profile?["features"]?.AsArray()
+                .Select(feature => feature?.GetValue<string>())
+                .ToHashSet(StringComparer.Ordinal);
+
+            Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Voice.Media", features);
+            Assert.DoesNotContain("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", features);
+        }
+    }
+
+    [Fact]
+    public void VoiceProviderCapabilities_DoNotExposeUncertifiedLegacyMediaFlag()
+    {
+        // Act
+        var capabilityNames = Enum.GetNames<ContactCenterVoiceProviderCapabilities>();
+
+        // Assert
+        Assert.DoesNotContain("BidirectionalMedia", capabilityNames);
     }
 
     [Fact]

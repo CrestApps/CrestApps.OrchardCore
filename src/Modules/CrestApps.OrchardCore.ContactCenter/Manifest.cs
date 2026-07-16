@@ -133,8 +133,9 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.VoiceMedia,
     Name = "Contact Center Voice Media",
-    Description = "Adds provider-capability-gated bidirectional media-provider resolution for active voice calls.",
+    Description = "Adds executable bidirectional media-provider resolution for active voice calls.",
     Category = "Contact Center",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,

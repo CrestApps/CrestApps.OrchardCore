@@ -76,10 +76,4 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can take over a live call from the agent.
     /// </summary>
     TakeOver = 1 << 12,
-
-    /// <summary>
-    /// Indicates legacy bidirectional-media metadata. Executable media support is determined by a matching
-    /// <see cref="IContactCenterVoiceMediaProvider"/> registration.
-    /// </summary>
-    BidirectionalMedia = 1 << 13,
 }

@@ -257,7 +257,7 @@
       "category": "correctness",
       "planFinding": "PR9",
       "gate": "Capability flags exceed executable contracts",
-      "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that media work occurred. `IContactCenterVoiceMediaProviderResolver` already requires both the `BidirectionalMedia` capability flag and a matching `IContactCenterVoiceMediaProvider` registration before selecting a provider for AI media sessions, but Recording, Monitor, Whisper, Barge, and TakeOver still rely on the capability bitmask alone.",
+      "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that provider work occurred. Live media is exposed only by a matching `IContactCenterVoiceMediaProvider` registration under the dependency-only media features, while Recording, Monitor, Whisper, Barge, and TakeOver require both their capability metadata and matching executable contracts.",
       "testId": "CC-C008",
       "ciJob": {
         "id": "contact-center-domain-invariants",
@@ -275,7 +275,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterVoiceMediaProviderResolverTests.cs proves the capability-plus-implementation contract for BidirectionalMedia; extending the same registration-time proof to Recording/Monitor/Whisper/Barge/TakeOver is a planned:contact-center-domain-invariants dependency."
+      "evidenceLocation": "ContactCenterVoiceMediaProviderResolverTests proves executable-registration-only media resolution; ContactCenterRecordingAndMonitoringTests and ContactCenterTransferServiceTests prove capability-plus-contract enforcement and provider-confirmed state for recording, monitoring, and transfer."
     },
     {
       "id": "D001",
@@ -1148,7 +1148,7 @@
       "category": "voice-provider",
       "planFinding": "P1-provider-command-semantics",
       "gate": "RTP secure boundary/jitter/reorder missing",
-      "invariant": "Asterisk bidirectional media must reject or ignore RTP packets from a spoofed/unexpected source, tolerate packet loss, reordering, and jitter without corrupting the audio stream or the sequence/timestamp state, and the deployment must document a secure network boundary for the RTP path. Today's RTP codec/media-session tests cover only well-formed round-trip packets; no spoofed-source, loss, reorder, or jitter behavior is proven, and no secure network boundary is documented.",
+      "invariant": "No GA-Core profile may enable, advertise, resolve, or expose bidirectional media until Asterisk RTP has a documented secure deployment boundary and certified loss, reordering, jitter, capacity, failover, and node-affinity behavior. The media features remain dependency-only and absent from every approved profile; full transport certification is deferred to R9.",
       "testId": "CC-V004",
       "ciJob": {
         "id": "contact-center-provider-contract-suite",
@@ -1166,7 +1166,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskRtpPacketCodecTests.cs and AsteriskContactCenterVoiceMediaSessionTests.cs prove well-formed packet parsing and sequential outgoing RTP; spoofed-source rejection, loss/reorder/jitter tolerance, and the documented secure network boundary are a planned:contact-center-provider-contract-suite dependency."
+      "evidenceLocation": "ContactCenterSupportMatrixTests, ContactCenterFeatureDependencyArchitectureTests, and the fresh-tenant activation matrix prove both GA-Core profiles prohibit and do not register media, while AsteriskRtpPacketCodecTests and AsteriskContactCenterVoiceMediaSessionTests remain development-foundation evidence only. Secure boundary, loss/reorder/jitter, capacity, failover, and node-affinity certification are planned:R9-contact-center-media-certification dependencies."
     }
   ]
 }

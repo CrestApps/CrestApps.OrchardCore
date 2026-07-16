@@ -30,6 +30,7 @@ using OrchardCore.Modules.Manifest;
     Name = "Asterisk Contact Center Media",
     Description = "Adds bidirectional RTP media sessions for active Asterisk Contact Center calls.",
     Category = "Contact Center",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         AsteriskConstants.Feature.ContactCenterVoice,

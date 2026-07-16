@@ -135,6 +135,8 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.Contains(
                 services.GetServices<IProviderIdentityProvider>().SelectMany(provider => provider.GetIdentities()),
                 identity => identity.CanonicalName == expectedProviderName);
+            Assert.Empty(services.GetServices<IContactCenterVoiceMediaProvider>());
+            Assert.Null(services.GetService<IContactCenterVoiceMediaProviderResolver>());
             var webhookHandlers = services.GetServices<IProviderWebhookInboxHandler>().ToArray();
             Assert.All(
                 webhookHandlers,

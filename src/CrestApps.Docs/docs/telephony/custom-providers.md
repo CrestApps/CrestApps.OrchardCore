@@ -88,7 +88,7 @@ If the provider participates in Contact Center voice orchestration, implement `I
 - `IContactCenterVoiceMonitoringProvider` for monitor, whisper, barge, and take-over
 - `IContactCenterVoiceMediaProvider` for bidirectional live media
 
-Capability flags are discovery metadata, not executable behavior. Advertise an executable capability only when the corresponding interface is implemented. Contact Center also checks the executable contract before routing or staging provider work, so a flag without an implementation fails closed.
+Capability flags are discovery metadata, not executable behavior. Advertise an executable call-control, transfer, conference, recording, or monitoring capability only when the corresponding interface is implemented. Contact Center also checks the executable contract before routing or staging provider work, so a flag without an implementation fails closed. Live media is discovered only from `IContactCenterVoiceMediaProvider` registrations and has no capability flag.
 
 ## 3. Implement bidirectional media only when the provider exposes live audio
 
