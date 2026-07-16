@@ -85,6 +85,46 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         return new ContactCenterTenant(settings, profile);
     }
 
+    /// <summary>
+    /// Executes the supplied action inside the specified tenant's shell scope.
+    /// </summary>
+    /// <param name="tenant">The tenant whose shell scope should be used.</param>
+    /// <param name="action">The action to execute with the tenant service provider.</param>
+    public async Task ExecuteInTenantScopeAsync(
+        ContactCenterTenant tenant,
+        Func<IServiceProvider, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentNullException.ThrowIfNull(action);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope => action(shellScope.ServiceProvider));
+    }
+
+    /// <summary>
+    /// Executes the supplied function inside the specified tenant's shell scope.
+    /// </summary>
+    /// <typeparam name="T">The value returned by the tenant-scoped operation.</typeparam>
+    /// <param name="tenant">The tenant whose shell scope should be used.</param>
+    /// <param name="action">The function to execute with the tenant service provider.</param>
+    /// <returns>The value returned by <paramref name="action"/>.</returns>
+    public async Task<T> ExecuteInTenantScopeAsync<T>(
+        ContactCenterTenant tenant,
+        Func<IServiceProvider, Task<T>> action)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentNullException.ThrowIfNull(action);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        var result = default(T);
+        await scope.UsingAsync(async shellScope =>
+        {
+            result = await action(shellScope.ServiceProvider);
+        });
+
+        return result;
+    }
+
     public async Task AssertTenantAsync(ContactCenterTenant tenant)
     {
         ArgumentNullException.ThrowIfNull(tenant);

@@ -47,7 +47,8 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
-    "extendable-media-recorder": "^9.2.36"
+    "extendable-media-recorder": "^9.2.36",
+    "sip.js": "0.21.2"
   },
   "overrides": {
     "brace-expansion": "^5.0.5",
