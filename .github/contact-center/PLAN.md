@@ -1775,7 +1775,7 @@ Changes:
 - [ ] Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
 - [x] Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
 - [x] Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
-- [ ] Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
+- [x] Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
 
 Exit: health/telemetry contracts, erasure/retention, backup/restore, mixed-version upgrade, and failure-injection tests pass.
 
@@ -1990,6 +1990,8 @@ Ordered by the former design-review execution order. Numbers reference the histo
 - [ ] **G8 — Inbound entry points/IVR (Phase 8), recording/monitoring (Phase 9), compliance hardening (Phase 10), analytics (Phase 12)** per the existing phase plan once G1–G7 are stable.
 
 ### Change log
+
+- 2026-07-17: Continued R7 by adding operational failure runbooks covering SQL/primary-datastore, Redis/backplane, provider/telephony, node, and network-partition failures plus rolling and blue-green deployment. Authored `src/CrestApps.Docs/docs/contact-center/runbooks.md`, keyed to the real Contact Center signals (the `contactcenter-storage`/`contactcenter-outbox`/`contactcenter-provider-ingress` health checks, the `contactcenter.outbox.redelivered`/`dead_lettered` counters, and the `CrestApps.OrchardCore.SignalR.Redis` backplane + `OrchardCore.Redis.Lock` requirement), and documenting that fence tokens, leases, the durable outbox/inbox, and additive migrations make single-node loss, lock loss, and rolling/blue-green cutover safe without double-execution or event loss. Cross-linked from Contact Center production support. Docs build passes.
 
 - 2026-07-17: Continued R7 by documenting the Contact Center expand-migrate-contract upgrade policy and auditing the shipped migrations for rolling-deploy safety. Confirmed the entire Contact Center schema-migration surface is additive: every migration uses `CreateMapIndexTable`, `AddColumn` with a default or nullable value, and guarded `CreateIndex`/`CreateUniqueIndex`, with no `DropColumn`/`DropTable`/`RenameColumn`/`RenameTable`/`AlterColumn` operations anywhere, and unique-constraint additions run a portable preflight that rejects pre-existing duplicate active claims with explicit repair guidance rather than corrupting data. Documented the expand→migrate→contract phases, the audit result (no shipped upgrade requires downtime), and the rule that any future incompatible change must either be phased or declare downtime in its release notes, under Contact Center production support. Docs build passes.
 
