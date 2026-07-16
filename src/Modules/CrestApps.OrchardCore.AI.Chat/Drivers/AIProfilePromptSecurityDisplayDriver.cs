@@ -41,7 +41,7 @@ public sealed class AIProfilePromptSecurityDisplayDriver : DisplayDriver<AIProfi
             {
                 AIProfilePromptSecurityMapper.PopulateOverrides(model, settings);
             }
-        }).Location("Content:20%Prompt Security;1");
+        }).Location("Content:1%Prompt Security;100");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
