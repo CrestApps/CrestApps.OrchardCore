@@ -74,4 +74,4 @@ Each ledger entry resolves the applicable control-matrix ids, current unit evide
 - Elasticsearch in routing, assignment, provider ingest, or another correctness path.
 - Any feature, provider, database, or topology combination not listed in the versioned matrix.
 
-Unsupported controls must be hidden or rejected server-side. Enabling an implementation that has not passed the profile's release gates does not make that capability supported.
+Unsupported controls are hidden and rejected server-side. Supervisor engagement modes are returned to the dashboard only when the active provider advertises the mode and implements the executable monitoring contract; recording and Contact Center transfer likewise fail closed without their executable contracts. Provider failure or an unknown outcome never writes successful recording, monitoring, or transfer state. Telephony soft-phone commands also repeat capability enforcement on the server. Enabling an implementation that has not passed the profile's release gates does not make that capability supported.

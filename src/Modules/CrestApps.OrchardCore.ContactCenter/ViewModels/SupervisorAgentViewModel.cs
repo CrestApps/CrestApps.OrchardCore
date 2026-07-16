@@ -44,4 +44,9 @@ public sealed class SupervisorAgentViewModel
     /// Gets or sets the currently live interaction identifier, when supervisor engagement is possible.
     /// </summary>
     public string ActiveInteractionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the executable supervisor engagement modes available for the active interaction.
+    /// </summary>
+    public IList<string> AvailableMonitoringModes { get; set; } = [];
 }

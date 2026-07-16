@@ -56,8 +56,7 @@ operations:
 | Send to voicemail | `SendToVoicemailAsync` |
 | Client bootstrap | `GetClientCredentialsAsync` |
 
-Each provider also advertises the operations it supports through the `Capabilities` property (a
-`TelephonyCapabilities` flags value). The soft phone UI uses these flags to show or hide controls.
+Each provider also advertises the operations it supports through the `Capabilities` property (a `TelephonyCapabilities` flags value). The soft phone UI uses these flags to show or hide controls, and `DefaultTelephonyService` enforces the same capability before calling the provider so a hidden or forged client command fails closed.
 
 Live agent audio is advertised separately through the optional `ITelephonyAudioProvider` contract. `TelephonyAudioCapabilities` distinguishes browser audio from an external device or provider-owned application, and `TelephonyAudioModeResolver` applies these rules:
 

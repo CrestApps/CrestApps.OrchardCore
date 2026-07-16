@@ -49,7 +49,7 @@ It shows three sections:
 
 Use it to spot a backing-up queue, an SLA breach, or too few available agents, and then rebalance staffing, adjust queue priorities, or open a campaign.
 
-When an agent has a live interaction and the voice provider advertises the matching capability, the agent card shows **Monitor**, **Whisper**, **Barge**, and **Take over** actions. Each action posts to the audited monitoring service, which refuses unsupported modes and records the engagement as a Contact Center domain event. Providers still own the media execution, so buttons are effective only when the active provider implements the requested capability.
+When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, **Barge**, or **Take over** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement.
 
 ## For contact center managers: inbound routing runbook
 
@@ -134,7 +134,7 @@ Once you accept, the **active interaction** panel shows:
 - The **queue** the work came from.
 - A **Complete activity** link that opens the same Omnichannel CRM completion page used by manual activities.
 
-Use the soft phone for hold, mute, transfer, and hang-up. When a call is held, the keypad becomes available for a second call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
+Use the soft phone for hold, mute, transfer, and hang-up. Controls are shown from the provider's advertised Telephony capabilities, and the server repeats the same capability check before invoking the provider. When a call is held, the keypad becomes available for a second call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
 
 Consultative transfer remains provider-dependent. Asterisk currently supports blind transfer and two-call conference but rejects warm transfer; DialPad exposes its provider transfer and merge actions when configured. The shared Telephony contract does not yet expose an agent-specific conference participant or leave-conference operation, so the UI does not claim that an agent can leave a conference while keeping all remote participants connected.
 

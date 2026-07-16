@@ -28,51 +28,51 @@ public sealed class DefaultTelephonyService : ITelephonyService
 
     /// <inheritdoc/>
     public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.DialAsync(request, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Dial, (provider, token) => provider.DialAsync(request, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.HangupAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Hangup, (provider, token) => provider.HangupAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HoldAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.HoldAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Hold, (provider, token) => provider.HoldAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> ResumeAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.ResumeAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Resume, (provider, token) => provider.ResumeAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> MuteAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.MuteAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Mute, (provider, token) => provider.MuteAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> UnmuteAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.UnmuteAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Mute, (provider, token) => provider.UnmuteAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.TransferAsync(request, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Transfer, (provider, token) => provider.TransferAsync(request, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> MergeAsync(MergeRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.MergeAsync(request, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Merge, (provider, token) => provider.MergeAsync(request, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> SendDigitsAsync(SendDigitsRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.SendDigitsAsync(request, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.SendDigits, (provider, token) => provider.SendDigitsAsync(request, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> AnswerAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.AnswerAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.ReceiveCalls, (provider, token) => provider.AnswerAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.RejectAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.ReceiveCalls, (provider, token) => provider.RejectAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
-        => InvokeAsync((provider, token) => provider.SendToVoicemailAsync(call, token), cancellationToken);
+        => InvokeAsync(TelephonyCapabilities.Voicemail, (provider, token) => provider.SendToVoicemailAsync(call, token), cancellationToken);
 
     /// <inheritdoc/>
     public async Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
@@ -140,6 +140,7 @@ public sealed class DefaultTelephonyService : ITelephonyService
     }
 
     private async Task<TelephonyResult> InvokeAsync(
+        TelephonyCapabilities requiredCapability,
         Func<ITelephonyProvider, CancellationToken, Task<TelephonyResult>> operation,
         CancellationToken cancellationToken)
     {
@@ -148,6 +149,11 @@ public sealed class DefaultTelephonyService : ITelephonyService
         if (provider is null)
         {
             return TelephonyResult.Failed(S["No telephony provider is configured."].Value);
+        }
+
+        if (!provider.Capabilities.HasFlag(requiredCapability))
+        {
+            return TelephonyResult.Failed(S["The configured telephony provider does not support this operation."].Value);
         }
 
         return await operation(provider, cancellationToken);

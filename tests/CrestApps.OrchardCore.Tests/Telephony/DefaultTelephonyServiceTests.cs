@@ -57,6 +57,66 @@ public sealed class DefaultTelephonyServiceTests
         Assert.False(string.IsNullOrEmpty(result.Error));
     }
 
+    [Theory]
+    [InlineData("Dial", TelephonyCapabilities.Dial)]
+    [InlineData("Hangup", TelephonyCapabilities.Hangup)]
+    [InlineData("Hold", TelephonyCapabilities.Hold)]
+    [InlineData("Resume", TelephonyCapabilities.Resume)]
+    [InlineData("Mute", TelephonyCapabilities.Mute)]
+    [InlineData("Unmute", TelephonyCapabilities.Mute)]
+    [InlineData("Transfer", TelephonyCapabilities.Transfer)]
+    [InlineData("Merge", TelephonyCapabilities.Merge)]
+    [InlineData("SendDigits", TelephonyCapabilities.SendDigits)]
+    [InlineData("Answer", TelephonyCapabilities.ReceiveCalls)]
+    [InlineData("Reject", TelephonyCapabilities.ReceiveCalls)]
+    [InlineData("SendToVoicemail", TelephonyCapabilities.Voicemail)]
+    public async Task OperationAsync_WhenProviderAdvertisesCapability_Delegates(
+        string operation,
+        TelephonyCapabilities capability)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider { Capabilities = capability };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await InvokeAsync(service, operation);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(operation, provider.LastOperation);
+    }
+
+    [Theory]
+    [InlineData("Dial")]
+    [InlineData("Hangup")]
+    [InlineData("Hold")]
+    [InlineData("Resume")]
+    [InlineData("Mute")]
+    [InlineData("Unmute")]
+    [InlineData("Transfer")]
+    [InlineData("Merge")]
+    [InlineData("SendDigits")]
+    [InlineData("Answer")]
+    [InlineData("Reject")]
+    [InlineData("SendToVoicemail")]
+    public async Task OperationAsync_WhenProviderDoesNotAdvertiseCapability_FailsClosed(string operation)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider { Capabilities = TelephonyCapabilities.None };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await InvokeAsync(service, operation);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Null(provider.LastOperation);
+    }
+
     [Fact]
     public async Task GetCapabilitiesAsync_ReturnsProviderCapabilities()
     {
@@ -153,5 +213,38 @@ public sealed class DefaultTelephonyServiceTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.NotEmpty(result.Error);
+    }
+
+    private static Task<TelephonyResult> InvokeAsync(DefaultTelephonyService service, string operation)
+    {
+        var call = new CallReference { CallId = "call-1" };
+
+        return operation switch
+        {
+            "Dial" => service.DialAsync(new DialRequest { To = "+15551234567" }),
+            "Hangup" => service.HangupAsync(call),
+            "Hold" => service.HoldAsync(call),
+            "Resume" => service.ResumeAsync(call),
+            "Mute" => service.MuteAsync(call),
+            "Unmute" => service.UnmuteAsync(call),
+            "Transfer" => service.TransferAsync(new TransferRequest
+            {
+                CallId = call.CallId,
+                To = "+15557654321",
+            }),
+            "Merge" => service.MergeAsync(new MergeRequest
+            {
+                CallIds = [call.CallId],
+            }),
+            "SendDigits" => service.SendDigitsAsync(new SendDigitsRequest
+            {
+                CallId = call.CallId,
+                Digits = "1",
+            }),
+            "Answer" => service.AnswerAsync(call),
+            "Reject" => service.RejectAsync(call),
+            "SendToVoicemail" => service.SendToVoicemailAsync(call),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
+        };
     }
 }

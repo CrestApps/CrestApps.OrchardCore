@@ -43,6 +43,7 @@ internal static class SupervisorDashboardEndpoints
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
+        IEnumerable<IContactCenterMonitoringService> monitoringServices,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
@@ -61,6 +62,7 @@ internal static class SupervisorDashboardEndpoints
 
         var agents = await ListAgentsAsync(agentManager, httpContext.RequestAborted);
         var queues = await queueManager.ListEnabledAsync(httpContext.RequestAborted);
+        var monitoringService = monitoringServices.FirstOrDefault();
 
         foreach (var queue in queues)
         {
@@ -103,6 +105,9 @@ internal static class SupervisorDashboardEndpoints
         {
             var activeInteractions = await interactionManager.CountActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
             var activeInteraction = await interactionManager.FindActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
+            var availableMonitoringModes = activeInteraction is null || monitoringService is null
+                ? []
+                : await monitoringService.GetAvailableModesAsync(activeInteraction.ItemId, httpContext.RequestAborted);
 
             model.Agents.Add(new SupervisorAgentViewModel
             {
@@ -114,6 +119,9 @@ internal static class SupervisorDashboardEndpoints
                 QueueCount = agent.QueueIds.Count,
                 ActiveInteractions = activeInteractions,
                 ActiveInteractionId = activeInteraction?.ItemId,
+                AvailableMonitoringModes = availableMonitoringModes
+                    .Select(mode => mode.ToString())
+                    .ToArray(),
             });
 
             if (agent.PresenceStatus == AgentPresenceStatus.Available)

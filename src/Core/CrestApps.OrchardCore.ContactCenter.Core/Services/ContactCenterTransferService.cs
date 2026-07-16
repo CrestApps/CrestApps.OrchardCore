@@ -11,6 +11,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
 {
     private readonly IInteractionManager _interactionManager;
     private readonly IActivityQueueService _queueService;
+    private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
 
@@ -19,16 +20,19 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// </summary>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="queueService">The queue service used to re-enqueue queue transfers.</param>
+    /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp transfer times.</param>
     public ContactCenterTransferService(
         IInteractionManager interactionManager,
         IActivityQueueService queueService,
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         IClock clock)
     {
         _interactionManager = interactionManager;
         _queueService = queueService;
+        _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
         _clock = clock;
     }
@@ -53,6 +57,30 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         if (interaction is null)
         {
             return TransferResult.Failure("The interaction could not be found.");
+        }
+
+        var provider = _voiceProviderResolver.Get(interaction.ProviderName);
+
+        if (provider is not IContactCenterVoiceTransferProvider transferProvider ||
+            !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.CallTransfer) ||
+            string.IsNullOrEmpty(interaction.ProviderInteractionId))
+        {
+            return TransferResult.Failure("The voice provider does not support call transfer.");
+        }
+
+        var providerResult = await transferProvider.TransferAsync(new ContactCenterVoiceTransferRequest
+        {
+            InteractionId = interaction.ItemId,
+            ProviderCallId = interaction.ProviderInteractionId,
+            TransferType = request.Type,
+            TargetType = request.TargetType,
+            Target = request.TargetId,
+        }, cancellationToken);
+
+        if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
+        {
+            return TransferResult.Failure(
+                providerResult?.ErrorMessage ?? "The voice provider did not confirm the call transfer.");
         }
 
         var now = _clock.UtcNow;

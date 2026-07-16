@@ -150,15 +150,28 @@
             refs.board.innerHTML = agents.map(function (agent) {
                 var status = agent.presenceStatus || 'Offline';
                 var detail = agent.presenceReason || status;
+                var availableModes = agent.availableMonitoringModes || [];
+                var modeButtons = {
+                    Monitor: ['btn-outline-secondary', label('monitor', 'Monitor')],
+                    Whisper: ['btn-outline-secondary', label('whisper', 'Whisper')],
+                    Barge: ['btn-outline-secondary', label('barge', 'Barge')],
+                    TakeOver: ['btn-outline-danger', label('takeOver', 'Take over')]
+                };
+                var actions = '';
 
-                var actions = agent.activeInteractionId
-                    ? '<span class="cc-agent__actions">' +
-                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Monitor">' + escapeHtml(label('monitor', 'Monitor')) + '</button>' +
-                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Whisper">' + escapeHtml(label('whisper', 'Whisper')) + '</button>' +
-                        '<button type="button" class="btn btn-sm btn-outline-secondary" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="Barge">' + escapeHtml(label('barge', 'Barge')) + '</button>' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger" data-cc-engage="' + escapeHtml(agent.activeInteractionId) + '" data-cc-mode="TakeOver">' + escapeHtml(label('takeOver', 'Take over')) + '</button>' +
-                    '</span>'
-                    : '';
+                if (agent.activeInteractionId && availableModes.length) {
+                    actions = '<span class="cc-agent__actions">' + availableModes.map(function (mode) {
+                        var button = modeButtons[mode];
+
+                        if (!button) {
+                            return '';
+                        }
+
+                        return '<button type="button" class="btn btn-sm ' + button[0] + '" data-cc-engage="' +
+                            escapeHtml(agent.activeInteractionId) + '" data-cc-mode="' + escapeHtml(mode) + '">' +
+                            escapeHtml(button[1]) + '</button>';
+                    }).join('') + '</span>';
+                }
 
                 return '<div class="cc-agent">' +
                     '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' +

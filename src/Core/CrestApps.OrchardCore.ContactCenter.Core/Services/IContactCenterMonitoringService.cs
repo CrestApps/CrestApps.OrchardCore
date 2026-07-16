@@ -10,6 +10,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IContactCenterMonitoringService
 {
     /// <summary>
+    /// Gets the executable supervisor engagement modes available for an interaction.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The available engagement modes.</returns>
+    Task<IReadOnlyCollection<MonitorMode>> GetAvailableModesAsync(
+        string interactionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Engages a live interaction as a supervisor using the requested mode when the provider supports it.
     /// </summary>
     /// <param name="interactionId">The interaction identifier.</param>

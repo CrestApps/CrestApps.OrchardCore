@@ -1735,7 +1735,7 @@ Exit: concurrency tests with multiple service providers/nodes produce exactly on
 Changes:
 
 - [x] Split voice capabilities into executable call-control, queue/assignment, transfer/conference, recording, monitoring, and media contracts.
-- Hide all unavailable controls and make success depend on provider confirmation.
+- [x] Hide all unavailable controls and make success depend on provider confirmation.
 - Add one listener owner/lease per tenant/provider stream or prove duplicate ingestion harmless; preserve monotonic provider truth.
 - Decouple PBX mutations from SignalR connection cancellation and use bounded server-owned command timeouts.
 - For GA-Core, fail closed and hide BidirectionalMedia unless it is in the approved support matrix. If media is included, define the secure RTP deployment boundary and implement/test sequence-aware reorder/jitter handling; otherwise defer transport certification to R9.
