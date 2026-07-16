@@ -66,6 +66,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePromptSecurityDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePromptSecurityDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddSiteDisplayDriver<PromptSecurityOptionsDisplayDriver>()
             .AddSiteDisplayDriver<AIVisitorIdentityOptionsDisplayDriver>()

@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model AIProfilePromptSecurityViewModel
+
+<p class="hint">@T["Override the site-wide anti-spam throttle limits for this profile. Leave a field blank to inherit the site default. These overrides only affect this profile; the shared prompt-injection and output guards remain site-wide."]</p>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxMessagesPerWindow" class="ocat-label">@T["Maximum messages per window"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxMessagesPerWindow" class="form-control" type="number" min="0" max="1000" placeholder="@T["Inherit site default ({0})", Model.SiteMaxMessagesPerWindow]" />
+        <span asp-validation-for="MaxMessagesPerWindow" class="text-danger"></span>
+        <span class="hint">@T["How many chat messages one rate-limit partition can send within the window below. Set to 0 to disable message throttling for this profile."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RateLimitWindowSeconds" class="ocat-label">@T["Message rate-limit window (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" placeholder="@T["Inherit site default ({0})", Model.SiteRateLimitWindowSeconds]" />
+        <span asp-validation-for="RateLimitWindowSeconds" class="text-danger"></span>
+        <span class="hint">@T["Duration of the chat message rate-limit window for this profile."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxAnonymousSessionsPerWindow" class="ocat-label">@T["Maximum anonymous sessions per window"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxAnonymousSessionsPerWindow" class="form-control" type="number" min="0" max="1000" placeholder="@T["Inherit site default ({0})", Model.SiteMaxAnonymousSessionsPerWindow]" />
+        <span asp-validation-for="MaxAnonymousSessionsPerWindow" class="text-danger"></span>
+        <span class="hint">@T["Limits how many new anonymous chat sessions can be started within the window below. Set to 0 to disable anonymous session-start throttling for this profile."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AnonymousSessionRateLimitWindowSeconds" class="ocat-label">@T["Anonymous session window (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AnonymousSessionRateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" placeholder="@T["Inherit site default ({0})", Model.SiteAnonymousSessionRateLimitWindowSeconds]" />
+        <span asp-validation-for="AnonymousSessionRateLimitWindowSeconds" class="text-danger"></span>
+        <span class="hint">@T["Duration of the anonymous chat session-start rate-limit window for this profile."]</span>
+    </div>
+</div>

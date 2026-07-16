@@ -261,6 +261,19 @@ The **Prompt Security** section tunes the shared AI chat protections.
 
 Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below.
 
+##### Per-profile throttle overrides
+
+The four anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
+
+| Override | Behavior |
+| --- | --- |
+| Maximum messages per window | When left blank, inherits the site default. Set to `0` to disable message throttling for this profile only. |
+| Message rate-limit window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Maximum anonymous sessions per window | When left blank, inherits the site default. Set to `0` to disable anonymous session-start throttling for this profile only. |
+| Anonymous session window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+
+Each override is optional and independent: an unset field always falls back to the corresponding site-wide default, so a profile can override only the message limit while still inheriting the anonymous session limits. Overrides are stored on the profile settings and applied by the chat message and session-start rate limiters. When a profile is created from a profile-source template, the template's throttle overrides are copied onto the new profile. The higher-level prompt-injection, output-filtering, and prompt-length guards remain site-wide only and cannot be overridden per profile.
+
 #### Anonymous Visitor Identity
 
 The **Visitor Identity** section controls how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage. Anonymous visitors receive a stable first-party cookie during page load so repeat visits are recognized as the same visitor instead of a new one for each chat session.
