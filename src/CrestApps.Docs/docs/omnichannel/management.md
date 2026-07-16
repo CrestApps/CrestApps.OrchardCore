@@ -26,7 +26,7 @@ A **Contact** is any content item that has `OmnichannelContactPart` attached.
 This lets you model customers/leads however you want (name, phone, email, account fields, custom fields, etc.).
 
 ### Subject ("the nature of the interaction")
-A **Subject** is any content type with the `OmnichannelSubject` stereotype.
+A **Subject** is any content type that has `OmnichannelSubjectPart` attached.
 
 Subjects are used to describe the nature of the interaction and to define the data you want agents (human or AI) to capture during the interaction. You can add any fields, parts, or custom data to the subject.
 
@@ -41,7 +41,7 @@ A **Campaign** is now used primarily for **reporting, grouping, and business out
 Campaigns no longer define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings now live on the subject flow so different subjects inside the same campaign can behave differently.
 
 ### Subject Flow
-A **Subject Flow** defines how a specific `OmnichannelSubject` content type behaves.
+A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves.
 
 Each subject flow stores:
 
@@ -53,10 +53,11 @@ Each subject flow stores:
 
 When the AI feature is enabled, the subject flow editor also adds AI-specific settings for:
 
-- the chat AI profile
+- the chat AI profile, filtered to profiles with **Add initial prompt** enabled
 - the subject goal
-- the initial outbound prompt pattern
 - AI update permissions for the contact and subject
+- phone automation defaults for speech-to-text deployment, text-to-speech deployment, and voice
+- SMS automation controls such as no-response timeout, response delay, and opt-out keywords
 
 ### Subject Action
 A **Subject Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition for a given subject type.
@@ -68,8 +69,13 @@ Each subject can have multiple actions per disposition, and each action has its 
 | Type | Description |
 |------|-------------|
 | **Finish** | Completes the task. No additional actions are taken. |
-| **Try Again** | Creates a retry activity with the same details and an incremented attempt count. Configurable parameters: max attempts, urgency level, assigned user, default schedule hours. |
-| **New Activity** | Creates a brand new activity, optionally targeting a different subject type. The new activity resolves its campaign, interaction type, and channel settings from the target subject flow. |
+| **Try Again** | Creates a retry activity with the same details and an incremented attempt count. Configurable parameters include max attempts, urgency level, owner assignment, and default schedule hours. |
+| **New Activity** | Creates a brand new activity, optionally targeting a different subject type. The new activity resolves its campaign, interaction type, and channel settings from the target subject flow and supports configurable owner assignment. |
+
+Actions that create follow-up activities expose an **Assignment type**:
+
+- **Same owner** assigns the follow-up activity to the user who completes the current activity.
+- **Specific owner** displays a required user selector and assigns the follow-up activity to that selected user.
 
 **Communication preferences:** Every action type can optionally set Do-Not-Call, Do-Not-SMS, Do-Not-Email, and Do-Not-Chat flags on the contact when executed.
 
@@ -83,10 +89,12 @@ When an activity is completed, the user selects a disposition and is shown a pre
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
-### Activity Batch
-An **Activity Batch** defines filters to find contacts and then **loads activities in the background**.
+### Load Inventory
+A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 
-The batch loader runs as a background process to avoid overloading the system and to allow loading large contact lists safely.
+The loader runs as a background process to avoid overloading the system and to allow loading large inventory sets safely.
+
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
 
 ## Getting started (recommended order)
 
@@ -147,35 +155,40 @@ When the import file is not already using E.164 phone numbers, select the defaul
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
-2. Create a new content type.
-3. Set stereotype to `OmnichannelSubject`.
-4. Add any fields/parts you want the agent to capture during the interaction.
+2. Create a new content type or edit an existing one.
+3. Attach `OmnichannelSubjectPart` to mark the content type as an Omnichannel subject.
+4. Add any fields or parts you want the agent to capture during the interaction.
+
+The former `OmnichannelSubject` stereotype is no longer recognized. Existing subject content types must remove that stereotype and attach `OmnichannelSubjectPart`.
 
 ### 4) Create Dispositions
 
-1. Go to `Interaction Center` → `Dispositions`.
+1. Go to `Interaction Center` → `Management` → `Dispositions`.
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
 
-### 5) Create a Campaign
+### 5) Create Campaign Groups and Campaigns
 
-1. Go to `Interaction Center` → `Campaigns`.
-2. Create the campaign name and description.
-3. Save the campaign.
+1. Optionally go to `Interaction Center` → `Management` → `Campaign Groups` and create a name and description for a reporting group.
+2. Go to `Interaction Center` → `Management` → `Campaigns`.
+3. Create the campaign name and description and optionally select its campaign group.
+4. Save the campaign.
+
+Campaign groups let reporting users combine multiple related campaigns without changing activity execution. Activities continue to store the campaign identifier, and reports resolve the campaign's current group when they run. Moving a campaign to another group therefore changes the group used for historical aggregation.
 
 ### 6) Configure Subject Flows
 
-After creating your subject content types and campaigns, go to `Interaction Center` → `Subject Flows`.
+After creating your subject content types and campaigns, go to `Interaction Center` → `Management` → `Subject Flows`.
 
-1. Review the list of content types with the `OmnichannelSubject` stereotype.
+1. Review the list of content types that attach `OmnichannelSubjectPart`.
 2. Click **Configure** next to a subject.
 3. Select the campaign used for reporting and grouping.
 4. Select the interaction type and channel.
 5. If the subject uses automated interactions, configure the channel endpoint.
-6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, and initial outbound prompt pattern fields.
+6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
 7. Save the subject flow.
 
-Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint for automated flows). Activity creation, batch loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
+Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, inventory loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
 
 ### 7) Manage Flow
 
@@ -183,7 +196,7 @@ After saving the subject flow, click **Manage Flow** from the `Subject Flows` li
 
 1. Click **Add Action**.
 2. Select an action type (**Finish**, **Try Again**, or **New Activity**).
-3. Choose a disposition and configure the action parameters.
+3. Choose a disposition and configure the action parameters. For **Try Again** and **New Activity**, choose **Same owner** or **Specific owner**.
 4. Repeat to add multiple actions per disposition or for different dispositions.
 
 **Example setup:**
@@ -197,17 +210,38 @@ After saving the subject flow, click **Manage Flow** from the `Subject Flows` li
 
 Subjects without any actions show a **Missing flow** badge in the Subject Flows list so you can find incomplete setups quickly.
 
-### 8) Create and Load an Activity Batch
+### 8) Create and Load Inventory
 
-1. Go to `Interaction Center` → `Activity Batches`.
-2. Create a new batch:
+1. Go to `Interaction Center` → `Management` → `Load Inventory`.
+2. Click **Add Inventory Load** and choose a source:
+   - **Manual** loads activities assigned to the selected users immediately.
+   - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
+3. Create the inventory load:
    - Select contact type
    - Select subject type
-   - Assign users
-   - Optionally set lead created range filters
-3. Click `Load`.
+   - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
+   - For automated loads, optionally override the subject flow's AI profile, speech-to-text deployment, text-to-speech deployment, and voice. Empty speech selections fall back through the subject flow and then the global AI site settings.
+   - Assign users when the selected source requires assignment.
+   - Optionally set contact created range, phone number, time zone, and last activity filters
+4. Click `Load`.
 
-The batch runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the campaign, interaction type, channel, and channel endpoint.
+The inventory load runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
+
+When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
+
+### Extending inventory load sources
+
+Inventory loading is extensible. Each inventory load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:
+
+1. **Registering a source** — register sources through `ActivityBatchSourceOptions` in a feature `Startup`. Each `ActivityBatchSourceEntry` provides the display name, description, whether the source requires user assignment, and whether it should appear in the creation picker. Display drivers can add source-specific editor sections.
+
+2. **Controlling the load** — implement `IActivityBatchLoader` (from `CrestApps.OrchardCore.Omnichannel.Core.Services`) to fully own how a source queries leads, applies filters, and creates activities. The loader's `Source` property must match the registered source. Register the loader as a scoped service:
+
+   ```csharp
+   services.AddScoped<IActivityBatchLoader, MyCustomActivityBatchLoader>();
+   ```
+
+When an inventory load is started, the `IActivityBatchLoadCoordinator` transitions it to the loading state, resolves the loader whose `Source` matches the selected source, and delegates to it. Sources **without** a dedicated loader fall back to the built-in `DefaultContactActivityBatchLoader`, which pages over contacts of the inventory load's contact content type, applies the standard lead filters (created range, phone number, time zone, last completed activity), and creates activities from the subject flow settings. The default loader is not sealed, so a custom loader can inherit from it to reuse the contact-paging pipeline while overriding individual stages. If a loader throws, the coordinator logs the error and returns the inventory load to the `New` state so it can be retried.
 
 ### 9) Complete Activities
 
@@ -224,13 +258,38 @@ Navigate to **Interaction Center** -> **Activities** to review scheduled omnicha
 
 The scheduled activities list now includes a **Time zone** filter alongside the existing urgency, subject, channel, and attempt filters so agents can narrow work to leads in call-safe regions. Activity summary rows also display the contact's current local time when a lead time zone is stored, and the tooltip shows the full local date/time plus the IANA time zone id so agents can confirm whether the lead is ahead of or behind their own day before opening or completing the activity.
 
+Users with the **Purge activity** permission see a **Purge** button on each scheduled activity in a contact profile. Purging is irreversible, changes the activity status to `Purged`, records the UTC purge time and current user's identifier and username for auditing, and clears any reservation state while preserving assignment. The same permission is required for the bulk **Purge** action on the Manage Activities page; every activity in one bulk operation records the same purge time and actor, and **Manage activities** implies **Purge activity**.
+
+### Phone number search
+
+Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods.
+
+- Input that does not begin with `+` is reduced to digits and matched against the national number, so values such as `702499`, `(702) 499`, or `702-499` are accepted.
+- Input whose trimmed value begins with `+` is matched against the E.164 value. The plus sign is a literal format indicator, not a wildcard.
+- **Contains** is the default match mode. **Exact match**, **Begins with**, and **Ends with** are also available in Load Inventory and Manage Activities.
+
+Content Admin evaluates the displayed content version. Load Inventory uses published or latest contact values according to **Only published leads**, while Manage Activities uses the latest saved contact values.
+
+The shared contact index stores primary Cell and Home numbers as national digits for national searches, while the corresponding normalized values remain in E.164 format.
+
+Content Admin supports these named search terms:
+
+| Term | Match behavior | Example |
+|------|----------------|---------|
+| `phone:` | Contains | `phone:702499` |
+| `phone-exact:` | Exact match | `phone-exact:7024993350` |
+| `phone-starts:` | Begins with | `phone-starts:+1702` |
+| `phone-ends:` | Ends with | `phone-ends:3350` |
+
+National-number searches can match contacts from more than one country. Use a leading `+` when the country calling code must be part of the search.
+
 ## Bulk Activity Management
 
-The **Manage Activities** page provides a centralized interface for performing bulk operations on `NotStarted` manual activities.
+The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.
 
 ### Accessing the page
 
-Navigate to **Interaction Center → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
+Navigate to **Interaction Center → Management → Manage Activities** in the admin menu. This page is available to users with the **Manage Activities** permission.
 
 Route: `Admin/omnichannel/manage-activities`
 
@@ -243,6 +302,8 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Filter | Type | Description |
 |--------|------|-------------|
 | Contact status | Select | Filter by published or unpublished contacts |
+| Phone number | Text | Search primary Cell and Home numbers using national-number fragments or a leading `+` for E.164 |
+| Phone match type | Select | Contains, exact match, begins with, or ends with |
 
 #### Activity Filters
 
@@ -251,6 +312,11 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Attempts | Select | Filter by the current attempt number. Values `0` and `1` both mean no attempt, and `2` means the second attempt. |
 | Subject | Select | Filter by subject content type |
 | Channel | Select | Filter by communication channel (Phone, SMS, Email) |
+| Source | Select | Filter by activity source such as Manual, Automatic, Dialer, Preview dial, Power dial, or Progressive dial |
+| Interaction type | Select | Filter by manual versus automated activities |
+| Status | Select | Filter by active editable statuses |
+| Assignment status | Select | Filter by unassigned, available, reserved, assigned, in-progress, or released work |
+| Campaign | Select | Filter by campaign |
 | Assigned to users | User picker | Filter by one or more assigned users |
 | Urgency level | Select | Filter by urgency level (Normal, Low, Medium, High, etc.) |
 | Scheduled from | Date | Filter activities scheduled on or after this date |
@@ -279,3 +345,8 @@ The page also includes a **Page size** selector so managers can review more than
 | **Set Instructions** | Set instruction text for all selected activities. Instructions are notes the agent reads before completing the task. |
 | **Set Urgency Level** | Update the urgency level for all selected activities. |
 | **Change Subject** | Change the subject content type for all selected activities. |
+| **Clear Assignment** | Remove the current assignee and clear reservation state so the activity can be re-routed or dialed again. |
+| **Change Source** | Change the activity source and optionally clear assignment and reservation state. This is useful when reclassifying inventory between manual, automatic, and dialer-style workflows. |
+| **Change Dialer Profile** | When the Contact Center dialer feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
+
+Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want to move selected outbound inventory to a different dialer campaign path without recreating the activities.

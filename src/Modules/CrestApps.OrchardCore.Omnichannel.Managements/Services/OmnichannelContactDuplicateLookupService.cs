@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers;
-using OrchardCore.ContentManagement.Records;
 using YesSql;
 using YesSql.Services;
 
@@ -47,10 +46,12 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
 
         var existingPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var cellPhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.NormalizedPrimaryCellPhoneNumber.IsIn(normalizedPhoneNumbers))
+                index => index.Published &&
+                    index.NormalizedPrimaryCellPhoneNumber.IsIn(normalizedPhoneNumbers))
             .ListAsync(cancellationToken);
         var homePhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.NormalizedPrimaryHomePhoneNumber.IsIn(normalizedPhoneNumbers))
+                index => index.Published &&
+                    index.NormalizedPrimaryHomePhoneNumber.IsIn(normalizedPhoneNumbers))
             .ListAsync(cancellationToken);
 
         foreach (var match in cellPhoneMatches)
@@ -92,38 +93,16 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     public async Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken)
     {
         var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        var allIndexes = await _session.QueryIndex<OmnichannelContactIndex>()
+        var publishedIndexes = await _session.QueryIndex<OmnichannelContactIndex>(index => index.Published)
             .ListAsync(cancellationToken);
 
-        if (!allIndexes.Any())
+        if (!publishedIndexes.Any())
         {
             return [];
         }
 
-        var contentItemIds = allIndexes
-            .Select(index => index.ContentItemId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        if (contentItemIds.Length == 0)
+        foreach (var index in publishedIndexes)
         {
-            return [];
-        }
-
-        var latestContentItemIds = (await _session.QueryIndex<ContentItemIndex>(index =>
-                index.ContentItemId.IsIn(contentItemIds) && index.Latest)
-            .ListAsync(cancellationToken))
-            .Select(index => index.ContentItemId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var index in allIndexes)
-        {
-            if (!latestContentItemIds.Contains(index.ContentItemId))
-            {
-                continue;
-            }
-
             AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
             AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
         }

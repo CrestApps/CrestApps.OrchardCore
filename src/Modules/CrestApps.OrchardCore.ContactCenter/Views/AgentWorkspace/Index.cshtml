@@ -1,0 +1,113 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.ContactCenter
+@using CrestApps.OrchardCore.Omnichannel.Core
+@model AgentWorkspaceIndexViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    var initial = string.IsNullOrWhiteSpace(Model.DisplayName) ? "?" : Model.DisplayName.Trim().Substring(0, 1);
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
+    var completeActivityUrlTemplate = Url.Action(
+        "Complete",
+        "Activities",
+        new
+        {
+            area = OmnichannelConstants.Features.Managements,
+            id = "__activityId__",
+            returnUrl = workspaceUrl,
+        });
+
+    var config = new Dictionary<string, object>
+    {
+        ["hubUrl"] = Model.HubUrl,
+        ["stateUrl"] = Model.StateUrl,
+        ["setPresenceUrl"] = Model.SetPresenceUrl,
+        ["acceptOfferUrl"] = Model.AcceptOfferUrl,
+        ["declineOfferUrl"] = Model.DeclineOfferUrl,
+        ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
+        ["antiForgeryToken"] = antiForgeryToken,
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["noQueues"] = T["Not signed in to any queue"].Value,
+            ["incomingOffer"] = T["Incoming"].Value,
+            ["unknownCaller"] = T["Unknown caller"].Value,
+            ["accept"] = T["Accept"].Value,
+            ["decline"] = T["Decline"].Value,
+            ["respondIn"] = T["Respond in"].Value,
+            ["noActiveCall"] = T["You have no active interaction. Available work will ring here."].Value,
+            ["inbound"] = T["Inbound"].Value,
+            ["outbound"] = T["Outbound"].Value,
+            ["status"] = T["Status"].Value,
+            ["talkTime"] = T["Talk time"].Value,
+            ["openContact"] = T["Open customer record"].Value,
+            ["completeWork"] = T["Complete activity"].Value,
+            ["acceptFailed"] = T["The offer could not be accepted. It may have been re-offered."].Value,
+            ["declineFailed"] = T["The offer could not be declined. Refresh the workspace and try again."].Value,
+            ["noHistory"] = T["No recent interactions."].Value,
+        },
+    };
+}
+
+<style asp-name="contact-center-workspace"></style>
+<script asp-name="contact-center-agent-workspace" at="Foot"></script>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["My workspace"])</h1></zone>
+
+<div class="cc-workspace" data-cc-workspace data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
+    <div class="cc-topbar">
+        <div class="cc-topbar__identity">
+            <span class="cc-avatar">@initial</span>
+            <span>@Model.DisplayName</span>
+        </div>
+
+        <div class="cc-presence" data-cc-presence>
+            <button type="button" class="cc-presence__button" data-cc-presence-button>
+                <span class="cc-presence__dot" data-cc-presence-dot></span>
+                <span data-cc-presence-label>@T["Loading..."]</span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="cc-menu" data-cc-presence-menu>
+                <button type="button" class="cc-menu__item" data-cc-set-presence="Available">
+                    <span class="cc-presence__dot is-available"></span> @T["Available"]
+                </button>
+                @foreach (var reason in Model.ReasonCodes)
+                {
+                    <button type="button" class="cc-menu__item" data-cc-set-presence="@reason.Id" data-cc-reason="@reason.Name">
+                        <span class="cc-presence__dot is-@reason.Id.ToLowerInvariant()"></span> @reason.Name
+                    </button>
+                }
+                <button type="button" class="cc-menu__item" data-cc-set-presence="RequestBreak">
+                    <span class="cc-presence__dot is-break"></span> @T["Request break"]
+                </button>
+            </div>
+        </div>
+
+        @if (Model.CanMonitor && !string.IsNullOrEmpty(Model.SupervisorDashboardUrl))
+        {
+            <a class="btn btn-sm btn-outline-secondary" href="@Model.SupervisorDashboardUrl">
+                <i class="fa-solid fa-gauge-high"></i> @T["Live dashboard"]
+            </a>
+        }
+
+        <div class="cc-topbar__queues" data-cc-queues></div>
+    </div>
+
+    <div class="cc-grid">
+        <div class="cc-stack">
+            <div data-cc-offer hidden></div>
+
+            <div class="cc-panel">
+                <div class="cc-panel__header">@T["Active interaction"]</div>
+                <div class="cc-panel__body" data-cc-active></div>
+            </div>
+        </div>
+
+        <div class="cc-panel">
+            <div class="cc-panel__header">@T["Recent activity"]</div>
+            <div class="cc-panel__body">
+                <ul class="cc-history" data-cc-history></ul>
+            </div>
+        </div>
+    </div>
+</div>

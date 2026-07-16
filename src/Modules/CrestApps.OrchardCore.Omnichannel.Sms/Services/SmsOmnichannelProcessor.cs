@@ -2,9 +2,11 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -23,7 +25,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 {
     private readonly IAIChatSessionManager _aIChatSessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly IAIProfileManager _profileManager;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -37,7 +41,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     /// </summary>
     /// <param name="aIChatSessionManager">The AI chat session manager.</param>
     /// <param name="promptStore">The prompt store.</param>
+    /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
     /// <param name="channelEndpointCatalog">The channel endpoint catalog.</param>
     /// <param name="smsService">The sms service.</param>
     /// <param name="liquidTemplateManager">The liquid template manager.</param>
@@ -47,7 +53,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
         IAIChatSessionPromptStore promptStore,
+        IAIProfileManager profileManager,
         ICatalog<OmnichannelCampaign> campaignCatalog,
+        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
@@ -57,7 +65,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     {
         _aIChatSessionManager = aIChatSessionManager;
         _promptStore = promptStore;
+        _profileManager = profileManager;
         _campaignCatalog = campaignCatalog;
+        _flowSettingsCatalog = flowSettingsCatalog;
         _channelEndpointCatalog = channelEndpointCatalog;
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
@@ -85,36 +95,65 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             chatSession = await _aIChatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
         }
 
-        var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId, cancellationToken)
-        ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
+        var flowSettings = await FindFlowSettingsAsync(activity.SubjectContentType, cancellationToken)
+            ?? throw new InvalidOperationException($"Unable to find subject flow settings for the activity '{activity.ItemId}' and subject '{activity.SubjectContentType}'.");
+
+        var profileId = string.IsNullOrWhiteSpace(activity.AIProfileId)
+            ? flowSettings.ProfileId
+            : activity.AIProfileId;
+
+        var profile = await _profileManager.FindByIdAsync(profileId, cancellationToken)
+            ?? throw new InvalidOperationException($"Unable to find the AI profile '{profileId}' for the activity '{activity.ItemId}'.");
+
+        if (profile.Type != AIProfileType.Chat)
+        {
+            throw new InvalidOperationException($"The AI profile '{profile.ItemId}' must be a chat profile.");
+        }
+
+        var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
+        var initialPromptPattern = profileMetadata.InitialPrompt?.Trim();
+
+        if (string.IsNullOrWhiteSpace(initialPromptPattern))
+        {
+            throw new InvalidOperationException($"The AI profile '{profile.ItemId}' must have Add initial prompt enabled.");
+        }
+
+        var campaign = string.IsNullOrWhiteSpace(activity.CampaignId)
+            ? null
+            : await _campaignCatalog.FindByIdAsync(activity.CampaignId, cancellationToken);
 
         if (chatSession is null)
         {
             chatSession = new AIChatSession
             {
                 SessionId = UniqueId.GenerateId(),
+                ProfileId = profile.ItemId,
                 CreatedUtc = _clock.UtcNow,
+                LastActivityUtc = _clock.UtcNow,
                 Title = S["Automated SMS Activity"],
             };
-
-            await _promptStore.CreateAsync(new AIChatSessionPrompt
-            {
-                ItemId = UniqueId.GenerateId(),
-                SessionId = chatSession.SessionId,
-                Role = ChatRole.System,
-                Content = campaign.SystemMessage,
-            }, cancellationToken);
         }
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
-        var initialPrompt = await _liquidTemplateManager.RenderStringAsync(campaign.InitialOutboundPromptPattern, NullEncoder.Default,
-        new Dictionary<string, FluidValue>()
+        var templateContext = new Dictionary<string, FluidValue>
         {
+            ["Activity"] = new ObjectValue(activity),
             ["Contact"] = new ObjectValue(contact),
-            ["Campaign"] = new ObjectValue(campaign),
+            ["FlowSettings"] = new ObjectValue(flowSettings),
+            ["Profile"] = new ObjectValue(profile),
             ["Session"] = new ObjectValue(chatSession),
-        });
+        };
+
+        if (campaign is not null)
+        {
+            templateContext["Campaign"] = new ObjectValue(campaign);
+        }
+
+        var initialPrompt = await _liquidTemplateManager.RenderStringAsync(
+            initialPromptPattern,
+            NullEncoder.Default,
+            templateContext);
 
         initialPrompt = initialPrompt?.Trim();
 
@@ -151,15 +190,39 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 Content = initialPrompt,
             }, cancellationToken);
 
+            chatSession.LastActivityUtc = _clock.UtcNow;
+
             await _aIChatSessionManager.SaveAsync(chatSession, cancellationToken);
 
             // Update the activity with the AI session details.
             activity.AISessionId = chatSession.SessionId;
             activity.Status = ActivityStatus.AwaitingCustomerAnswer;
+
+            if (OmnichannelAutomationHelper.HasNoResponseTimeout(flowSettings))
+            {
+                activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(
+                    flowSettings,
+                    _clock.UtcNow);
+            }
         }
         else
         {
             throw new InvalidOperationException("Failed to send SMS for an automated activity.");
         }
+    }
+
+    private async Task<SubjectFlowSettings> FindFlowSettingsAsync(
+        string subjectContentType,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(subjectContentType))
+        {
+            return null;
+        }
+
+        var flowSettings = await _flowSettingsCatalog.GetAllAsync(cancellationToken);
+
+        return flowSettings.FirstOrDefault(settings =>
+            string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
     }
 }

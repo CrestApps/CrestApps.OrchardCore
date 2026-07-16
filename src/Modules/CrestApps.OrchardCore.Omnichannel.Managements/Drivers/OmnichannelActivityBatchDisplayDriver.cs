@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -27,6 +29,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
+    private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -35,11 +39,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// </summary>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="optionsProvider">The bulk activity options provider.</param>
+    /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
@@ -49,6 +55,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        BulkActivityAdminFormOptionsProvider optionsProvider,
+        IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -58,6 +66,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _optionsProvider = optionsProvider;
+        _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         S = stringLocalizer;
     }
 
@@ -83,9 +93,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {
             model.DisplayText = batch.DisplayText;
+            model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
+            model.SourceDisplayName = GetSourceEntry(model.Source)?.DisplayName.Value ?? model.Source;
+            model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
             model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
+            model.DialerProfileId = batch.DialerProfileId;
             model.UserIds = batch.UserIds;
             model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
             model.IncludeDoNoSms = batch.IncludeDoNoSms;
@@ -119,7 +133,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 }
             }
 
-            if (batch.UserIds is { Length: > 0 })
+            model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, "Select a dialer profile");
+
+            if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
             {
                 var users = (await _session.Query<User, UserIndex>(x => x.UserId.IsIn(batch.UserIds)).ListAsync())
                     .OrderBy(user => Array.FindIndex(batch.UserIds, itemId => string.Equals(itemId, user.UserId, StringComparison.OrdinalIgnoreCase)));
@@ -148,6 +164,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.PhoneNumberMatchTypes =
             [
+                new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
                 new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
@@ -181,21 +198,38 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)
     {
         var model = new OmnichannelActivityBatchViewModel();
+        model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        model.Source = string.IsNullOrEmpty(model.Source) ? batch.Source : model.Source;
+        model.Source = string.IsNullOrEmpty(model.Source) ? ActivitySources.Manual : model.Source;
+
+        var sourceEntry = GetSourceEntry(model.Source);
+
+        if (sourceEntry is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["The selected activity source is invalid."]);
+        }
 
         if (string.IsNullOrEmpty(model.DisplayText))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Title is required."]);
         }
 
+        SubjectFlowSettings flowSettings = null;
+
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
         }
-        else if (await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
+        else
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activity batches can load activities."]);
+            flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+
+            if (flowSettings is null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before inventory loads can load activities."]);
+            }
         }
 
         if (string.IsNullOrEmpty(model.ContactContentType))
@@ -203,9 +237,40 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
         }
 
-        if (model.UserIds is null || model.UserIds.Length == 0)
+        if ((sourceEntry?.RequiresUserAssignment ?? true) && (model.UserIds is null || model.UserIds.Length == 0))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserIds), S["At least one user is required."]);
+        }
+
+        if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(model.DialerProfileId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["Dialer profile is required for dialer inventory loads."]);
+            }
+            else if (!await _optionsProvider.DialerProfileExistsAsync(model.DialerProfileId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["The selected dialer profile is invalid."]);
+            }
+        }
+
+        if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
+            flowSettings?.InteractionType != ActivityInteractionType.Automated)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["The Automatic source requires a subject flow with the Automated interaction type."]);
+        }
+
+        if (flowSettings?.InteractionType == ActivityInteractionType.Automated &&
+            !string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Automated subject flows must be loaded with the Automatic source."]);
+        }
+
+        if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) &&
+            flowSettings?.Channel is not null &&
+            !string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Dialer inventory loads require a subject flow that uses the Phone channel."]);
         }
 
         if (model.ScheduleAt is null)
@@ -213,18 +278,23 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
         }
 
-        if (!string.IsNullOrEmpty(model.PhoneNumber) && !model.PhoneNumber.TrimStart().StartsWith('+'))
+        if (!string.IsNullOrWhiteSpace(model.PhoneNumber) &&
+            !PhoneNumberSearchTerm.TryParse(model.PhoneNumber, out _))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must contain at least one digit."]);
         }
 
         batch.DisplayText = model.DisplayText?.Trim();
+        batch.Source = model.Source?.Trim();
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
+        batch.DialerProfileId = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase)
+            ? model.DialerProfileId?.Trim()
+            : null;
 
         batch.Instructions = model.Instructions?.Trim();
         batch.UrgencyLevel = model.UrgencyLevel;
-        batch.UserIds = model.UserIds ?? [];
+        batch.UserIds = sourceEntry?.RequiresUserAssignment == true ? model.UserIds ?? [] : [];
         batch.IncludeDoNoCalls = model.IncludeDoNoCalls;
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
@@ -245,5 +315,16 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         }
 
         return Edit(batch, context);
+    }
+
+    private ActivityBatchSourceEntry GetSourceEntry(string source)
+    {
+        var normalizedSource = string.IsNullOrWhiteSpace(source)
+            ? ActivitySources.Manual
+            : source.Trim();
+
+        _activityBatchSourceOptions.Sources.TryGetValue(normalizedSource, out var entry);
+
+        return entry;
     }
 }

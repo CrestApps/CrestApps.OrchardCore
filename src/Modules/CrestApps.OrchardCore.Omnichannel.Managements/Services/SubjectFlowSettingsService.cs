@@ -64,7 +64,7 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
 
         return contentTypes
             .Where(contentType =>
-                contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject) &&
+                OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType) &&
                 configuredSubjectNames.Contains(contentType.Name))
             .OrderBy(contentType => contentType.DisplayName)
             .ToArray();
@@ -82,6 +82,7 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
         }
 
         return flowSettings.InteractionType != ActivityInteractionType.Automated ||
-            !string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId);
+            (!string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId) &&
+                !string.IsNullOrWhiteSpace(flowSettings.ProfileId));
     }
 }

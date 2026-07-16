@@ -1,0 +1,114 @@
+@model ShapeViewModel<AgentSoftPhoneViewModel>
+@using CrestApps.OrchardCore.ContactCenter
+@using CrestApps.OrchardCore.ContactCenter.Endpoints
+@using CrestApps.OrchardCore.Omnichannel.Core
+
+@{
+    var viewModel = Model.Value;
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area }) ?? returnUrl;
+    var completeActivityUrlTemplate = Url.Action(
+        "Complete",
+        "Activities",
+        new
+        {
+            area = OmnichannelConstants.Features.Managements,
+            id = "__activityId__",
+            returnUrl = workspaceUrl,
+        });
+}
+
+<div class="telephony-soft-phone__view telephony-soft-phone__extension-view contact-center-soft-phone"
+     data-telephony-view="contact-center"
+     data-contact-center-hub-url="@viewModel.HubUrl"
+     data-contact-center-signed-in-text="@T["Signed in"]"
+     data-contact-center-offline-text="@T["Offline"]"
+     data-contact-center-selection-required="@T["Select at least one queue or campaign before signing in."]"
+     data-contact-center-queue-text="@T["Queue"]"
+     data-contact-center-campaign-text="@T["Campaign"]"
+     data-contact-center-sign-out-item-text="@T["Sign out"]"
+     data-contact-center-sync-url="@Url.RouteUrl(AgentSoftPhoneEndpoints.SyncQueuedVoiceWorkRouteName)"
+     data-contact-center-current-offer-url="@Url.RouteUrl(AgentSoftPhoneEndpoints.CurrentIncomingOfferRouteName)"
+     data-contact-center-complete-activity-url-template="@completeActivityUrlTemplate"
+     hidden>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+       <strong>@T["Contact Center"]</strong>
+       <span class="badge @(viewModel.IsSignedIn ? "text-bg-success" : "text-bg-secondary")" data-contact-center-membership-badge>
+           @(viewModel.IsSignedIn ? T["Signed in"] : T["Offline"])
+       </span>
+    </div>
+
+    <div class="alert alert-danger py-2 small" data-contact-center-membership-error hidden></div>
+
+    <div data-contact-center-sign-in-panel hidden="@viewModel.IsSignedIn">
+       <form asp-action="SignIn" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-sign-in-form>
+           <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+           <div class="mb-2">
+               <label class="form-label small mb-1">@T["Queues"]</label>
+               <select name="selectedQueueIds"
+                       class="selectpicker show-tick"
+                       multiple
+                       data-contact-center-picker
+                       data-live-search="true"
+                       data-actions-box="true"
+                       data-width="100%"
+                       data-selected-text-format="count > 2"
+                       data-count-selected-text="{0} queues selected"
+                       title="@T["Select queue(s)"]"
+                       aria-label="@T["Select queues"]">
+                   @foreach (var queue in viewModel.AvailableQueues)
+                   {
+                       <option value="@queue.ItemId" selected="@(viewModel.SelectedQueueIds.Contains(queue.ItemId) ? "selected" : null)">@queue.Name</option>
+                   }
+               </select>
+           </div>
+
+           <div class="mb-2">
+               <label class="form-label small mb-1">@T["Campaigns"]</label>
+               <select name="selectedCampaignIds"
+                       class="selectpicker show-tick"
+                       multiple
+                       data-contact-center-picker
+                       data-live-search="true"
+                       data-actions-box="true"
+                       data-width="100%"
+                       data-selected-text-format="count > 2"
+                       data-count-selected-text="{0} campaigns selected"
+                       title="@T["Select campaign(s)"]"
+                       aria-label="@T["Select campaigns"]">
+                   @foreach (var option in viewModel.CampaignOptions)
+                   {
+                       <option value="@option.Value" selected="@(option.Selected ? "selected" : null)" disabled="@(option.Disabled ? "disabled" : null)">@option.Text</option>
+                   }
+               </select>
+           </div>
+
+           <button type="submit" class="btn btn-sm btn-success w-100" data-contact-center-sign-in-button>@T["Sign in"]</button>
+       </form>
+    </div>
+
+    <div data-contact-center-sign-out-panel hidden="@(!viewModel.IsSignedIn)">
+       <div class="list-group list-group-flush mb-2" data-contact-center-membership-list>
+           @foreach (var queue in viewModel.AvailableQueues.Where(queue => viewModel.SelectedQueueIds.Contains(queue.ItemId)))
+           {
+               <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">
+                   <span class="small"><span class="text-body-secondary">@T["Queue"]:</span> @queue.Name</span>
+                   <button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="queue" data-membership-id="@queue.ItemId">@T["Sign out"]</button>
+               </div>
+           }
+           @foreach (var campaign in viewModel.CampaignOptions.Where(campaign => viewModel.SelectedCampaignIds.Contains(campaign.Value)))
+           {
+               <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">
+                   <span class="small"><span class="text-body-secondary">@T["Campaign"]:</span> @campaign.Text</span>
+                   <button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="campaign" data-membership-id="@campaign.Value">@T["Sign out"]</button>
+               </div>
+           }
+       </div>
+
+       <form asp-action="SignOutAgent" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-sign-out-form>
+           <input type="hidden" name="returnUrl" value="@returnUrl" />
+           <button type="submit" class="btn btn-sm btn-secondary w-100" data-contact-center-sign-out-button>@T["Sign out of all"]</button>
+       </form>
+    </div>
+</div>

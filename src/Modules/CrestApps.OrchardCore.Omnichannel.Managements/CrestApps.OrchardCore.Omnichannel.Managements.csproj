@@ -9,8 +9,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ContentFields" />
@@ -27,6 +32,7 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

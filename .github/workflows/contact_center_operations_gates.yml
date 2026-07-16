@@ -1,0 +1,62 @@
+name: Contact Center - Operations Gates
+
+on:
+  pull_request:
+    branches: [ main, release/** ]
+    paths:
+      - '.github/contact-center/**'
+      - '.github/workflows/contact_center_operations_gates.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'Directory.Packages.props'
+      - 'src/Modules/CrestApps.OrchardCore.ContactCenter/**'
+      - 'src/Modules/CrestApps.OrchardCore.SignalR/**'
+      - 'src/Modules/CrestApps.OrchardCore.Telephony/**'
+      - 'tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/**'
+  push:
+    branches: [ main, release/** ]
+    paths:
+      - '.github/contact-center/**'
+      - '.github/workflows/contact_center_operations_gates.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'Directory.Packages.props'
+      - 'src/Modules/CrestApps.OrchardCore.ContactCenter/**'
+      - 'src/Modules/CrestApps.OrchardCore.SignalR/**'
+      - 'src/Modules/CrestApps.OrchardCore.Telephony/**'
+      - 'tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/**'
+
+permissions:
+  contents: read
+
+env:
+  CONTACT_CENTER_REDIS_CONFIGURATION: localhost:6379,abortConnect=false
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  redis-backplane-two-node:
+    name: Redis Backplane Two-Node
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Run distributed Contact Center tests
+        run: >-
+          dotnet test
+          -c Release
+          -p:NuGetAudit=false
+          ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj

@@ -20,7 +20,7 @@ public sealed class AdminMenu : AdminNavigationProvider
 
         builder
             .Add(S["Content"], content => content
-                .Add(S["Bulk Import"], S["Bulk Import"].PrefixPosition(), transfer => transfer
+                .Add(S["Import"], S["Import"].PrefixPosition(), transfer => transfer
                     .Action(nameof(AdminController.List), adminControllerName, new
                     {
                         area = ContentTransferConstants.Feature.ModuleId,
@@ -28,7 +28,7 @@ public sealed class AdminMenu : AdminNavigationProvider
                     .Permission(ContentTransferPermissions.ListContentTransferEntries)
                     .LocalNav()
                 )
-                .Add(S["Bulk Export"], S["Bulk Export"].PrefixPosition(), transfer => transfer
+                .Add(S["Export"], S["Export"].PrefixPosition(), transfer => transfer
                     .Action(nameof(AdminController.Export), adminControllerName, new
                     {
                         area = ContentTransferConstants.Feature.ModuleId,

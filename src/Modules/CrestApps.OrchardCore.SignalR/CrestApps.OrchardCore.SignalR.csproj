@@ -20,6 +20,8 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
   </ItemGroup>
 
   <ItemGroup>

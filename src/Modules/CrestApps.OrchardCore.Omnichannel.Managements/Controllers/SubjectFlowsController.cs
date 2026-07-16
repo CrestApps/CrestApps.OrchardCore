@@ -10,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -106,7 +105,7 @@ public sealed class SubjectFlowsController : Controller
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
         var subjectTypes = contentTypes
-            .Where(t => t.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+            .Where(OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart)
             .OrderBy(t => t.DisplayName)
             .ToList();
 
@@ -149,7 +148,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -192,7 +191,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -251,7 +250,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -310,7 +309,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -353,7 +352,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -498,4 +497,5 @@ public sealed class SubjectFlowsController : Controller
 
         return RedirectToAction(nameof(ManageActions), new { subjectContentType });
     }
+
 }

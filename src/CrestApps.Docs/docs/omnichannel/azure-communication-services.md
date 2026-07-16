@@ -7,24 +7,42 @@ description: Azure Communication Services channel support for the Orchard Core O
 
 | | |
 | --- | --- |
-| **Feature Name** | Omnichannel (Azure Communication Services) |
+| **Feature Name** | Omnichannel - Azure Communication Services |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` |
 
-Provides a communication-channel integration for Azure Communication Services on top of the base [Omnichannel](./) feature.
+Enables Orchard Core's Azure Communication Services email and SMS providers alongside the base [Omnichannel](./) feature.
 
 ## When to enable this feature
 
-Enable **Omnichannel (Azure Communication Services)** when your Orchard tenant needs to send or receive omnichannel traffic through Azure Communication Services instead of relying only on the generic base module or provider-specific webhook relays.
+Enable **Omnichannel - Azure Communication Services** when the tenant uses Azure Communication Services to send email or SMS through Orchard Core's standard communication services. Omnichannel components consume those standard services, so no separate ACS client or credential store is required in this feature.
 
 This feature depends on:
 
 - `CrestApps.OrchardCore.Omnichannel`
+- `OrchardCore.Email.Azure`
+- `OrchardCore.Sms.Azure`
 
 ## What it adds
 
-- Azure Communication Services-specific channel wiring for the Omnichannel stack
-- a provider integration point that can be composed with Omnichannel campaigns and activity processing
-- the Azure Communication Services layer that other Omnichannel features can build on when ACS is part of the deployment
+- Azure Communication Services implementations of Orchard Core's email and SMS provider contracts
+- the provider settings pages supplied by `OrchardCore.Email.Azure` and `OrchardCore.Sms.Azure`
+- a single feature that activates the base Omnichannel model and both ACS outbound providers
+
+The feature intentionally does not define another connection-string model or settings driver. Orchard Core owns those provider settings and protects their secrets through its standard site-settings infrastructure.
+
+## Configuration
+
+After enabling the feature:
+
+1. Open **Settings > Email** and select/configure the Azure email provider.
+2. Open **Settings > SMS** and select/configure the Azure SMS provider.
+3. Enable the Omnichannel channel feature that consumes the service, such as **SMS Omnichannel Automation**, when required by the application.
+
+Provider selection remains tenant-specific. Enabling this feature registers the ACS providers but does not silently change an existing tenant's selected email or SMS provider.
+
+## Inbound events
+
+Azure Communication Services delivery and inbound-message events are normally delivered through Azure Event Grid. Enable [Omnichannel - Azure Event Grid](./event-grid) and configure its authenticated webhook when inbound ACS events must enter the Omnichannel event pipeline.
 
 ## How it fits with the other Omnichannel docs
 

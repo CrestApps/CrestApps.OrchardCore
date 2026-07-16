@@ -1,4 +1,5 @@
 using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -11,9 +12,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -25,10 +28,32 @@ namespace CrestApps.OrchardCore.Telephony;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind Telephony options.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services
+            .AddOptions<TelephonyCommandOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_Telephony:Commands"))
+            .Validate(
+                options => options.Timeout >= TimeSpan.FromSeconds(TelephonyCommandOptions.MinimumTimeoutSeconds) &&
+                    options.Timeout <= TimeSpan.FromSeconds(TelephonyCommandOptions.MaximumTimeoutSeconds),
+                "The Telephony command timeout must be between one second and two minutes.")
+            .ValidateOnStart();
+
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
+        services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
+        services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
         services.AddTransient<IPostConfigureOptions<TelephonySettings>, TelephonySettingsConfiguration>();
 
         services.AddScoped<ITelephonyUserAccessor, DefaultTelephonyUserAccessor>();
@@ -36,6 +61,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITelephonyAuthenticationService, DefaultTelephonyAuthenticationService>();
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
+        services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
+        services.AddSingleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>();
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
 

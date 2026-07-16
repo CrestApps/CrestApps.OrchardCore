@@ -104,6 +104,14 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Contact Center',
+            items: [
+                'contact-center/index',
+                'contact-center/single-node-completion',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Standard Modules',
             items: [
                 'modules/index',

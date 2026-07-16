@@ -108,6 +108,15 @@ public interface ITelephonyProvider
     Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sends a ringing inbound call to voicemail. Only invoked when the provider advertises
+    /// <see cref="TelephonyCapabilities.Voicemail"/>.
+    /// </summary>
+    /// <param name="call">A reference to the inbound call to send to voicemail.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Issues the bootstrap configuration a soft phone client needs to connect to the provider.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

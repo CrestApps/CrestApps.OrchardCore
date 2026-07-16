@@ -1,19 +1,47 @@
 @using CrestApps.OrchardCore.Telephony
 @using CrestApps.OrchardCore.Telephony.Hubs
+@using CrestApps.OrchardCore.Telephony.Models
 @using CrestApps.Core.SignalR.Services
 @using System.Text.Json
 @inject HubRouteManager HubRouteManager
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
-    var capabilities = Model.Capabilities is int caps ? caps : 0;
+    var recentCallsCount = Model.RecentCallsCount is int configuredRecentCallsCount
+        ? configuredRecentCallsCount
+        : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
+    var capabilities = 0;
+    var audioCapabilities = Model.AudioCapabilities is TelephonyAudioCapabilities configuredAudioCapabilities
+        ? (int)configuredAudioCapabilities
+        : 0;
+    var audioMode = Model.AudioMode is TelephonyAudioMode configuredAudioMode
+        ? (int)configuredAudioMode
+        : 0;
+    var browserMediaAdapterName = Model.BrowserMediaAdapterName as string;
+
+    if (Model.Capabilities is TelephonyCapabilities caps)
+    {
+        capabilities = (int)caps;
+    }
+    else if (Model.Capabilities is int intCaps)
+    {
+        capabilities = intCaps;
+    }
+
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
         ["capabilities"] = capabilities,
+        ["audioCapabilities"] = audioCapabilities,
+        ["audioMode"] = audioMode,
+        ["browserMediaAdapterName"] = browserMediaAdapterName,
+        ["recentCallsCount"] = recentCallsCount,
         ["connectUrl"] = connectUrl,
+        ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
         ["strings"] = new Dictionary<string, string>
         {
@@ -21,16 +49,27 @@
             ["connecting"] = T["Connecting..."].Value,
             ["ringing"] = T["Ringing..."].Value,
             ["connected"] = T["In call"].Value,
+            ["inConference"] = T["In conference"].Value,
             ["onHold"] = T["On hold"].Value,
             ["disconnected"] = T["Call ended"].Value,
             ["failed"] = T["Call failed"].Value,
             ["disconnectedHub"] = T["Disconnected"].Value,
             ["notReady"] = T["Not Ready"].Value,
-            ["notConfigured"] = T["No telephony provider is configured."].Value,
+            ["notConfigured"] = T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."].Value,
             ["notConnected"] = T["Not connected"].Value,
             ["invalidNumber"] = T["Enter a phone number to call."].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
-            ["mergePrompt"] = T["Second call id to merge"].Value,
+            ["transferTitle"] = T["Transfer call"].Value,
+            ["transferDestination"] = T["Number or extension"].Value,
+            ["directory"] = T["Directory"].Value,
+            ["directoryEmpty"] = T["No directory entries are available."].Value,
+            ["cancel"] = T["Cancel"].Value,
+            ["transfer"] = T["Transfer"].Value,
+            ["keypad"] = T["Keypad"].Value,
+            ["activeCalls"] = T["Active calls"].Value,
+            ["selectCallsToMerge"] = T["Select at least two calls to conference."].Value,
+            ["conference"] = T["Conference selected calls"].Value,
+            ["disconnectAll"] = T["Disconnect all calls"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
             ["noInteractions"] = T["No recent calls."].Value,
             ["incoming"] = T["Incoming"].Value,
@@ -40,6 +79,16 @@
             ["completed"] = T["Completed"].Value,
             ["rejected"] = T["Rejected"].Value,
             ["canceled"] = T["Canceled"].Value,
+            ["incomingCall"] = T["Incoming call"].Value,
+            ["answer"] = T["Answer"].Value,
+            ["voicemail"] = T["Send to voicemail"].Value,
+            ["ignore"] = T["Ignore"].Value,
+            ["answerAndOpen"] = T["Answer & open"].Value,
+            ["open"] = T["Open"].Value,
+            ["matchedRecords"] = T["Matched records"].Value,
+            ["offerUnavailable"] = T["This call is no longer available."].Value,
+            ["microphoneUnavailable"] = T["The microphone is unavailable. Allow microphone access and try again."].Value,
+            ["browserAudioUnavailable"] = T["The configured browser audio adapter is unavailable."].Value,
         },
     };
 }
@@ -49,22 +98,21 @@
      style="--telephony-accent: @accentColor; visibility: hidden;"
      data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
 
-    <button type="button" class="telephony-soft-phone__toggle" data-telephony-toggle title="@T["Soft phone"]" aria-label="@T["Soft phone"]">
+    <button type="button" class="telephony-soft-phone__toggle" data-telephony-toggle title="@T["Phone"]" aria-label="@T["Phone"]">
         <i class="fa-solid fa-phone" data-telephony-toggle-icon></i>
     </button>
 
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
+        <audio data-telephony-remote-audio autoplay></audio>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
-            <span class="telephony-soft-phone__title">@T["Soft Phone"]</span>
-            <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
+            <span class="telephony-soft-phone__title">@T["Phone"]</span>
+            @if (Model.HeaderActions != null)
+            {
+                @await DisplayAsync(Model.HeaderActions)
+            }
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-        </div>
-
-        <div class="telephony-soft-phone__unavailable" data-telephony-unavailable hidden>
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <p data-telephony-unavailable-text>@T["No telephony provider is configured."]</p>
         </div>
 
         <div class="telephony-soft-phone__connect" data-telephony-connect-panel hidden>
@@ -75,19 +123,48 @@
         </div>
 
         <div class="telephony-soft-phone__body" data-telephony-body>
+            <div class="telephony-soft-phone__unavailable alert alert-warning" data-telephony-unavailable hidden>
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p data-telephony-unavailable-text>@T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."]</p>
+            </div>
+
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">
                 <div class="telephony-soft-phone__display">
+                    <div class="telephony-soft-phone__display-meta">
+                        <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
+                    </div>
                     <input type="tel"
                            class="telephony-soft-phone__number"
                            data-telephony-number
                            placeholder="@T["Enter a number"]"
                            aria-label="@T["Phone number"]" />
-                    <div class="telephony-soft-phone__peer" data-telephony-peer></div>
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
 
-                <div class="telephony-soft-phone__keypad">
+                <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
+                    <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
+                    <div class="telephony-soft-phone__active-calls-list" data-telephony-active-calls-list></div>
+                </div>
+
+                <div class="telephony-soft-phone__transfer-panel" data-telephony-transfer-panel hidden>
+                    <div class="telephony-soft-phone__transfer-title">@T["Transfer call"]</div>
+                    <input type="tel"
+                           class="telephony-soft-phone__transfer-input"
+                           data-telephony-transfer-input
+                           placeholder="@T["Number or extension"]"
+                           aria-label="@T["Transfer destination"]" />
+                    <div class="telephony-soft-phone__directory" data-telephony-directory hidden>
+                        <div class="telephony-soft-phone__directory-heading">@T["Directory"]</div>
+                        <div class="telephony-soft-phone__directory-list" data-telephony-directory-list></div>
+                    </div>
+                    <div class="telephony-soft-phone__transfer-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-transfer-cancel>@T["Cancel"]</button>
+                        <button type="button" class="btn btn-sm btn-primary" data-telephony-transfer-confirm>@T["Transfer"]</button>
+                    </div>
+                </div>
+
+                <div class="telephony-soft-phone__keypad" data-telephony-keypad-panel>
                     @foreach (var key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" })
                     {
                         <button type="button" class="telephony-soft-phone__key" data-telephony-key="@key">@key</button>
@@ -111,10 +188,14 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        <i class="fa-solid fa-arrow-right-arrow-left" data-telephony-transfer-icon></i>
+                        <span class="visually-hidden" data-telephony-transfer-label>@T["Transfer"]</span>
                     </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Merge"]" hidden>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--merge" data-telephony-merge title="@T["Conference selected calls"]" hidden>
                         <i class="fa-solid fa-code-merge"></i>
+                    </button>
+                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup-all" data-telephony-hangup-all title="@T["Disconnect all calls"]" hidden>
+                        <i class="fa-solid fa-phone-volume"></i>
                     </button>
                     <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup" data-telephony-hangup title="@T["Hang up"]" hidden>
                         <i class="fa-solid fa-phone-slash"></i>
@@ -125,6 +206,11 @@
             <div class="telephony-soft-phone__view telephony-soft-phone__history" data-telephony-view="history" data-telephony-history hidden>
                 <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
             </div>
+
+            @if (Model.Views != null)
+            {
+                @await DisplayAsync(Model.Views)
+            }
         </div>
 
         <div class="telephony-soft-phone__footer" data-telephony-footer hidden>
@@ -136,6 +222,38 @@
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
             </button>
+            @if (Model.Tabs != null)
+            {
+                @await DisplayAsync(Model.Tabs)
+            }
+        </div>
+    </div>
+
+    <div class="telephony-incoming" data-telephony-incoming hidden role="dialog" aria-modal="true" aria-label="@T["Incoming call"]">
+        <div class="telephony-incoming__backdrop"></div>
+        <div class="telephony-incoming__dialog">
+            <div class="telephony-incoming__header">
+                <span class="telephony-incoming__pulse"><i class="fa-solid fa-phone-volume"></i></span>
+                <div class="telephony-incoming__heading">
+                    <span class="telephony-incoming__label">@T["Incoming call"]</span>
+                    <span class="telephony-incoming__caller" data-telephony-incoming-caller></span>
+                    <span class="telephony-incoming__queue" data-telephony-incoming-queue hidden></span>
+                </div>
+            </div>
+
+            <div class="telephony-incoming__cards" data-telephony-incoming-cards hidden></div>
+
+            <div class="telephony-incoming__actions">
+                <button type="button" class="btn btn-success telephony-incoming__btn" data-telephony-incoming-answer>
+                    <i class="fa-solid fa-phone"></i> @T["Answer"]
+                </button>
+                <button type="button" class="btn btn-warning telephony-incoming__btn" data-telephony-incoming-voicemail hidden>
+                    <i class="fa-solid fa-voicemail"></i> @T["Voicemail"]
+                </button>
+                <button type="button" class="btn btn-danger telephony-incoming__btn" data-telephony-incoming-ignore>
+                    <i class="fa-solid fa-phone-slash"></i> @T["Ignore"]
+                </button>
+            </div>
         </div>
     </div>
 </div>

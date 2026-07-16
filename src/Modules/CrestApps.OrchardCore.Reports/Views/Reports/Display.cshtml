@@ -1,0 +1,67 @@
+@model ReportDisplayViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(Model.Report.DisplayName)</h1></zone>
+
+@if (!string.IsNullOrEmpty(Model.Report.Description?.Value))
+{
+    <p class="text-muted">@Model.Report.Description</p>
+}
+
+<form method="get" asp-action="Display" asp-route-id="@Model.Report.Name">
+    <div class="card">
+        <div class="card-header">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 align-items-end g-2">
+                @await DisplayAsync(Model.FilterShape)
+                <div class="col-auto p-1">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> @T["Show"]
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (Model.Document is not null && Model.Document.HasContent)
+            {
+                var reportHeading = Model.Document.Sections.FirstOrDefault()?.Title;
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <h2 class="h5 mb-0">@(string.IsNullOrEmpty(reportHeading) ? Model.Report.DisplayName : reportHeading)</h2>
+
+                    @if (Model.ExportFormats.Count == 1)
+                    {
+                        var exportFormat = Model.ExportFormats[0];
+
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
+                            <i class="fa-solid fa-download"></i> @T["Export {0}", exportFormat.DisplayName]
+                        </button>
+                    }
+                    else if (Model.ExportFormats.Count > 1)
+                    {
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="report-export-menu-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa-solid fa-download"></i> @T["Export"]
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="report-export-menu-button">
+                                @foreach (var exportFormat in Model.ExportFormats)
+                                {
+                                    <li>
+                                        <button type="submit" class="dropdown-item" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
+                                            @T["Export {0}", exportFormat.DisplayName]
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+
+                <partial name="_ReportDocument" model="Model.Document" />
+            }
+            else
+            {
+                <p class="card-text text-center text-muted">@T["No data found for the selected filters."]</p>
+            }
+        </div>
+    </div>
+</form>

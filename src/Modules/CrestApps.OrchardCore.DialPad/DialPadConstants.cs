@@ -23,6 +23,11 @@ public static class DialPadConstants
     public const string OAuthProtectorName = "DialPad.OAuth";
 
     /// <summary>
+    /// The name of the data protector used to protect the DialPad webhook signing secret.
+    /// </summary>
+    public const string WebhookProtectorName = "DialPad.Webhook";
+
+    /// <summary>
     /// The DialPad OAuth scope that allows access to a refresh token so access tokens can be renewed
     /// without prompting the user to reconnect.
     /// </summary>
@@ -88,5 +93,10 @@ public static class DialPadConstants
         /// The identifier of the DialPad provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.DialPad";
+
+        /// <summary>
+        /// The identifier of the DialPad Contact Center voice-provider feature.
+        /// </summary>
+        public const string ContactCenterVoice = "CrestApps.OrchardCore.DialPad.ContactCenterVoice";
     }
 }

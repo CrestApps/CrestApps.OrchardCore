@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// <summary>
 /// A telephony provider that records the last invoked operation and returns a configurable result.
 /// </summary>
-internal sealed class RecordingTelephonyProvider : ITelephonyProvider
+internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyDirectoryProvider
 {
     public string LastOperation { get; private set; }
 
@@ -16,6 +16,12 @@ internal sealed class RecordingTelephonyProvider : ITelephonyProvider
     public TelephonyResult ResultToReturn { get; set; } = TelephonyResult.Success();
 
     public TelephonyCapabilities Capabilities { get; set; } = TelephonyCapabilities.Dial | TelephonyCapabilities.Hangup;
+
+    public TelephonyAudioCapabilities AudioCapabilities { get; set; }
+
+    public TelephonyAudioMode ConfiguredAudioMode { get; set; }
+
+    public string BrowserMediaAdapterName { get; set; }
 
     public LocalizedString Name => new("Recording", "Recording");
 
@@ -52,11 +58,33 @@ internal sealed class RecordingTelephonyProvider : ITelephonyProvider
     public Task<TelephonyResult> RejectAsync(CallReference call, CancellationToken cancellationToken = default)
         => Record("Reject", call);
 
+    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+        => Record("SendToVoicemail", call);
+
     public Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)
     {
         LastOperation = "GetClientCredentials";
 
         return Task.FromResult(new TelephonyClientCredentials { ProviderName = "Recording" });
+    }
+
+    public Task<TelephonyDirectoryResult> GetDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        LastOperation = "GetDirectory";
+
+        return Task.FromResult(new TelephonyDirectoryResult
+        {
+            Succeeded = true,
+            Entries =
+            [
+                new()
+                {
+                    Id = "entry-1",
+                    DisplayName = "Directory entry",
+                    Destination = "2001",
+                },
+            ],
+        });
     }
 
     private Task<TelephonyResult> Record(string operation, object payload)

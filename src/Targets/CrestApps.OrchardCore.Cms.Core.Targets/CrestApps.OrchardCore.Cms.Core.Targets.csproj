@@ -56,7 +56,9 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.AzureAI/CrestApps.OrchardCore.AI.Memory.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.Elasticsearch/CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" PrivateAssets="none" />
@@ -74,6 +76,8 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />

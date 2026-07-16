@@ -1,0 +1,893 @@
+using System.Security.Claims;
+using CrestApps.Core.Services;
+using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Endpoints;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
+using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Models;
+using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
+using OrchardCore.Workflows.Helpers;
+
+namespace CrestApps.OrchardCore.ContactCenter;
+
+/// <summary>
+/// Registers the services and configuration for the base Contact Center feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind Contact Center options.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterConstants.CollectionName));
+
+        services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
+        services.Configure<ContactCenterHealthCheckOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"));
+        services
+            .AddHealthChecks()
+            .AddCheck<ContactCenterStorageHealthCheck>(
+                "contactcenter-storage",
+                tags: ["contactcenter", "ready"])
+            .AddCheck<ContactCenterOutboxHealthCheck>(
+                "contactcenter-outbox",
+                tags: ["contactcenter", "ready"])
+            .AddCheck<ContactCenterProviderIngressHealthCheck>(
+                "contactcenter-provider-ingress",
+                tags: ["contactcenter", "ready"]);
+        services
+            .AddOptions<ContactCenterFeatureLifecycleOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))
+            .Validate(
+                options => options.DrainTimeoutSeconds is >= 1 and <= 300,
+                "The Contact Center feature drain timeout must be between 1 and 300 seconds.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
+            .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
+            .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.Area,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IInteractionStore, InteractionStore>()
+            .AddScoped<IInteractionManager, InteractionManager>()
+            .AddScoped<IInteractionEventStore, InteractionEventStore>()
+            .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
+            .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
+            .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
+            .AddScoped<ContactCenterEventDispatchContext>()
+            .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
+            .AddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>()
+            .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
+            .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
+            .AddScoped<IContactCenterProjectionCheckpointStore, ContactCenterProjectionCheckpointStore>()
+            .AddScoped<IContactCenterMetricsProjectionMaintenanceService, ContactCenterMetricsProjectionMaintenanceService>()
+            .AddScoped<IContactCenterEventDeduplicationService, ContactCenterEventDeduplicationService>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
+            .AddScoped<IContactCenterRetentionService, ContactCenterRetentionService>()
+            .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
+            .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
+
+        services
+            .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
+            .AddDataMigration<ContactCenterEventMetricIndexMigrations>();
+
+        services
+            .AddIndexProvider<ContactCenterProcessedEventIndexProvider>()
+            .AddDataMigration<ContactCenterProcessedEventIndexMigrations>();
+
+        services
+            .AddIndexProvider<ContactCenterProjectionCheckpointIndexProvider>()
+            .AddDataMigration<ContactCenterProjectionCheckpointIndexMigrations>();
+
+        services
+            .AddScoped<ICallSessionStore, CallSessionStore>()
+            .AddScoped<ICallSessionManager, CallSessionManager>();
+
+        services
+            .AddIndexProvider<InteractionIndexProvider>()
+            .AddDataMigration<InteractionIndexMigrations>();
+
+        services
+            .AddIndexProvider<InteractionEventIndexProvider>()
+            .AddDataMigration<InteractionEventIndexMigrations>();
+
+        services
+            .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
+            .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();
+
+        services
+            .AddIndexProvider<CallSessionIndexProvider>()
+            .AddDataMigration<CallSessionIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
+        services.AddPermissionProvider<ContactCenterPermissionProvider>();
+    }
+}
+
+/// <summary>
+/// Registers agent profiles, presence, capacity, skills, and queue/campaign sign-in.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Agents)]
+public sealed class AgentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAgentProfileStore, AgentProfileStore>()
+            .AddScoped<IAgentProfileManager, AgentProfileManager>()
+            .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
+            .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
+
+        services
+            .AddIndexProvider<AgentProfileIndexProvider>()
+            .AddDataMigration<AgentProfileIndexMigrations>()
+            .AddIndexProvider<AgentQueueMembershipIndexProvider>()
+            .AddDataMigration<AgentQueueMembershipIndexMigrations>();
+
+        services
+            .AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<AgentStateReasonCode>, AgentStateReasonCodeHandler>()
+            .AddIndexProvider<AgentStateReasonCodeIndexProvider>()
+            .AddDataMigration<AgentStateReasonCodeIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers durable agent presence, availability sessions, heartbeat recovery, and logout synchronization.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Availability)]
+public sealed class AvailabilityStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AvailabilityStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind availability policy.</param>
+    public AvailabilityStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddOptions<AgentAvailabilityOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Availability"))
+            .Validate(options => options.HeartbeatTimeout > TimeSpan.Zero, "HeartbeatTimeout must be greater than zero.")
+            .Validate(options => options.MaximumWrapUpDuration > TimeSpan.Zero, "MaximumWrapUpDuration must be greater than zero.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
+            .AddScoped<IAgentSessionStore, AgentSessionStore>()
+            .AddScoped<IAgentSessionManager, AgentSessionManager>()
+            .AddScoped<IAgentSessionService, AgentSessionService>()
+            .AddScoped<IAgentAvailabilityService, AgentAvailabilityService>()
+            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>();
+
+        services
+            .AddIndexProvider<AgentSessionIndexProvider>()
+            .AddDataMigration<AgentSessionIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        app.Use(async (context, next) =>
+        {
+            var isLogoutRequest = IsLogoutRequest(context);
+            var userId = isLogoutRequest
+                ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                : null;
+            var logger = isLogoutRequest
+                ? context.RequestServices.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentsStartup>>()
+                : null;
+
+            if (isLogoutRequest)
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "Observed Orchard logout request for user '{UserId}'.",
+                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
+                }
+            }
+
+            await next();
+
+            if (!isLogoutRequest || string.IsNullOrEmpty(userId) || context.Response.StatusCode >= 400)
+            {
+                return;
+            }
+
+            var presenceManager = context.RequestServices.GetRequiredService<IAgentPresenceManager>();
+            await presenceManager.SignOutAsync(userId, context.RequestAborted);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Completed Contact Center logout synchronization for Orchard user '{UserId}' with response status {StatusCode}.",
+                    OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
+                    context.Response.StatusCode);
+            }
+        });
+    }
+
+    private static bool IsLogoutRequest(HttpContext httpContext)
+    {
+        if (!HttpMethods.IsPost(httpContext.Request.Method) || httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        return string.Equals(httpContext.Request.Path.Value, "/Users/Account/LogOff", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(httpContext.Request.Path.Value, "/Users/Account/Logout", StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+/// <summary>
+/// Registers recipe execution support for the agent feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Agents)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class AgentsRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AgentStateReasonCodeStep>();
+    }
+}
+
+/// <summary>
+/// Registers queues, queue items, reservations, and availability-based assignment.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Queues)]
+public sealed class QueuesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IActivityQueueGroupStore, ActivityQueueGroupStore>()
+            .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
+            .AddScoped<IActivityQueueStore, ActivityQueueStore>()
+            .AddScoped<IActivityQueueManager, ActivityQueueManager>()
+            .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
+            .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
+            .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
+            .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
+            .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>()
+            .AddScoped<IQueueItemStore, QueueItemStore>()
+            .AddScoped<IQueueItemManager, QueueItemManager>()
+            .AddScoped<IActivityReservationStore, ActivityReservationStore>()
+            .AddScoped<IActivityReservationManager, ActivityReservationManager>()
+            .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
+            .AddScoped<IActivityQueueService, ActivityQueueService>()
+            .AddScoped<IActivityReservationService, ActivityReservationService>()
+            .AddScoped<ContactCenterAdminFormOptionsProvider>();
+
+        services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
+
+        services
+            .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
+            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
+            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
+            .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
+            .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
+            .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, BusinessHoursCalendarHandler>()
+            .AddIndexProvider<ActivityQueueGroupIndexProvider>()
+            .AddDataMigration<ActivityQueueGroupIndexMigrations>()
+            .AddIndexProvider<ActivityQueueIndexProvider>()
+            .AddDataMigration<ActivityQueueIndexMigrations>()
+            .AddIndexProvider<ContactCenterSkillIndexProvider>()
+            .AddDataMigration<ContactCenterSkillIndexMigrations>()
+            .AddIndexProvider<BusinessHoursCalendarIndexProvider>()
+            .AddDataMigration<BusinessHoursCalendarIndexMigrations>()
+            .AddIndexProvider<QueueItemIndexProvider>()
+            .AddDataMigration<QueueItemIndexMigrations>()
+            .AddIndexProvider<ActivityReservationIndexProvider>()
+            .AddDataMigration<ActivityReservationIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers policy-based routing strategies and activity assignment orchestration.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Routing)]
+public sealed class RoutingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
+            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
+            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
+
+        services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Registers outbound dialing profiles, callbacks, and agent-driven activity batch sources.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Dialer)]
+public sealed class DialerStartup : StartupBase
+{
+    private readonly IStringLocalizer S;
+
+    public DialerStartup(IStringLocalizer<DialerStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IDialerProfileStore, DialerProfileStore>()
+            .AddScoped<IDialerProfileManager, DialerProfileManager>()
+            .AddScoped<ICallbackRequestStore, CallbackRequestStore>()
+            .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
+            .AddScoped<ICallbackService, CallbackService>()
+            .AddScoped<IDialerService, DialerService>()
+            .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
+            .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.Dialer,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        services
+            .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
+            .AddIndexProvider<DialerProfileIndexProvider>()
+            .AddDataMigration<DialerProfileIndexMigrations>()
+            .AddIndexProvider<CallbackRequestIndexProvider>()
+            .AddDataMigration<CallbackRequestIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, CallbackDispatchBackgroundTask>();
+        services.AddNavigationProvider<ContactCenterDialerAdminMenu>();
+
+        services.Configure<ActivityBatchSourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Dialer, entry =>
+            {
+                entry.DisplayName = S["Dialer"];
+                entry.Description = S["Loads unassigned activities and applies the selected dialer profile when the batch is loaded."];
+                entry.RequiresUserAssignment = false;
+            });
+
+            options.AddSource(ActivitySources.PreviewDial, entry =>
+            {
+                entry.DisplayName = S["Preview dial batch"];
+                entry.Description = S["Loads unassigned activities the dialer offers to agents one at a time for review before dialing."];
+                entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
+            });
+
+        });
+    }
+}
+
+/// <summary>
+/// Registers the mandatory eligibility and suppression gate evaluated before outbound dialing attempts.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Compliance)]
+public sealed class ComplianceStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ComplianceStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind outbound compliance options.</param>
+    public ComplianceStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddOptions<ContactCenterComplianceOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Compliance"))
+            .Validate(
+                options => options.AbandonmentRollingWindowMinutes is >= 1 and <= 1440,
+                "The Contact Center abandonment rolling window must be between 1 and 1440 minutes.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
+            .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
+            .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
+            .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()
+            .AddScoped<IDialerAttemptService, DialerAttemptService>();
+    }
+}
+
+/// <summary>
+/// Registers compliance-gated Power and Progressive dialing strategies and scheduled pacing.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.DialerAutomated)]
+public sealed class DialerAutomatedStartup : StartupBase
+{
+    private readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DialerAutomatedStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public DialerAutomatedStartup(IStringLocalizer<DialerAutomatedStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IDialerStrategy, PowerDialerStrategy>()
+            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new ContactCenterFeatureWorkLifecycleParticipant(
+                    ContactCenterConstants.Feature.DialerAutomated,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        services.AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>();
+
+        services.Configure<ActivityBatchSourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.PowerDial, entry =>
+            {
+                entry.DisplayName = S["Power dial batch"];
+                entry.Description = S["Loads unassigned activities the dialer dials automatically for available agents."];
+                entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
+            });
+        });
+    }
+}
+
+/// <summary>
+/// Registers the Voice Contact Center Call Router that routes inbound and outbound voice calls while
+/// Telephony providers execute media operations.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Voice)]
+public sealed class VoiceStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VoiceStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind voice ingress options.</param>
+    public VoiceStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddOptions<ProviderWebhookIngressOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:WebhookIngress"))
+            .Validate(
+                options => options.ConcurrencyPermitLimit > 0 &&
+                    options.ConcurrencyPermitLimit <= 1024 &&
+                    options.RatePermitLimit is > 0 and <= 100_000 &&
+                    options.RatePeriodSeconds is > 0 and <= 3600 &&
+                    options.MaximumDeliveryAgeSeconds is > 0 and <= 86_400 &&
+                    options.MaximumFutureSkewSeconds is >= 0 and <= 3600,
+                "Webhook ingress rate, concurrency, period, delivery-age, or future-skew values are outside their supported ranges.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<IInboundContactLookup, InboundContactLookup>()
+            .AddScoped<IInboundVoiceEventSink, InboundVoiceEventSink>()
+            .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
+            .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
+            .AddScoped<IProviderCommandStore, ProviderCommandStore>()
+            .AddScoped<IProviderCommandManager, ProviderCommandManager>()
+            .AddScoped<IProviderCommandStateService, ProviderCommandStateService>()
+            .AddScoped<IProviderCommandTypeExecutor, DialProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, AnswerProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, RejectProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandTypeExecutor, SendToVoicemailProviderCommandTypeExecutor>()
+            .AddScoped<IProviderCommandProcessor, ProviderCommandProcessor>()
+            .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
+            .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
+            .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
+            .AddScoped<IProviderVoiceEventSink, ProviderVoiceEventSink>()
+            .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
+            .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
+            .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
+            .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
+            .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
+            .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
+            .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
+            .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
+            .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
+            .AddScoped<VoiceContactCenterCallRouter>()
+            .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
+            .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
+            .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
+            .AddScoped<ContactCenterVoiceTenantEvents>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>());
+
+        services
+            .AddIndexProvider<ProviderCommandIndexProvider>()
+            .AddDataMigration<ProviderCommandIndexMigrations>()
+            .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
+            .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
+
+        services.AddSingleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>();
+
+        services.AddSingleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddVoiceOfferEndpoints()
+            .AddProviderVoiceWebhookEndpoint();
+    }
+
+}
+
+/// <summary>
+/// Registers provider-capability-gated bidirectional voice-media resolution.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.VoiceMedia)]
+public sealed class VoiceMediaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
+    }
+}
+
+/// <summary>
+/// Registers voice interaction recording orchestration.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Recording)]
+public sealed class RecordingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
+    }
+}
+
+/// <summary>
+/// Registers inbound voice entry-point administration, qualification, and queue ingress.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
+public sealed class EntryPointsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
+            .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            .AddScoped<IEntryPointResolver, EntryPointResolver>()
+            .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
+            .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
+            .AddScoped<QueuedVoiceWorkOfferScopeContext>()
+            .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
+            .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
+            .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
+            .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddVoiceIngressEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers the Contact Center projection that synchronizes server-side voice state with the Telephony soft phone.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.VoiceSoftPhone)]
+public sealed class VoiceSoftPhoneStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
+
+        services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
+        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
+    }
+}
+
+/// <summary>
+/// Registers the shared SignalR hub and event projection that broadcasts presence, offer, and queue
+/// updates to optional real-time user experiences.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.RealTime)]
+public sealed class RealTimeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<ContactCenterHubScopeContext>()
+            .AddScoped<ContactCenterRealTimeEventScopeContext>()
+            .AddScoped<IContactCenterRealTimeNotifier, ContactCenterRealTimeNotifier>()
+            .AddScoped<IContactCenterEventHandler, ContactCenterRealTimeEventHandler>()
+            .AddSingleton<ContactCenterHubConnectionRegistry>()
+            .AddScoped<ContactCenterRealTimeLifecycleParticipant>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                serviceProvider.GetRequiredService<ContactCenterRealTimeLifecycleParticipant>());
+
+        services.AddResourceConfiguration<ContactCenterRealTimeResourceConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        HubRouteManager.MapHub<ContactCenterHub>(routes);
+    }
+}
+
+/// <summary>
+/// Registers the CRM-integrated agent desktop and its navigation and state endpoints.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.AgentDesktop)]
+public sealed class AgentDesktopStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<ContactCenterAgentDesktopAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddAgentWorkspaceEndpoints();
+    }
+}
+
+/// <summary>
+/// Registers the real-time supervisor dashboard, navigation, and monitoring endpoints.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Supervision)]
+public sealed class SupervisionStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<ContactCenterSupervisionAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddSupervisorDashboardEndpoints();
+    }
+}
+
+/// <summary>
+/// Registers the reporting and analytics experience: the reporting service that aggregates interactions
+/// and activities into productivity, call insights, queue usage, and campaign/subject progress reports,
+/// and the Reports admin navigation.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Analytics)]
+public sealed class AnalyticsStartup : StartupBase
+{
+    private readonly IStringLocalizer S;
+
+    public AnalyticsStartup(IStringLocalizer<AnalyticsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
+        services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
+
+        services
+            .AddScoped<IReport, CallInsightsReportProvider>()
+            .AddScoped<IReport, AgentProductivityReportProvider>()
+            .AddScoped<IReport, QueueUsageReportProvider>()
+            .AddScoped<IReport, CampaignSummaryReportProvider>()
+            .AddScoped<IReport, SubjectInventoryReportProvider>();
+
+        AddEnterpriseReport(services, "contact-center-executive-performance", () => S["Executive performance dashboard"], () => S["Enterprise KPI cards and interactive charts for interaction demand, accessibility, channel mix, queue service level, agent workload, and operating efficiency."], EnterpriseInteractionReportKind.ExecutiveSummary, ReportsConstants.Categories.Executive);
+        AddEnterpriseReport(services, "contact-center-interaction-volume-trend", () => S["Interaction volume trend"], () => S["Daily offered, answered, abandoned, and failed interaction volume."], EnterpriseInteractionReportKind.VolumeTrend, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-interval-performance", () => S["Interval performance"], () => S["Daily interaction outcomes, answer and abandonment rates, speed of answer, and handle time."], EnterpriseInteractionReportKind.IntervalPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-channel-performance", () => S["Channel performance"], () => S["Interaction performance grouped by voice, chat, email, SMS, and other supported channels."], EnterpriseInteractionReportKind.ChannelPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-direction-performance", () => S["Direction performance"], () => S["Inbound and outbound interaction performance with consistent outcome and duration metrics."], EnterpriseInteractionReportKind.DirectionPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-provider-performance", () => S["Provider performance"], () => S["Interaction outcomes and duration metrics grouped by executing communications provider."], EnterpriseInteractionReportKind.ProviderPerformance, ReportsConstants.Categories.Technical);
+        AddEnterpriseReport(services, "contact-center-outcome-performance", () => S["Interaction outcome summary"], () => S["Interaction volume and response metrics grouped by normalized lifecycle outcome."], EnterpriseInteractionReportKind.OutcomePerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-interaction-detail", () => S["Interaction detail"], () => S["One row per interaction with routing, agent, provider, timing, and transfer details."], EnterpriseInteractionReportKind.InteractionDetail, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-transfer-analysis", () => S["Transfer analysis"], () => S["Transfer volume, completion, destination type, result, and completion time."], EnterpriseInteractionReportKind.TransferAnalysis, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-recording-coverage", () => S["Recording coverage"], () => S["Answered voice interaction recording coverage grouped by provider."], EnterpriseInteractionReportKind.RecordingCoverage, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-queue-service-level", () => S["Queue service level"], () => S["Queue service level calculated from answered-within-threshold interactions and eligible offered interactions."], EnterpriseInteractionReportKind.QueueServiceLevel, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-queue-abandonment", () => S["Queue abandonment analysis"], () => S["Inbound queue offered, answered, abandoned, abandonment rate, and wait before abandonment."], EnterpriseInteractionReportKind.QueueAbandonment, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-agent-handle-time", () => S["Agent handle time analysis"], () => S["Per-agent handled volume, connected time, wrap-up time, and total handle time."], EnterpriseInteractionReportKind.AgentHandleTime, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-wrap-up-performance", () => S["Agent wrap-up performance"], () => S["Per-agent wrap-up starts, completions, completion rate, average duration, and total duration."], EnterpriseInteractionReportKind.WrapUpPerformance, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-hour-of-day-performance", () => S["Hour-of-day performance"], () => S["Interaction demand, outcomes, and response metrics grouped by UTC hour."], EnterpriseInteractionReportKind.HourOfDayPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-day-of-week-performance", () => S["Day-of-week performance"], () => S["Interaction demand, outcomes, and response metrics grouped by weekday."], EnterpriseInteractionReportKind.DayOfWeekPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-queue-performance", () => S["Queue performance summary"], () => S["Interaction volume, outcomes, answer rate, abandonment, ASA, and AHT by queue."], EnterpriseInteractionReportKind.QueuePerformance, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-queue-wait-time", () => S["Queue wait time analysis"], () => S["Total, average, and maximum customer wait time by queue."], EnterpriseInteractionReportKind.QueueWaitTime, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-queue-handle-time", () => S["Queue handle time analysis"], () => S["Total, average, and maximum connected plus wrap-up time by queue."], EnterpriseInteractionReportKind.QueueHandleTime, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-queue-transfer-performance", () => S["Queue transfer performance"], () => S["Handled interactions, transferred interactions, transfer events, and transfer rate by queue."], EnterpriseInteractionReportKind.QueueTransferPerformance, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-agent-volume", () => S["Agent interaction volume"], () => S["Handled, answered, failed, transferred, recorded, and average handle time by agent."], EnterpriseInteractionReportKind.AgentVolume, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-agent-outcomes", () => S["Agent outcome performance"], () => S["Interaction outcomes and average handle time by agent, ordered by failed volume."], EnterpriseInteractionReportKind.AgentOutcome, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-agent-inbound", () => S["Agent inbound performance"], () => S["Inbound handled volume, outcomes, transfers, recording count, and handle time by agent."], EnterpriseInteractionReportKind.AgentInbound, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-agent-outbound", () => S["Agent outbound performance"], () => S["Outbound handled volume, outcomes, transfers, recording count, and handle time by agent."], EnterpriseInteractionReportKind.AgentOutbound, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-agent-transfers", () => S["Agent transfer performance"], () => S["Transfer volume and supporting interaction metrics by agent."], EnterpriseInteractionReportKind.AgentTransferPerformance, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "contact-center-agent-recording-coverage", () => S["Agent recording coverage"], () => S["Recorded interaction volume and supporting performance metrics by agent."], EnterpriseInteractionReportKind.AgentRecordingCoverage, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-queue-usage-billing", () => S["Queue usage for billing"], () => S["Interaction counts, connected time, wrap-up, queue wait, transfers, and recordings by queue for invoice support."], EnterpriseInteractionReportKind.QueueUsageBilling, ReportsConstants.Categories.BillingUsage);
+        AddEnterpriseReport(services, "contact-center-agent-usage-billing", () => S["Agent usage for billing"], () => S["Interaction counts and measured service time by agent for staffing, payroll, and chargeback support."], EnterpriseInteractionReportKind.AgentUsageBilling, ReportsConstants.Categories.BillingUsage);
+        AddEnterpriseReport(services, "contact-center-provider-usage-billing", () => S["Provider usage for billing"], () => S["Interaction counts and measured service time by communications provider for vendor invoice reconciliation."], EnterpriseInteractionReportKind.ProviderUsageBilling, ReportsConstants.Categories.BillingUsage);
+        AddEnterpriseReport(services, "contact-center-channel-usage-billing", () => S["Channel usage for billing"], () => S["Interaction counts and measured service time by channel for service allocation and chargeback."], EnterpriseInteractionReportKind.ChannelUsageBilling, ReportsConstants.Categories.BillingUsage);
+        AddEnterpriseReport(services, "contact-center-daily-usage-billing", () => S["Daily usage for billing"], () => S["Daily interaction counts and measured service time for invoice period reconciliation."], EnterpriseInteractionReportKind.DailyUsageBilling, ReportsConstants.Categories.BillingUsage);
+        AddEnterpriseReport(services, "contact-center-transcript-coverage", () => S["Transcript coverage"], () => S["Answered interactions with and without transcript references, grouped by channel."], EnterpriseInteractionReportKind.TranscriptCoverage, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-long-interactions", () => S["Long interaction detail"], () => S["Interaction-level audit of connected sessions lasting at least 15 minutes."], EnterpriseInteractionReportKind.LongInteractionDetail, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-failed-interactions", () => S["Failed interaction detail"], () => S["Interaction-level audit of failed communications."], EnterpriseInteractionReportKind.FailedInteractionDetail, ReportsConstants.Categories.Technical);
+        AddEnterpriseReport(services, "contact-center-abandoned-interactions", () => S["Abandoned interaction detail"], () => S["Interaction-level audit of inbound customers who left before answer."], EnterpriseInteractionReportKind.AbandonedInteractionDetail, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "contact-center-high-wait-interactions", () => S["High-wait interaction detail"], () => S["Interaction-level audit of customers who waited at least 60 seconds."], EnterpriseInteractionReportKind.HighWaitDetail, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "contact-center-lifecycle-duration", () => S["Interaction lifecycle duration"], () => S["Average wait, connected, wrap-up, and end-to-end duration by interaction status."], EnterpriseInteractionReportKind.LifecycleDuration, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "contact-center-call-leg-performance", () => S["Call leg performance"], () => S["Provider call-leg volume, answer state, status, and average duration for technical operations."], EnterpriseInteractionReportKind.CallLegPerformance, ReportsConstants.Categories.Technical);
+
+        AddWorkforceReport(services, "contact-center-agent-time-summary", () => S["Agent time summary"], () => S["Observed signed-in, available, busy, wrap-up, break, and other not-ready time by agent."], AgentWorkforceReportKind.TimeSummary, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-agent-daily-timecard", () => S["Daily agent timecard"], () => S["Daily observed on-duty, productive presence, working, and break time by agent."], AgentWorkforceReportKind.DailyTimecard, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-presence-status-duration", () => S["Presence status duration"], () => S["Total observed duration and share of signed-in time for every presence status."], AgentWorkforceReportKind.StatusDuration, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-agent-break-analysis", () => S["Agent break and away analysis"], () => S["Break count, total time, average duration, and longest duration by agent."], AgentWorkforceReportKind.BreakAnalysis, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-ready-not-ready", () => S["Ready versus not-ready time"], () => S["Ready, actively working, and not-ready time by agent."], AgentWorkforceReportKind.ReadyNotReady, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-agent-utilization", () => S["Agent utilization"], () => S["Busy plus wrap-up time divided by total observed signed-in time."], AgentWorkforceReportKind.Utilization, ReportsConstants.Categories.AgentPerformance);
+        AddWorkforceReport(services, "contact-center-agent-occupancy", () => S["Agent occupancy"], () => S["Busy plus wrap-up time divided by available, reserved, busy, and wrap-up time."], AgentWorkforceReportKind.Occupancy, ReportsConstants.Categories.AgentPerformance);
+        AddWorkforceReport(services, "contact-center-presence-reasons", () => S["Presence reason breakdown"], () => S["Observed presence duration and interval count by status and reason."], AgentWorkforceReportKind.ReasonBreakdown, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-presence-audit", () => S["Agent presence audit"], () => S["Detailed auditable presence transitions with status, reason, and membership counts."], AgentWorkforceReportKind.PresenceAudit, ReportsConstants.Categories.ComplianceAudit);
+        AddWorkforceReport(services, "contact-center-queue-signed-in-hours", () => S["Queue signed-in hours"], () => S["Observed signed-in agent time attributed to queue memberships."], AgentWorkforceReportKind.QueueMembershipHours, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-campaign-signed-in-hours", () => S["Campaign signed-in hours"], () => S["Observed signed-in agent time attributed to campaign memberships."], AgentWorkforceReportKind.CampaignMembershipHours, ReportsConstants.Categories.WorkforcePayroll);
+        AddWorkforceReport(services, "contact-center-payroll-timecard", () => S["Payroll timecard inputs"], () => S["Observed on-duty, productive presence, break, meeting, training, and other not-ready time for payroll review; pay rates and schedules are not applied."], AgentWorkforceReportKind.PayrollTimecard, ReportsConstants.Categories.WorkforcePayroll);
+    }
+
+    private static void AddEnterpriseReport(
+        IServiceCollection services,
+        string name,
+        Func<LocalizedString> displayName,
+        Func<LocalizedString> description,
+        EnterpriseInteractionReportKind kind,
+        string category)
+    {
+        var definition = new EnterpriseInteractionReportDefinition(
+            name,
+            displayName,
+            description,
+            kind,
+            category,
+            [
+                ContactCenterReportFilter.QueueGroupId,
+                ContactCenterReportFilter.QueueId,
+                ContactCenterReportFilter.AgentId,
+                ContactCenterReportFilter.Channel,
+                ContactCenterReportFilter.Direction,
+            ]);
+
+        services.AddScoped<IReport>(serviceProvider => new EnterpriseInteractionReportProvider(
+            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            serviceProvider.GetRequiredService<IActivityQueueManager>(),
+            serviceProvider.GetRequiredService<IAgentProfileManager>(),
+            definition,
+            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>()));
+    }
+
+    private static void AddWorkforceReport(
+        IServiceCollection services,
+        string name,
+        Func<LocalizedString> displayName,
+        Func<LocalizedString> description,
+        AgentWorkforceReportKind kind,
+        string category)
+    {
+        var definition = new AgentWorkforceReportDefinition(
+            name,
+            displayName,
+            description,
+            kind,
+            category,
+            [ContactCenterReportFilter.AgentId]);
+
+        services.AddScoped<IReport>(serviceProvider => new AgentWorkforceReportProvider(
+            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            serviceProvider.GetRequiredService<IAgentProfileManager>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
+            definition,
+            serviceProvider.GetRequiredService<IStringLocalizer<AgentWorkforceReportProvider>>()));
+    }
+}
+
+/// <summary>
+/// Registers the Orchard Core Workflows bridge: a Contact Center workflow event activity and the
+/// handler that triggers it for every published domain event.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Workflows)]
+public sealed class ContactCenterWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
+        services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
+    }
+}

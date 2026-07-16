@@ -29,16 +29,3 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OmnichannelConstants.CollectionName));
     }
 }
-
-/// <summary>
-/// Registers services and configuration for the AzureCommunicationServices feature.
-/// </summary>
-[Feature(OmnichannelConstants.Features.AzureCommunicationServices)]
-public sealed class AzureCommunicationServicesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // TODO: add configuration for CommunicationServiceOptions
-        // Also, add display driver to manage CommunicationServiceSettings
-    }
-}

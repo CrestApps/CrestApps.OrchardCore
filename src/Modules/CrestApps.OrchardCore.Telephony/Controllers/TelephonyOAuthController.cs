@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -124,7 +125,7 @@ public sealed class TelephonyOAuthController : Controller
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to complete the telephony OAuth authorization flow.");
+                _logger.LogError(OperationalLogRedactor.RedactException(ex), "Failed to complete the telephony OAuth authorization flow.");
             }
         }
 

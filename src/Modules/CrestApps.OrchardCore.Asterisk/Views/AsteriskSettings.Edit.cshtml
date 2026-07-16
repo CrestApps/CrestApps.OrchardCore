@@ -1,0 +1,128 @@
+@model AsteriskSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsEnabled" checked="@Model.IsEnabled" id="asterisk-is-enabled" />
+            <label class="form-check-label" asp-for="IsEnabled">@T["Enable Asterisk provider"]</label>
+        </div>
+        <span class="hint">@T["When enabled, this provider becomes available for selection as the default telephony provider."]</span>
+    </div>
+</div>
+
+<div id="asterisk-provider-settings" class="@(Model.IsEnabled ? string.Empty : "d-none")">
+    <div class="ocat-wrapper" asp-validation-class-for="BaseUrl">
+        <label asp-for="BaseUrl" class="ocat-label">@T["ARI base URL"]</label>
+        <div class="ocat-end">
+            <input asp-for="BaseUrl" class="form-control" autocomplete="off" />
+            <span asp-validation-for="BaseUrl"></span>
+            <span class="hint">@T["Enter the base URL of the Asterisk ARI endpoint, for example http://localhost:8088/ari/. If you omit /ari, it is added automatically."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="UserName">
+        <label asp-for="UserName" class="ocat-label">@T["ARI user name"]</label>
+        <div class="ocat-end">
+            <input asp-for="UserName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="UserName"></span>
+            <span class="hint">@T["The Asterisk ARI user name used for HTTP basic authentication."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Password">
+        <label asp-for="Password" class="ocat-label">@T["ARI password"]</label>
+        <div class="ocat-end">
+            <input asp-for="Password" class="form-control" type="password" autocomplete="off" />
+            <span asp-validation-for="Password"></span>
+            @if (Model.HasPassword)
+            {
+                <span class="hint">@T["An encrypted ARI password is already saved. Leave this empty to keep the existing value, or enter a new password to replace it."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Enter the Asterisk ARI password. This value is encrypted before it is stored."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ApplicationName">
+        <label asp-for="ApplicationName" class="ocat-label">@T["Stasis application name"]</label>
+        <div class="ocat-end">
+            <input asp-for="ApplicationName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="ApplicationName"></span>
+            <span class="hint">@T["The ARI Stasis application name that receives originated channels. Use the same application name that your Asterisk server is configured to allow."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="EndpointTemplate">
+        <label asp-for="EndpointTemplate" class="ocat-label">@T["Endpoint template"]</label>
+        <div class="ocat-end">
+            <input asp-for="EndpointTemplate" class="form-control" autocomplete="off" />
+            <span asp-validation-for="EndpointTemplate"></span>
+            <span class="hint">@T["Optional. Use {{number}} to insert the dialed destination into an Asterisk endpoint such as PJSIP/{{number}}@phones. When empty, the dialed destination is sent to Asterisk as-is."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="OutboundCallerId">
+        <label asp-for="OutboundCallerId" class="ocat-label">@T["Outbound caller id"]</label>
+        <div class="ocat-end">
+            <input asp-for="OutboundCallerId" class="form-control" autocomplete="off" />
+            <span asp-validation-for="OutboundCallerId"></span>
+            <span class="hint">@T["Optional. The caller identifier presented on outbound calls when the dial request does not provide one."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TimeoutSeconds">
+        <label asp-for="TimeoutSeconds" class="ocat-label">@T["Dial timeout (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="TimeoutSeconds" class="form-control" type="number" min="1" />
+            <span asp-validation-for="TimeoutSeconds"></span>
+            <span class="hint">@T["How long Asterisk should keep trying to originate the outbound call before it times out."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailContext">
+        <label asp-for="VoicemailContext" class="ocat-label">@T["Voicemail context"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailContext" class="form-control" autocomplete="off" />
+            <span asp-validation-for="VoicemailContext"></span>
+            <span class="hint">@T["Optional. When set together with the voicemail extension template, the soft phone can send inbound calls to this dialplan context for voicemail handling."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailExtensionTemplate">
+        <label asp-for="VoicemailExtensionTemplate" class="ocat-label">@T["Voicemail extension template"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailExtensionTemplate" class="form-control" autocomplete="off" />
+            <span asp-validation-for="VoicemailExtensionTemplate"></span>
+            <span class="hint">@T["Optional. Resolves the dialplan extension used for voicemail routing. The template can reference call metadata tokens such as {{voicemailRecipientUserName}}, {{voicemailRecipientUserId}}, {{calledAddress}}, or {{queueName}}."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="VoicemailPriority">
+        <label asp-for="VoicemailPriority" class="ocat-label">@T["Voicemail priority"]</label>
+        <div class="ocat-end">
+            <input asp-for="VoicemailPriority" class="form-control" type="number" min="1" />
+            <span asp-validation-for="VoicemailPriority"></span>
+            <span class="hint">@T["The dialplan priority Asterisk should start at when the soft phone routes a call to voicemail."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const isEnabledCheckbox = document.getElementById('asterisk-is-enabled');
+        const settingsSection = document.getElementById('asterisk-provider-settings');
+
+        if (!isEnabledCheckbox || !settingsSection) {
+            return;
+        }
+
+        function toggleSettingsSection() {
+            settingsSection.classList.toggle('d-none', !isEnabledCheckbox.checked);
+        }
+
+        isEnabledCheckbox.addEventListener('change', toggleSettingsSection);
+        toggleSettingsSection();
+    });
+</script>

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Layout;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Settings;
 
@@ -19,10 +21,11 @@ namespace CrestApps.OrchardCore.Telephony.Filters;
 public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
 {
     private readonly ILayoutAccessor _layoutAccessor;
-    private readonly IShapeFactory _shapeFactory;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ITelephonyProviderResolver _providerResolver;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<SoftPhoneWidget> _displayManager;
     private readonly IResourceManager _resourceManager;
     private readonly AdminOptions _adminOptions;
 
@@ -30,26 +33,29 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
     /// Initializes a new instance of the <see cref="SoftPhoneWidgetFilter"/> class.
     /// </summary>
     /// <param name="layoutAccessor">The layout accessor.</param>
-    /// <param name="shapeFactory">The shape factory.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayManager">The soft phone widget display manager.</param>
     /// <param name="resourceManager">The resource manager.</param>
     /// <param name="adminOptions">The admin options.</param>
     public SoftPhoneWidgetFilter(
         ILayoutAccessor layoutAccessor,
-        IShapeFactory shapeFactory,
         ISiteService siteService,
         IAuthorizationService authorizationService,
         ITelephonyProviderResolver providerResolver,
+        IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<SoftPhoneWidget> displayManager,
         IResourceManager resourceManager,
         IOptions<AdminOptions> adminOptions)
     {
         _layoutAccessor = layoutAccessor;
-        _shapeFactory = shapeFactory;
         _siteService = siteService;
         _authorizationService = authorizationService;
         _providerResolver = providerResolver;
+        _updateModelAccessor = updateModelAccessor;
+        _displayManager = displayManager;
         _resourceManager = resourceManager;
         _adminOptions = adminOptions.Value;
     }
@@ -92,17 +98,40 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
 
         var provider = await _providerResolver.GetAsync();
         var capabilities = provider is not null ? (int)provider.Capabilities : 0;
+        var audioProvider = provider as ITelephonyAudioProvider;
+        var audioCapabilities = audioProvider?.AudioCapabilities ?? TelephonyAudioCapabilities.None;
+        var audioMode = audioProvider is null
+            ? TelephonyAudioMode.None
+            : TelephonyAudioModeResolver.Resolve(
+                audioCapabilities,
+                audioProvider.ConfiguredAudioMode,
+                audioProvider.BrowserMediaAdapterName);
 
         _resourceManager.RegisterResource("stylesheet", "telephony-soft-phone").AtHead();
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();
         _resourceManager.RegisterResource("script", "telephony-phone-field").AtFoot();
 
-        var shape = await _shapeFactory.CreateAsync("SoftPhoneWidget");
+        var widget = new SoftPhoneWidget
+        {
+            AccentColor = string.IsNullOrWhiteSpace(settings.AccentColor)
+                ? SoftPhoneWidgetSettings.DefaultAccentColor
+                : settings.AccentColor,
+            Capabilities = provider?.Capabilities ?? TelephonyCapabilities.None,
+            AudioCapabilities = audioCapabilities,
+            AudioMode = audioMode,
+            BrowserMediaAdapterName = audioProvider?.BrowserMediaAdapterName,
+            RecentCallsCount = settings.RecentCallsCount is >= 1 and <= 200
+                ? settings.RecentCallsCount
+                : SoftPhoneWidgetSettings.DefaultRecentCallsCount,
+        };
 
-        shape.Properties["AccentColor"] = string.IsNullOrWhiteSpace(settings.AccentColor)
-            ? SoftPhoneWidgetSettings.DefaultAccentColor
-            : settings.AccentColor;
+        var shape = await _displayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");
+        shape.Properties["AccentColor"] = widget.AccentColor;
         shape.Properties["Capabilities"] = capabilities;
+        shape.Properties["AudioCapabilities"] = (int)widget.AudioCapabilities;
+        shape.Properties["AudioMode"] = (int)widget.AudioMode;
+        shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
+        shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 

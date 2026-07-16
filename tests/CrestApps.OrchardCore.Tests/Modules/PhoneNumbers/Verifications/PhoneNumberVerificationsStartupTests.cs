@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
@@ -14,6 +16,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using YesSql.Indexes;
 using PhoneNumberVerificationsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.Startup;
+using PhoneNumberVerificationsReportsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.ReportsStartup;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;
 
@@ -137,6 +140,21 @@ public sealed class PhoneNumberVerificationsStartupTests
         Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IContentHandler) &&
             descriptor.ImplementationType?.Name == "OmnichannelContactPhoneNumberVerificationHandler");
+    }
+
+    [Fact]
+    public void ReportsStartup_ShouldRegisterPhoneNumberVerificationReport()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        new PhoneNumberVerificationsReportsStartup().ConfigureServices(services);
+
+        // Assert
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IReport) &&
+            descriptor.ImplementationType == typeof(PhoneNumberVerificationReportProvider));
     }
 
     private static IStringLocalizer<T> CreateLocalizer<T>()

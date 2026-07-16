@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "releaseStatus": "blocked-until-r0-r8-pass",
+  "measurementWindowDays": 30,
+  "availabilityObjectives": [
+    {
+      "id": "agent-routing-api",
+      "targetPercent": 99.9,
+      "maximumMonthlyErrorBudgetMinutes": 43.8
+    },
+    {
+      "id": "provider-webhook-ingress",
+      "targetPercent": 99.95,
+      "maximumMonthlyErrorBudgetMinutes": 21.9
+    },
+    {
+      "id": "agent-realtime-session",
+      "targetPercent": 99.9,
+      "maximumMonthlyErrorBudgetMinutes": 43.8
+    }
+  ],
+  "latencyObjectives": [
+    {
+      "id": "routing-decision",
+      "p95Milliseconds": 250,
+      "p99Milliseconds": 750
+    },
+    {
+      "id": "committed-offer-to-agent-notification",
+      "p95Milliseconds": 500,
+      "p99Milliseconds": 1500
+    },
+    {
+      "id": "authenticated-webhook-to-durable-inbox-ack",
+      "p95Milliseconds": 500,
+      "p99Milliseconds": 1500
+    },
+    {
+      "id": "supervisor-dashboard-freshness",
+      "p95Milliseconds": 2000,
+      "p99Milliseconds": 5000
+    }
+  ],
+  "dependencyLimits": [
+    {
+      "id": "relational-database-command",
+      "p95Milliseconds": 100,
+      "timeoutMilliseconds": 3000
+    },
+    {
+      "id": "redis-operation",
+      "p95Milliseconds": 25,
+      "timeoutMilliseconds": 1000
+    },
+    {
+      "id": "provider-command",
+      "p95Milliseconds": 2000,
+      "timeoutMilliseconds": 10000
+    },
+    {
+      "id": "provider-webhook-body",
+      "maximumBytes": 1048576
+    }
+  ],
+  "recoveryObjectives": [
+    {
+      "scope": "relational-contact-center-state",
+      "rpoMinutes": 5,
+      "rtoMinutes": 60
+    },
+    {
+      "scope": "redis-and-realtime-projections",
+      "rpoMinutes": 0,
+      "rtoMinutes": 15
+    },
+    {
+      "scope": "provider-event-ingress",
+      "rpoMinutes": 0,
+      "rtoMinutes": 30
+    }
+  ],
+  "ownership": [
+    {
+      "area": "architecture-and-feature-contract",
+      "driRole": "Contact Center principal engineer",
+      "approverRoles": [
+        "Orchard Core architecture owner",
+        "Product owner"
+      ]
+    },
+    {
+      "area": "security-privacy-and-provider-ingress",
+      "driRole": "Contact Center security owner",
+      "approverRoles": [
+        "Security approver",
+        "Privacy or legal approver"
+      ]
+    },
+    {
+      "area": "availability-capacity-and-disaster-recovery",
+      "driRole": "Contact Center SRE owner",
+      "approverRoles": [
+        "SRE approver",
+        "Database approver"
+      ]
+    },
+    {
+      "area": "test-and-release-evidence",
+      "driRole": "Contact Center quality owner",
+      "approverRoles": [
+        "Quality approver",
+        "Release engineering approver",
+        "Documentation approver"
+      ]
+    }
+  ]
+}

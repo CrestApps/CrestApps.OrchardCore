@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -5,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
@@ -19,6 +22,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs;
 public sealed class TelephonyHub : Hub<ITelephonyClient>
 {
     private readonly ILogger _logger;
+    private readonly string _tenantName;
 
     internal readonly IStringLocalizer S;
 
@@ -27,12 +31,48 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public TelephonyHub(
         ILogger<TelephonyHub> logger,
-        IStringLocalizer<TelephonyHub> stringLocalizer)
+        IStringLocalizer<TelephonyHub> stringLocalizer,
+        ShellSettings shellSettings)
     {
         _logger = logger;
+        _tenantName = shellSettings.Name;
         S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnConnectedAsync()
+    {
+        var userId = Context.UserIdentifier;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Context.Abort();
+
+            return;
+        }
+
+        var authorized = false;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            authorized = await AuthorizeAsync(scope.ServiceProvider);
+        });
+
+        if (!authorized)
+        {
+            Context.Abort();
+
+            return;
+        }
+
+        await Groups.AddToGroupAsync(
+            Context.ConnectionId,
+            TenantSignalRGroupName.ForUser(_tenantName, userId),
+            Context.ConnectionAborted);
+        await base.OnConnectedAsync();
     }
 
     /// <summary>
@@ -41,7 +81,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The dial request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Dial(DialRequest request)
-        => ExecuteAsync((service, token) => service.DialAsync(request, token));
+        => ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
 
     /// <summary>
     /// Ends an active call.
@@ -49,7 +89,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to end.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Hangup(CallReference call)
-        => ExecuteAsync((service, token) => service.HangupAsync(call, token));
+        => ExecuteAsync("Hangup", () => DescribeCallReference(call), (service, token) => service.HangupAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Places an active call on hold.
@@ -57,7 +97,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to place on hold.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Hold(CallReference call)
-        => ExecuteAsync((service, token) => service.HoldAsync(call, token));
+        => ExecuteAsync("Hold", () => DescribeCallReference(call), (service, token) => service.HoldAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Resumes a call that is on hold.
@@ -65,7 +105,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to resume.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Resume(CallReference call)
-        => ExecuteAsync((service, token) => service.ResumeAsync(call, token));
+        => ExecuteAsync("Resume", () => DescribeCallReference(call), (service, token) => service.ResumeAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Mutes the local audio of an active call.
@@ -73,7 +113,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to mute.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Mute(CallReference call)
-        => ExecuteAsync((service, token) => service.MuteAsync(call, token));
+        => ExecuteAsync("Mute", () => DescribeCallReference(call), (service, token) => service.MuteAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Unmutes the local audio of an active call.
@@ -81,7 +121,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to unmute.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Unmute(CallReference call)
-        => ExecuteAsync((service, token) => service.UnmuteAsync(call, token));
+        => ExecuteAsync("Unmute", () => DescribeCallReference(call), (service, token) => service.UnmuteAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Transfers an active call to another destination.
@@ -89,7 +129,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The transfer request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Transfer(TransferRequest request)
-        => ExecuteAsync((service, token) => service.TransferAsync(request, token));
+        => ExecuteAsync("Transfer", () => DescribeTransferRequest(request), (service, token) => service.TransferAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Merges two active calls into a conference.
@@ -97,7 +137,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The merge request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Merge(MergeRequest request)
-        => ExecuteAsync((service, token) => service.MergeAsync(request, token));
+        => ExecuteAsync("Merge", () => DescribeMergeRequest(request), (service, token) => service.MergeAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Sends DTMF digits to an active call.
@@ -105,7 +145,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The send-digits request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> SendDigits(SendDigitsRequest request)
-        => ExecuteAsync((service, token) => service.SendDigitsAsync(request, token));
+        => ExecuteAsync("SendDigits", () => DescribeSendDigitsRequest(request), (service, token) => service.SendDigitsAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Answers a ringing inbound call.
@@ -113,7 +153,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the inbound call to answer.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Answer(CallReference call)
-        => ExecuteAsync((service, token) => service.AnswerAsync(call, token));
+        => ExecuteAsync("Answer", () => DescribeCallReference(call), (service, token) => service.AnswerAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Rejects a ringing inbound call.
@@ -121,7 +161,15 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the inbound call to reject.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Reject(CallReference call)
-        => ExecuteAsync((service, token) => service.RejectAsync(call, token));
+        => ExecuteAsync("Reject", () => DescribeCallReference(call), (service, token) => service.RejectAsync(call, token), () => GetCallIds(call));
+
+    /// <summary>
+    /// Sends a ringing inbound call to voicemail.
+    /// </summary>
+    /// <param name="call">A reference to the inbound call to send to voicemail.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    public Task<TelephonyResult> Voicemail(CallReference call)
+        => ExecuteAsync("Voicemail", () => DescribeCallReference(call), (service, token) => service.SendToVoicemailAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Issues the bootstrap configuration the soft phone client needs to connect to the provider.
@@ -130,17 +178,29 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     public async Task<TelephonyClientCredentials> GetCredentials()
     {
         TelephonyClientCredentials credentials = null;
+        LogHubActionStart("GetCredentials");
 
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
+                LogHubActionUnauthorized("GetCredentials");
                 return;
             }
 
             var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();
             credentials = await service.GetClientCredentialsAsync(Context.ConnectionAborted);
         });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, HasCredentials={HasCredentials}.",
+                "GetCredentials",
+                RedactedUserId(),
+                credentials?.ProviderName ?? "(none)",
+                credentials is not null);
+        }
 
         return credentials;
     }
@@ -158,11 +218,13 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             RequiresAuthentication = false,
             IsConnected = false,
         };
+        LogHubActionStart("GetConnectionStatus");
 
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
+                LogHubActionUnauthorized("GetConnectionStatus");
                 return;
             }
 
@@ -173,6 +235,18 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 status = await authenticationService.GetStatusAsync(Context.ConnectionAborted);
             }
         });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Provider={ProviderName}, Available={IsAvailable}, RequiresAuthentication={RequiresAuthentication}, Connected={IsConnected}.",
+                "GetConnectionStatus",
+                RedactedUserId(),
+                status.ProviderName ?? "(none)",
+                status.IsAvailable,
+                status.RequiresAuthentication,
+                status.IsConnected);
+        }
 
         return status;
     }
@@ -187,11 +261,13 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         IReadOnlyList<TelephonyInteraction> interactions = [];
 
         var take = count <= 0 ? 25 : Math.Min(count, 200);
+        LogHubActionStart("GetInteractions", () => $"Count={take}");
 
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
+                LogHubActionUnauthorized("GetInteractions");
                 return;
             }
 
@@ -206,7 +282,116 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             interactions = await store.GetRecentAsync(userId, take, Context.ConnectionAborted);
         });
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Requested={RequestedCount}, Returned={ReturnedCount}.",
+                "GetInteractions",
+                RedactedUserId(),
+                take,
+                interactions.Count);
+        }
+
         return interactions;
+    }
+
+    /// <summary>
+    /// Gets the current user's active call directly from the configured telephony provider.
+    /// </summary>
+    /// <returns>The provider-authoritative call lookup result.</returns>
+    public async Task<TelephonyCallLookupResult> GetActiveCall()
+    {
+        var result = new TelephonyCallLookupResult
+        {
+            Succeeded = false,
+            Found = false,
+            Error = S["Unable to determine the current call state."].Value,
+        };
+        LogHubActionStart("GetActiveCall");
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetActiveCall");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
+
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
+            result = await synchronizationService.GetActiveCallAsync(userId, Context.ConnectionAborted);
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Found={Found}, CallId={CallId}, CallState={CallState}, Error={Error}.",
+                "GetActiveCall",
+                RedactedUserId(),
+                result.Succeeded,
+                result.Found,
+                OperationalLogRedactor.Redact(result.Call?.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call),
+                result.Call?.State.ToString() ?? "(none)",
+                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Gets all active calls for the current user directly from their configured telephony providers.
+    /// </summary>
+    /// <returns>The provider-authoritative active call-list result.</returns>
+    public async Task<TelephonyCallListLookupResult> GetActiveCalls()
+    {
+        var result = new TelephonyCallListLookupResult
+        {
+            Succeeded = false,
+            Error = S["Unable to determine the active call state."].Value,
+        };
+        LogHubActionStart("GetActiveCalls");
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetActiveCalls");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
+
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
+            result = await synchronizationService.GetActiveCallsAsync(userId, Context.ConnectionAborted);
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Returned={ReturnedCount}, Error={Error}.",
+                "GetActiveCalls",
+                RedactedUserId(),
+                result.Succeeded,
+                result.Calls.Count,
+                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -216,11 +401,13 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     public async Task<int> GetCapabilities()
     {
         var capabilities = TelephonyCapabilities.None;
+        LogHubActionStart("GetCapabilities");
 
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
+                LogHubActionUnauthorized("GetCapabilities");
                 return;
             }
 
@@ -228,52 +415,375 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             capabilities = await service.GetCapabilitiesAsync(Context.ConnectionAborted);
         });
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Capabilities={Capabilities}.",
+                "GetCapabilities",
+                RedactedUserId(),
+                capabilities);
+        }
+
         return (int)capabilities;
     }
 
-    private async Task<TelephonyResult> ExecuteAsync(Func<ITelephonyService, CancellationToken, Task<TelephonyResult>> operation)
+    /// <summary>
+    /// Gets transfer destinations from the configured provider directory.
+    /// </summary>
+    /// <returns>The provider directory lookup result.</returns>
+    public async Task<TelephonyDirectoryResult> GetDirectory()
     {
-        TelephonyResult result = null;
+        var result = new TelephonyDirectoryResult
+        {
+            Succeeded = false,
+            Error = S["Unable to load the provider directory."].Value,
+        };
+        LogHubActionStart("GetDirectory");
 
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             if (!await AuthorizeAsync(scope.ServiceProvider))
             {
-                result = TelephonyResult.Failed(S["You are not authorized to use the soft phone."].Value);
+                LogHubActionUnauthorized("GetDirectory");
+                result.Error = S["You are not authorized to use the soft phone."].Value;
 
                 return;
             }
 
             var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();
-
-            try
-            {
-                result = await operation(service, Context.ConnectionAborted);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while processing a telephony request.");
-
-                result = TelephonyResult.Failed(S["An error occurred while processing your request."].Value);
-            }
-
-            if (result?.Call is not null)
-            {
-                await RecordInteractionAsync(scope.ServiceProvider, result.Call);
-            }
+            result = await service.GetDirectoryAsync(Context.ConnectionAborted);
         });
 
-        if (result?.Call is not null)
+        if (_logger.IsEnabled(LogLevel.Information))
         {
-            await Clients.Caller.CallStateChanged(result.Call);
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Succeeded={Succeeded}, Returned={ReturnedCount}, Error={Error}.",
+                "GetDirectory",
+                RedactedUserId(),
+                result.Succeeded,
+                result.Entries.Count,
+                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
         }
 
         return result;
     }
 
-    private async Task RecordInteractionAsync(IServiceProvider services, TelephonyCall call)
+    private async Task<TelephonyResult> ExecuteAsync(
+        string actionName,
+        Func<string> requestFactory,
+        Func<ITelephonyService, CancellationToken, Task<TelephonyResult>> operation,
+        Func<IEnumerable<string>> callIdsFactory = null)
     {
-        if (call is null || string.IsNullOrEmpty(call.CallId))
+        TelephonyResult result = null;
+        LogHubActionStart(actionName, requestFactory);
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized(actionName);
+                result = TelephonyResult.Failed(S["You are not authorized to use the soft phone."].Value);
+
+                return;
+            }
+
+            if (!await AuthorizeReferencedCallsAsync(
+                scope.ServiceProvider,
+                actionName,
+                callIdsFactory?.Invoke(),
+                CancellationToken.None))
+            {
+                result = TelephonyResult.Failed(S["The requested call is not available."].Value);
+
+                return;
+            }
+
+            var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();
+            var commandExecutor = scope.ServiceProvider.GetRequiredService<ITelephonyCommandExecutor>();
+
+            try
+            {
+                result = await commandExecutor.ExecuteAsync(
+                    commandCancellationToken => operation(service, commandCancellationToken));
+
+                if (result?.Call is not null)
+                {
+                    try
+                    {
+                        await RecordInteractionAsync(
+                            scope.ServiceProvider,
+                            actionName,
+                            result.Call,
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            OperationalLogRedactor.RedactException(ex),
+                            "Telephony provider action {Action} completed for user {UserId}, but local interaction persistence failed.",
+                            actionName,
+                            RedactedUserId());
+
+                        result = TelephonyResult.Unknown(
+                            S["The telephony provider completed the operation, but the local interaction history could not be confirmed."].Value);
+                    }
+                }
+            }
+            catch (TimeoutException)
+            {
+                result = TelephonyResult.Unknown(
+                    S["The telephony provider did not complete the operation within the server timeout."].Value);
+            }
+            catch (OperationCanceledException)
+            {
+                result = TelephonyResult.Unknown(
+                    S["The telephony operation was interrupted before the provider outcome could be confirmed."].Value);
+            }
+            catch (Exception ex)
+            {
+                var request = BuildLogRequest(requestFactory);
+
+                _logger.LogError(
+                    OperationalLogRedactor.RedactException(ex),
+                    "Telephony hub action {Action} failed for user {UserId} on connection {ConnectionId}. Request: {Request}.",
+                    actionName,
+                    RedactedUserId(),
+                    OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session),
+                    request ?? "(none)");
+
+                result = TelephonyResult.Failed(S["An error occurred while processing your request."].Value);
+            }
+        });
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var completionRequest = BuildLogRequest(requestFactory);
+
+            _logger.LogInformation(
+                "Telephony hub action {Action} completed for user {UserId}. Request: {Request}. Succeeded={Succeeded}, Error={Error}, CallId={CallId}, CallState={CallState}.",
+                actionName,
+                RedactedUserId(),
+                completionRequest,
+                result?.Succeeded,
+                OperationalLogRedactor.Redact(result?.Error, OperationalLogFieldKind.FreeText),
+                OperationalLogRedactor.Redact(result?.Call?.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call),
+                result?.Call?.State.ToString() ?? "(none)");
+        }
+
+        return result;
+    }
+
+    private async Task<bool> AuthorizeReferencedCallsAsync(
+        IServiceProvider services,
+        string actionName,
+        IEnumerable<string> callIds,
+        CancellationToken cancellationToken)
+    {
+        // A null collection indicates an action that does not operate on an existing call (for
+        // example, Dial), so there is nothing to authorize. Every other action must reference at
+        // least one call owned by the caller; a missing store, an unidentified caller, a blank
+        // identifier, an empty set, or an unmatched call all fail closed.
+        if (callIds is null)
+        {
+            return true;
+        }
+
+        var store = services.GetService<ITelephonyInteractionStore>();
+        var userId = Context.UserIdentifier;
+
+        if (store is null || string.IsNullOrWhiteSpace(userId))
+        {
+            LogHubActionCallUnavailable(actionName);
+
+            return false;
+        }
+
+        var authorizedCallCount = 0;
+
+        foreach (var callId in callIds)
+        {
+            if (string.IsNullOrWhiteSpace(callId))
+            {
+                LogHubActionCallUnavailable(actionName);
+
+                return false;
+            }
+
+            var interaction = await store.FindByCallIdAsync(userId, callId, cancellationToken);
+
+            if (interaction is null)
+            {
+                LogHubActionCallUnavailable(actionName);
+
+                return false;
+            }
+
+            authorizedCallCount++;
+        }
+
+        if (authorizedCallCount == 0)
+        {
+            LogHubActionCallUnavailable(actionName);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void LogHubActionStart(string actionName)
+    {
+        if (!_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "Telephony hub action {Action} started for user {UserId} on connection {ConnectionId}.",
+            actionName,
+            RedactedUserId(),
+            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+    }
+
+    private void LogHubActionStart(string actionName, Func<string> requestFactory)
+    {
+        if (!_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "Telephony hub action {Action} started for user {UserId} on connection {ConnectionId}. Request: {Request}.",
+            actionName,
+            RedactedUserId(),
+            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session),
+            BuildLogRequest(requestFactory));
+    }
+
+    private void LogHubActionUnauthorized(string actionName)
+    {
+        _logger.LogWarning(
+            "Telephony hub action {Action} was denied for user {UserId} on connection {ConnectionId}.",
+            actionName,
+            RedactedUserId(),
+            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+    }
+
+    private void LogHubActionCallUnavailable(string actionName)
+    {
+        _logger.LogWarning(
+            "Telephony hub action {Action} referenced a call that is not available to user {UserId} on connection {ConnectionId}.",
+            actionName,
+            RedactedUserId(),
+            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+    }
+
+    private static IEnumerable<string> GetCallIds(CallReference call)
+    {
+        if (call is null)
+        {
+            return [];
+        }
+
+        return [call.CallId];
+    }
+
+    private static IEnumerable<string> GetCallIds(TransferRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return [request.CallId];
+    }
+
+    private static IEnumerable<string> GetCallIds(MergeRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return request.GetCallIds()
+            .Concat(
+            [
+                request.PrimaryCallId,
+                request.SecondaryCallId,
+            ])
+            .Where(callId => !string.IsNullOrWhiteSpace(callId))
+            .Distinct(StringComparer.Ordinal);
+    }
+
+    private static IEnumerable<string> GetCallIds(SendDigitsRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return [request.CallId];
+    }
+
+    private static string DescribeDialRequest(DialRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"To={OperationalLogRedactor.Redact(request.To, OperationalLogFieldKind.Address)}, From={OperationalLogRedactor.Redact(request.From, OperationalLogFieldKind.Address)}";
+    }
+
+    private static string DescribeCallReference(CallReference call)
+    {
+        if (call is null)
+        {
+            return "(null)";
+        }
+
+        return $"CallId={OperationalLogRedactor.Redact(call.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, Metadata={OperationalLogRedactor.RedactMetadata(call.Metadata)}";
+    }
+
+    private static string DescribeTransferRequest(TransferRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"CallId={OperationalLogRedactor.Redact(request.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, To={OperationalLogRedactor.Redact(request.To, OperationalLogFieldKind.Address)}, Mode={request.Mode}";
+    }
+
+    private static string DescribeMergeRequest(MergeRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"PrimaryCallId={OperationalLogRedactor.Redact(request.PrimaryCallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, SecondaryCallId={OperationalLogRedactor.Redact(request.SecondaryCallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}";
+    }
+
+    private static string DescribeSendDigitsRequest(SendDigitsRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"CallId={OperationalLogRedactor.Redact(request.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, DigitsLength={request.Digits?.Length ?? 0}";
+    }
+
+    private static string BuildLogRequest(Func<string> requestFactory)
+    {
+        return requestFactory?.Invoke() ?? "(none)";
+    }
+
+    private string RedactedUserId()
+    {
+        return string.IsNullOrEmpty(Context.UserIdentifier)
+            ? "(anonymous)"
+            : OperationalLogRedactor.Pseudonymize(Context.UserIdentifier, OperationalLogIdentifierCategory.User);
+    }
+
+    private async Task RecordInteractionAsync(
+        IServiceProvider services,
+        string actionName,
+        TelephonyCall call,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(actionName, "Dial", StringComparison.Ordinal) ||
+            call is null ||
+            string.IsNullOrEmpty(call.CallId))
         {
             return;
         }
@@ -286,11 +796,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        var clock = services.GetService<IClock>();
-        var now = clock?.UtcNow ?? DateTime.UtcNow;
+        var clock = services.GetRequiredService<IClock>();
+        var now = clock.UtcNow;
         var userName = Context.GetHttpContext()?.User?.Identity?.Name;
 
-        var existing = await store.FindByCallIdAsync(userId, call.CallId, Context.ConnectionAborted);
+        var existing = await store.FindByCallIdAsync(userId, call.CallId, cancellationToken);
 
         if (existing is null)
         {
@@ -313,36 +823,22 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 StartedUtc = call.StartedUtc?.UtcDateTime ?? now,
             };
 
-            await store.CreateAsync(interaction, Context.ConnectionAborted);
+            await store.CreateAsync(interaction, cancellationToken);
 
             return;
         }
 
-        if (call.State == CallState.Disconnected)
+        if (!string.IsNullOrEmpty(call.To))
         {
-            existing.Outcome = CallOutcome.Completed;
-            existing.EndedUtc = now;
-            existing.DurationSeconds = Math.Max(0, (now - existing.StartedUtc).TotalSeconds);
-        }
-        else if (call.State == CallState.Failed)
-        {
-            existing.Outcome = CallOutcome.Failed;
-            existing.EndedUtc = now;
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(call.To))
-            {
-                existing.To = call.To;
-            }
-
-            if (!string.IsNullOrEmpty(call.From))
-            {
-                existing.From = call.From;
-            }
+            existing.To = call.To;
         }
 
-        await store.UpdateAsync(existing, Context.ConnectionAborted);
+        if (!string.IsNullOrEmpty(call.From))
+        {
+            existing.From = call.From;
+        }
+
+        await store.UpdateAsync(existing, cancellationToken);
     }
 
     private async Task<bool> AuthorizeAsync(IServiceProvider services)

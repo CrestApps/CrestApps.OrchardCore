@@ -3,6 +3,7 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -14,9 +15,15 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
+using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +31,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Contents.Services;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
@@ -32,6 +40,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -49,8 +58,13 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
+
         services.AddCatalogs()
             .AddCatalogManagers();
+
+        services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
+        services.AddScoped<DefaultContactActivityBatchLoader>();
 
         services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
 
@@ -70,9 +84,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
+        services.AddContentPart<OmnichannelSubjectPart>();
         services.AddScoped<OmnichannelContactDefinitionService>();
         services.AddScoped<IContentDefinitionHandler, OmnichannelContactDefinitionHandler>();
-        services.AddScoped<IModularTenantEvents, OmnichannelContactDefinitionTenantEvents>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
@@ -86,6 +100,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<BulkManageActivityFilter, BulkManageActivityFilterDisplayDriver>()
             .AddScoped<IBulkManageActivityFilterHandler, BulkManageActivityFilterHandler>();
 
+        services.AddScoped<BulkActivityAdminFormOptionsProvider>();
+
         services
             .AddDisplayDriver<BulkManageOmnichannelActivityContainer, BulkManageActivityActionsDisplayDriver>();
 
@@ -98,6 +114,10 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<OmnichannelCampaign>, OmnichannelCampaignHandler>();
 
         services
+            .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<OmnichannelCampaignGroup>, OmnichannelCampaignGroupHandler>();
+
+        services
             .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
 
@@ -108,7 +128,9 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
-            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>();
+            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>()
+            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
+            .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
 
         // Subject Flow Settings.
         services
@@ -137,12 +159,33 @@ public sealed class Startup : StartupBase
             });
         });
 
+        services.Configure<ActivityBatchSourceOptions>(options =>
+        {
+            options.AddSource(ActivitySources.Manual, entry =>
+            {
+                entry.DisplayName = S["Manual"];
+                entry.Description = S["Loads activities assigned to selected users for manual agent work."];
+                entry.RequiresUserAssignment = true;
+            });
+
+            options.AddSource(ActivitySources.Automatic, entry =>
+            {
+                entry.DisplayName = S["Automatic"];
+                entry.Description = S["Loads unassigned activities that AI automation processes through the configured subject flow."];
+                entry.RequiresUserAssignment = false;
+                entry.ShowInCreationPicker = false;
+            });
+        });
+
         services.AddPermissionProvider<PermissionProvider>();
+        services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
         services.AddNavigationProvider<AdminMenu>();
 
         services
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
 
         services.AddDataMigration<ContactMethodMigrations>();
 
@@ -166,7 +209,11 @@ public sealed class AISubjectFlowStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>();
+        services
+            .AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>()
+            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>()
+            .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
+            .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
     }
 }
 
@@ -188,5 +235,69 @@ public sealed class NationalDoNotCallRegistryContentTransferStartup : StartupBas
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ImportContent, NationalDoNotCallRegistryImportOptionsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Omnichannel reports contributed to the admin Reports area.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    private readonly IStringLocalizer S;
+
+    public ReportsStartup(IStringLocalizer<ReportsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IReport, ActivitySummaryReportProvider>()
+            .AddScoped<IReport, CampaignPerformanceReportProvider>()
+            .AddScoped<IReport, DispositionBreakdownReportProvider>();
+        services.AddDisplayDriver<ReportFilter, OmnichannelReportFilterDisplayDriver>();
+
+        AddEnterpriseReport(services, "omnichannel-activity-backlog", () => S["Activity backlog"], () => S["Open CRM activity inventory, assignment, reservation, and overdue workload."], EnterpriseActivityReportKind.Backlog, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "omnichannel-activity-aging", () => S["Activity aging"], () => S["Open activity workload grouped into enterprise aging bands."], EnterpriseActivityReportKind.Aging, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "omnichannel-source-performance", () => S["Activity source performance"], () => S["Activity progress and attempts grouped by the source that created or drives the work."], EnterpriseActivityReportKind.SourcePerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "omnichannel-channel-performance", () => S["CRM channel performance"], () => S["Activity progress and attempts grouped by communications channel."], EnterpriseActivityReportKind.ChannelPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "omnichannel-kind-performance", () => S["Activity kind performance"], () => S["Activity progress and attempts grouped by business work kind."], EnterpriseActivityReportKind.KindPerformance, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "omnichannel-assignment-performance", () => S["Activity assignment performance"], () => S["Activity progress and attempts grouped by assignment lifecycle status."], EnterpriseActivityReportKind.AssignmentPerformance, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "omnichannel-attempt-analysis", () => S["Activity attempt analysis"], () => S["Activity outcomes grouped by number of contact or processing attempts."], EnterpriseActivityReportKind.AttemptAnalysis, ReportsConstants.Categories.Operations);
+        AddEnterpriseReport(services, "omnichannel-contact-type-workload", () => S["Contact type workload"], () => S["Activity progress and attempts grouped by CRM contact content type."], EnterpriseActivityReportKind.ContactTypeWorkload, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-urgency-performance", () => S["Activity urgency performance"], () => S["Activity progress and attempts grouped by urgency level."], EnterpriseActivityReportKind.UrgencyPerformance, ReportsConstants.Categories.QueueRouting);
+        AddEnterpriseReport(services, "omnichannel-assigned-user-performance", () => S["Assigned user performance"], () => S["Activity volume, progress, completion rate, and attempts grouped by assigned user."], EnterpriseActivityReportKind.AssignedUserPerformance, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "omnichannel-created-by-performance", () => S["Activity creation by user"], () => S["Activity volume and outcomes grouped by the user or system actor that created the work."], EnterpriseActivityReportKind.CreatedByPerformance, ReportsConstants.Categories.ComplianceAudit);
+        AddEnterpriseReport(services, "omnichannel-user-completion-time", () => S["User completion time"], () => S["Completed activity cycle time by assigned user, including average, median, and maximum."], EnterpriseActivityReportKind.UserCompletionTime, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "omnichannel-user-daily-productivity", () => S["Daily user productivity"], () => S["Completed activity count, cycle time, and attempts by assigned user and UTC day."], EnterpriseActivityReportKind.UserDailyProductivity, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "omnichannel-campaign-source-mix", () => S["Campaign source mix"], () => S["Campaign activity volume and outcomes by activity source."], EnterpriseActivityReportKind.CampaignSourceMix, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-campaign-channel-mix", () => S["Campaign channel mix"], () => S["Campaign activity volume and outcomes by communication channel."], EnterpriseActivityReportKind.CampaignChannelMix, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-campaign-disposition-mix", () => S["Campaign disposition mix"], () => S["Campaign activity volume and outcomes by disposition."], EnterpriseActivityReportKind.CampaignDispositionMix, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-campaign-attempt-performance", () => S["Campaign attempt performance"], () => S["Campaign activity outcomes grouped by attempt count."], EnterpriseActivityReportKind.CampaignAttemptPerformance, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-overdue-by-user", () => S["Overdue workload by user"], () => S["Overdue activity count, age, and unassigned volume grouped by assigned user."], EnterpriseActivityReportKind.OverdueByUser, ReportsConstants.Categories.AgentPerformance);
+        AddEnterpriseReport(services, "omnichannel-channel-endpoint-usage", () => S["Channel endpoint usage"], () => S["Activity volume, outcomes, and attempts by configured channel endpoint."], EnterpriseActivityReportKind.ChannelEndpointUsage, ReportsConstants.Categories.Technical);
+        AddEnterpriseReport(services, "omnichannel-customer-workload", () => S["Customer workload"], () => S["Activity volume, outcomes, and attempts grouped by customer record."], EnterpriseActivityReportKind.CustomerWorkload, ReportsConstants.Categories.CrmCampaigns);
+        AddEnterpriseReport(services, "omnichannel-schedule-completion", () => S["Scheduled completion performance"], () => S["Activities completed by schedule versus late, with completion variance."], EnterpriseActivityReportKind.ScheduleCompletion, ReportsConstants.Categories.Operations);
+    }
+
+    private static void AddEnterpriseReport(
+        IServiceCollection services,
+        string name,
+        Func<LocalizedString> displayName,
+        Func<LocalizedString> description,
+        EnterpriseActivityReportKind kind,
+        string category)
+    {
+        var definition = new EnterpriseActivityReportDefinition(name, displayName, description, kind, category);
+
+        services.AddScoped<IReport>(serviceProvider => new EnterpriseActivityReportProvider(
+            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
+            serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>(),
+            serviceProvider.GetRequiredService<INamedCatalogManager<OmnichannelDisposition>>(),
+            definition,
+            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseActivityReportProvider>>()));
     }
 }

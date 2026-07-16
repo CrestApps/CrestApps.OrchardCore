@@ -10,6 +10,20 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 **Target Framework**: .NET 10.0 (net10.0)  
 **Architecture**: Modular, multi-tenant application framework
 
+## Contact Center module (active, multi-phase project)
+
+The **Contact Center** module set is a large, multi-phase orchestration layer being built between the CRM (Omnichannel) and Telephony modules. Before doing any Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`), **ALWAYS read the durable plan first**:
+
+- **Plan & progress:** [`.github/contact-center/PLAN.md`](contact-center/PLAN.md)
+
+That document is the source of truth for the Contact Center architecture, phased scope, MVP definition, conceptual data model, event catalog, and current progress. Always read its **Progress status** section to see what is done and what is next, start at the lowest incomplete phase, and update that section after each meaningful change.
+
+Key rules for this module set:
+
+- Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item; `Interaction` is communication history for one attempt and never owns workflow or disposition.
+- **Never** write competitor product names in code, comments, identifiers, or public docs. Adopt only the generic, industry-standard terminology defined in the plan's terminology/metrics section.
+- Group related capabilities into separate, feature-gated Orchard modules/features (the plan's module breakdown), the way commercial platforms separate licensed capabilities.
+
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
@@ -136,6 +150,7 @@ dotnet run
 #### Documentation
 
 * Keep public docs and comments accurate and aligned with the code.
+* In Markdown docs, do not manually hard-wrap prose at a fixed column. Keep each paragraph or list item on a single line and let the editor/viewer wrap it visually.
 * Always document:
 
   * Every public method (including constructors) with XML `<summary>` and `<param>` tags.

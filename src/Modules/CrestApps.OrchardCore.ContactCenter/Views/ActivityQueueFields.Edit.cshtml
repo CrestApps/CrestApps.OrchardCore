@@ -1,0 +1,181 @@
+@model QueueViewModel
+
+<style asp-name="crestapps-bootstrap-select"></style>
+<script asp-name="crestapps-bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueGroupId">
+    <label asp-for="QueueGroupId" class="ocat-label">@T["Queue group"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueGroupId" asp-items="Model.QueueGroupOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue group"]" data-width="100%" title="@T["No queue group"]">
+            <option value="">@T["No queue group"]</option>
+        </select>
+        <span asp-validation-for="QueueGroupId" class="text-danger"></span>
+        <span class="hint">@T["Queue groups organize the catalog and reports only. They do not change routing, SLA settings, entitlements, or queue behavior."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="DefaultPriority">
+    <label asp-for="DefaultPriority" class="ocat-label">@T["Default priority"]</label>
+    <div class="ocat-limited">
+        <select asp-for="DefaultPriority" class="form-select">
+            <option value="@InteractionPriority.Lowest">@T["Lowest"]</option>
+            <option value="@InteractionPriority.Low">@T["Low"]</option>
+            <option value="@InteractionPriority.Normal">@T["Normal"]</option>
+            <option value="@InteractionPriority.High">@T["High"]</option>
+            <option value="@InteractionPriority.Highest">@T["Highest"]</option>
+        </select>
+        <span asp-validation-for="DefaultPriority" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RoutingStrategy">
+    <label asp-for="RoutingStrategy" class="ocat-label">@T["Routing strategy"]</label>
+    <div class="ocat-limited">
+        <select asp-for="RoutingStrategy" class="form-select">
+            <option value="@QueueRoutingStrategy.LongestIdle">@T["Longest idle"]</option>
+            <option value="@QueueRoutingStrategy.RoundRobin">@T["Round robin"]</option>
+            <option value="@QueueRoutingStrategy.LeastBusy">@T["Least busy"]</option>
+        </select>
+        <span asp-validation-for="RoutingStrategy" class="text-danger"></span>
+        <span class="hint">@T["How the queue chooses which available agent receives the next item."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PreferStickyAgent">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="PreferStickyAgent" class="form-check-input" />
+            <label asp-for="PreferStickyAgent" class="form-check-label">@T["Prefer the last assigned agent (sticky)"]</label>
+        </div>
+        <span class="hint dashed">@T["When available and eligible, returning work prefers the agent who last owned the activity."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="SlaThresholdSeconds">
+    <label asp-for="SlaThresholdSeconds" class="ocat-label">@T["Service Level Agreement (SLA) threshold (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="SlaThresholdSeconds" class="form-control" />
+        <span asp-validation-for="SlaThresholdSeconds" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnableSlaAging">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnableSlaAging" class="form-check-input" />
+            <label asp-for="EnableSlaAging" class="form-check-label">@T["Age waiting items past the SLA threshold"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, items waiting beyond the SLA threshold gain priority so aging work is routed first."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="ReservationTimeoutSeconds">
+    <label asp-for="ReservationTimeoutSeconds" class="ocat-label">@T["Reservation timeout (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ReservationTimeoutSeconds" class="form-control" />
+        <span asp-validation-for="ReservationTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long an offered call can ring for an agent before the queue applies the unanswered-offer action."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="UnansweredOfferAction">
+    <label asp-for="UnansweredOfferAction" class="ocat-label">@T["Unanswered offer action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="UnansweredOfferAction" class="form-select">
+            <option value="@UnansweredOfferAction.Requeue">@T["Requeue"]</option>
+            <option value="@UnansweredOfferAction.Voicemail">@T["Send to voicemail"]</option>
+            <option value="@UnansweredOfferAction.Reject">@T["Reject call"]</option>
+        </select>
+        <span asp-validation-for="UnansweredOfferAction" class="text-danger"></span>
+        <span class="hint">@T["Applied only when an offered call times out without an answer. Requeue offers it again, voicemail sends the live call to the telephony provider's voicemail path, and reject ends the live call."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
+    <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
+    <div class="ocat-end">
+        <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
+        <span asp-validation-for="RequiredSkills" class="text-danger"></span>
+        <span class="hint">@T["Agents must have every selected skill to receive work from this queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
+    <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound channel endpoint"]</label>
+    <div class="ocat-end">
+        <select asp-for="InboundChannelEndpointId" asp-items="Model.InboundChannelEndpointOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an endpoint"]" data-width="100%" title="@T["Default inbound queue"]">
+            <option value="">@T["Default inbound queue"]</option>
+        </select>
+        <span asp-validation-for="InboundChannelEndpointId" class="text-danger"></span>
+        <span class="hint">@T["Calls received on this Omnichannel endpoint route to this queue. Leave empty for a default inbound queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
+    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
+    <div class="ocat-end">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" data-width="100%" title="@T["Always open"]">
+            <option value="">@T["Always open"]</option>
+        </select>
+        <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
+        <span class="hint">@T["Routing pauses while the calendar reports the queue closed. Leave empty to route around the clock."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="AfterHoursAction">
+    <label asp-for="AfterHoursAction" class="ocat-label">@T["After-hours action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="AfterHoursAction" class="form-select">
+            <option value="@QueueAfterHoursAction.HoldInQueue">@T["Hold in queue"]</option>
+            <option value="@QueueAfterHoursAction.Overflow">@T["Overflow"]</option>
+        </select>
+        <span asp-validation-for="AfterHoursAction" class="text-danger"></span>
+        <span class="hint">@T["What happens to waiting items while the queue is closed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OverflowQueueId">
+    <label asp-for="OverflowQueueId" class="ocat-label">@T["Overflow queue"]</label>
+    <div class="ocat-end">
+        <select asp-for="OverflowQueueId" asp-items="Model.OverflowQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No overflow"]">
+            <option value="">@T["No overflow"]</option>
+        </select>
+        <span asp-validation-for="OverflowQueueId" class="text-danger"></span>
+        <span class="hint">@T["Items move to this queue when they wait too long or while the queue is closed and set to overflow."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="OverflowAfterSeconds">
+    <label asp-for="OverflowAfterSeconds" class="ocat-label">@T["Overflow after (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="OverflowAfterSeconds" class="form-control" />
+        <span asp-validation-for="OverflowAfterSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long an item may wait before it overflows. Set to 0 to disable wait-time overflow."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Disabled queues do not receive routing assignments."]</span>
+    </div>
+</div>

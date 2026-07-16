@@ -30,7 +30,7 @@ public sealed class TimeZoneListOmnichannelActivityFilterHandler : IListOmnichan
         }
 
         var contactContentItemIds = (await _session.QueryIndex<OmnichannelContactIndex>(
-            index => index.TimeZoneId == context.Filter.TimeZoneId)
+            index => index.Published && index.TimeZoneId == context.Filter.TimeZoneId)
             .ListAsync(cancellationToken))
             .Select(index => index.ContentItemId)
             .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))

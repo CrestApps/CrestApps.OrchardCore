@@ -1,28 +1,46 @@
-@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using Microsoft.AspNetCore.Authorization
-@using OrchardCore.ContentManagement.Metadata
-@using OrchardCore.Contents
 
 @model CompleteOmnichannelActivityContainer
 
-@inject IContentDefinitionManager ContentDefinitionManager
+@{
+    var subject = Model.Subject;
+    var activity = Model.Activity;
+    var contact = Model.Contact;
+}
 
-<div class="card mb-3">
-    <div class="card-header">
-        @T["Subject"]
+@if (contact is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            @T["Contact information"]
+        </div>
+        <div class="card-body">
+            @await DisplayAsync(contact)
+        </div>
     </div>
-    <div class="card-body">
-        @await DisplayAsync(Model.Subject)
-    </div>
-</div>
+}
 
-<div class="card mb-3">
-    <div class="card-header">
-        @T["Activity"]
+@if (subject is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            @T["Subject details"]
+        </div>
+        <div class="card-body">
+            @await DisplayAsync(subject)
+        </div>
     </div>
-    <div class="card-body">
-        @await DisplayAsync(Model.Activity)
+}
+
+@if (activity is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            @T["Activity and workflow"]
+        </div>
+        <div class="card-body">
+            @await DisplayAsync(activity)
+        </div>
     </div>
-</div>
+}

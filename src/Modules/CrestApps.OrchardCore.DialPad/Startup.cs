@@ -1,5 +1,9 @@
 using CrestApps.OrchardCore.DialPad.Drivers;
+using CrestApps.OrchardCore.DialPad.Endpoints;
 using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Telephony.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -33,5 +37,17 @@ public sealed class Startup : StartupBase
 
         services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
         services.AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers DialPad Contact Center voice integration endpoints.
+/// </summary>
+[Feature(DialPadConstants.Feature.ContactCenterVoice)]
+public sealed class DialPadContactCenterStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddDialPadWebhookEndpoint();
     }
 }

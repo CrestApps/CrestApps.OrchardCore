@@ -41,6 +41,13 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using
+    /// this subject can be completed. This is the single decision-control policy that applies to both
+    /// inbound and outbound activities, enforced by the activity disposition service.
+    /// </summary>
+    public bool RequireDisposition { get; set; }
+
+    /// <summary>
     /// When the interaction is automated, this will be the initial message to start the conversation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
@@ -57,6 +64,24 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name used for automated phone calls.
+    /// When empty, the site default speech-to-text deployment is used.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name used for automated phone calls.
+    /// When empty, the site default text-to-speech deployment is used.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier used for automated phone calls.
+    /// When empty, the site default voice is used.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to allow AI to update contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }
@@ -65,6 +90,23 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     /// Gets or sets a value indicating whether to allow AI to update subject.
     /// </summary>
     public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the number of minutes to wait before an automated SMS activity is marked as failed
+    /// when the contact stops responding.
+    /// </summary>
+    public int? NoResponseTimeoutInMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of seconds to wait before sending each automated SMS response.
+    /// </summary>
+    public int? SmsResponseDelayInSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets SMS opt-out keywords that stop automated SMS conversations and set the contact's
+    /// do-not-SMS preference.
+    /// </summary>
+    public string[] SmsOptOutKeywords { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time the settings were created.
@@ -100,11 +142,18 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
             InteractionType = InteractionType,
             Channel = Channel,
             ChannelEndpointId = ChannelEndpointId,
+            RequireDisposition = RequireDisposition,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             SubjectGoal = SubjectGoal,
             ProfileId = ProfileId,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
+            TextToSpeechDeploymentName = TextToSpeechDeploymentName,
+            TextToSpeechVoiceId = TextToSpeechVoiceId,
             AllowAIToUpdateContact = AllowAIToUpdateContact,
             AllowAIToUpdateSubject = AllowAIToUpdateSubject,
+            NoResponseTimeoutInMinutes = NoResponseTimeoutInMinutes,
+            SmsResponseDelayInSeconds = SmsResponseDelayInSeconds,
+            SmsOptOutKeywords = SmsOptOutKeywords?.ToArray(),
             CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
             Author = Author,

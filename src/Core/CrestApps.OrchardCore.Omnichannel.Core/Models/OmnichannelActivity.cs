@@ -14,6 +14,17 @@ public sealed class OmnichannelActivity : CatalogItem
     public long Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of work the activity represents.
+    /// </summary>
+    public ActivityKind Kind { get; set; } = ActivityKind.Task;
+
+    /// <summary>
+    /// Gets or sets the source that created or is currently driving the activity.
+    /// Workflow processing must not depend on this value.
+    /// </summary>
+    public string Source { get; set; } = ActivitySources.Manual;
+
+    /// <summary>
     /// 'SMS', 'Chat', 'Email', etc.
     /// </summary>
     public string Channel { get; set; }
@@ -34,6 +45,29 @@ public sealed class OmnichannelActivity : CatalogItem
     public string AISessionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI profile identifier used to drive this automated activity.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier used by this automated phone activity.
+    /// When empty, execution falls back to the subject flow and then the site default.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }
@@ -47,6 +81,31 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the contact content type.
     /// </summary>
     public string ContactContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact-attribution state.
+    /// </summary>
+    public ContactResolutionStatus ContactResolutionStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact content item identifiers considered during resolution.
+    /// </summary>
+    public IList<string> ContactResolutionCandidates { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the UTC time when the contact was explicitly resolved.
+    /// </summary>
+    public DateTime? ContactResolvedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user who explicitly resolved the contact.
+    /// </summary>
+    public string ContactResolvedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the user who explicitly resolved the contact.
+    /// </summary>
+    public string ContactResolvedByUsername { get; set; }
 
     /// <summary>
     /// Gets or sets the campaign id.
@@ -84,6 +143,36 @@ public sealed class OmnichannelActivity : CatalogItem
     public DateTime? AssignedToUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the assignment lifecycle status used by queues, dialers, and reservations.
+    /// </summary>
+    public ActivityAssignmentStatus AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active reservation identifier when a queue or dialer has reserved the activity.
+    /// </summary>
+    public string ReservationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user or system actor that reserved the activity.
+    /// </summary>
+    public string ReservedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the user or system actor that reserved the activity.
+    /// </summary>
+    public string ReservedByUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity was reserved.
+    /// </summary>
+    public DateTime? ReservedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity reservation expires.
+    /// </summary>
+    public DateTime? ReservationExpiresUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the created by id.
     /// </summary>
     public string CreatedById { get; set; }
@@ -107,6 +196,21 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the completed by username.
     /// </summary>
     public string CompletedByUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity was purged.
+    /// </summary>
+    public DateTime? PurgedAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user who purged the activity.
+    /// </summary>
+    public string PurgedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the user who purged the activity.
+    /// </summary>
+    public string PurgedByUsername { get; set; }
 
     /// <summary>
     /// Gets or sets the disposition id.
@@ -142,6 +246,58 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the status.
     /// </summary>
     public ActivityStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stable reason code explaining why the activity reached a terminal state.
+    /// </summary>
+    public string TerminalReasonCode { get; set; }
+
+    /// <summary>
+    /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.
+    /// </summary>
+    /// <param name="contact">The contact selected for the activity.</param>
+    /// <param name="resolvedById">The identifier of the user resolving the contact.</param>
+    /// <param name="resolvedByUsername">The username of the user resolving the contact.</param>
+    /// <param name="resolvedUtc">The UTC time of the resolution.</param>
+    /// <returns><see langword="true"/> when the contact is resolved or was already resolved to the same contact; otherwise <see langword="false"/>.</returns>
+    public bool TryResolveContact(
+        ContentItem contact,
+        string resolvedById,
+        string resolvedByUsername,
+        DateTime resolvedUtc)
+    {
+        ArgumentNullException.ThrowIfNull(contact);
+
+        if (string.IsNullOrEmpty(contact.ContentItemId) || string.IsNullOrEmpty(contact.ContentType))
+        {
+            return false;
+        }
+
+        if (ContactResolutionStatus == ContactResolutionStatus.Resolved)
+        {
+            return string.Equals(ContactContentItemId, contact.ContentItemId, StringComparison.Ordinal);
+        }
+
+        if (ContactResolutionStatus is not ContactResolutionStatus.Unresolved and not ContactResolutionStatus.Ambiguous)
+        {
+            return false;
+        }
+
+        if (ContactResolutionStatus == ContactResolutionStatus.Ambiguous &&
+            !ContactResolutionCandidates.Contains(contact.ContentItemId, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        ContactContentItemId = contact.ContentItemId;
+        ContactContentType = contact.ContentType;
+        ContactResolutionStatus = ContactResolutionStatus.Resolved;
+        ContactResolvedById = resolvedById;
+        ContactResolvedByUsername = resolvedByUsername;
+        ContactResolvedUtc = resolvedUtc;
+
+        return true;
+    }
 }
 
 /// <summary>
@@ -162,6 +318,13 @@ public enum ActivityStatus
     AwaitingAgentResponse,
     AwaitingCustomerAnswer,
     Completed,
+    Pending,
+    Scheduled,
+    Reserved,
+    Dialing,
+    InProgress,
+    Failed,
+    Cancelled,
     Purged,
 }
 

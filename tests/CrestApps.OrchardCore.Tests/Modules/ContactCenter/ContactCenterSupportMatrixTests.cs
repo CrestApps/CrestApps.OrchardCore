@@ -1,0 +1,177 @@
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.DialPad;
+
+namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
+
+public sealed class ContactCenterSupportMatrixTests
+{
+    [Fact]
+    public void SupportMatrix_DefinesFiniteBlockedGaProfiles()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+
+        // Act
+        var tenantProfiles = matrix["tenantProfiles"]?.AsArray();
+        var providerProfiles = matrix["providerProfiles"]?.AsArray();
+        var productionDatabases = matrix["databases"]?.AsArray()
+            .Where(database => database?["production"]?.GetValue<bool>() == true)
+            .ToList();
+        var productionTopologies = matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true)
+            .ToList();
+
+        // Assert
+        Assert.Equal("blocked-until-r0-r8-pass", matrix["releaseStatus"]?.GetValue<string>());
+        Assert.NotEmpty(tenantProfiles);
+        Assert.NotEmpty(providerProfiles);
+        Assert.NotEmpty(productionDatabases);
+        Assert.NotEmpty(productionTopologies);
+        Assert.Equal(
+            tenantProfiles.Count,
+            tenantProfiles.Select(profile => profile?["id"]?.GetValue<string>()).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void SupportMatrix_GaProfilesReferenceDeclaredProductionDependencies()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var providerIds = matrix["providerProfiles"]?.AsArray()
+            .Select(profile => profile?["id"]?.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+        var databaseIds = matrix["databases"]?.AsArray()
+            .Where(database => database?["production"]?.GetValue<bool>() == true)
+            .Select(database => database?["id"]?.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+        var topologyIds = matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true)
+            .Select(topology => topology?["id"]?.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Act & Assert
+        foreach (var profile in matrix["tenantProfiles"]?.AsArray())
+        {
+            Assert.Contains(profile?["providerProfile"]?.GetValue<string>(), providerIds);
+            Assert.Contains(profile?["database"]?.GetValue<string>(), databaseIds);
+            Assert.Contains(profile?["topology"]?.GetValue<string>(), topologyIds);
+            Assert.NotEmpty(profile?["features"]?.AsArray());
+        }
+    }
+
+    [Fact]
+    public void SupportMatrix_ProhibitsUncertifiedHighRiskCapabilities()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var prohibitedCombinations = matrix["prohibitedCombinations"]?.AsArray()
+            .Select(item => item?.GetValue<string>())
+            .ToList();
+
+        // Act & Assert
+        Assert.Contains("Power, Progressive, or Predictive dialing", prohibitedCombinations);
+        Assert.Contains("recording, monitor, whisper, barge, take-over, or bidirectional media", prohibitedCombinations);
+        Assert.Contains("multi-node without a Redis SignalR backplane", prohibitedCombinations);
+        Assert.Contains("multi-node without OrchardCore.Redis.Lock distributed locking", prohibitedCombinations);
+        Assert.Contains("unlisted feature, provider, database, or topology combinations", prohibitedCombinations);
+
+        foreach (var topology in matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true))
+        {
+            Assert.True(topology?["redisBackplaneRequired"]?.GetValue<bool>());
+            Assert.True(topology?["redisDistributedLockRequired"]?.GetValue<bool>());
+        }
+
+        foreach (var provider in matrix["providerProfiles"]?.AsArray())
+        {
+            var prohibitedCapabilities = provider?["prohibitedCapabilities"]?.AsArray()
+                .Select(capability => capability?.GetValue<string>())
+                .ToHashSet(StringComparer.Ordinal);
+
+            Assert.Contains("predictive-dial", prohibitedCapabilities);
+            Assert.Contains("recording", prohibitedCapabilities);
+            Assert.Contains("bidirectional-media", prohibitedCapabilities);
+        }
+
+        foreach (var profile in matrix["tenantProfiles"]?.AsArray())
+        {
+            var features = profile?["features"]?.AsArray()
+                .Select(feature => feature?.GetValue<string>())
+                .ToHashSet(StringComparer.Ordinal);
+
+            Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Voice.Media", features);
+            Assert.DoesNotContain("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", features);
+        }
+    }
+
+    [Fact]
+    public void VoiceProviderCapabilities_DoNotExposeUncertifiedLegacyMediaFlag()
+    {
+        // Act
+        var capabilityNames = Enum.GetNames<ContactCenterVoiceProviderCapabilities>();
+
+        // Assert
+        Assert.DoesNotContain("BidirectionalMedia", capabilityNames);
+    }
+
+    [Fact]
+    public void SupportMatrix_TierOneCapacityIsExplicitAndBounded()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var capacity = matrix["capacityTier"];
+
+        // Act & Assert
+        Assert.Equal("tier-1", capacity?["id"]?.GetValue<string>());
+        Assert.Equal(100, capacity?["maxConcurrentSignedInAgentsPerTenant"]?.GetValue<int>());
+        Assert.Equal(50, capacity?["maxConcurrentVoiceInteractionsPerTenant"]?.GetValue<int>());
+        Assert.Equal(10, capacity?["maxNewInteractionsPerSecondPerTenant"]?.GetValue<int>());
+        Assert.True(capacity?["maxTenantsPerDeployment"]?.GetValue<int>() > 0);
+    }
+
+    [Fact]
+    public void SupportMatrix_GaProfilesReferenceCurrentProviderAdapterFeatures()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var profiles = matrix["tenantProfiles"]?.AsArray()
+            .ToDictionary(
+                profile => profile?["id"]?.GetValue<string>() ?? string.Empty,
+                profile => profile?["features"]?.AsArray()
+                    .Select(feature => feature?.GetValue<string>())
+                    .ToHashSet(StringComparer.Ordinal),
+                StringComparer.Ordinal);
+
+        // Act & Assert
+        Assert.Contains(AsteriskConstants.Feature.ContactCenterVoice, profiles["ga-core-asterisk"]);
+        Assert.Contains(DialPadConstants.Feature.ContactCenterVoice, profiles["ga-core-dialpad"]);
+    }
+
+    private static JsonObject LoadMatrix()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var matrixPath = Path.Combine(
+            repositoryRoot,
+            ".github",
+            "contact-center",
+            "support-matrix.v1.json");
+
+        return JsonNode.Parse(File.ReadAllText(matrixPath))?.AsObject() ??
+            throw new InvalidOperationException("The Contact Center support matrix is invalid.");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ??
+            throw new InvalidOperationException("The repository root could not be located.");
+    }
+}

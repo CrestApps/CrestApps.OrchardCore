@@ -19,8 +19,9 @@ public interface ITelephonyClient
     /// Notifies the client that an inbound call is ringing.
     /// </summary>
     /// <param name="call">The inbound call.</param>
+    /// <param name="context">The contextual cards contributed for the call, such as matched customers.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task IncomingCall(TelephonyCall call);
+    Task IncomingCall(TelephonyCall call, IncomingCallContext context);
 
     /// <summary>
     /// Notifies the client that the provider issued new connection credentials.

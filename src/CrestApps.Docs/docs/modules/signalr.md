@@ -9,6 +9,7 @@ description: Seamless SignalR integration within Orchard Core for real-time comm
 | --- | --- |
 | **Feature Name** | SignalR |
 | **Feature ID** | `CrestApps.OrchardCore.SignalR` |
+| **Redis backplane feature ID** | `CrestApps.OrchardCore.SignalR.Redis` |
 
 Provides real-time messaging capabilities using SignalR.
 
@@ -76,3 +77,30 @@ Then, initialize the SignalR connection using JavaScript:
 Note the dependency on the `signalr` script, which is automatically added to the page by the SignalR module.
 
 This setup ensures your SignalR hub is properly registered and accessible within Orchard Core, allowing seamless real-time communication.
+
+## Multi-tenant destinations
+
+SignalR backplanes are shared infrastructure, while Orchard user identifiers and application group names are tenant-local. Do not send tenant data through an unqualified `Clients.User(userId)` or a globally named group.
+
+Use `TenantSignalRGroupName.ForUser(shellSettings.Name, userId)` for user destinations and `TenantSignalRGroupName.ForGroup(shellSettings.Name, logicalGroupName)` for application groups. The hub must add only authorized connections to the corresponding tenant-qualified group, and publishers must target the same generated name. This keeps equal user, queue, or supervisor identifiers in different Orchard shells isolated on both single-node and backplane deployments.
+
+## Redis backplane
+
+Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange SignalR messages across application nodes. The feature depends on `OrchardCore.Redis` and uses its `OrchardCore_Redis` connection settings, but creates a dedicated SignalR Redis connection so stopping a hub lifetime manager cannot dispose Orchard's shared cache, bus, or lock connection.
+
+The backplane channel prefix includes both `InstancePrefix` and the immutable Orchard shell name. Two nodes serving the same tenant therefore share one channel namespace, while different tenants never share hub control channels even when they use the same Redis deployment. Application destinations must still use `TenantSignalRGroupName`; channel isolation is defense in depth rather than permission enforcement.
+
+```json
+{
+  "OrchardCore": {
+    "OrchardCore_Redis": {
+      "Configuration": "localhost:6379,abortConnect=false",
+      "InstancePrefix": "MyApplication:Production:EastUS:"
+    }
+  }
+}
+```
+
+Use a deployment-unique `InstancePrefix` that identifies the application, environment, and region whenever Redis infrastructure is shared. Reusing an empty or generic prefix across deployments can merge the backplane channels of tenants with the same shell name.
+
+For multi-node Contact Center deployments, also enable `OrchardCore.Redis.Lock` because routing, webhook inbox acceptance, and other distributed critical sections require the Redis lock implementation independently of the SignalR backplane.

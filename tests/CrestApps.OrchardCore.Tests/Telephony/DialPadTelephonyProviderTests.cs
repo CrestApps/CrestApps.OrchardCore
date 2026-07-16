@@ -42,6 +42,67 @@ public sealed class DialPadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task DialAsync_WithIdempotencyMetadata_SendsProviderIdempotencyHeader()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\": 12345}");
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+        var request = new DialRequest
+        {
+            To = "+15551234567",
+            Metadata = new Dictionary<string, string>
+            {
+                [TelephonyConstants.RequestMetadata.IdempotencyKey] = "command-1",
+            },
+        };
+
+        // Act
+        var result = await provider.DialAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(handler.LastRequest.Headers.TryGetValues("Idempotency-Key", out var values));
+        Assert.Equal("command-1", Assert.Single(values));
+    }
+
+    [Fact]
+    public async Task DialAsync_WhenTransportOutcomeIsUnknown_ReturnsOutcomeUnknown()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(_ => throw new HttpRequestException("connection lost"));
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.DialAsync(
+            new DialRequest { To = "+15551234567" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task DialAsync_WhenApiResponseIsAmbiguous_ReturnsOutcomeUnknown(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(statusCode, "{\"error\": \"temporary\"}");
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.DialAsync(
+            new DialRequest { To = "+15551234567" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+    }
+
+    [Fact]
     public async Task DialAsync_WhenDisabled_ReturnsFailedAndDoesNotCallApi()
     {
         // Arrange
@@ -149,6 +210,31 @@ public sealed class DialPadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task MergeAsync_WithMultipleCalls_MergesEachAdditionalCallIntoPrimary()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.MergeAsync(
+            new MergeRequest
+            {
+                CallIds = ["call-1", "call-2", "call-3"],
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(
+            handler.Requests,
+            request => Assert.Equal($"{BaseUrl}call/call-1/merge", request.RequestUri.AbsoluteUri));
+        Assert.True((bool)result.Call.Metadata["isConference"]);
+        Assert.Equal(3, result.Call.Metadata["participantCount"]);
+    }
+
+    [Fact]
     public async Task GetClientCredentialsAsync_WhenConfigured_ReturnsProviderName()
     {
         // Arrange
@@ -162,6 +248,41 @@ public sealed class DialPadTelephonyProviderTests
         Assert.NotNull(credentials);
         Assert.Equal(DialPadConstants.ProviderTechnicalName, credentials.ProviderName);
         Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task GetDirectoryAsync_WhenConfigured_MapsDialPadUsers()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(
+            HttpStatusCode.OK,
+            """
+            {
+              "items": [
+                {
+                  "id": 123,
+                  "first_name": "Alex",
+                  "last_name": "Agent",
+                  "email": "alex@example.test",
+                  "extension": "2001",
+                  "phone_number": "+15550002001"
+                }
+              ]
+            }
+            """);
+        var provider = CreateProvider(handler, out _, isEnabled: true);
+
+        // Act
+        var result = await provider.GetDirectoryAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        var entry = Assert.Single(result.Entries);
+        Assert.Equal("123", entry.Id);
+        Assert.Equal("Alex Agent", entry.DisplayName);
+        Assert.Equal("2001", entry.Destination);
+        Assert.Equal("+15550002001", entry.PhoneNumber);
+        Assert.Equal($"{BaseUrl}users", handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
     private static DialPadTelephonyProvider CreateProvider(StubHttpMessageHandler handler, out IDataProtectionProvider dataProtectionProvider, bool isEnabled)

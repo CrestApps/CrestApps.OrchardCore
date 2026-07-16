@@ -19,7 +19,8 @@
 
   <!-- Default TFMs to use when building and packaging -->
   <PropertyGroup>
-    <TargetFrameworks>$(CommonTargetFrameworks)</TargetFrameworks>
+    <TargetFramework Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'False'">$(CommonTargetFrameworks)</TargetFramework>
+    <TargetFrameworks Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'True'">$(CommonTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>

@@ -1,0 +1,57 @@
+@using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Core.Models
+
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<ContactCenterSkill>>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Skills"])</h1></zone>
+
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Skill"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group with-checkbox" id="skills-list">
+        @if (Model.Models.Count > 0)
+        {
+            <li class="list-group-item text-bg-theme ignore-elements">
+                @(Model.Models.Count == 1 ? T["1 item"] : T["{0} items", Model.Models.Count])
+            </li>
+
+            @foreach (var entry in Model.Models)
+            {
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @T["<strong>Nothing here!</strong> There are no skills at the moment."]
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+@await DisplayAsync(Model.Pager)

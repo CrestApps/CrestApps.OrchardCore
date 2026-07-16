@@ -4,24 +4,26 @@
 
 @model OmnichannelActivityViewModel
 
+<h5 class="mb-3">@T["Activity information"]</h5>
+
 <div class="ocat-wrapper">
     <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
     <div class="ocat-end">
-        <input asp-for="InteractionType" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.InteractionType)" class="form-control-plaintext" value="@Model.InteractionType" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
     <div class="ocat-end">
-        <input asp-for="Channel" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.Channel)" class="form-control-plaintext" value="@Model.Channel" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
     <div class="ocat-end">
-        <input asp-for="CampaignTitle" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.CampaignTitle)" class="form-control-plaintext" value="@Model.CampaignTitle" readonly />
     </div>
 </div>
 
@@ -39,21 +41,21 @@
                 _ => T["Normal"],
             };
         }
-        <input asp-for="UrgencyLevel" class="form-control-plaintext" value="@value.Value" />
+        <input id="@Html.IdFor(x => x.UrgencyLevel)" class="form-control-plaintext" value="@value.Value" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
     <div class="ocat-end">
-        <input asp-for="AssignedToName" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.AssignedToName)" class="form-control-plaintext" value="@Model.AssignedToName" readonly />
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="ScheduledLocal" class="ocat-label">@T["Scheduled at"]</label>
     <div class="ocat-end">
-        <input asp-for="ScheduledLocal" class="form-control-plaintext" />
+        <input id="@Html.IdFor(x => x.ScheduledLocal)" class="form-control-plaintext" value="@Model.ScheduledLocal.ToString("g")" readonly />
     </div>
 </div>
 
@@ -62,14 +64,14 @@
     <div class="ocat-wrapper">
         <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
         <div class="ocat-end">
-            <input asp-for="CompletedByName" class="form-control-plaintext" />
+            <input id="@Html.IdFor(x => x.CompletedByName)" class="form-control-plaintext" value="@Model.CompletedByName" readonly />
         </div>
     </div>
 
     <div class="ocat-wrapper">
         <label asp-for="CompletedLocal" class="ocat-label">@T["Completed at"]</label>
         <div class="ocat-end">
-            <input asp-for="CompletedLocal" class="form-control-plaintext" />
+            <input id="@Html.IdFor(x => x.CompletedLocal)" class="form-control-plaintext" value="@Model.CompletedLocal.Value.ToString("g")" readonly />
         </div>
     </div>
 }
@@ -79,49 +81,67 @@
     <div class="ocat-wrapper">
         <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
         <div class="ocat-end">
-            <input asp-for="Instructions" class="form-control-plaintext" />
+            <textarea id="@Html.IdFor(x => x.Instructions)" class="form-control-plaintext" rows="3" readonly>@Model.Instructions</textarea>
         </div>
     </div>
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.Notes))
+@if (Model.RequiresContactResolution)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="SelectedContactContentItemId" class="ocat-label">@T["Contact"]</label>
+        <div class="ocat-end">
+            <select asp-for="SelectedContactContentItemId" asp-items="Model.ContactCandidates" class="form-select">
+                <option value="">@T["Select the contact associated with this activity"]</option>
+            </select>
+            <span asp-validation-for="SelectedContactContentItemId" class="text-danger"></span>
+            <span class="hint">@T["Multiple contacts match the caller. Select one before completing the activity."]</span>
+        </div>
+    </div>
+}
+
+<hr class="my-4" />
+<h5 class="mb-3">@T["Workflow"]</h5>
+
+@if (Model.ShowWorkflowPreview || !string.IsNullOrWhiteSpace(Model.Notes))
 {
     <div class="ocat-wrapper">
         <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
         <div class="ocat-end">
-            <textarea asp-for="Notes" class="form-control"></textarea>
+            <textarea asp-for="Notes" class="form-control" rows="4" placeholder="@T["Capture call notes and follow-up details"]"></textarea>
             <span asp-validation-for="Notes" class="text-danger"></span>
         </div>
     </div>
 }
 
-<div class="activity-wrapper">
-    <div class="ocat-wrapper">
-        <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
-        <div class="ocat-end">
-            <select asp-for="DispositionId" class="form-select">
-                <option value="">@T["Select a disposition"]</option>
-                @foreach (var disposition in Model.Dispositions)
+@if (Model.RequireDisposition || Model.Dispositions.Any())
+{
+    <div class="activity-wrapper">
+        <div class="ocat-wrapper">
+            <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+            <div class="ocat-end">
+                <select asp-for="DispositionId" class="form-select">
+                    <option value="">@T["Select a disposition"]</option>
+                    @foreach (var disposition in Model.Dispositions)
+                    {
+                        <option value="@disposition.ItemId">@disposition.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="DispositionId" class="text-danger"></span>
+
+                @if (Model.ShowWorkflowPreview)
                 {
-                    <option value="@disposition.ItemId">@disposition.Name</option>
+                    <div id="campaign-actions-preview" class="d-none my-3">
+                        <h5 class="text-uppercase">@T["Workflow Results"]</h5>
+                        <div id="actions-list"></div>
+                    </div>
                 }
-            </select>
-            <span asp-validation-for="DispositionId" class="text-danger"></span>
-
-            @if (Model.ShowWorkflowPreview)
-            {
-                <div id="campaign-actions-preview" class="d-none my-3">
-                    <h5 class="text-uppercase">@T["Workflow Results"]</h5>
-                    <div id="actions-list"></div>
-                </div>
-            }
+            </div>
         </div>
-
     </div>
+}
 
-</div>
-
-@if (Model.ShowWorkflowPreview)
+@if (Model.ShowWorkflowPreview && (Model.RequireDisposition || Model.Dispositions.Any()))
 {
     <style asp-name="flatpickr"></style>
     <script asp-name="flatpickr" at="Foot"></script>
@@ -138,6 +158,7 @@
             const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
             const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
             const currentAttempts = @Model.Attempts;
+            const scheduleAtText = @Html.Raw(JsonSerializer.Serialize(T["Schedule at"].Value));
 
             function initFlatpickr(input) {
                 flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
@@ -150,7 +171,7 @@
 
                 if (!dispositionId) {
                     previewContainer.classList.add("d-none");
-                    actionsList.innerHTML = "";
+                    actionsList.replaceChildren();
                     return;
                 }
 
@@ -175,17 +196,21 @@
 
                     if (!actions || actions.length === 0) {
                         previewContainer.classList.add("d-none");
-                        actionsList.innerHTML = "";
+                        actionsList.replaceChildren();
                         return;
                     }
 
-                    actionsList.innerHTML = "";
+                    actionsList.replaceChildren();
 
                     actions.forEach(function (action) {
                         const card = document.createElement("div");
                         card.className = "card mb-2";
+                        const cardBody = document.createElement("div");
+                        cardBody.className = "card-body";
+                        const previewTitle = document.createElement("strong");
+                        previewTitle.textContent = action.previewTitle;
 
-                        let cardBody = '<div class="card-body"><strong>' + action.previewTitle + '</strong>';
+                        cardBody.appendChild(previewTitle);
 
                         if (action.requiresScheduleDate) {
                             const inputId = 'schedule-' + action.actionId;
@@ -193,15 +218,25 @@
                             const defaultDate = action.defaultScheduleDate
                                 ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
                                 : '';
+                            const scheduleContainer = document.createElement("div");
+                            scheduleContainer.className = "mt-2";
+                            const label = document.createElement("label");
+                            label.htmlFor = inputId;
+                            label.className = "form-label";
+                            label.textContent = scheduleAtText;
+                            const input = document.createElement("input");
+                            input.type = "text";
+                            input.id = inputId;
+                            input.name = inputName;
+                            input.value = defaultDate;
+                            input.className = "form-control schedule-date-input";
+                            input.placeholder = scheduleAtText;
 
-                            cardBody += '<div class="mt-2">';
-                            cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule at"]</label>';
-                            cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule at"]" />';
-                            cardBody += '</div>';
+                            scheduleContainer.append(label, input);
+                            cardBody.appendChild(scheduleContainer);
                         }
 
-                        cardBody += '</div>';
-                        card.innerHTML = cardBody;
+                        card.appendChild(cardBody);
                         actionsList.appendChild(card);
 
                         if (action.requiresScheduleDate) {
@@ -214,6 +249,7 @@
 
                     previewContainer.classList.remove("d-none");
                 } catch (e) {
+                    console.error("Unable to load disposition workflow actions.", e);
                     previewContainer.classList.add("d-none");
                 }
             }

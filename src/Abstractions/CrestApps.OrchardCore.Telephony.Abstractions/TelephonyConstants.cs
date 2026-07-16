@@ -18,6 +18,22 @@ public static class TelephonyConstants
     public const string TokenProtectorPurpose = "CrestApps.OrchardCore.Telephony.UserTokens";
 
     /// <summary>
+    /// Contains metadata keys that have provider-neutral command semantics.
+    /// </summary>
+    public static class RequestMetadata
+    {
+        /// <summary>
+        /// Identifies a stable command that providers should use for idempotent execution when supported.
+        /// </summary>
+        public const string IdempotencyKey = "idempotencyKey";
+
+        /// <summary>
+        /// Identifies the monotonic fence token associated with an idempotent provider command.
+        /// </summary>
+        public const string FenceToken = "commandFenceToken";
+    }
+
+    /// <summary>
     /// Contains the well-known authentication scheme identifiers a telephony provider can use.
     /// </summary>
     public static class AuthenticationSchemes
@@ -64,10 +80,5 @@ public static class TelephonyConstants
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
 
-        /// <summary>
-        /// The legacy identifier of the soft phone feature.
-        /// </summary>
-        [Obsolete("Use SoftPhone instead.")]
-        public const string SoftPhoneWidget = SoftPhone;
     }
 }

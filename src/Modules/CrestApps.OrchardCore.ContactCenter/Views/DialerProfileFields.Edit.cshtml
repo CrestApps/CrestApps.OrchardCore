@@ -1,0 +1,195 @@
+@model DialerProfileViewModel
+
+<style asp-name="crestapps-bootstrap-select"></style>
+<script asp-name="crestapps-bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CampaignId">
+    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <select asp-for="CampaignId" asp-items="Model.CampaignOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a campaign"]" data-width="100%" title="@T["Select a campaign"]">
+            <option value="">@T["Select a campaign"]</option>
+        </select>
+        <span asp-validation-for="CampaignId" class="text-danger"></span>
+        <span class="hint">@T["The dialer uses CRM activities associated with the selected Interaction Center campaign."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueId">
+    <label asp-for="QueueId" class="ocat-label">@T["Queue"]</label>
+    <div class="ocat-end">
+        <select asp-for="QueueId" asp-items="Model.QueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["Select a queue"]">
+            <option value="">@T["Select a queue"]</option>
+        </select>
+        <span asp-validation-for="QueueId" class="text-danger"></span>
+        <span class="hint">@T["Agents signed in to this queue are reserved before power or progressive dialing."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Mode">
+    <label asp-for="Mode" class="ocat-label">@T["Mode"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Mode" class="form-select">
+            <option value="@DialerMode.Manual">@T["Manual"]</option>
+            <option value="@DialerMode.Preview">@T["Preview"]</option>
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Power)
+            {
+                <option value="@DialerMode.Power">@T["Power"]</option>
+            }
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Progressive)
+            {
+                <option value="@DialerMode.Progressive">@T["Progressive"]</option>
+            }
+        </select>
+        <span asp-validation-for="Mode" class="text-danger"></span>
+        @if (!Model.AutomatedDialerEnabled)
+        {
+            <span class="hint">@T["Enable the Contact Center Automated Dialer feature to offer the Power and Progressive automated pacing modes."]</span>
+        }
+        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting is available."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+    <label asp-for="ProviderName" class="ocat-label">@T["Voice call provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProviderName" asp-items="Model.ProviderOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a voice call provider"]" data-width="100%" title="@T["Default provider"]">
+            <option value="">@T["Default provider"]</option>
+        </select>
+        <span asp-validation-for="ProviderName" class="text-danger"></span>
+        <span class="hint">@T["The Voice Contact Center Call Router resolves this provider when placing outbound campaign calls."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent">
+    <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
+    <div class="ocat-limited">
+        <input asp-for="CallsPerAgent" class="form-control" />
+        <span asp-validation-for="CallsPerAgent" class="text-danger"></span>
+        <span class="hint">@T["Power dialing is capped at {0} calls per agent until predictive pacing is available.", Model.MaxCallsPerAgent]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts">
+    <label asp-for="MaxAttempts" class="ocat-label">@T["Max attempts"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxAttempts" class="form-control" />
+        <span asp-validation-for="MaxAttempts" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes">
+    <label asp-for="RetryDelayMinutes" class="ocat-label">@T["Retry delay (minutes)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="RetryDelayMinutes" class="form-control" />
+        <span asp-validation-for="RetryDelayMinutes" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CallerId">
+    <label asp-for="CallerId" class="ocat-label">@T["Caller ID"]</label>
+    <div class="ocat-end">
+        <input asp-for="CallerId" class="form-control" />
+        <span asp-validation-for="CallerId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RespectDoNotCall">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RespectDoNotCall" class="form-check-input" />
+            <label asp-for="RespectDoNotCall" class="form-check-label">@T["Respect do-not-call and communication preferences"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, contacts that opted out of phone calls and destinations listed on a national do-not-call registry are suppressed before dialing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceCallingWindow">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceCallingWindow" class="form-check-input" />
+            <label asp-for="EnforceCallingWindow" class="form-check-label">@T["Enforce a calling window"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, the contact is only dialed while the selected calendar is open. Contact time zones override the calendar time zone, and region-specific calendar rules configured through deployment data take precedence."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CallingCalendarId">
+    <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling calendar"]</label>
+    <div class="ocat-end">
+        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" data-width="100%" title="@T["Select an outbound calling calendar"]">
+            <option value="">@T["Select an outbound calling calendar"]</option>
+        </select>
+        <span asp-validation-for="CallingCalendarId" class="text-danger"></span>
+        <span class="hint">@T["The calendar supplies minute-precision weekday, overnight, holiday, and default time-zone rules."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="EnforceAbandonmentCap" class="form-check-input" />
+            <label asp-for="EnforceAbandonmentCap" class="form-check-label">@T["Enforce an abandonment-rate cap"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, automated pacing modes are suppressed once the rolling abandonment rate reaches the cap or the compliance statistics cannot be proven. Manual and preview dialing are unaffected because an agent is bound to every call."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent">
+    <label asp-for="MaxAbandonmentRatePercent" class="ocat-label">@T["Maximum abandonment rate (%)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxAbandonmentRatePercent" class="form-control" />
+        <span asp-validation-for="MaxAbandonmentRatePercent" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor">
+    <label asp-for="AbandonmentSampleFloor" class="ocat-label">@T["Abandonment sample floor"]</label>
+    <div class="ocat-limited">
+        <input asp-for="AbandonmentSampleFloor" class="form-control" />
+        <span asp-validation-for="AbandonmentSampleFloor" class="text-danger"></span>
+        <span class="hint">@T["The minimum number of live-answered calls in the rolling window before the abandonment rate is enforced."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SafeHarborEnabled" class="form-check-input" />
+            <label asp-for="SafeHarborEnabled" class="form-check-label">@T["Play a safe-harbor announcement when abandoned"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, an abandoned automated call plays a recorded announcement that identifies the caller instead of dropping the party silently."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage">
+    <label asp-for="SafeHarborMessage" class="ocat-label">@T["Safe-harbor announcement"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="SafeHarborMessage" class="form-control"></textarea>
+        <span asp-validation-for="SafeHarborMessage" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+    </div>
+</div>

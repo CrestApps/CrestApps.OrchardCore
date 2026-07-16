@@ -28,8 +28,6 @@ public static class OmnichannelConstants
     {
         public const string OmnichannelContact = "OmnichannelContact";
 
-        public const string OmnichannelSubject = "OmnichannelSubject";
-
         public const string ContactMethod = "ContactMethod";
     }
 
@@ -41,6 +39,8 @@ public static class OmnichannelConstants
         // public const string OmnichannelContactInfo = "OmnichannelContactInfoPart";
 
         public const string OmnichannelContact = "OmnichannelContactPart";
+
+        public const string OmnichannelSubject = "OmnichannelSubjectPart";
 
         public const string EmailInfo = "EmailInfoPart";
 
@@ -98,6 +98,7 @@ public static class OmnichannelConstants
         public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
 
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
+
     }
 
     /// <summary>
@@ -141,9 +142,19 @@ public static class OmnichannelConstants
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
 
         /// <summary>
+        /// Gets the permission to manage campaign groups.
+        /// </summary>
+        public readonly static Permission ManageCampaignGroups = new("ManageCampaignGroups", "Manage campaign groups");
+
+        /// <summary>
         /// Gets the permission to manage activities in bulk.
         /// </summary>
         public readonly static Permission ManageActivities = new("ManageActivities", "Manage activities");
+
+        /// <summary>
+        /// Gets the permission to purge an activity.
+        /// </summary>
+        public readonly static Permission PurgeActivity = new("PurgeActivity", "Purge activity", [ManageActivities]);
 
         /// <summary>
         /// Gets the permission to manage activity batches.
@@ -159,5 +170,10 @@ public static class OmnichannelConstants
         /// Gets the permission to manage subject flows.
         /// </summary>
         public readonly static Permission ManageSubjectFlows = new("ManageSubjectFlows", "Manage subject flows");
+
+        /// <summary>
+        /// Gets the permission to view the Omnichannel reports.
+        /// </summary>
+        public readonly static Permission ViewReports = new("ViewOmnichannelReports", "View Omnichannel reports", [ManageActivities]);
     }
 }

@@ -1,5 +1,6 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -14,6 +15,8 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<ActivityKind>("Kind")
+            .Column<string>("Source", column => column.WithLength(50))
             .Column<string>("Channel", column => column.WithLength(50))
             .Column<string>("ChannelEndpointId", column => column.WithLength(26))
             .Column<string>("PreferredDestination", column => column.WithLength(255))
@@ -27,12 +30,17 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
+            .Column<ActivityAssignmentStatus>("AssignmentStatus")
+            .Column<string>("ReservationId", column => column.WithLength(26))
+            .Column<string>("ReservedById", column => column.WithLength(26))
+            .Column<DateTime>("ReservedUtc")
+            .Column<DateTime>("ReservationExpiresUtc")
             .Column<string>("CreatedById", column => column.WithLength(26))
             .Column<string>("DispositionId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
-            .Column<string>("UrgencyLevel", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(50))
-            .Column<string>("InteractionType", column => column.WithLength(50)),
+            .Column<ActivityUrgencyLevel>("UrgencyLevel")
+            .Column<ActivityStatus>("Status")
+            .Column<ActivityInteractionType>("InteractionType"),
         collection: OmnichannelConstants.CollectionName
         );
 
@@ -53,6 +61,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         "DocumentId",
         "AssignedToId",
         "Status",
+        "AssignmentStatus",
         "InteractionType",
         "ScheduledUtc"),
         collection: OmnichannelConstants.CollectionName
@@ -68,6 +77,71 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivity_Assignment",
+        "AssignmentStatus",
+        "ReservationId",
+        "ReservedById",
+        "ScheduledUtc",
+        "DocumentId"),
+        collection: OmnichannelConstants.CollectionName
+        );
+
+        return 4;
+    }
+
+    /// <summary>
+    /// Adds Contact Center assignment and classification columns to the activity index.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.AddColumn<string>("Kind", column => column.WithLength(50));
+            table.AddColumn<string>("Source", column => column.WithLength(50));
+            table.AddColumn<string>("AssignmentStatus", column => column.WithLength(50));
+            table.AddColumn<string>("ReservationId", column => column.WithLength(26));
+            table.AddColumn<string>("ReservedById", column => column.WithLength(26));
+            table.AddColumn<DateTime>("ReservedUtc");
+            table.AddColumn<DateTime>("ReservationExpiresUtc");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivity_Assignment",
+                "AssignmentStatus",
+                "ReservationId",
+                "ReservedById",
+                "ScheduledUtc",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Skips the superseded username-index migration.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public static int UpdateFrom2()
+    {
+        return 4;
+    }
+
+    /// <summary>
+    /// Removes usernames from the activity index because user presentation is resolved by shapes.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.DropColumn("AssignedToUsername");
+            table.DropColumn("CreatedByUsername");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 4;
     }
 }

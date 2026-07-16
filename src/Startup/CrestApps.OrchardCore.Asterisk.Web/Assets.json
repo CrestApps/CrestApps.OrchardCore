@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "../../Modules/CrestApps.OrchardCore.SignalR/node_modules/@microsoft/signalr/dist/browser/signalr.js"
+    ],
+    "output": "wwwroot/js/signalr.js"
+  }
+]

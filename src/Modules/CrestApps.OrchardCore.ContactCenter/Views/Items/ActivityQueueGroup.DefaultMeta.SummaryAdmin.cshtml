@@ -1,0 +1,17 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ActivityQueueGroup>
+
+@{
+    var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+}
+
+@if (modifiedAt != default)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@modifiedAt.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: modifiedAt))</time>
+    </span>
+}

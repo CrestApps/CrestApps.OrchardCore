@@ -1,0 +1,198 @@
+{
+  "version": "1.0",
+  "status": "minimal-harness-implemented-certification-pending",
+  "scenarios": [
+    {
+      "id": "redis-backplane-two-shell",
+      "status": "implemented-uncertified",
+      "description": "Run two Orchard tenants through the production SignalR Redis backplane configuration and prove tenant-qualified agent, queue, supervisor, reconnect, and fan-out delivery.",
+      "controlIds": [
+        "O002",
+        "S001"
+      ],
+      "implementationPhase": "R1",
+      "certificationPhase": "R8",
+      "currentEvidence": [
+        "ContactCenterHubSecurityTests",
+        "ContactCenterRealTimeNotifierTests",
+        "SignalRRedisBackplaneArchitectureTests",
+        "TwoNodeRedisBackplaneTests.ProviderEvent_CrossesNodesWithoutCrossingTenantShells"
+      ],
+      "blockedBy": [
+        "The current transport harness uses tenant-scoped hosts and production backplane registration but does not activate features through a complete Orchard tenant setup.",
+        "R8 must extend the minimal provider-listener harness to authenticated ContactCenterHub agent, queue, supervisor, reconnect, and fan-out scenarios.",
+        "Retained release evidence has not yet been produced for every candidate GA topology."
+      ],
+      "harnessDependencies": [
+        "Redis 7-compatible test container",
+        "Production-equivalent SignalR backplane configuration",
+        "Two configured Orchard shells with distinct tenant identities",
+        "Authenticated agent and supervisor SignalR clients"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/O002/redis-backplane-two-shell/"
+    },
+    {
+      "id": "duplicate-provider-stream-two-process",
+      "status": "blocked",
+      "description": "Run two application processes against one tenant database while both receive duplicate and reordered provider events, then prove one monotonic provider transition.",
+      "controlIds": [
+        "D003",
+        "V001"
+      ],
+      "implementationPhase": "R3",
+      "certificationPhase": "R4",
+      "currentEvidence": [
+        "DefaultContactCenterEventPublisherTests.PublishAsync_WhenConcurrentDuplicatesBothReadMissing_PersistsBothToday",
+        "ProviderVoiceEventServiceTests.IngestAsync_WhenOutOfOrderEventHasEqualTimestamp_RegressesConnectedCallToday"
+      ],
+      "blockedBy": [
+        "The repository has no two-process Orchard Contact Center harness.",
+        "Provider inbox uniqueness, canonical provider identity, and sequence high-water state do not exist."
+      ],
+      "harnessDependencies": [
+        "Two independently hosted Orchard application processes",
+        "Shared PostgreSQL tenant database",
+        "Deterministic provider event duplicate/reorder injector",
+        "Provider inbox and call-session state inspector"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/V001/duplicate-provider-stream/"
+    },
+    {
+      "id": "listener-lease-loss",
+      "status": "blocked",
+      "description": "Expire or revoke the active provider-listener lease while events are flowing and prove ownership transfers without a delivery gap, split brain, or state regression.",
+      "controlIds": [
+        "O001",
+        "V001"
+      ],
+      "implementationPhase": "R4",
+      "certificationPhase": "R4",
+      "currentEvidence": [
+        "AsteriskRealtimeVoiceEventDispatcherTests",
+        "ProviderVoiceEventServiceTests"
+      ],
+      "blockedBy": [
+        "Provider stream ownership has no durable renewable lease or fencing token.",
+        "No multi-process provider-listener harness can pause, expire, and transfer ownership deterministically."
+      ],
+      "harnessDependencies": [
+        "Two provider-listener application processes",
+        "Controllable lease clock and fencing store",
+        "Continuous provider event source",
+        "Delivery-gap and duplicate-state assertions"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/V001/listener-lease-loss/"
+    },
+    {
+      "id": "application-node-failure",
+      "status": "blocked",
+      "description": "Terminate one application process during offers, provider commands, outbox dispatch, and active calls, then prove surviving nodes recover without duplicate customer actions or capacity leaks.",
+      "controlIds": [
+        "C003",
+        "C004",
+        "D001",
+        "D002",
+        "T003"
+      ],
+      "implementationPhase": "R3",
+      "certificationPhase": "R8",
+      "currentEvidence": [
+        "AgentSessionServiceTests.DisconnectAsync_WhenLastConnection_DoesNotSignOutAvailableProfileToday",
+        "DialerAttemptServiceTests.TryDialAsync_WhenProviderTimesOutAfterUnknownExecution_MarksDefinitiveFailureToday",
+        "ContactCenterOutboxTests.DispatchDueAsync_AfterHandlerOrderChanges_ReplaysCompletedHandlerToday"
+      ],
+      "blockedBy": [
+        "Canonical agent availability, durable provider commands, and stable outbox handler ids are not implemented.",
+        "The repository has no process-kill orchestration or surviving-node convergence probe."
+      ],
+      "harnessDependencies": [
+        "Two independently hosted Orchard application processes",
+        "Shared PostgreSQL and Redis dependencies",
+        "Controllable provider command/event simulator",
+        "Process termination and convergence assertions"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/T003/application-node-failure/"
+    },
+    {
+      "id": "redis-network-partition",
+      "status": "blocked",
+      "description": "Partition one application process from Redis while database and provider connectivity remain available, then prove readiness degradation, reconnect convergence, and tenant-safe real-time behavior.",
+      "controlIds": [
+        "O001",
+        "O002",
+        "T003"
+      ],
+      "implementationPhase": "R7",
+      "certificationPhase": "R8",
+      "currentEvidence": [
+        "ContactCenterHubSecurityTests",
+        "ContactCenterRealTimeNotifierTests"
+      ],
+      "blockedBy": [
+        "No Contact Center Redis readiness model exists.",
+        "No network-fault proxy is wired into a multi-process Contact Center harness."
+      ],
+      "harnessDependencies": [
+        "Two independently hosted Orchard application processes",
+        "Redis backplane behind a controllable network-fault proxy",
+        "Readiness endpoint and reconnect-state probes",
+        "Tenant-qualified SignalR delivery assertions"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/T003/redis-network-partition/"
+    },
+    {
+      "id": "database-network-partition",
+      "status": "blocked",
+      "description": "Partition one or all application processes from the tenant database during routing, reservation, provider ingest, and outbox work, then prove fail-closed behavior and bounded recovery.",
+      "controlIds": [
+        "D003",
+        "D004",
+        "O001",
+        "T003"
+      ],
+      "implementationPhase": "R7",
+      "certificationPhase": "R8",
+      "currentEvidence": [
+        "ActivityReservationSharedDatabaseTests.ReserveAsync_TwoProvidersReadWaitingState_BothPersistReservationsToday",
+        "DefaultContactCenterEventPublisherTests.PublishAsync_WhenConcurrentDuplicatesBothReadMissing_PersistsBothToday"
+      ],
+      "blockedBy": [
+        "Database readiness and degraded-mode behavior are not defined.",
+        "The distributed harness has no network-fault proxy or database recovery oracle."
+      ],
+      "harnessDependencies": [
+        "Two independently hosted Orchard application processes",
+        "PostgreSQL behind a controllable network-fault proxy",
+        "Database readiness and backlog probes",
+        "Reservation, inbox, and outbox convergence assertions"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/T003/database-network-partition/"
+    },
+    {
+      "id": "rolling-version-deployment",
+      "status": "blocked",
+      "description": "Run N and N-1 application processes concurrently while replaying pending outbox, provider, and active-work state, then prove stable handler ids and expand-migrate-contract compatibility.",
+      "controlIds": [
+        "C004",
+        "O006",
+        "T003"
+      ],
+      "implementationPhase": "R7",
+      "certificationPhase": "R8",
+      "currentEvidence": [
+        "ContactCenterOutboxTests.DispatchDueAsync_AfterHandlerOrderChanges_ReplaysCompletedHandlerToday"
+      ],
+      "blockedBy": [
+        "Stable versioned outbox handler ids are not implemented.",
+        "No N/N-1 package fixture or expand-migrate-contract deployment harness exists."
+      ],
+      "harnessDependencies": [
+        "Version-pinned N and N-1 Orchard application images",
+        "Shared PostgreSQL and Redis dependencies",
+        "Pending outbox/provider-command seed data",
+        "Schema and handler replay compatibility assertions"
+      ],
+      "evidenceTarget": ".github/contact-center/evidence/O006/rolling-version-deployment/"
+    }
+  ]
+}

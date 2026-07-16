@@ -1,0 +1,41 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.ContactCenter.Indexes;
+
+/// <summary>
+/// Maps <see cref="ActivityReservation"/> documents to the <see cref="ActivityReservationIndex"/>.
+/// </summary>
+public sealed class ActivityReservationIndexProvider : IndexProvider<ActivityReservation>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityReservationIndexProvider"/> class.
+    /// </summary>
+    public ActivityReservationIndexProvider()
+    {
+        CollectionName = ContactCenterConstants.CollectionName;
+    }
+
+    /// <inheritdoc/>
+    public override void Describe(DescribeContext<ActivityReservation> context)
+    {
+        context
+            .For<ActivityReservationIndex>()
+            .Map(reservation => new ActivityReservationIndex
+            {
+                ItemId = reservation.ItemId,
+                ActivityItemId = reservation.ActivityItemId,
+                ActivityClaimKey = reservation.Status is ReservationStatus.Pending or ReservationStatus.Accepted
+                    ? reservation.ActivityItemId
+                    : reservation.ItemId,
+                AgentId = reservation.AgentId,
+                AgentClaimKey = reservation.Status == ReservationStatus.Pending
+                    ? reservation.AgentId
+                    : reservation.ItemId,
+                Status = reservation.Status,
+                ExpiresUtc = reservation.ExpiresUtc,
+            });
+    }
+}

@@ -1,0 +1,787 @@
+using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Logging;
+using OrchardCore;
+using OrchardCore.Locking.Distributed;
+using OrchardCore.Modules;
+using YesSql;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Provides the default implementation of <see cref="IActivityReservationService"/>.
+/// </summary>
+public sealed class ActivityReservationService : IActivityReservationService
+{
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
+    private readonly IActivityReservationManager _reservationManager;
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IAgentProfileManager _agentManager;
+    private readonly IAgentAvailabilityService _availabilityService;
+    private readonly IActivityQueueManager _queueManager;
+    private readonly IActivityQueueService _queueService;
+    private readonly IInteractionManager _interactionManager;
+    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterEventPublisher _publisher;
+    private readonly IProviderCommandStateService _providerCommandStateService;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IDistributedLock _distributedLock;
+    private readonly ISession _session;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityReservationService"/> class.
+    /// </summary>
+    /// <param name="reservationManager">The reservation manager.</param>
+    /// <param name="queueItemManager">The queue item manager.</param>
+    /// <param name="agentManager">The agent profile manager.</param>
+    /// <param name="availabilityService">The canonical agent availability service.</param>
+    /// <param name="queueManager">The queue manager.</param>
+    /// <param name="queueService">The queue service used for dequeue operations.</param>
+    /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
+    /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
+    /// <param name="session">The YesSql session used to commit reservation state atomically.</param>
+    /// <param name="clock">The clock used to stamp reservation times.</param>
+    /// <param name="logger">The logger.</param>
+    public ActivityReservationService(
+        IActivityReservationManager reservationManager,
+        IQueueItemManager queueItemManager,
+        IAgentProfileManager agentManager,
+        IAgentAvailabilityService availabilityService,
+        IActivityQueueManager queueManager,
+        IActivityQueueService queueService,
+        IInteractionManager interactionManager,
+        IOmnichannelActivityManager activityManager,
+        IContactCenterEventPublisher publisher,
+        IEnumerable<IProviderCommandStateService> providerCommandStateServices,
+        IContactCenterScopeExecutor scopeExecutor,
+        IDistributedLock distributedLock,
+        ISession session,
+        IClock clock,
+        ILogger<ActivityReservationService> logger)
+    {
+        _reservationManager = reservationManager;
+        _queueItemManager = queueItemManager;
+        _agentManager = agentManager;
+        _availabilityService = availabilityService;
+        _queueManager = queueManager;
+        _queueService = queueService;
+        _interactionManager = interactionManager;
+        _activityManager = activityManager;
+        _publisher = publisher;
+        _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
+        _scopeExecutor = scopeExecutor;
+        _distributedLock = distributedLock;
+        _session = session;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> ReserveAsync(QueueItem queueItem, AgentProfile agent, int timeoutSeconds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queueItem);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetActivityReservationLockKey(queueItem.ActivityItemId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!activityLocked)
+        {
+            return null;
+        }
+
+        await using var acquiredActivityLock = activityLocker;
+
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetAgentReservationLockKey(agent.ItemId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!agentLocked)
+        {
+            return null;
+        }
+
+        await using var acquiredAgentLock = agentLocker;
+
+        var current = await _queueItemManager.FindByIdAsync(queueItem.ItemId, cancellationToken);
+
+        if (current is null || current.Status != QueueItemStatus.Waiting)
+        {
+            return null;
+        }
+
+        queueItem = current;
+        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
+
+        if (agent.PresenceStatus != AgentPresenceStatus.Available ||
+            !string.IsNullOrWhiteSpace(agent.ActiveReservationId))
+        {
+            return null;
+        }
+
+        var availability = await _availabilityService.GetAsync(agent.ItemId, queueItem.QueueId, cancellationToken);
+
+        if (availability is null)
+        {
+            return null;
+        }
+
+        var capacity = agent.MaxConcurrentInteractions > 0
+            ? agent.MaxConcurrentInteractions
+            : 1;
+        var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(
+            agent.ItemId,
+            cancellationToken);
+
+        if (activeInteractionCount >= capacity)
+        {
+            return null;
+        }
+
+        var now = _clock.UtcNow;
+        var reservation = await _reservationManager.NewAsync(cancellationToken: cancellationToken);
+        reservation.ActivityItemId = queueItem.ActivityItemId;
+        reservation.QueueId = queueItem.QueueId;
+        reservation.QueueItemId = queueItem.ItemId;
+        reservation.AgentId = agent.ItemId;
+        reservation.Status = ReservationStatus.Pending;
+        reservation.CreatedUtc = now;
+        reservation.ExpiresUtc = now.AddSeconds(timeoutSeconds);
+
+        await _reservationManager.CreateAsync(reservation, cancellationToken: cancellationToken);
+
+        queueItem.Status = QueueItemStatus.Reserved;
+        queueItem.ReservationId = reservation.ItemId;
+        queueItem.AgentId = agent.ItemId;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        if (!agent.RequestedPresenceStatus.HasValue &&
+            agent.PresenceStatus is not AgentPresenceStatus.Available and not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp)
+        {
+            agent.RequestedPresenceStatus = agent.PresenceStatus == AgentPresenceStatus.RequestBreak
+                ? AgentPresenceStatus.Break
+                : agent.PresenceStatus;
+        }
+
+        agent.PresenceStatus = AgentPresenceStatus.Reserved;
+        agent.ActiveReservationId = reservation.ItemId;
+        agent.PresenceChangedUtc = now;
+        agent.LastAssignedUtc = now;
+        await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+
+        await UpdateActivityAsync(queueItem.ActivityItemId, activity =>
+        {
+            activity.AssignmentStatus = ActivityAssignmentStatus.Reserved;
+            activity.ReservationId = reservation.ItemId;
+            activity.ReservedById = agent.UserId;
+            activity.ReservedByUsername = agent.UserName;
+            activity.ReservedUtc = now;
+            activity.ReservationExpiresUtc = reservation.ExpiresUtc;
+        }, cancellationToken);
+
+        await PublishAsync(ContactCenterConstants.Events.QueueItemReserved, reservation, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentReserved, reservation, cancellationToken);
+
+        await CommitTransitionAsync(
+            queueItem.ActivityItemId,
+            agent.ItemId,
+            cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> AcceptAsync(string reservationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null || reservation.Status != ReservationStatus.Pending)
+        {
+            return null;
+        }
+
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetAgentReservationLockKey(reservation.AgentId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!agentLocked)
+        {
+            return null;
+        }
+
+        await using var acquiredAgentLock = agentLocker;
+
+        reservation.Status = ReservationStatus.Accepted;
+        await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
+
+        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is not null)
+        {
+            queueItem.Status = QueueItemStatus.Assigned;
+            await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+        }
+
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+        if (agent is not null)
+        {
+            agent.PresenceStatus = AgentPresenceStatus.Busy;
+            agent.ActiveReservationId = null;
+            agent.PresenceChangedUtc = _clock.UtcNow;
+            await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+        }
+
+        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        {
+            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+            activity.AssignedToId = agent?.UserId;
+            activity.AssignedToUsername = agent?.UserName;
+            activity.AssignedToUtc = _clock.UtcNow;
+        }, cancellationToken);
+
+        await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, cancellationToken);
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> RejectAsync(string reservationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null ||
+            reservation.Status is not ReservationStatus.Pending and not ReservationStatus.Accepted)
+        {
+            return null;
+        }
+
+        await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken);
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> CancelAsync(string reservationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null || reservation.Status != ReservationStatus.Pending)
+        {
+            return null;
+        }
+
+        await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken);
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> CompensateAsync(
+        string reservationId,
+        bool removeFromQueue,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null ||
+            reservation.Status is not ReservationStatus.Pending and not ReservationStatus.Accepted)
+        {
+            return null;
+        }
+
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+            GetAgentReservationLockKey(reservation.AgentId),
+            _lockTimeout,
+            _lockExpiration);
+
+        if (!agentLocked)
+        {
+            return null;
+        }
+
+        await using var acquiredAgentLock = agentLocker;
+
+        var activeAgentReservations = await _reservationManager.ListActiveByAgentAsync(
+            reservation.AgentId,
+            cancellationToken);
+        var hasNewerAgentWork = activeAgentReservations.Any(candidate =>
+            !string.Equals(candidate.ItemId, reservation.ItemId, StringComparison.Ordinal));
+        var now = _clock.UtcNow;
+        var wasAccepted = reservation.Status == ReservationStatus.Accepted;
+        reservation.Status = ReservationStatus.Canceled;
+        await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
+
+        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is not null &&
+            string.Equals(queueItem.ReservationId, reservation.ItemId, StringComparison.Ordinal))
+        {
+            queueItem.ReservationId = null;
+            queueItem.AgentId = null;
+
+            if (removeFromQueue)
+            {
+                await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
+            }
+            else
+            {
+                queueItem.Status = QueueItemStatus.Waiting;
+                await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+            }
+        }
+
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var agentReleased = false;
+        var ownsPendingReservation = !wasAccepted &&
+            agent?.PresenceStatus == AgentPresenceStatus.Reserved &&
+            string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal);
+        var ownsAcceptedReservation = wasAccepted &&
+            agent?.PresenceStatus == AgentPresenceStatus.Busy &&
+            (string.Equals(agent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(agent.ActiveReservationId));
+
+        if (agent is not null &&
+            !hasNewerAgentWork &&
+            (ownsPendingReservation || ownsAcceptedReservation))
+        {
+            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
+            agent.RequestedPresenceStatus = null;
+            agent.ActiveReservationId = null;
+            agent.PresenceChangedUtc = now;
+            await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+            agentReleased = true;
+        }
+
+        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        {
+            if (!string.Equals(activity.ReservationId, reservation.ItemId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            activity.AssignmentStatus = removeFromQueue
+                ? ActivityAssignmentStatus.Released
+                : ActivityAssignmentStatus.Available;
+            activity.ReservationId = null;
+            activity.ReservedById = null;
+            activity.ReservedByUsername = null;
+            activity.ReservedUtc = null;
+            activity.ReservationExpiresUtc = null;
+            activity.AssignedToId = null;
+            activity.AssignedToUsername = null;
+            activity.AssignedToUtc = null;
+        }, cancellationToken);
+
+        if (agentReleased)
+        {
+            await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+        }
+
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        return reservation;
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> ExpireDueAsync(CancellationToken cancellationToken = default)
+    {
+        var now = _clock.UtcNow;
+        var expired = await _reservationManager.ListExpiredAsync(now, cancellationToken);
+        var count = 0;
+
+        foreach (var candidate in expired)
+        {
+            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+                GetReservationLockKey(candidate.ItemId),
+                _lockTimeout,
+                _lockExpiration);
+
+            if (!locked)
+            {
+                continue;
+            }
+
+            await using var acquiredLock = locker;
+
+            var reservation = await _reservationManager.FindByIdAsync(candidate.ItemId, cancellationToken);
+
+            if (reservation is null ||
+                reservation.Status != ReservationStatus.Pending ||
+                reservation.ExpiresUtc > now)
+            {
+                continue;
+            }
+
+            await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
+            await CommitTransitionAsync(
+                reservation.ActivityItemId,
+                reservation.AgentId,
+                cancellationToken);
+            count++;
+        }
+
+        return count;
+    }
+
+    private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+        reservation.Status = status;
+        await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
+
+        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is not null &&
+            !string.IsNullOrWhiteSpace(queueItem.ReservationId) &&
+            !string.Equals(queueItem.ReservationId, reservation.ItemId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Skipped releasing expired reservation '{ReservationId}' for activity '{ActivityItemId}' because queue item '{QueueItemId}' is now owned by newer reservation '{CurrentReservationId}'.",
+                OperationalLogRedactor.Pseudonymize(reservation.ItemId, OperationalLogIdentifierCategory.Reservation),
+                OperationalLogRedactor.Pseudonymize(reservation.ActivityItemId, OperationalLogIdentifierCategory.Activity),
+                OperationalLogRedactor.Pseudonymize(queueItem.ItemId, OperationalLogIdentifierCategory.Queue),
+                OperationalLogRedactor.Pseudonymize(queueItem.ReservationId, OperationalLogIdentifierCategory.Reservation));
+
+            var obsoleteAgent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+            if (obsoleteAgent is not null &&
+                string.Equals(obsoleteAgent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal))
+            {
+                obsoleteAgent.PresenceStatus = obsoleteAgent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(obsoleteAgent);
+                obsoleteAgent.RequestedPresenceStatus = null;
+                obsoleteAgent.ActiveReservationId = null;
+                obsoleteAgent.PresenceChangedUtc = now;
+                await _agentManager.UpdateAsync(obsoleteAgent, cancellationToken: cancellationToken);
+                await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+            }
+
+            return;
+        }
+
+        var queue = !string.IsNullOrEmpty(reservation.QueueId)
+            ? await _queueManager.FindByIdAsync(reservation.QueueId, cancellationToken)
+            : null;
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+        var configuredUnansweredAction = status == ReservationStatus.Expired
+            ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
+            : UnansweredOfferAction.Requeue;
+        var unansweredAction = configuredUnansweredAction;
+        ProviderCommandRegistration providerCommand = null;
+
+        if (unansweredAction is UnansweredOfferAction.Voicemail or UnansweredOfferAction.Reject)
+        {
+            if (interaction is null ||
+                string.IsNullOrWhiteSpace(interaction.ProviderInteractionId) ||
+                string.IsNullOrWhiteSpace(interaction.ProviderName) ||
+                _providerCommandStateService is null)
+            {
+                _logger.LogWarning(
+                    "The unanswered-offer action '{UnansweredOfferAction}' could not be persisted for activity '{ActivityItemId}' because provider command infrastructure or call identity is unavailable.",
+                    unansweredAction,
+                    OperationalLogRedactor.Pseudonymize(interaction?.ActivityItemId, OperationalLogIdentifierCategory.Activity));
+                unansweredAction = UnansweredOfferAction.Requeue;
+            }
+            else
+            {
+                var commandId = IdGenerator.GenerateId();
+                interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
+                providerCommand = new ProviderCommandRegistration
+                {
+                    CommandId = commandId,
+                    ProviderName = interaction.ProviderName,
+                    CommandType = unansweredAction == UnansweredOfferAction.Voicemail
+                        ? ProviderCommandType.SendToVoicemail
+                        : ProviderCommandType.Reject,
+                    ActivityItemId = reservation.ActivityItemId,
+                    InteractionId = interaction.ItemId,
+                    RemoveReservationFromQueueOnFailure = false,
+                    RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+                    {
+                        ActivityItemId = reservation.ActivityItemId,
+                        QueueId = reservation.QueueId,
+                        ProviderCallId = interaction.ProviderInteractionId,
+                        ReofferOnFailure = true,
+                        Metadata = BuildOfferTimeoutMetadata(queue, agent),
+                    }),
+                };
+            }
+        }
+
+        var requeue = unansweredAction == UnansweredOfferAction.Requeue;
+
+        if (queueItem is not null)
+        {
+            queueItem.ReservationId = null;
+            queueItem.AgentId = null;
+
+            if (requeue)
+            {
+                queueItem.Status = QueueItemStatus.Waiting;
+                await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+            }
+            else
+            {
+                queueItem.DequeuedUtc = now;
+                await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
+            }
+        }
+
+        if (agent is not null)
+        {
+            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
+            agent.RequestedPresenceStatus = null;
+            agent.ActiveReservationId = null;
+            agent.PresenceChangedUtc = now;
+            await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+        }
+
+        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        {
+            activity.AssignmentStatus = requeue
+                ? ActivityAssignmentStatus.Available
+                : ActivityAssignmentStatus.Released;
+            activity.ReservationId = null;
+            activity.ReservedById = null;
+            activity.ReservedByUsername = null;
+            activity.ReservedUtc = null;
+            activity.ReservationExpiresUtc = null;
+
+            if (!requeue)
+            {
+                activity.Status = unansweredAction == UnansweredOfferAction.Voicemail
+                    ? ActivityStatus.Completed
+                    : ActivityStatus.Cancelled;
+                activity.CompletedUtc = now;
+            }
+        }, cancellationToken);
+
+        if (interaction is not null)
+        {
+            if (requeue)
+            {
+                interaction.Status = InteractionStatus.Created;
+                interaction.AgentId = null;
+            }
+            else if (providerCommand is not null)
+            {
+                interaction.Status = InteractionStatus.Ringing;
+                interaction.EndedUtc = null;
+                interaction.AgentId = null;
+                interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
+            }
+            else
+            {
+                interaction.Status = InteractionStatus.Ended;
+                interaction.EndedUtc ??= now;
+                interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
+            }
+
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
+        await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+
+        if (providerCommand is not null)
+        {
+            await _providerCommandStateService.RegisterAsync(providerCommand, cancellationToken);
+            _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+                processor.DispatchAsync(providerCommand.CommandId, CancellationToken.None));
+        }
+    }
+
+    private async Task CommitTransitionAsync(
+        string activityItemId,
+        string agentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "A concurrent Contact Center operation won the compare-and-set transition for activity '{ActivityId}' and agent '{AgentId}'.",
+                    OperationalLogRedactor.Pseudonymize(activityItemId, OperationalLogIdentifierCategory.Activity),
+                    OperationalLogRedactor.Pseudonymize(agentId, OperationalLogIdentifierCategory.Agent));
+            }
+
+            throw;
+        }
+    }
+
+    private static Dictionary<string, object> BuildOfferTimeoutMetadata(ActivityQueue queue, AgentProfile agent)
+    {
+        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        if (queue is not null)
+        {
+            metadata["queueId"] = queue.ItemId;
+
+            if (!string.IsNullOrWhiteSpace(queue.Name))
+            {
+                metadata["queueName"] = queue.Name;
+            }
+        }
+
+        if (agent is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(agent.UserId))
+            {
+                metadata["voicemailRecipientUserId"] = agent.UserId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(agent.UserName))
+            {
+                metadata["voicemailRecipientUserName"] = agent.UserName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(agent.DisplayName))
+            {
+                metadata["voicemailRecipientDisplayName"] = agent.DisplayName;
+            }
+        }
+
+        return metadata;
+    }
+
+    private async Task UpdateActivityAsync(string activityItemId, Action<OmnichannelActivity> mutate, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(activityItemId))
+        {
+            return;
+        }
+
+        var activity = await _activityManager.FindByIdAsync(activityItemId, cancellationToken);
+
+        if (activity is null)
+        {
+            return;
+        }
+
+        mutate(activity);
+
+        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+    }
+
+    private Task PublishAsync(string eventType, ActivityReservation reservation, CancellationToken cancellationToken)
+    {
+        return _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = eventType,
+            AggregateType = nameof(ActivityReservation),
+            AggregateId = reservation.ItemId,
+            ActorId = reservation.AgentId,
+            SourceComponent = ContactCenterConstants.Components.Queues,
+        }, cancellationToken);
+    }
+
+    private static string GetAgentReservationLockKey(string agentId)
+    {
+        return $"ContactCenterAgentReservation:{agentId}";
+    }
+
+    private static string GetActivityReservationLockKey(string activityItemId)
+    {
+        return $"ContactCenterActivityReservation:{activityItemId}";
+    }
+
+    private static string GetReservationLockKey(string reservationId)
+    {
+        return $"ContactCenterReservation:{reservationId}";
+    }
+}

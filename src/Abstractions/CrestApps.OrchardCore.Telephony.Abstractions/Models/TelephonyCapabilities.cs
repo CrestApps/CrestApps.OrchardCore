@@ -56,4 +56,14 @@ public enum TelephonyCapabilities
     /// The provider can receive inbound calls.
     /// </summary>
     ReceiveCalls = 1 << 8,
+
+    /// <summary>
+    /// The provider can send a ringing inbound call to voicemail.
+    /// </summary>
+    Voicemail = 1 << 9,
+
+    /// <summary>
+    /// The provider can list directory destinations for call transfer.
+    /// </summary>
+    Directory = 1 << 10,
 }
