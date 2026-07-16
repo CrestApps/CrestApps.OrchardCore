@@ -23,6 +23,24 @@ public sealed class ContactCenterFeatureActivationTests
         Assert.Equal(_runtimeProfileIds.Order(StringComparer.Ordinal), profileIds);
     }
 
+    [Fact]
+    public async Task SupportMatrix_GaCoreProfiles_DoNotEnableAutomatedDialing()
+    {
+        // Arrange
+        var matrix = await ContactCenterSupportMatrix.LoadAsync();
+
+        // Act
+        var automatedProfiles = matrix.TenantProfiles
+            .Where(profile => profile.Features.Contains(
+                "CrestApps.OrchardCore.ContactCenter.Dialer.Automated",
+                StringComparer.Ordinal))
+            .Select(profile => profile.Id)
+            .ToArray();
+
+        // Assert
+        Assert.Empty(automatedProfiles);
+    }
+
     [Theory]
     [InlineData("ga-core-asterisk")]
     [InlineData("ga-core-dialpad")]
