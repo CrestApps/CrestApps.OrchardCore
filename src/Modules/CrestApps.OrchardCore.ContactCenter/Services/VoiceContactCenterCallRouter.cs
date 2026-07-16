@@ -260,9 +260,9 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         var flow = await ResolveFlowAsync(endpoint, cancellationToken);
 
-        var contactItemId = await ResolveContactAsync(fromAddress, cancellationToken);
+        var contactItemIds = await ResolveContactsAsync(fromAddress, cancellationToken);
 
-        var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemId, now);
+        var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now);
         result.ActivityItemId = activity.ItemId;
 
         var entryPointResolver = _entryPointResolvers.FirstOrDefault();
@@ -413,18 +413,24 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             string.Equals(flow.ChannelEndpointId, endpoint.ItemId, StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task<string> ResolveContactAsync(string fromAddress, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> ResolveContactsAsync(
+        string fromAddress,
+        CancellationToken cancellationToken)
     {
         var contactIds = await _contactLookup.FindContactItemIdsAsync(fromAddress, cancellationToken);
 
-        return contactIds.Count > 0 ? contactIds[0] : null;
+        return contactIds
+            .Where(contactId => !string.IsNullOrEmpty(contactId))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
     }
 
     private async Task<OmnichannelActivity> CreateActivityAsync(
         OmnichannelChannelEndpoint endpoint,
         SubjectFlowSettings flow,
         string fromAddress,
-        string contactItemId,
+        IReadOnlyList<string> contactItemIds,
         DateTime now)
     {
         var activity = await _activityManager.NewAsync();
@@ -440,15 +446,27 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         activity.Status = ActivityStatus.AwaitingAgentResponse;
         activity.ScheduledUtc = now;
         activity.CreatedUtc = now;
-
-        if (!string.IsNullOrEmpty(contactItemId))
+        activity.ContactResolutionCandidates = contactItemIds.ToList();
+        activity.ContactResolutionStatus = contactItemIds.Count switch
         {
-            var contact = await _contentManager.GetAsync(contactItemId);
+            0 => ContactResolutionStatus.Unresolved,
+            1 => ContactResolutionStatus.Resolved,
+            _ => ContactResolutionStatus.Ambiguous,
+        };
+
+        if (activity.ContactResolutionStatus == ContactResolutionStatus.Resolved)
+        {
+            var contact = await _contentManager.GetAsync(contactItemIds[0]);
 
             if (contact is not null)
             {
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = contact.ContentType;
+                activity.ContactResolvedUtc = now;
+            }
+            else
+            {
+                activity.ContactResolutionStatus = ContactResolutionStatus.Unresolved;
             }
         }
 

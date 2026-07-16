@@ -179,7 +179,7 @@
       "category": "correctness",
       "planFinding": "PR8",
       "gate": "Ambiguous inbound matches attributed to first contact",
-      "invariant": "When inbound contact lookup returns more than one match, the activity must persist an explicit ambiguous-resolution state instead of auto-assigning `contactIds[0]`, and no contact-bound subject action may run until the ambiguity is resolved explicitly. `InboundContactLookup.cs:31-68` can return multiple matches and `VoiceContactCenterCallRouter.cs:464-469` currently chooses the first match with no ordering or ambiguity state.",
+      "invariant": "When inbound contact lookup returns more than one match, the activity must persist a deterministic candidate set and an explicit ambiguous-resolution state instead of auto-assigning the first match. The call may continue through contact-independent routing, but completion must require an authorized explicit candidate selection and no contact-bound subject action may run before resolution.",
       "testId": "CC-C005",
       "ciJob": {
         "id": "contact-center-domain-invariants",
@@ -197,7 +197,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "InboundVoiceServiceTests.HandleInboundAsync_WhenMultipleContactsMatch_AssignsFirstMatchToday proves the router immediately persists the first returned contact as the activity attribution and never loads the other valid match. R5 must invert this characterization with an explicit unresolved/ambiguous attribution state and block contact-bound subject actions until resolution."
+      "evidenceLocation": "InboundVoiceServiceTests proves zero, one, and unordered duplicate lookup matches persist Unresolved, Resolved, and deterministic Ambiguous states without first-match fallback while ambiguous calls remain routable. OmnichannelActivityTests pins candidate validation, immutable reattribution, audit metadata, and idempotency. DefaultActivityDispositionServiceTests proves the source-neutral completion boundary rejects unresolved ambiguity, and AgentWorkspaceEndpoints requires resource-scoped CompleteActivity authorization. DefaultSubjectActionExecutorTests proves unresolved, ambiguous, and legacy unknown inbound activities cannot mutate contacts or create follow-up work. ContactResolutionUiArchitectureTests proves completion renders the required candidate selector, resolves the activity in the display driver, and reloads the selected contact before disposition."
     },
     {
       "id": "C006",

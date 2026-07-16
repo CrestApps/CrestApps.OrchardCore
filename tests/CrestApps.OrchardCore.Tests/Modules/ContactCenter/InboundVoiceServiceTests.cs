@@ -179,7 +179,7 @@ public sealed class InboundVoiceServiceTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Routed);
+        Assert.True(result.Routed, result.Reason);
         Assert.False(result.Queued);
         Assert.Equal("u1", result.AgentUserId);
         Assert.Equal("act1", result.ActivityItemId);
@@ -199,14 +199,15 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
-    public async Task HandleInboundAsync_WhenMultipleContactsMatch_AssignsFirstMatchToday()
+    public async Task HandleInboundAsync_WhenMultipleContactsMatch_LeavesContactUnresolvedAndRoutesActivity()
     {
         // Arrange
         var harness = new Harness();
+
         harness.ChannelEndpointManager
             .Setup(manager => manager.GetByServiceAddressAsync(
                 "Phone",
-                "15553334444",
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<OmnichannelChannelEndpoint>(
                 new OmnichannelChannelEndpoint
@@ -215,6 +216,7 @@ public sealed class InboundVoiceServiceTests
                     Channel = "Phone",
                     Value = "+15553334444",
                 }));
+
         harness.SubjectFlowSettingsService
             .Setup(service => service.GetConfiguredFlowSettingsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
@@ -226,9 +228,148 @@ public sealed class InboundVoiceServiceTests
                     SubjectContentType = "CallSubject",
                 },
             ]);
+
         harness.ContactLookup
             .Setup(service => service.FindContactItemIdsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(["contact-a", "contact-b"]);
+            .ReturnsAsync(["contact-b", "contact-a", "contact-b", ""]);
+
+        harness.ContentManager
+            .Setup(manager => manager.NewAsync("CallSubject"))
+            .ReturnsAsync(new ContentItem { ContentType = "CallSubject" });
+
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+
+        harness.QueueManager
+            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new ActivityQueue
+                {
+                    ItemId = "q1",
+                    Enabled = true,
+                    InboundChannelEndpointId = "ep1",
+                },
+            ]);
+
+        harness.QueueService
+            .Setup(manager => manager.EnqueueAsync("act1", "q1", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ItemId = "qi1",
+                ActivityItemId = "act1",
+                QueueId = "q1",
+            });
+
+        harness.AssignmentService
+            .Setup(manager => manager.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                AgentId = "a1",
+                ActivityItemId = "act1",
+                QueueId = "q1",
+            });
+
+        harness.AgentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+            });
+
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "int1" });
+
+        harness.InteractionManager
+            .Setup(manager => manager.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "int1" });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Routed, result.Reason);
+        Assert.False(result.Queued);
+        Assert.Equal("u1", result.AgentUserId);
+        Assert.Equal("act1", result.ActivityItemId);
+        Assert.Equal("q1", result.QueueId);
+        Assert.Null(activity.ContactContentItemId);
+        Assert.Null(activity.ContactContentType);
+        Assert.Equal(ContactResolutionStatus.Ambiguous, activity.ContactResolutionStatus);
+        Assert.Equal(new[] { "contact-a", "contact-b" }, activity.ContactResolutionCandidates);
+        Assert.Equal(ActivityKind.Call, activity.Kind);
+        Assert.Equal(ActivitySources.Inbound, activity.Source);
+        Assert.Equal("CallSubject", activity.SubjectContentType);
+        Assert.Equal(ActivityAssignmentStatus.Available, activity.AssignmentStatus);
+        Assert.NotNull(activity.Subject);
+
+        harness.ActivityManager.Verify(
+            manager => manager.CreateAsync(
+                It.Is<OmnichannelActivity>(persistedActivity =>
+                    ReferenceEquals(persistedActivity, activity) &&
+                    persistedActivity.ContactContentItemId == null &&
+                    persistedActivity.ContactContentType == null &&
+                    persistedActivity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous)),
+            Times.Once);
+
+        harness.ContentManager.Verify(
+            manager => manager.GetAsync("contact-a", It.IsAny<VersionOptions>()),
+            Times.Never);
+        harness.ContentManager.Verify(
+            manager => manager.GetAsync("contact-b", It.IsAny<VersionOptions>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleInboundAsync_WhenSingleContactMatches_RecordsResolvedContact()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        harness.ChannelEndpointManager
+            .Setup(manager => manager.GetByServiceAddressAsync(
+                "Phone",
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<OmnichannelChannelEndpoint>(
+                new OmnichannelChannelEndpoint
+                {
+                    ItemId = "ep1",
+                    Channel = "Phone",
+                    Value = "+15553334444",
+                }));
+
+        harness.SubjectFlowSettingsService
+            .Setup(service => service.GetConfiguredFlowSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new SubjectFlowSettings
+                {
+                    Channel = "Phone",
+                    ChannelEndpointId = "ep1",
+                    SubjectContentType = "CallSubject",
+                },
+            ]);
+
+        harness.ContactLookup
+            .Setup(service => service.FindContactItemIdsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["contact-a"]);
+
         harness.ContentManager
             .Setup(manager => manager.GetAsync("contact-a", It.IsAny<VersionOptions>()))
             .ReturnsAsync(new ContentItem
@@ -236,19 +377,24 @@ public sealed class InboundVoiceServiceTests
                 ContentItemId = "contact-a",
                 ContentType = "Customer",
             });
+
         harness.ContentManager
             .Setup(manager => manager.NewAsync("CallSubject"))
             .ReturnsAsync(new ContentItem { ContentType = "CallSubject" });
+
         var activity = new OmnichannelActivity { ItemId = "act1" };
         harness.ActivityManager
             .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(activity);
+
         harness.QueueManager
             .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
+
         harness.InteractionManager
             .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Interaction { ItemId = "int1" });
+
         var service = harness.CreateService();
 
         // Act
@@ -266,18 +412,100 @@ public sealed class InboundVoiceServiceTests
         Assert.False(result.Routed);
         Assert.Equal("contact-a", activity.ContactContentItemId);
         Assert.Equal("Customer", activity.ContactContentType);
+        Assert.Equal(ContactResolutionStatus.Resolved, activity.ContactResolutionStatus);
         harness.ActivityManager.Verify(
             manager => manager.CreateAsync(
                 It.Is<OmnichannelActivity>(persistedActivity =>
                     ReferenceEquals(persistedActivity, activity) &&
                     persistedActivity.ContactContentItemId == "contact-a" &&
-                    persistedActivity.ContactContentType == "Customer")),
+                    persistedActivity.ContactContentType == "Customer" &&
+                    persistedActivity.ContactResolutionStatus == ContactResolutionStatus.Resolved)),
             Times.Once);
         harness.ContentManager.Verify(
             manager => manager.GetAsync("contact-a", It.IsAny<VersionOptions>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleInboundAsync_WhenNoContactsMatch_RecordsUnresolvedContact()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        harness.ChannelEndpointManager
+            .Setup(manager => manager.GetByServiceAddressAsync(
+                "Phone",
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<OmnichannelChannelEndpoint>(
+                new OmnichannelChannelEndpoint
+                {
+                    ItemId = "ep1",
+                    Channel = "Phone",
+                    Value = "+15553334444",
+                }));
+
+        harness.SubjectFlowSettingsService
+            .Setup(service => service.GetConfiguredFlowSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new SubjectFlowSettings
+                {
+                    Channel = "Phone",
+                    ChannelEndpointId = "ep1",
+                    SubjectContentType = "CallSubject",
+                },
+            ]);
+
+        harness.ContactLookup
+            .Setup(service => service.FindContactItemIdsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        harness.ContentManager
+            .Setup(manager => manager.NewAsync("CallSubject"))
+            .ReturnsAsync(new ContentItem { ContentType = "CallSubject" });
+
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+
+        harness.QueueManager
+            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "int1" });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.Null(activity.ContactContentItemId);
+        Assert.Null(activity.ContactContentType);
+        Assert.Equal(ContactResolutionStatus.Unresolved, activity.ContactResolutionStatus);
+        harness.ActivityManager.Verify(
+            manager => manager.CreateAsync(
+                It.Is<OmnichannelActivity>(persistedActivity =>
+                    ReferenceEquals(persistedActivity, activity) &&
+                    persistedActivity.ContactContentItemId == null &&
+                    persistedActivity.ContactContentType == null &&
+                    persistedActivity.ContactResolutionStatus == ContactResolutionStatus.Unresolved)),
+            Times.Once);
         harness.ContentManager.Verify(
-            manager => manager.GetAsync("contact-b", It.IsAny<VersionOptions>()),
+            manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()),
             Times.Never);
     }
 

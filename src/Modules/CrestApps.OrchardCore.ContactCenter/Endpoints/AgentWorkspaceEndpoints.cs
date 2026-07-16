@@ -177,6 +177,14 @@ internal static class AgentWorkspaceEndpoints
             return TypedResults.NotFound();
         }
 
+        if (!await authorizationService.AuthorizeAsync(
+            httpContext.User,
+            OmnichannelConstants.Permissions.CompleteActivity,
+            activity))
+        {
+            return TypedResults.Forbid();
+        }
+
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))

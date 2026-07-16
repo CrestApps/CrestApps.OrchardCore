@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
@@ -118,4 +119,21 @@ public class OmnichannelActivityViewModel
     /// </summary>
     [BindNever]
     public bool ShowWorkflowPreview { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an explicit contact selection is required.
+    /// </summary>
+    [BindNever]
+    public bool RequiresContactResolution { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected contact content item identifier.
+    /// </summary>
+    public string SelectedContactContentItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the candidate contacts available for explicit resolution.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> ContactCandidates { get; set; } = [];
 }

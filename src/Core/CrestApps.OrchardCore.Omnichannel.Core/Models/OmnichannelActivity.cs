@@ -83,6 +83,31 @@ public sealed class OmnichannelActivity : CatalogItem
     public string ContactContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the contact-attribution state.
+    /// </summary>
+    public ContactResolutionStatus ContactResolutionStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact content item identifiers considered during resolution.
+    /// </summary>
+    public IList<string> ContactResolutionCandidates { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the UTC time when the contact was explicitly resolved.
+    /// </summary>
+    public DateTime? ContactResolvedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user who explicitly resolved the contact.
+    /// </summary>
+    public string ContactResolvedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the user who explicitly resolved the contact.
+    /// </summary>
+    public string ContactResolvedByUsername { get; set; }
+
+    /// <summary>
     /// Gets or sets the campaign id.
     /// </summary>
     public string CampaignId { get; set; }
@@ -221,6 +246,53 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the status.
     /// </summary>
     public ActivityStatus Status { get; set; }
+
+    /// <summary>
+    /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.
+    /// </summary>
+    /// <param name="contact">The contact selected for the activity.</param>
+    /// <param name="resolvedById">The identifier of the user resolving the contact.</param>
+    /// <param name="resolvedByUsername">The username of the user resolving the contact.</param>
+    /// <param name="resolvedUtc">The UTC time of the resolution.</param>
+    /// <returns><see langword="true"/> when the contact is resolved or was already resolved to the same contact; otherwise <see langword="false"/>.</returns>
+    public bool TryResolveContact(
+        ContentItem contact,
+        string resolvedById,
+        string resolvedByUsername,
+        DateTime resolvedUtc)
+    {
+        ArgumentNullException.ThrowIfNull(contact);
+
+        if (string.IsNullOrEmpty(contact.ContentItemId) || string.IsNullOrEmpty(contact.ContentType))
+        {
+            return false;
+        }
+
+        if (ContactResolutionStatus == ContactResolutionStatus.Resolved)
+        {
+            return string.Equals(ContactContentItemId, contact.ContentItemId, StringComparison.Ordinal);
+        }
+
+        if (ContactResolutionStatus is not ContactResolutionStatus.Unresolved and not ContactResolutionStatus.Ambiguous)
+        {
+            return false;
+        }
+
+        if (ContactResolutionStatus == ContactResolutionStatus.Ambiguous &&
+            !ContactResolutionCandidates.Contains(contact.ContentItemId, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        ContactContentItemId = contact.ContentItemId;
+        ContactContentType = contact.ContentType;
+        ContactResolutionStatus = ContactResolutionStatus.Resolved;
+        ContactResolvedById = resolvedById;
+        ContactResolvedByUsername = resolvedByUsername;
+        ContactResolvedUtc = resolvedUtc;
+
+        return true;
+    }
 }
 
 /// <summary>

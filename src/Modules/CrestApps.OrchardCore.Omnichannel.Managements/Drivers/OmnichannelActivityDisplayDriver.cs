@@ -209,6 +209,31 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
             model.UrgencyLevel = activity.UrgencyLevel;
             model.ShowWorkflowPreview = isCompletingActivity;
+            model.RequiresContactResolution =
+                activity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous ||
+                (isCompletingActivity &&
+                    activity.ContactResolutionStatus == ContactResolutionStatus.Resolved &&
+                    activity.ContactResolutionCandidates.Count > 1);
+            model.SelectedContactContentItemId = activity.ContactContentItemId;
+
+            if (model.RequiresContactResolution)
+            {
+                var contactCandidates = new List<SelectListItem>();
+
+                foreach (var contactItemId in activity.ContactResolutionCandidates)
+                {
+                    var contactCandidate = await _contentManager.GetAsync(contactItemId, VersionOptions.Latest);
+
+                    if (contactCandidate is not null)
+                    {
+                        contactCandidates.Add(new SelectListItem(
+                            contactCandidate.DisplayText ?? contactCandidate.ContentItemId,
+                            contactCandidate.ContentItemId));
+                    }
+                }
+
+                model.ContactCandidates = contactCandidates.OrderBy(candidate => candidate.Text);
+            }
 
             if (activity.Status == ActivityStatus.Completed)
             {
@@ -236,6 +261,37 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             var processModel = new OmnichannelActivityViewModel();
 
             await context.Updater.TryUpdateModelAsync(processModel, Prefix);
+
+            if (isCompletingActivity &&
+                activity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous)
+            {
+                if (string.IsNullOrEmpty(processModel.SelectedContactContentItemId))
+                {
+                    context.Updater.ModelState.AddModelError(
+                        Prefix,
+                        nameof(processModel.SelectedContactContentItemId),
+                        S["Select the contact associated with this activity."]);
+                }
+                else
+                {
+                    var contact = await _contentManager.GetAsync(
+                        processModel.SelectedContactContentItemId,
+                        VersionOptions.Latest);
+
+                    if (contact is null ||
+                        !activity.TryResolveContact(
+                            contact,
+                            _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier),
+                            _httpContextAccessor.HttpContext?.User?.Identity?.Name,
+                            _clock.UtcNow))
+                    {
+                        context.Updater.ModelState.AddModelError(
+                            Prefix,
+                            nameof(processModel.SelectedContactContentItemId),
+                            S["The selected contact is not a valid candidate for this activity."]);
+                    }
+                }
+            }
 
             var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
 

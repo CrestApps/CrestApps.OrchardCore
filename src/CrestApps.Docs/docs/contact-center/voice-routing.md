@@ -125,6 +125,8 @@ At this stage:
 - the **Interaction** is the communication attempt record
 - the provider call id is stored on the interaction so later provider truth can find it again
 
+Contact attribution is explicit and auditable. No contact match persists `Unresolved`; one loadable match persists `Resolved`; multiple matches persist `Ambiguous` with a deduplicated, deterministic candidate list and no assigned contact. Ambiguity does not block queueing or an agent offer because those operations are contact-independent. The source-neutral disposition service rejects an ambiguous activity, so alternate completion callers cannot bypass resolution. Before completing it, an agent with resource-scoped completion permission must select one of the persisted candidates on the completion form. The activity records the selected contact, resolving user, and UTC resolution time before disposition processing. Unresolved, ambiguous, and legacy inbound activities without explicit resolution cannot run contact-bound Subject Actions.
+
 ### 3. The activity is queued
 
 If the entry point is open and queueing is allowed, Contact Center enqueues the activity into the resolved `ActivityQueue`.

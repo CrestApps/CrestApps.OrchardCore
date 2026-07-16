@@ -566,17 +566,27 @@ public sealed class ActivitiesController : Controller
             subject = await _contentManager.NewAsync(activity.SubjectContentType);
         }
 
+        var activityEditor = await _activityDisplayManager.UpdateEditorAsync(
+            activity,
+            _updateModelAccessor.ModelUpdater,
+            isNew: false,
+            OmnichannelConstants.CompleteActivityGroup);
+        var subjectEditor = subject is null
+            ? null
+            : await _contentItemDisplayManager.UpdateEditorAsync(
+                subject,
+                _updateModelAccessor.ModelUpdater,
+                isNew: false);
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
         var model = new CompleteOmnichannelActivityContainer()
         {
             ContactContentItem = contact,
             Contact = contact is null
                 ? null
                 : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
-            Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
-            Subject = subject is null
-                ? null
-                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            Activity = activityEditor,
+            Subject = subjectEditor,
             ReturnUrl = GetSafeReturnUrl(returnUrl),
         };
 

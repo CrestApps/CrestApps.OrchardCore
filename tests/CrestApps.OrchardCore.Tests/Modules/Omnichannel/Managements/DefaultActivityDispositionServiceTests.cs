@@ -139,6 +139,57 @@ public sealed class DefaultActivityDispositionServiceTests
         executor.Verify(e => e.ExecuteAsync(It.IsAny<SubjectActionExecutionContext>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task ApplyAsync_WhenContactResolutionIsAmbiguous_ReturnsFailureWithoutCompleting()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            ContactResolutionStatus = ContactResolutionStatus.Ambiguous,
+        };
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var executor = new Mock<ISubjectActionExecutor>();
+        var handler = new Mock<IActivityDispositionHandler>();
+        var service = CreateService(
+            activityManager,
+            new Mock<INamedCatalog<OmnichannelDisposition>>(),
+            new Mock<IContentManager>(),
+            executor,
+            handlers: [handler.Object]);
+
+        // Act
+        var result = await service.ApplyAsync(
+            new ActivityDispositionRequest
+            {
+                Activity = activity,
+                DispositionId = "d1",
+                ActorId = "u1",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("Resolve the contact before completing this activity.", result.ErrorMessage);
+        Assert.NotEqual(ActivityStatus.Completed, activity.Status);
+        activityManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<OmnichannelActivity>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        executor.Verify(
+            actionExecutor => actionExecutor.ExecuteAsync(
+                It.IsAny<SubjectActionExecutionContext>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        handler.Verify(
+            dispositionHandler => dispositionHandler.DispositionedAsync(
+                It.IsAny<ActivityDispositionRequest>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static DefaultActivityDispositionService CreateService(
         Mock<IOmnichannelActivityManager> activityManager,
         Mock<INamedCatalog<OmnichannelDisposition>> dispositionsCatalog,

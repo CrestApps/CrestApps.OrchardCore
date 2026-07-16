@@ -86,6 +86,20 @@
     </div>
 }
 
+@if (Model.RequiresContactResolution)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="SelectedContactContentItemId" class="ocat-label">@T["Contact"]</label>
+        <div class="ocat-end">
+            <select asp-for="SelectedContactContentItemId" asp-items="Model.ContactCandidates" class="form-select">
+                <option value="">@T["Select the contact associated with this activity"]</option>
+            </select>
+            <span asp-validation-for="SelectedContactContentItemId" class="text-danger"></span>
+            <span class="hint">@T["Multiple contacts match the caller. Select one before completing the activity."]</span>
+        </div>
+    </div>
+}
+
 <hr class="my-4" />
 <h5 class="mb-3">@T["Workflow"]</h5>
 

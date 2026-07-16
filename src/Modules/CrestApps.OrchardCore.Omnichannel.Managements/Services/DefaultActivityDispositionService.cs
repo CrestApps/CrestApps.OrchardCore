@@ -62,6 +62,11 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
             return ActivityDispositionResult.Failure("An activity is required to apply a disposition.");
         }
 
+        if (activity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous)
+        {
+            return ActivityDispositionResult.Failure("Resolve the contact before completing this activity.");
+        }
+
         var effectiveDispositionId = !string.IsNullOrEmpty(request.DispositionId)
             ? request.DispositionId
             : activity.DispositionId;

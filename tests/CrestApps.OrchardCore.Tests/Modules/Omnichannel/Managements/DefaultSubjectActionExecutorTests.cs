@@ -143,6 +143,105 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Equal(expectedUtc, savedActivity.ScheduledUtc);
     }
 
+    [Theory]
+    [InlineData("TryAgain", ContactResolutionStatus.Unknown)]
+    [InlineData("TryAgain", ContactResolutionStatus.Unresolved)]
+    [InlineData("TryAgain", ContactResolutionStatus.Ambiguous)]
+    [InlineData("NewActivity", ContactResolutionStatus.Unresolved)]
+    [InlineData("NewActivity", ContactResolutionStatus.Ambiguous)]
+    public async Task ExecuteAsync_UnresolvedOrAmbiguousContact_SkipsFollowUpSave(
+        string actionType,
+        ContactResolutionStatus resolutionStatus)
+    {
+        // Arrange
+        var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.ContactResolutionStatus = resolutionStatus;
+        context.Activity.Source = ActivitySources.Inbound;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        session.Verify(
+            x => x.SaveAsync(It.IsAny<object>(), false, OmnichannelConstants.CollectionName, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(ContactResolutionStatus.Unknown)]
+    [InlineData(ContactResolutionStatus.Unresolved)]
+    [InlineData(ContactResolutionStatus.Ambiguous)]
+    public async Task ExecuteAsync_UnresolvedOrAmbiguousContact_SkipsContactPreferenceMutation(
+        ContactResolutionStatus resolutionStatus)
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotCall = true;
+        var session = new Mock<ISession>();
+        var executor = CreateExecutor(action, session);
+        var contact = new ContentItem();
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = resolutionStatus;
+        context.Activity.Source = ActivitySources.Inbound;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(contact.TryGet<OmnichannelContactPart>(out _));
+    }
+
+    [Theory]
+    [InlineData("TryAgain")]
+    [InlineData("NewActivity")]
+    public async Task ExecuteAsync_ResolvedContact_ExecutesFollowUpActions(string actionType)
+    {
+        // Arrange
+        var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ResolvedContact_AppliesContactPreferences()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotCall = true;
+        var session = new Mock<ISession>();
+
+        SetupSave(session, _ => { });
+
+        var executor = CreateExecutor(action, session);
+        var contact = new ContentItem();
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(contact.TryGet<OmnichannelContactPart>(out var part));
+        Assert.True(part.DoNotCall);
+    }
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
         Mock<ISession> session,

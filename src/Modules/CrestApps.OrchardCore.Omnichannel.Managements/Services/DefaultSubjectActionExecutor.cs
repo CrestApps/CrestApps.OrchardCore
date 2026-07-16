@@ -48,6 +48,21 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ArgumentNullException.ThrowIfNull(context.Activity);
         ArgumentNullException.ThrowIfNull(context.Disposition);
 
+        if (context.Activity.ContactResolutionStatus is ContactResolutionStatus.Unresolved or ContactResolutionStatus.Ambiguous ||
+            context.Activity.ContactResolutionStatus == ContactResolutionStatus.Unknown &&
+            string.Equals(context.Activity.Source, ActivitySources.Inbound, StringComparison.Ordinal))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Deferred subject actions for activity {ActivityId} because contact resolution is {ContactResolutionStatus}.",
+                    context.Activity.ItemId,
+                    context.Activity.ContactResolutionStatus);
+            }
+
+            return;
+        }
+
         var allActions = await _actionCatalog.GetAllAsync(cancellationToken);
 
         var actions = allActions
@@ -108,6 +123,11 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             PreferredDestination = activity.PreferredDestination,
             ContactContentItemId = activity.ContactContentItemId,
             ContactContentType = activity.ContactContentType,
+            ContactResolutionStatus = activity.ContactResolutionStatus,
+            ContactResolutionCandidates = activity.ContactResolutionCandidates.ToList(),
+            ContactResolvedUtc = activity.ContactResolvedUtc,
+            ContactResolvedById = activity.ContactResolvedById,
+            ContactResolvedByUsername = activity.ContactResolvedByUsername,
             CampaignId = activity.CampaignId,
             Instructions = activity.Instructions,
             Attempts = activity.Attempts + 1,
@@ -161,6 +181,11 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             PreferredDestination = activity.PreferredDestination,
             ContactContentItemId = activity.ContactContentItemId,
             ContactContentType = activity.ContactContentType,
+            ContactResolutionStatus = activity.ContactResolutionStatus,
+            ContactResolutionCandidates = activity.ContactResolutionCandidates.ToList(),
+            ContactResolvedUtc = activity.ContactResolvedUtc,
+            ContactResolvedById = activity.ContactResolvedById,
+            ContactResolvedByUsername = activity.ContactResolvedByUsername,
             CampaignId = activity.CampaignId,
             Instructions = null,
             Attempts = 1,
